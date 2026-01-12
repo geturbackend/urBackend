@@ -15,6 +15,8 @@ export default function Dashboard() {
     useEffect(() => {
         const fetchProjects = async () => {
             try {
+                await new Promise(r => setTimeout(r, 9000));
+
                 const response = await axios.get(`${API_URL}/api/projects`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
@@ -30,6 +32,25 @@ export default function Dashboard() {
         if (token) fetchProjects();
     }, [token]);
 
+     const SkeletonLoader = () => (
+        <div
+            style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: '1.5rem'
+            }}
+        >
+            {[1, 2, 3].map(i => (
+                <div key={i} className="card" style={{ padding: '1.5rem' }}>
+                    <div className="skeleton skeleton-text" style={{ width: '50%', height: '14px' }} />
+                    <div className="skeleton skeleton-text" style={{ width: '100%', height: '22px', marginTop: '10px' }} />
+                    <div className="skeleton skeleton-text" style={{ width: '80%', height: '14px', marginTop: '8px' }} />
+                    <div className="skeleton skeleton-text" style={{ width: '60%', height: '14px', marginTop: '12px' }} />
+                </div>
+            ))}
+        </div>
+    );
+
     // Inline Styles for Cards to match Landing Page aesthetic
     const cardStyle = {
         background: 'var(--color-bg-card)',
@@ -43,12 +64,6 @@ export default function Dashboard() {
         position: 'relative',
         overflow: 'hidden'
     };
-
-    if (isLoading) return (
-        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--color-text-muted)', gap: '10px' }}>
-            <div className="spinner"></div> Loading workspace...
-        </div>
-    );
 
     return (
         <div className="container" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '4rem' }}>
@@ -112,7 +127,8 @@ export default function Dashboard() {
                 <div style={{ height: '1px', flex: 1, background: 'var(--color-border)' }}></div>
             </div>
 
-            {projects.length === 0 ? (
+             {isLoading ?  (
+                < SkeletonLoader /> ) : projects.length === 0 ? (
                 <div style={{
                     ...cardStyle,
                     textAlign: 'center',
@@ -254,6 +270,42 @@ export default function Dashboard() {
                     animation: spin 1s linear infinite;
                 }
                 @keyframes spin { 100% { transform: rotate(360deg); } }
+
+                 /* Loading states */
+                .skeleton {
+                    background: rgba(255, 255, 255, 0.03);
+                }
+
+                .skeleton-text {
+                    border-radius: 2px;
+                }
+                .skeleton {
+                    position: relative;
+                    overflow: hidden;
+                    background: rgba(255,255,255,0.05);
+                }
+
+                .skeleton::after {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: -150%;
+                    width: 150%;
+                    height: 100%;
+                    background: linear-gradient(
+                        90deg,
+                        transparent,
+                        rgba(255,255,255,0.08),
+                        transparent
+                    );
+                    animation: shimmer 1.8s infinite;
+                }
+
+                @keyframes shimmer {
+                    100% {
+                        left: 50%;
+                    }
+                }
             `}</style>
         </div>
     );

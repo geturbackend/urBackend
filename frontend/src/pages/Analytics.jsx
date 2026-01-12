@@ -15,6 +15,8 @@ export default function Analytics() {
 
     const fetchData = useCallback(async () => {
         try {
+            await new Promise(r => setTimeout(r, 9000));
+
             setRefreshing(true);
             const res = await axios.get(`${API_URL}/api/projects/${projectId}/analytics`, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -32,7 +34,40 @@ export default function Analytics() {
         fetchData();
     }, [fetchData]);
 
-    if (loading) return <div className="container" style={{ display: 'flex', justifyContent: 'center', marginTop: '4rem', color: '#666' }}>Loading Analytics...</div>;
+      const SkeletonLoader = () => (
+        <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '4rem' }}>
+
+            {/* Stats Cards Skeleton */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+                {[1,2,3].map(i => (
+                    <div key={i} className="card" style={{ padding: '1rem', position: 'relative' }}>
+                        <div className="skeleton skeleton-text" style={{ width: '40%', height: '16px' }} />
+                        <div className="skeleton skeleton-text" style={{ width: '60%', height: '36px', marginTop: '8px' }} />
+                        <div className="skeleton skeleton-text" style={{ width: '100%', height: '6px', marginTop: '12px' }} />
+                    </div>
+                ))}
+            </div>
+
+            {/* Chart & Logs Skeleton */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '2rem' }}>
+                
+                {/* Chart Skeleton */}
+                <div className="card" style={{ height: '400px', padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+                    <div className="skeleton skeleton-text" style={{ width: '50%', height: '16px', marginBottom: '12px' }} />
+                    <div className="skeleton skeleton-text" style={{ width: '100%', height: '340px' }} />
+                </div>
+
+                {/* Logs Skeleton */}
+                <div className="card" style={{ height: '400px', padding: '1.5rem', overflowY: 'auto' }}>
+                    {[1,2,3,4,5,6,7,8,9,10].map(i => (
+                        <div key={i} className="skeleton-row">
+                            <div className="skeleton skeleton-text" style={{ width: '100%' }} />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
 
     // Helper to format bytes
     const formatBytes = (bytes) => {
@@ -67,6 +102,11 @@ export default function Analytics() {
                 </button>
             </div>
 
+              {/* Main Content with Skeleton*/}
+            {loading ? (
+                <SkeletonLoader />
+            ) : (
+                <>
             {/* Stats Cards Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
 
@@ -236,12 +276,43 @@ export default function Analytics() {
                     </div>
                 </div>
             </div>
+         </>
+        )}
 
-            {/* Inline Styles for Spin Animation & Hover */}
+            
             <style>{`
+            /* Inline Styles for Spin Animation & Hover */
+
                 .spin { animation: spin 1s linear infinite; }
                 @keyframes spin { 100% { transform: rotate(360deg); } }
                 .log-row:hover { background-color: var(--color-bg-input); }
+            
+            /* Loading states */
+
+                .skeleton {
+                    position: relative;
+                    overflow: hidden;
+                    background: rgba(255,255,255,0.05);
+                    border-radius: 4px;
+                }
+
+                .skeleton::after {
+                    content: '';
+                    position: absolute;
+                    top: 0; left: -150%;
+                    width: 150%; height: 100%;
+                    background: linear-gradient(
+                    90deg,
+                    transparent,
+                    rgba(255,255,255,0.08),
+                    transparent
+                    );
+                    animation: shimmer 1.8s infinite;
+                }
+
+                @keyframes shimmer {
+                    100% { left: 150%; }
+                }   
             `}</style>
         </div>
     );
