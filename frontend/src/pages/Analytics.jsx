@@ -15,8 +15,6 @@ export default function Analytics() {
 
     const fetchData = useCallback(async () => {
         try {
-            await new Promise(r => setTimeout(r, 9000));
-
             setRefreshing(true);
             const res = await axios.get(`${API_URL}/api/projects/${projectId}/analytics`, {
                 headers: { Authorization: `Bearer ${token}` }

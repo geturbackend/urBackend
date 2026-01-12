@@ -15,8 +15,6 @@ export default function Dashboard() {
     useEffect(() => {
         const fetchProjects = async () => {
             try {
-                await new Promise(r => setTimeout(r, 9000));
-
                 const response = await axios.get(`${API_URL}/api/projects`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
