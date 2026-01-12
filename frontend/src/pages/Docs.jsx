@@ -254,7 +254,7 @@ console.log(data);
                             body={{ name: "MacBook Pro", price: 1299, inStock: true }}
                             comment="Add a new item"
                         />
-                        <TryItPanel endpoint="/api/data/products" method="POST" />
+                       <TryItPanel endpoint="/api/data/:collectionName" method="POST" />
 
 
                         <h3 style={{ fontSize: '1.1rem', marginTop: '2rem' }}>3. Get / Update / Delete by ID</h3>
