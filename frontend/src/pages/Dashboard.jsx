@@ -271,16 +271,14 @@ export default function Dashboard() {
 
                  /* Loading states */
                 .skeleton {
-                    background: rgba(255, 255, 255, 0.03);
+                    position: relative;
+                    overflow: hidden;
+                    background: rgba(255,255,255,0.05);
+                    border-radius: 4px;
                 }
 
                 .skeleton-text {
                     border-radius: 2px;
-                }
-                .skeleton {
-                    position: relative;
-                    overflow: hidden;
-                    background: rgba(255,255,255,0.05);
                 }
 
                 .skeleton::after {
