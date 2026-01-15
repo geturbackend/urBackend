@@ -1,0 +1,1 @@
+{"version":3,"file":"ingestEndpointHeadersIn.js","sourceRoot":"","sources":["../../src/models/ingestEndpointHeadersIn.ts"],"names":[],"mappings":";;;AAOa,QAAA,iCAAiC,GAAG;IAC/C,eAAe,CAAC,MAAW;QACzB,OAAO;YACL,OAAO,EAAE,MAAM,CAAC,SAAS,CAAC;SAC3B,CAAC;IACJ,CAAC;IAED,aAAa,CAAC,IAA6B;QACzC,OAAO;YACL,OAAO,EAAE,IAAI,CAAC,OAAO;SACtB,CAAC;IACJ,CAAC;CACF,CAAC"}

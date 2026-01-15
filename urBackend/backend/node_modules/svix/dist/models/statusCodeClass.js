@@ -1,0 +1,21 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.StatusCodeClassSerializer = exports.StatusCodeClass = void 0;
+var StatusCodeClass;
+(function (StatusCodeClass) {
+    StatusCodeClass[StatusCodeClass["CodeNone"] = 0] = "CodeNone";
+    StatusCodeClass[StatusCodeClass["Code1xx"] = 100] = "Code1xx";
+    StatusCodeClass[StatusCodeClass["Code2xx"] = 200] = "Code2xx";
+    StatusCodeClass[StatusCodeClass["Code3xx"] = 300] = "Code3xx";
+    StatusCodeClass[StatusCodeClass["Code4xx"] = 400] = "Code4xx";
+    StatusCodeClass[StatusCodeClass["Code5xx"] = 500] = "Code5xx";
+})(StatusCodeClass = exports.StatusCodeClass || (exports.StatusCodeClass = {}));
+exports.StatusCodeClassSerializer = {
+    _fromJsonObject(object) {
+        return object;
+    },
+    _toJsonObject(self) {
+        return self;
+    },
+};
+//# sourceMappingURL=statusCodeClass.js.map

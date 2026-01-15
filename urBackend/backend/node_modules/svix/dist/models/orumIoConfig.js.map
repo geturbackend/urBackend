@@ -1,0 +1,1 @@
+{"version":3,"file":"orumIoConfig.js","sourceRoot":"","sources":["../../src/models/orumIoConfig.ts"],"names":[],"mappings":";;;AAOa,QAAA,sBAAsB,GAAG;IACpC,eAAe,CAAC,MAAW;QACzB,OAAO;YACL,SAAS,EAAE,MAAM,CAAC,WAAW,CAAC;SAC/B,CAAC;IACJ,CAAC;IAED,aAAa,CAAC,IAAkB;QAC9B,OAAO;YACL,SAAS,EAAE,IAAI,CAAC,SAAS;SAC1B,CAAC;IACJ,CAAC;CACF,CAAC"}

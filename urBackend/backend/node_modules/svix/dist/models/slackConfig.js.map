@@ -1,0 +1,1 @@
+{"version":3,"file":"slackConfig.js","sourceRoot":"","sources":["../../src/models/slackConfig.ts"],"names":[],"mappings":";;;AAOa,QAAA,qBAAqB,GAAG;IACnC,eAAe,CAAC,MAAW;QACzB,OAAO;YACL,MAAM,EAAE,MAAM,CAAC,QAAQ,CAAC;SACzB,CAAC;IACJ,CAAC;IAED,aAAa,CAAC,IAAiB;QAC7B,OAAO;YACL,MAAM,EAAE,IAAI,CAAC,MAAM;SACpB,CAAC;IACJ,CAAC;CACF,CAAC"}

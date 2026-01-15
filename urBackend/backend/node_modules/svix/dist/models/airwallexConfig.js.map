@@ -1,0 +1,1 @@
+{"version":3,"file":"airwallexConfig.js","sourceRoot":"","sources":["../../src/models/airwallexConfig.ts"],"names":[],"mappings":";;;AAOa,QAAA,yBAAyB,GAAG;IACvC,eAAe,CAAC,MAAW;QACzB,OAAO;YACL,MAAM,EAAE,MAAM,CAAC,QAAQ,CAAC;SACzB,CAAC;IACJ,CAAC;IAED,aAAa,CAAC,IAAqB;QACjC,OAAO;YACL,MAAM,EAAE,IAAI,CAAC,MAAM;SACpB,CAAC;IACJ,CAAC;CACF,CAAC"}

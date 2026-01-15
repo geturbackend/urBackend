@@ -1,0 +1,1 @@
+{"version":3,"file":"operationalWebhookEndpointHeadersIn.js","sourceRoot":"","sources":["../../src/models/operationalWebhookEndpointHeadersIn.ts"],"names":[],"mappings":";;;AAOa,QAAA,6CAA6C,GAAG;IAC3D,eAAe,CAAC,MAAW;QACzB,OAAO;YACL,OAAO,EAAE,MAAM,CAAC,SAAS,CAAC;SAC3B,CAAC;IACJ,CAAC;IAED,aAAa,CAAC,IAAyC;QACrD,OAAO;YACL,OAAO,EAAE,IAAI,CAAC,OAAO;SACtB,CAAC;IACJ,CAAC;CACF,CAAC"}

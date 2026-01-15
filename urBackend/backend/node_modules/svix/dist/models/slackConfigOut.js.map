@@ -1,0 +1,1 @@
+{"version":3,"file":"slackConfigOut.js","sourceRoot":"","sources":["../../src/models/slackConfigOut.ts"],"names":[],"mappings":";;;AAOa,QAAA,wBAAwB,GAAG;IACtC,eAAe,CAAC,MAAW;QACzB,OAAO,EAAE,CAAC;IACZ,CAAC;IAED,aAAa,CAAC,IAAoB;QAChC,OAAO,EAAE,CAAC;IACZ,CAAC;CACF,CAAC"}

@@ -1,0 +1,24 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.BackgroundTaskOutSerializer = void 0;
+const backgroundTaskStatus_1 = require("./backgroundTaskStatus");
+const backgroundTaskType_1 = require("./backgroundTaskType");
+exports.BackgroundTaskOutSerializer = {
+    _fromJsonObject(object) {
+        return {
+            data: object["data"],
+            id: object["id"],
+            status: backgroundTaskStatus_1.BackgroundTaskStatusSerializer._fromJsonObject(object["status"]),
+            task: backgroundTaskType_1.BackgroundTaskTypeSerializer._fromJsonObject(object["task"]),
+        };
+    },
+    _toJsonObject(self) {
+        return {
+            data: self.data,
+            id: self.id,
+            status: backgroundTaskStatus_1.BackgroundTaskStatusSerializer._toJsonObject(self.status),
+            task: backgroundTaskType_1.BackgroundTaskTypeSerializer._toJsonObject(self.task),
+        };
+    },
+};
+//# sourceMappingURL=backgroundTaskOut.js.map

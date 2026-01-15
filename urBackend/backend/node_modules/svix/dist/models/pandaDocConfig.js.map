@@ -1,0 +1,1 @@
+{"version":3,"file":"pandaDocConfig.js","sourceRoot":"","sources":["../../src/models/pandaDocConfig.ts"],"names":[],"mappings":";;;AAOa,QAAA,wBAAwB,GAAG;IACtC,eAAe,CAAC,MAAW;QACzB,OAAO;YACL,MAAM,EAAE,MAAM,CAAC,QAAQ,CAAC;SACzB,CAAC;IACJ,CAAC;IAED,aAAa,CAAC,IAAoB;QAChC,OAAO;YACL,MAAM,EAAE,IAAI,CAAC,MAAM;SACpB,CAAC;IACJ,CAAC;CACF,CAAC"}

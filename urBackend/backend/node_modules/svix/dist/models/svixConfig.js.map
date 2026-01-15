@@ -1,0 +1,1 @@
+{"version":3,"file":"svixConfig.js","sourceRoot":"","sources":["../../src/models/svixConfig.ts"],"names":[],"mappings":";;;AAOa,QAAA,oBAAoB,GAAG;IAClC,eAAe,CAAC,MAAW;QACzB,OAAO;YACL,MAAM,EAAE,MAAM,CAAC,QAAQ,CAAC;SACzB,CAAC;IACJ,CAAC;IAED,aAAa,CAAC,IAAgB;QAC5B,OAAO;YACL,MAAM,EAAE,IAAI,CAAC,MAAM;SACpB,CAAC;IACJ,CAAC;CACF,CAAC"}

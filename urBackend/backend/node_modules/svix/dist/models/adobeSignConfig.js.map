@@ -1,0 +1,1 @@
+{"version":3,"file":"adobeSignConfig.js","sourceRoot":"","sources":["../../src/models/adobeSignConfig.ts"],"names":[],"mappings":";;;AAOa,QAAA,yBAAyB,GAAG;IACvC,eAAe,CAAC,MAAW;QACzB,OAAO;YACL,QAAQ,EAAE,MAAM,CAAC,UAAU,CAAC;SAC7B,CAAC;IACJ,CAAC;IAED,aAAa,CAAC,IAAqB;QACjC,OAAO;YACL,QAAQ,EAAE,IAAI,CAAC,QAAQ;SACxB,CAAC;IACJ,CAAC;CACF,CAAC"}

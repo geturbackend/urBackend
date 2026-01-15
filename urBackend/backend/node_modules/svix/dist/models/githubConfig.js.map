@@ -1,0 +1,1 @@
+{"version":3,"file":"githubConfig.js","sourceRoot":"","sources":["../../src/models/githubConfig.ts"],"names":[],"mappings":";;;AAOa,QAAA,sBAAsB,GAAG;IACpC,eAAe,CAAC,MAAW;QACzB,OAAO;YACL,MAAM,EAAE,MAAM,CAAC,QAAQ,CAAC;SACzB,CAAC;IACJ,CAAC;IAED,aAAa,CAAC,IAAkB;QAC9B,OAAO;YACL,MAAM,EAAE,IAAI,CAAC,MAAM;SACpB,CAAC;IACJ,CAAC;CACF,CAAC"}

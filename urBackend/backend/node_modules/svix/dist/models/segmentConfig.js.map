@@ -1,0 +1,1 @@
+{"version":3,"file":"segmentConfig.js","sourceRoot":"","sources":["../../src/models/segmentConfig.ts"],"names":[],"mappings":";;;AAOa,QAAA,uBAAuB,GAAG;IACrC,eAAe,CAAC,MAAW;QACzB,OAAO;YACL,MAAM,EAAE,MAAM,CAAC,QAAQ,CAAC;SACzB,CAAC;IACJ,CAAC;IAED,aAAa,CAAC,IAAmB;QAC/B,OAAO;YACL,MAAM,EAAE,IAAI,CAAC,MAAM;SACpB,CAAC;IACJ,CAAC;CACF,CAAC"}
