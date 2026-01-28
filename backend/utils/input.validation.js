@@ -10,6 +10,21 @@ module.exports.loginSchema = z.object({
         .max(100, { message: "Password is too long." })
 });
 
+module.exports.signupSchema = z.object({
+    username: z.string()
+        .min(3, { message: "Username must be at least 3 characters." })
+        .max(30, { message: "Username is too long." }),
+
+    email: z.string()
+        .min(1, { message: "Email is required." })
+        .email({ message: "Invalid email format." })
+        .max(100, { message: "Email is too long." }),
+
+    password: z.string()
+        .min(6, { message: "Password must be at least 6 characters." })
+        .max(100, { message: "Password is too long." })
+});
+
 module.exports.changePasswordSchema = z.object({
     currentPassword: z.string().min(1, "Current password is required"),
     newPassword: z.string().min(6, "New password must be at least 6 characters")
