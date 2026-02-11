@@ -1,15 +1,21 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
+require('dotenv').config();
 
-const JWT_SECRET =
-    process.env.JWT_SECRET ||
-    (process.env.NODE_ENV === "test" ? "ci_test_jwt_secret" : null);
+/**
+ * CI / local fallback values
+ * Tests should not depend on developer machine env.
+ */
+process.env.TEST_MONGO_URL =
+  process.env.TEST_MONGO_URL || "mongodb://127.0.0.1:27017/urbackend_test";
 
-if (!JWT_SECRET) {
-    throw new Error("JWT_SECRET is not defined");
-}
+process.env.JWT_SECRET =
+  process.env.JWT_SECRET || "ci_test_jwt_secret";
 
 
+/**
+ * Mock Redis
+ */
 jest.mock('ioredis', () => {
     return jest.fn().mockImplementation(() => ({
         on: jest.fn(),
@@ -21,6 +27,9 @@ jest.mock('ioredis', () => {
     }));
 });
 
+/**
+ * Mock email service
+ */
 jest.mock('resend', () => {
     return {
         Resend: jest.fn().mockImplementation(() => ({
@@ -34,15 +43,12 @@ jest.mock('resend', () => {
 const app = require('../app');
 const Developer = require('../models/Developer');
 const bcrypt = require('bcryptjs');
-require('dotenv').config();
-
 
 
 // --- SETUP 
 beforeAll(async () => {
     const uri = process.env.TEST_MONGO_URL;
 
-    // Debugging (Secret is masked as *** in GitHub logs, but we can check the format)
     console.log("URI Length:", uri ? uri.length : 0);
     console.log("URI Starts with mongodb:", uri ? uri.startsWith('mongodb') : false);
 
@@ -54,25 +60,22 @@ beforeAll(async () => {
     await mongoose.connect(uri);
 });
 
-const redis = require('../config/redis'); // Import redis client
+const redis = require('../config/redis');
 
 afterAll(async () => {
     await mongoose.connection.close();
-    await redis.quit(); // Close Redis connection
+    await redis.quit();
 });
 
 describe('Auth API Security', () => {
 
-    // Clean DB bedore every test
     beforeEach(async () => {
-        await Developer.deleteMany({}); // Clear old data
+        await Developer.deleteMany({});
 
-        // Create a dummy user
         const hashedPassword = await bcrypt.hash('password123', 10);
         await Developer.create({ email: 'test@example.com', password: hashedPassword });
     });
 
-    // Clean DB after every test
     afterEach(async () => {
         await Developer.deleteMany({});
     });
@@ -93,14 +96,9 @@ describe('Auth API Security', () => {
         const res = await request(app)
             .post('/api/auth/login')
             .send({
-                email: { "$ne": null }, // Attack Payload
+                email: { "$ne": null },
                 password: 'password123'
             });
-
-        // DEBUGGING LOGS 
-        console.log("Status Code:", res.statusCode);
-        console.log("Response Body:", res.body);
-        console.log("Response Text:", res.text);
 
         expect(res.statusCode).toBe(400);
         expect(res.body.error).toBeDefined();
