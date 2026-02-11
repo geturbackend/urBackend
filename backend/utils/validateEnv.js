@@ -1,6 +1,7 @@
 const requiredEnvVars = ["MONGO_URL", "PORT", "REDIS_URL"];
 
 function validateEnv() {
+  if (process.env.NODE_ENV === "test") return;
   const missing = requiredEnvVars.filter((key) => !process.env[key]);
 
   if (missing.length) {
