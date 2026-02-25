@@ -10,6 +10,7 @@ const { encrypt } = require('../utils/encryption');
 const { URL } = require('url');
 const { getConnection } = require("../utils/connection.manager");
 const { getCompiledModel } = require("../utils/injectModel")
+const QueryEngine = require("../utils/queryEngine");
 const { storageRegistry } = require("../utils/registry");
 const { deleteProjectByApiKeyCache, setProjectById, getProjectById, deleteProjectById } = require("../services/redisCaching");
 const { getPublicIp } = require("../utils/network");
@@ -332,7 +333,12 @@ module.exports.getData = async (req, res) => {
 
         // const collectionsList = await mongoose.connection.db.listCollections({ name: finalCollectionName }).toArray();
 
-        const data = await model.find({}).limit(50);
+        const features = new QueryEngine(model.find(), req.query)
+            .filter()
+            .sort()
+            .paginate();
+
+        const data = await features.query.lean();
 
         //        let data = [];
         // if (collectionsList.length > 0) {

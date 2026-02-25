@@ -96,8 +96,8 @@ export default function DatabaseSidebar({
                 /* Sidebar Styles - Scoped */
                 .db-sidebar {
                     width: 280px;
-                    background: var(--color-bg-sidebar);
-                    border-right: 1px solid var(--color-border);
+                    background: transparent; 
+                    border-right: none;
                     display: flex;
                     flex-direction: column;
                     z-index: 100;

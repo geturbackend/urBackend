@@ -131,7 +131,7 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
             {
                 id: "actions",
                 header: "Actions",
-                size: 80,
+                size: 120,
                 enableResizing: false,
                 enableHiding: false,
                 cell: (info) => (

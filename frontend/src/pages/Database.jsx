@@ -18,6 +18,11 @@ import {
   List as ListIcon,
   Menu,
   FileText,
+  Filter,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Trash2
 } from "lucide-react";
 
 import { API_URL } from "../config";
@@ -45,6 +50,15 @@ export default function Database() {
   const [collectionToDelete, setCollectionToDelete] = useState(null);
   const [selectedRecord, setSelectedRecord] = useState(null); // For detail drawer
   const [editingRecord, setEditingRecord] = useState(null);
+
+  // --- QUERY ENGINE STATES ---
+  const [queryParams, setQueryParams] = useState({
+      page: 1,
+      limit: 50,
+      sort: '-createdAt',
+      filters: [] // Format: { field: '', operator: '', value: '' }
+  });
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
 
   const fetchShowModal = (id) => {
     setShowModal(true);
@@ -105,8 +119,25 @@ export default function Database() {
     if (!activeCollection) return;
     setLoadingData(true);
     try {
+      // Build query string from state
+      let queryStr = `?page=${queryParams.page}&limit=${queryParams.limit}`;
+      if (queryParams.sort) {
+        queryStr += `&sort=${queryParams.sort}`;
+      }
+      
+      // Append advanced filters
+      queryParams.filters.forEach(filter => {
+         if (filter.field && filter.operator && filter.value !== '') {
+            if (filter.operator === '=') {
+              queryStr += `&${filter.field}=${encodeURIComponent(filter.value)}`;
+            } else {
+              queryStr += `&${filter.field}${filter.operator}=${encodeURIComponent(filter.value)}`;
+            }
+         }
+      });
+
       const res = await axios.get(
-        `${API_URL}/api/projects/${projectId}/collections/${activeCollection.name}/data`,
+        `${API_URL}/api/projects/${projectId}/collections/${activeCollection.name}/data${queryStr}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -118,7 +149,7 @@ export default function Database() {
     } finally {
       setLoadingData(false);
     }
-  }, [activeCollection, projectId, token]);
+  }, [activeCollection, projectId, token, queryParams]);
 
   // Fetch Data on Collection Change
   useEffect(() => {
@@ -204,7 +235,7 @@ export default function Database() {
   // --- SUB-COMPONENTS --- //
 
   const TableView = () => (
-    <div className="table-container-wrapper" style={{ height: "100%", overflow: "hidden" }}>
+    <div className="table-container-wrapper" style={{ height: "100%", overflow: "hidden", display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
       <CollectionTable
         data={data}
         activeCollection={activeCollection}
@@ -259,6 +290,7 @@ export default function Database() {
         onClose={() => setSelectedRecord(null)}
         record={selectedRecord}
         fields={activeCollection?.model || []}
+        onEdit={handleEditRow}
       />
 
       {showModal && (
@@ -338,6 +370,154 @@ export default function Database() {
                   </button>
                 </div>
 
+                <div style={{ position: 'relative' }}>
+                  <button
+                    className={`btn ${showFilterMenu ? 'btn-primary' : 'btn-secondary'} btn-icon-only filter-trigger`}
+                    onClick={() => setShowFilterMenu(!showFilterMenu)}
+                    title="Filter & Sort"
+                  >
+                    <Filter size={18} />
+                    {queryParams.filters.length > 0 && (
+                      <span className="filter-badge">{queryParams.filters.length}</span>
+                    )}
+                  </button>
+                  
+                  {showFilterMenu && (
+                    <>
+                      <div className="fixed-backdrop" style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setShowFilterMenu(false)} />
+                      <div className="filter-menu glass-panel" style={{ 
+                        position: 'absolute', right: 0, top: 'calc(100% + 10px)', width: '300px', 
+                        zIndex: 9000000000, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem',
+                        background: '#151515', border: '1px solid var(--color-border)', 
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.7)', borderRadius: '8px'
+                      }}>
+                        
+                        {/* SORTING SECTION */}
+                        <div className="filter-section">
+                          <div className="section-title mb-2"><ArrowUpDown size={14} /> SORT BY</div>
+                          <div className="flex gap-2">
+                            <select 
+                              className="form-input" 
+                              value={queryParams.sort.replace('-', '')}
+                              onChange={(e) => {
+                                const isDesc = queryParams.sort.startsWith('-');
+                                setQueryParams(p => ({ ...p, sort: `${isDesc ? '-' : ''}${e.target.value}` }));
+                              }}
+                              style={{ flex: 1 }}
+                            >
+                              <option value="createdAt">Created At</option>
+                                {activeCollection?.model?.map(f => (
+                                  <option key={f.key} value={f.key}>{f.key}</option>
+                                ))}
+                            </select>
+                            <button 
+                              className="btn btn-secondary btn-icon-only"
+                              onClick={() => {
+                                const isDesc = queryParams.sort.startsWith('-');
+                                const field = queryParams.sort.replace('-', '');
+                                setQueryParams(p => ({ ...p, sort: isDesc ? field : `-${field}` }));
+                              }}
+                              title="Toggle direction"
+                            >
+                              {queryParams.sort.startsWith('-') ? '↓' : '↑'}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* FILTERING SECTION */}
+                        <div className="filter-section">
+                          <div className="section-title mb-2"><Filter size={14} /> FILTERS</div>
+                          
+                          {queryParams.filters.map((filter, idx) => (
+                            <div key={idx} className="active-filter-row flex gap-2 items-center mb-2">
+                              <select 
+                                className="form-input"
+                                value={filter.field}
+                                onChange={e => {
+                                  const newFilters = [...queryParams.filters];
+                                  newFilters[idx].field = e.target.value;
+                                  setQueryParams(p => ({ ...p, filters: newFilters }));
+                                }}
+                                style={{ width: '35%', padding: '4px' }}
+                              >
+                                <option value="" disabled>Field</option>
+                                {activeCollection?.model?.map(f => (
+                                  <option key={f.key} value={f.key}>{f.key}</option>
+                                ))}
+                              </select>
+                              
+                              <select 
+                                className="form-input"
+                                value={filter.operator}
+                                onChange={e => {
+                                  const newFilters = [...queryParams.filters];
+                                  newFilters[idx].operator = e.target.value;
+                                  setQueryParams(p => ({ ...p, filters: newFilters }));
+                                }}
+                                style={{ width: '30%', padding: '4px' }}
+                              >
+                                <option value="" disabled>Op</option>
+                                <option value="=">=</option>
+                                <option value="_gt">&gt;</option>
+                                <option value="_gte">&ge;</option>
+                                <option value="_lt">&lt;</option>
+                                <option value="_lte">&le;</option>
+                              </select>
+                              
+                              <input 
+                                type="text"
+                                className="form-input"
+                                placeholder="Value"
+                                value={filter.value}
+                                onChange={e => {
+                                  const newFilters = [...queryParams.filters];
+                                  newFilters[idx].value = e.target.value;
+                                  setQueryParams(p => ({ ...p, filters: newFilters }));
+                                }}
+                                style={{ width: '35%', padding: '4px' }}
+                              />
+                              
+                              <button 
+                                className="btn-icon danger-hover shrink-0"
+                                onClick={() => {
+                                  setQueryParams(p => ({ ...p, filters: p.filters.filter((_, i) => i !== idx) }));
+                                }}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          ))}
+                          
+                          <button 
+                            className="btn btn-secondary w-full"
+                            style={{ fontSize: '0.8rem', marginTop: '4px' }}
+                            onClick={() => {
+                              setQueryParams(p => ({ 
+                                ...p, 
+                                filters: [...p.filters, { field: '', operator: '', value: '' }] 
+                              }));
+                            }}
+                          >
+                            <Plus size={14} /> Add Filter
+                          </button>
+                        </div>
+                        
+                        {/* APPLY BUTTON */}
+                        <button 
+                          className="btn btn-primary w-full mt-2" 
+                          onClick={() => {
+                            setShowFilterMenu(false);
+                            // Set page back to 1 when applying new filters
+                            setQueryParams(p => ({ ...p, page: 1 }));
+                          }}
+                        >
+                          Apply Queries
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
                 <button
                   onClick={fetchData}
                   className="btn btn-secondary btn-icon-only"
@@ -387,6 +567,59 @@ export default function Database() {
                 <JsonView />
               )}
             </div>
+
+            {/* PAGINATION FOOTER */}
+            {activeCollection && data.length > 0 && (
+              <div className="pagination-footer glass-panel" style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '0.75rem 2rem',
+                borderTop: '1px solid var(--color-border)',
+                background: 'rgba(10, 10, 10, 0.4)',
+                backdropFilter: 'blur(10px)',
+                zIndex: 10
+              }}>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted" style={{ fontSize: '0.85rem' }}>Rows per page:</span>
+                  <select 
+                    className="form-input" 
+                    value={queryParams.limit}
+                    onChange={(e) => {
+                      setQueryParams(p => ({ ...p, limit: Number(e.target.value), page: 1 }));
+                    }}
+                    style={{ padding: '4px 8px', fontSize: '0.85rem', width: 'auto' }}
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <span className="text-muted" style={{ fontSize: '0.85rem' }}>Page {queryParams.page}</span>
+                  <div className="flex gap-1">
+                    <button 
+                      className="btn btn-secondary btn-icon-only"
+                      onClick={() => setQueryParams(p => ({ ...p, page: Math.max(1, p.page - 1) }))}
+                      disabled={queryParams.page === 1}
+                      style={{ opacity: queryParams.page === 1 ? 0.5 : 1, cursor: queryParams.page === 1 ? 'not-allowed' : 'pointer' }}
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <button 
+                      className="btn btn-secondary btn-icon-only"
+                      onClick={() => setQueryParams(p => ({ ...p, page: p.page + 1 }))}
+                      disabled={data.length < queryParams.limit}
+                      style={{ opacity: data.length < queryParams.limit ? 0.5 : 1, cursor: data.length < queryParams.limit ? 'not-allowed' : 'pointer' }}
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="no-collection-state">
@@ -426,16 +659,16 @@ export default function Database() {
                 /* Component Specific Styles */
                 .db-layout {
                     display: flex;
-                    height: 100%; /* Fill the proper container */
+                    height: 100vh;
+                    width: 100vw;
                     overflow: hidden;
-                    background: var(--color-bg-main);
+                    background: #050505;
                     position: relative;
                 }
 
 
                 .sidebar-header-area {
                     padding: 1.5rem;
-                    border-bottom: 1px solid var(--color-border);
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
@@ -511,6 +744,11 @@ export default function Database() {
                     position: relative;
                     overflow: hidden;
                     min-width: 0; /* Critical for flex child scrolling */
+                    background: #0A0A0A;
+                    margin: 16px 16px 16px 0;
+                    border: 1px solid #1A1A1A;
+                    border-radius: 16px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
                 }
 
                 .db-header {
@@ -519,7 +757,8 @@ export default function Database() {
                     justify-content: space-between;
                     align-items: center;
                     border-bottom: 1px solid var(--color-border);
-                    z-index: 10;
+                    z-index: 100;
+                    position: relative;
                     flex-shrink: 0; /* Prevent header from collapsing */
                 }
 

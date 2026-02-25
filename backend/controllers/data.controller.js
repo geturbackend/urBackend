@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const Project = require("../models/Project");
 const { getConnection } = require("../utils/connection.manager");
 const { getCompiledModel } = require("../utils/injectModel");
+const QueryEngine = require("../utils/queryEngine");
 
 // Validate MongoDB ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -82,7 +83,12 @@ module.exports.getAllData = async (req, res) => {
         const connection = await getConnection(project._id);
         const Model = getCompiledModel(connection, collectionConfig, project._id, project.resources.db.isExternal);
 
-        const data = await Model.find({}).limit(100).lean();
+        const features = new QueryEngine(Model.find(), req.query)
+            .filter()
+            .sort()
+            .paginate();
+
+        const data = await features.query.lean();
         console.timeEnd("getall")
         res.json(data);
     } catch (err) {

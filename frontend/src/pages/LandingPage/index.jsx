@@ -144,8 +144,10 @@ function LandingPage() {
             </nav>
 
             <div className="hero-section">
+                <div className="hero-glow"></div>
+
                 <div className="hero-pill">
-                    <Zap size={14} fill="currentColor" /> Public Alpha v0.1.0
+                    <Zap size={14} fill="currentColor" strokeWidth={1} /> Public Alpha v0.1.0
                 </div>
 
                 <h1 className="hero-heading">
@@ -157,11 +159,11 @@ function LandingPage() {
                     No boilerplate. No servers. Get Database, Auth, and Storage APIs in seconds.
                 </p>
 
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                    <Link to="/signup" className="btn btn-primary" style={{ padding: '1rem 2.5rem', fontSize: '1.05rem', borderRadius: '8px' }}>
-                        Start Building <ArrowRight size={18} style={{ marginLeft: 6 }} />
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center', zIndex: 10, position: 'relative' }}>
+                    <Link to="/signup" className="btn-hero-primary">
+                        Start Building <ArrowRight size={18} strokeWidth={2} />
                     </Link>
-                    <Link to="/docs" className="btn btn-secondary" style={{ padding: '1rem 2.5rem', fontSize: '1.05rem', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid #333' }}>
+                    <Link to="/docs" className="btn-hero-secondary">
                         Documentation
                     </Link>
                 </div>
@@ -211,7 +213,7 @@ function LandingPage() {
                 </div>
             </div>
 
-            <div id="how-it-works" style={{ padding: '6rem 0', background: '#080808', borderTop: '1px solid #111' }}>
+            <div id="how-it-works" style={{ padding: '6rem 0', background: '#000', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
                 <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
                     <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
                         <h2 className="section-title">Backend Architecture, Simplified.</h2>
@@ -247,7 +249,7 @@ function LandingPage() {
                 </div>
             </div>
 
-            <div id="features" style={{ padding: '8rem 0', background: '#050505' }}>
+            <div id="features" style={{ padding: '8rem 0', background: '#000', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
                 <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
                     <h2 className="section-title">Complete Backend Suite</h2>
                     <p className="section-desc">Enterprise-grade tools packaged for individual developers.</p>
@@ -256,8 +258,8 @@ function LandingPage() {
                 <div className="bento-grid">
                     <div className="bento-item bento-span-8">
                         <div>
-                            <div className="bento-icon" style={{ background: 'rgba(62, 207, 142, 0.1)', color: '#3ECF8E' }}>
-                                <Database />
+                            <div className="bento-icon" style={{ background: 'rgba(62, 207, 142, 0.1)', color: '#3ECF8E', boxShadow: '0 0 20px rgba(62, 207, 142, 0.2)' }}>
+                                <Database strokeWidth={1.5} />
                             </div>
                             <h3 className="bento-title">Managed NoSQL Database</h3>
                             <p className="bento-desc">
@@ -273,8 +275,8 @@ function LandingPage() {
                     </div>
 
                     <div className="bento-item bento-span-4">
-                        <div className="bento-icon" style={{ background: 'rgba(255, 189, 46, 0.1)', color: '#FFBD2E' }}>
-                            <Shield />
+                        <div className="bento-icon" style={{ background: 'rgba(255, 189, 46, 0.1)', color: '#FFBD2E', boxShadow: '0 0 20px rgba(255, 189, 46, 0.2)' }}>
+                            <Shield strokeWidth={1.5} />
                         </div>
                         <h3 className="bento-title">Secure Auth</h3>
                         <p className="bento-desc">
@@ -287,8 +289,8 @@ function LandingPage() {
                     </div>
 
                     <div className="bento-item bento-span-4">
-                        <div className="bento-icon" style={{ background: 'rgba(64, 158, 255, 0.1)', color: '#409EFF' }}>
-                            <HardDrive />
+                        <div className="bento-icon" style={{ background: 'rgba(64, 158, 255, 0.1)', color: '#409EFF', boxShadow: '0 0 20px rgba(64, 158, 255, 0.2)' }}>
+                            <HardDrive strokeWidth={1.5} />
                         </div>
                         <h3 className="bento-title">Global Storage</h3>
                         <p className="bento-desc">
@@ -298,8 +300,8 @@ function LandingPage() {
 
                     <div className="bento-item bento-span-8">
                         <div>
-                            <div className="bento-icon" style={{ background: 'rgba(255, 95, 86, 0.1)', color: '#FF5F56' }}>
-                                <Cpu />
+                            <div className="bento-icon" style={{ background: 'rgba(255, 95, 86, 0.1)', color: '#FF5F56', boxShadow: '0 0 20px rgba(255, 95, 86, 0.2)' }}>
+                                <Cpu strokeWidth={1.5} />
                             </div>
                             <h3 className="bento-title">Serverless Architecture</h3>
                             <p className="bento-desc">
@@ -316,7 +318,7 @@ function LandingPage() {
                 </div>
             </div>
 
-            <div id="byod" style={{ padding: '8rem 0', background: '#0A0A0A', borderTop: '1px solid #111' }}>
+            <div id="byod" style={{ padding: '8rem 0', background: '#000', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
                 <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
                     <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
                         <h2 className="section-title">Bring Your Own Infrastructure</h2>
@@ -324,41 +326,41 @@ function LandingPage() {
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
-                        <div className="card" style={{ background: '#111', border: '1px solid #222', padding: '3rem' }}>
+                        <div className="card" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '3rem', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                                <div style={{ padding: '12px', background: 'rgba(62, 207, 142, 0.1)', borderRadius: '12px', color: '#3ECF8E' }}>
-                                    <Database size={32} />
+                                <div style={{ padding: '12px', background: 'rgba(62, 207, 142, 0.1)', borderRadius: '12px', color: '#3ECF8E', boxShadow: '0 0 20px rgba(62, 207, 142, 0.2)' }}>
+                                    <Database strokeWidth={1.5} size={32} />
                                 </div>
-                                <h3 style={{ fontSize: '1.5rem', fontWeight: 700 }}>BYO Database</h3>
+                                <h3 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#fff' }}>BYO Database</h3>
                             </div>
-                            <p style={{ color: '#888', lineHeight: 1.6, marginBottom: '2rem' }}>
+                            <p style={{ color: '#a1a1aa', lineHeight: 1.6, marginBottom: '2rem' }}>
                                 Connect your self-hosted MongoDB or Atlas cluster. We provide the instant API layer, auth, and validation schema, while you keep full ownership of the data.
                             </p>
                             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                <span className="hero-pill" style={{ margin: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid #333', color: '#ccc' }}>MongoDB Atlas</span>
-                                <span className="hero-pill" style={{ margin: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid #333', color: '#ccc' }}>Self-Hosted</span>
+                                <span className="hero-pill" style={{ margin: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#a1a1aa' }}>MongoDB Atlas</span>
+                                <span className="hero-pill" style={{ margin: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#a1a1aa' }}>Self-Hosted</span>
                             </div>
                         </div>
 
-                        <div className="card" style={{ background: '#111', border: '1px solid #222', padding: '3rem' }}>
+                        <div className="card" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '3rem', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                                <div style={{ padding: '12px', background: 'rgba(64, 158, 255, 0.1)', borderRadius: '12px', color: '#409EFF' }}>
-                                    <HardDrive size={32} />
+                                <div style={{ padding: '12px', background: 'rgba(64, 158, 255, 0.1)', borderRadius: '12px', color: '#409EFF', boxShadow: '0 0 20px rgba(64, 158, 255, 0.2)' }}>
+                                    <HardDrive strokeWidth={1.5} size={32} />
                                 </div>
-                                <h3 style={{ fontSize: '1.5rem', fontWeight: 700 }}>BYO Storage</h3>
+                                <h3 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#fff' }}>BYO Storage</h3>
                             </div>
-                            <p style={{ color: '#888', lineHeight: 1.6, marginBottom: '2rem' }}>
+                            <p style={{ color: '#a1a1aa', lineHeight: 1.6, marginBottom: '2rem' }}>
                                 Link your supabase buckets or Supabase Storage. We handle the file upload tokens, permissions, and CDN delivery automatically.
                             </p>
                             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                <span className="hero-pill" style={{ margin: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid #333', color: '#ccc' }}>Supabase</span>
+                                <span className="hero-pill" style={{ margin: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#a1a1aa' }}>Supabase</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div id="use-cases" style={{ padding: '8rem 0', background: '#080808', borderTop: '1px solid #111', borderBottom: '1px solid #111' }}>
+            <div id="use-cases" style={{ padding: '8rem 0', background: '#000', borderTop: '1px solid rgba(255, 255, 255, 0.08)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
                 <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
                     <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
                         <h2 className="section-title">Build Anything.</h2>
@@ -367,19 +369,19 @@ function LandingPage() {
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '6rem' }}>
                         <div className="use-case-card">
-                            <Layers size={32} color="#3ECF8E" style={{ marginBottom: '1.5rem' }} />
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>SaaS Platforms</h3>
-                            <p style={{ color: '#888', lineHeight: 1.6 }}>Handle complex data relationships, multi-tenant auth, and subscriptions securely.</p>
+                            <Layers strokeWidth={1.5} size={32} color="#3ECF8E" style={{ marginBottom: '1.5rem' }} />
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem', color: '#fff' }}>SaaS Platforms</h3>
+                            <p style={{ color: '#a1a1aa', lineHeight: 1.6 }}>Handle complex data relationships, multi-tenant auth, and subscriptions securely.</p>
                         </div>
                         <div className="use-case-card">
-                            <Smartphone size={32} color="#409EFF" style={{ marginBottom: '1.5rem' }} />
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>Mobile Backends</h3>
-                            <p style={{ color: '#888', lineHeight: 1.6 }}>Serve data to Flutter or React Native apps with lightweight, fast JSON responses.</p>
+                            <Smartphone strokeWidth={1.5} size={32} color="#409EFF" style={{ marginBottom: '1.5rem' }} />
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem', color: '#fff' }}>Mobile Backends</h3>
+                            <p style={{ color: '#a1a1aa', lineHeight: 1.6 }}>Serve data to Flutter or React Native apps with lightweight, fast JSON responses.</p>
                         </div>
                         <div className="use-case-card">
-                            <GlobeIcon size={32} color="#FFBD2E" style={{ marginBottom: '1.5rem' }} />
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>Content Sites</h3>
-                            <p style={{ color: '#888', lineHeight: 1.6 }}>Power blogs, portfolios, and e-commerce catalogs without CMS bloat.</p>
+                            <GlobeIcon strokeWidth={1.5} size={32} color="#FFBD2E" style={{ marginBottom: '1.5rem' }} />
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem', color: '#fff' }}>Content Sites</h3>
+                            <p style={{ color: '#a1a1aa', lineHeight: 1.6 }}>Power blogs, portfolios, and e-commerce catalogs without CMS bloat.</p>
                         </div>
                     </div>
 
@@ -387,7 +389,7 @@ function LandingPage() {
                 </div>
             </div>
 
-            <div id="faq" style={{ padding: '8rem 0', background: '#050505', borderTop: '1px solid #111' }}>
+            <div id="faq" style={{ padding: '8rem 0', background: '#000' }}>
                 <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 1.5rem' }}>
                     <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
                         <h2 className="section-title">Common Questions</h2>
