@@ -17,6 +17,6 @@ const createReleaseLimiter = RateLimit({
   max: 5 , 
 });
 // POST FOR - CREATE RELEASE
-router.post('/', createReleaseLimiter, createRelease);
+router.post('/', authorization, createReleaseLimiter, createRelease);
 
 module.exports = router;
