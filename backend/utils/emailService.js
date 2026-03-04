@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_testing');
 
-async function sendOtp(email, otp, {subject = "Verify your urBackend account"}) {
+async function sendOtp(email, otp, { subject = "Verify your urBackend account" } = {}) {
     try {
         const { data, error } = await resend.emails.send({
             from: 'urBackend <urbackend@bitbros.in>',
