@@ -7,7 +7,9 @@ const {
     changePassword,
     deleteAccount,
     sendOtp,
-    verifyOtp
+    verifyOtp,
+    forgotPassword,
+    resetPassword
 } = require('../controllers/auth.controller');
 
 
@@ -23,9 +25,12 @@ router.put('/change-password', authorization, changePassword);
 // DELETE ACCOUNT (Protected - Danger Zone)
 router.delete('/delete-account', authorization, deleteAccount);
 
+// OTP (email verification)
 router.post('/send-otp', sendOtp);
-
-
 router.post('/verify-otp', verifyOtp);
+
+// PASSWORD RESET (FIX 5)
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 
 module.exports = router;

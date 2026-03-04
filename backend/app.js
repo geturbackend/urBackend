@@ -28,6 +28,9 @@ const dashboardLimiter = rateLimit({
     skip: (req) => process.env.NODE_ENV === 'development',
 });
 
+// FIX 3: Strict limiter for auth endpoints (login / register)
+const { authLimiter } = require('./middleware/auth_limiter');
+
 
 const adminWhitelist = ['https://urbackend.bitbros.in'];
 
@@ -74,7 +77,9 @@ const storageRoute = require('./routes/storage');
 const schemaRoute = require('./routes/schemas');
 
 // ROUTES SETUP 
-app.use('/api/auth', dashboardLimiter, authRoute); // Developer Auth
+app.use('/api/auth/login', authLimiter);           // Strict limiter on login
+app.use('/api/auth/register', authLimiter);        // Strict limiter on register
+app.use('/api/auth', dashboardLimiter, authRoute); // Developer Auth (general)
 app.use('/api/projects', dashboardLimiter, projectRoute); // Project Mgmt
 app.use('/api/userAuth', limiter, logger, userAuthRoute);
 app.use('/api/data', limiter, cors(adminCorsOptions), logger, dataRoute);

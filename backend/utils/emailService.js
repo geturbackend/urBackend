@@ -5,12 +5,12 @@ const dotenv = require('dotenv');
 dotenv.config();
 const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_testing');
 
-async function sendOtp(email, otp) {
+async function sendOtp(email, otp, { subject = "Verify your urBackend account" } = {}) {
     try {
         const { data, error } = await resend.emails.send({
             from: 'urBackend <urbackend@bitbros.in>',
             to: email,
-            subject: 'Verify your urBackend account',
+            subject: subject,
             html: `
             <div style="font-family: Arial, sans-serif; background:#f4f6f8; padding:40px 0;">
                 <div style="max-width:500px; margin:auto; background:white; border-radius:10px; padding:30px; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
