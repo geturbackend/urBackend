@@ -34,9 +34,7 @@ function Signup() {
             toast.dismiss(loadingToast);
             toast.success(response.data.message);
 
-            await axios.post(`${API_URL}/api/auth/send-otp`, { email: formData.email });
-
-            toast.success("OTP Sent! Please verify your email.");
+            // Redirect to OTP verification page, which automatically sends the OTP
             navigate('/verify-otp', { state: { email: formData.email } });
 
         } catch (err) {

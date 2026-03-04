@@ -22,6 +22,7 @@ import {
     ChevronUp,
     Play
 } from 'lucide-react';
+import { motion as Motion } from 'framer-motion';
 import Footer from '../../components/Layout/Footer';
 import './style.css';
 
@@ -150,25 +151,46 @@ function LandingPage() {
                     <Zap size={14} fill="currentColor" strokeWidth={1} /> Public Alpha v0.1.0
                 </div>
 
-                <h1 className="hero-heading">
+                <Motion.h1 
+                    className="hero-heading"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                >
                     Instant Backend.<br />
                     <span className="text-gradient-primary">Just for Frontend Devs.</span>
-                </h1>
+                </Motion.h1>
 
-                <p className="hero-sub">
+                <Motion.p 
+                    className="hero-sub"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+                >
                     No boilerplate. No servers. Get Database, Auth, and Storage APIs in seconds.
-                </p>
+                </Motion.p>
 
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center', zIndex: 10, position: 'relative' }}>
+                <Motion.div 
+                    style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center', zIndex: 10, position: 'relative' }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
+                >
                     <Link to="/signup" className="btn-hero-primary">
                         Start Building <ArrowRight size={18} strokeWidth={2} />
                     </Link>
                     <Link to="/docs" className="btn-hero-secondary">
                         Documentation
                     </Link>
-                </div>
+                </Motion.div>
 
-                <div id="demo" className="demo-wrapper">
+                <Motion.div 
+                    id="demo" 
+                    className="demo-wrapper"
+                    initial={{ opacity: 0, scale: 0.98, y: 30 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                >
                     <div className="demo-header">
                         <div style={{ display: 'flex', gap: '6px' }}>
                             <div className="dot red" style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f56' }}></div>
@@ -198,9 +220,9 @@ function LandingPage() {
                             ) : apiResponse ? (
                                 <>
                                     <div style={{ color: '#666', marginBottom: '10px' }}>// Status: <span style={{ color: '#27C93F' }}>200 OK</span> • Time: {apiResponse.time}</div>
-                                    <div style={{ color: '#e5e5e5', lineHeight: 1.5 }}>
+                                    <pre style={{ color: '#e5e5e5', lineHeight: 1.5, fontSize: '0.9rem', overflowX: 'auto' }}>
                                         {JSON.stringify(apiResponse.data, null, 2)}
-                                    </div>
+                                    </pre>
                                 </>
                             ) : (
                                 <div style={{ color: '#444', marginTop: '4rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
@@ -210,11 +232,23 @@ function LandingPage() {
                             )}
                         </div>
                     </div>
+                </Motion.div>
+            </div>
+
+            <div className="integration-section" style={{ padding: '4rem 0', background: '#030303', textAlign: 'center' }}>
+                <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '2rem', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Integrates with your favorite stack</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '3rem', opacity: 0.6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontSize: '1.1rem', fontWeight: 600 }}><Smartphone size={20} /> Flutter</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontSize: '1.1rem', fontWeight: 600 }}><Layers size={20} /> React</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontSize: '1.1rem', fontWeight: 600 }}><Box size={20} /> Vue</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontSize: '1.1rem', fontWeight: 600 }}><Activity size={20} /> Next.js</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fff', fontSize: '1.1rem', fontWeight: 600 }}><GlobeIcon size={20} /> Webflow</div>
                 </div>
             </div>
 
-            <div id="how-it-works" style={{ padding: '6rem 0', background: '#000', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
+            <div id="how-it-works" style={{ padding: '6rem 0', background: '#030303', borderTop: '1px solid rgba(255, 255, 255, 0.08)', position: 'relative', overflow: 'hidden' }}>
+                <div className="section-glow" style={{ top: '-10%', right: '-10%', background: 'radial-gradient(circle, rgba(64,158,255,0.06) 0%, transparent 70%)' }}></div>
+                <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem', position: 'relative', zIndex: 1 }}>
                     <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
                         <h2 className="section-title">Backend Architecture, Simplified.</h2>
                         <p className="section-desc">We handle the complex infrastructure so you can ship professional apps faster.</p>
@@ -249,8 +283,9 @@ function LandingPage() {
                 </div>
             </div>
 
-            <div id="features" style={{ padding: '8rem 0', background: '#000', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
+            <div id="features" style={{ padding: '8rem 0', background: '#030303', borderTop: '1px solid rgba(255, 255, 255, 0.05)', position: 'relative', overflow: 'hidden' }}>
+                <div className="section-glow" style={{ bottom: '-10%', left: '-10%', background: 'radial-gradient(circle, rgba(62,207,142,0.06) 0%, transparent 70%)' }}></div>
+                <div style={{ textAlign: 'center', marginBottom: '5rem', position: 'relative', zIndex: 1 }}>
                     <h2 className="section-title">Complete Backend Suite</h2>
                     <p className="section-desc">Enterprise-grade tools packaged for individual developers.</p>
                 </div>
@@ -389,8 +424,57 @@ function LandingPage() {
                 </div>
             </div>
 
-            <div id="faq" style={{ padding: '8rem 0', background: '#000' }}>
+            <div id="pricing" style={{ padding: '8rem 0', background: '#030303', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
+                    <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
+                        <h2 className="section-title">Transparent Pricing</h2>
+                        <p className="section-desc">Start building for free. Scale as you grow.</p>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', maxWidth: '900px', margin: '0 auto' }}>
+                        <div className="pricing-card" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', padding: '3rem', borderRadius: '16px', position: 'relative' }}>
+                            <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'rgba(62, 207, 142, 0.1)', color: '#3ECF8E', padding: '4px 12px', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 700 }}>ACTIVE</div>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff', marginBottom: '0.5rem' }}>Developer Beta</h3>
+                            <div style={{ fontSize: '3rem', fontWeight: 800, color: '#fff', marginBottom: '1rem' }}>$0<span style={{ fontSize: '1rem', color: '#666', fontWeight: 400 }}>/mo</span></div>
+                            <p style={{ color: '#888', marginBottom: '2rem', fontSize: '0.95rem' }}>Perfect for side projects, MVPs, and learning.</p>
+                            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2rem 0', display: 'grid', gap: '12px' }}>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#3ECF8E" /> Unlimited Projects</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#3ECF8E" /> 500MB Storage</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#3ECF8E" /> Community Support</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#3ECF8E" /> BYO Infrastructure</li>
+                            </ul>
+                            <Link to="/signup" className="btn btn-primary" style={{ width: '100%', textAlign: 'center', padding: '12px', fontWeight: 600 }}>Get Started Now</Link>
+                        </div>
+
+                        <div className="pricing-card" style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)', padding: '3rem', borderRadius: '16px', opacity: 0.8 }}>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff', marginBottom: '0.5rem' }}>Pro Plan</h3>
+                            <div style={{ fontSize: '3rem', fontWeight: 800, color: '#666', marginBottom: '1rem' }}>Coming<span style={{ fontSize: '1rem', color: '#444', fontWeight: 400 }}> Soon</span></div>
+                            <p style={{ color: '#666', marginBottom: '2rem', fontSize: '0.95rem' }}>For growing teams and production-grade apps.</p>
+                            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2rem 0', display: 'grid', gap: '12px', opacity: 0.5 }}>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#888' }}><CheckCircle size={16} /> Custom Domains</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#888' }}><CheckCircle size={16} /> Advanced Analytics</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#888' }}><CheckCircle size={16} /> Priority Support</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#888' }}><CheckCircle size={16} /> Automated Backups</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="cta-section" style={{ padding: '8rem 0', background: 'radial-gradient(circle at 50% 50%, rgba(62, 207, 142, 0.05) 0%, transparent 70%)', textAlign: 'center' }}>
                 <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 1.5rem' }}>
+                    <h2 style={{ fontSize: '3rem', fontWeight: 800, marginBottom: '1.5rem', letterSpacing: '-0.04em' }}>Ready to ship?</h2>
+                    <p style={{ fontSize: '1.25rem', color: '#a1a1aa', marginBottom: '3rem' }}>Join hundreds of developers building the future without the backend headaches.</p>
+                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <Link to="/signup" className="btn-hero-primary" style={{ padding: '1rem 3rem' }}>Create Your Project</Link>
+                        <Link to="/login" className="btn-hero-secondary" style={{ padding: '1rem 3rem' }}>Back to Console</Link>
+                    </div>
+                </div>
+            </div>
+
+            <div id="faq" style={{ padding: '8rem 0', background: '#030303', borderTop: '1px solid rgba(255, 255, 255, 0.05)', position: 'relative', overflow: 'hidden' }}>
+                <div className="section-glow" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'radial-gradient(circle, rgba(64,158,255,0.04) 0%, transparent 70%)' }}></div>
+                <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 1.5rem', position: 'relative', zIndex: 1 }}>
                     <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
                         <h2 className="section-title">Common Questions</h2>
                     </div>

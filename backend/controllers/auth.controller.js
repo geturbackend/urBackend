@@ -4,7 +4,7 @@ const Project = require("../models/Project")
 const bcrypt = require("bcryptjs");
 const z = require("zod");
 const jwt = require("jsonwebtoken");
-const sendOtp = require("../utils/emailService");
+const { sendOtp } = require("../utils/emailService");
 const crypto = require("crypto");
 const {
     loginSchema,
@@ -55,7 +55,7 @@ async function validateOtp(userId, passedOtp) {
 
 module.exports.register = async (req, res) => {
     try {
-        // Validate with Zod
+        // POST FOR - REGISTER
         const { email, password } = loginSchema.parse(req.body);
 
         const existingUser = await Developer.findOne({ email });
@@ -86,9 +86,9 @@ module.exports.login = async (req, res) => {
         const validPass = await bcrypt.compare(password, dev.password);
         if (!validPass) return res.status(400).json({ error: "Invalid password" });
 
-        // FIX 1: JWT now expires in 7 days
+        // JWT EXPIRE
         const token = jwt.sign(
-            { _id: dev._id, isVerified: dev.isVerified },
+            { _id: dev._id, isVerified: dev.isVerified, maxProjects: dev.maxProjects },
             process.env.JWT_SECRET,
             { expiresIn: JWT_EXPIRES_IN }
         );
@@ -108,6 +108,7 @@ module.exports.login = async (req, res) => {
 
 module.exports.changePassword = async (req, res) => {
     try {
+        // POST FOR - CHANGE PASSWORD
         const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
 
         const dev = await Developer.findById(req.user._id);
@@ -132,6 +133,7 @@ module.exports.changePassword = async (req, res) => {
 
 module.exports.deleteAccount = async (req, res) => {
     try {
+        // POST FOR - DELETE ACCOUNT
         const { password } = deleteAccountSchema.parse(req.body);
 
         const dev = await Developer.findById(req.user._id);
@@ -174,6 +176,7 @@ module.exports.sendOtp = async (req, res) => {
 
 module.exports.verifyOtp = async (req, res) => {
     try {
+        // POST FOR - VERIFY OTP
         const { email, otp } = verifyOtpSchema.parse(req.body);
 
         const existingUser = await Developer.findOne({ email });
@@ -185,9 +188,9 @@ module.exports.verifyOtp = async (req, res) => {
         existingUser.isVerified = true;
         await existingUser.save();
 
-        // FIX 1: JWT with expiry
+        // JWT
         const token = jwt.sign(
-            { _id: existingUser._id, isVerified: true },
+            { _id: existingUser._id, isVerified: true, maxProjects: existingUser.maxProjects },
             process.env.JWT_SECRET,
             { expiresIn: JWT_EXPIRES_IN }
         );
@@ -202,7 +205,7 @@ module.exports.verifyOtp = async (req, res) => {
 }
 
 
-// FIX 5: Forgot Password — generate + send reset OTP
+// FORGOT PASSWORD
 module.exports.forgotPassword = async (req, res) => {
     try {
         const { email } = onlyEmailSchema.parse(req.body);
@@ -223,9 +226,10 @@ module.exports.forgotPassword = async (req, res) => {
 }
 
 
-// FIX 5: Reset Password — verify OTP then set new password
+// RESET PASSWORD
 module.exports.resetPassword = async (req, res) => {
     try {
+        // POST FOR - RESET PASSWORD
         const { email, otp, newPassword } = resetPasswordSchema.parse(req.body);
 
         const dev = await Developer.findOne({ email });
@@ -233,7 +237,7 @@ module.exports.resetPassword = async (req, res) => {
 
         const otpDoc = await validateOtp(dev._id, otp);
 
-        // OTP matched — update password
+        // UPDATE PASSWORD
         await otpDoc.deleteOne();
         const salt = await bcrypt.genSalt(10);
         dev.password = await bcrypt.hash(newPassword, salt);

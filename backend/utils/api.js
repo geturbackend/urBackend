@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 
-function generateApiKey() {
+function generateApiKey(prefix = 'ub_key_') {
 
     // OS level cryptographic randomnesss
     const bytes = crypto.randomBytes(32)
@@ -9,7 +9,7 @@ function generateApiKey() {
     const key = bytes.toString("base64url");
     // console.log(key)
 
-    return `ub_key_${key}`
+    return `${prefix}${key}`
 
 }
 

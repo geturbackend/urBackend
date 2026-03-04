@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Github, ArrowRight, Database } from 'lucide-react';
+import { ADMIN_EMAIL } from '../../config';
 
 export default function Footer() {
     return (
@@ -40,7 +41,7 @@ export default function Footer() {
                             <h4>Connect</h4>
                             <a href="https://discord.gg/CXJjvJkNWn" target="_blank" rel="noreferrer">Discord</a>
                             <a href="https://github.com/yash-pouranik/urBackend" target="_blank" rel="noreferrer">Github</a>
-                            <a href="mailto:yashpouranik124@gmail.com">Email</a>
+                            <a href={`mailto:${ADMIN_EMAIL}`}>Email</a>
                         </div>
                     </div>
                 </div>

@@ -2,7 +2,7 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
     LayoutDashboard, Database, Shield, HardDrive, Settings, BarChart2,
-    ArrowLeft, FileText, UserCog, LogOut, X // Import X for close
+    ArrowLeft, FileText, UserCog, LogOut, X, Rocket // Import Rocket
 } from 'lucide-react';
 
 function Sidebar({ logo, isOpen, onClose }) { // Props received
@@ -75,6 +75,9 @@ function Sidebar({ logo, isOpen, onClose }) { // Props received
                         </Link>
                         <Link to="/settings" onClick={handleNavClick} className={`nav-item ${isActive('/settings') ? 'active' : ''}`}>
                             <UserCog size={18} /> <span>Account Settings</span>
+                        </Link>
+                        <Link to="/releases" onClick={handleNavClick} className={`nav-item ${isActive('/releases') ? 'active' : ''}`}>
+                            <Rocket size={18} /> <span>Changelog</span>
                         </Link>
                     </>
                 )}

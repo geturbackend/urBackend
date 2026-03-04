@@ -17,7 +17,7 @@ function ProjectDetails() {
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
     const [newKey, setNewKey] = useState(null);
-    const [isRegenerating, setIsRegenerating] = useState(false);
+    const [isRegenerating, setIsRegenerating] = useState(null); // 'publishable', 'secret', or null
 
     useEffect(() => {
         const fetchProject = async () => {
@@ -35,20 +35,20 @@ function ProjectDetails() {
         fetchProject();
     }, [projectId, token]);
 
-    const handleRegenerateKey = async () => {
-        if (!window.confirm("Are you sure? The old key will stop working immediately.")) return;
+    const handleRegenerateKey = async (keyType) => {
+        if (!window.confirm(`Are you sure you want to roll your ${keyType} key? The old key will stop working immediately.`)) return;
 
-        setIsRegenerating(true);
+        setIsRegenerating(keyType);
         try {
-            const res = await axios.patch(`${API_URL}/api/projects/${projectId}/regenerate-key`, {}, {
+            const res = await axios.patch(`${API_URL}/api/projects/${projectId}/regenerate-key`, { keyType }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setNewKey(res.data.apiKey);
-            toast.success("New API Key Generated!");
+            setNewKey({ key: res.data.apiKey, type: keyType });
+            toast.success(`New ${keyType === 'publishable' ? 'Publishable' : 'Secret'} API Key Generated!`);
         } catch {
             toast.error("Failed to regenerate key");
         } finally {
-            setIsRegenerating(false);
+            setIsRegenerating(null);
         }
     };
 
@@ -76,12 +76,12 @@ function ProjectDetails() {
                     display: 'flex', justifyContent: 'center', alignItems: 'center',
                     backdropFilter: 'blur(5px)'
                 }}>
-                    <div className="card" style={{ maxWidth: '500px', width: '90%', border: '1px solid var(--color-primary)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+                    <div className="card" style={{ maxWidth: '500px', width: '90%', border: `1px solid ${newKey.type === 'secret' ? '#ef4444' : 'var(--color-primary)'}`, boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
                         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                            <div style={{ width: '50px', height: '50px', background: 'rgba(62, 207, 142, 0.1)', color: 'var(--color-primary)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
+                            <div style={{ width: '50px', height: '50px', background: newKey.type === 'secret' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(62, 207, 142, 0.1)', color: newKey.type === 'secret' ? '#ef4444' : 'var(--color-primary)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
                                 <Key size={24} />
                             </div>
-                            <h2 style={{ color: '#fff', marginBottom: '10px', fontSize: '1.5rem' }}>New API Key Generated</h2>
+                            <h2 style={{ color: '#fff', marginBottom: '10px', fontSize: '1.5rem' }}>New {newKey.type === 'publishable' ? 'Publishable' : 'Secret'} Key Generated</h2>
                             <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', lineHeight: '1.5' }}>
                                 Please copy this key immediately. For security reasons, it will not be displayed again.
                             </p>
@@ -93,15 +93,15 @@ function ProjectDetails() {
                                 background: 'var(--color-bg-input)',
                                 border: '1px solid var(--color-border)',
                                 borderRadius: '8px',
-                                color: '#3ECF8E',
+                                color: newKey.type === 'secret' ? '#ef4444' : '#3ECF8E',
                                 fontFamily: 'monospace',
                                 wordBreak: 'break-all',
                                 fontSize: '0.9rem'
                             }}>
-                                {newKey}
+                                {newKey.key}
                             </code>
                             <button
-                                onClick={() => copyToClipboard(newKey)}
+                                onClick={() => copyToClipboard(newKey.key)}
                                 style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '6px', borderRadius: '4px', cursor: 'pointer' }}
                                 title="Copy"
                             >
@@ -165,45 +165,38 @@ function ProjectDetails() {
                             </div>
                         </div>
 
-                        <div>
+                        <div style={{ marginBottom: '20px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-                                    Secret API Key
+                                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--color-primary)', fontWeight: 500 }}>
+                                    Publishable API Key
                                 </label>
-                                <button
-                                    onClick={handleRegenerateKey}
-                                    disabled={isRegenerating}
-                                    style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                >
-                                    {isRegenerating ? <RefreshCw size={12} className="spin" /> : <RefreshCw size={12} />} Roll Key
+                                <button onClick={() => handleRegenerateKey('publishable')} disabled={!!isRegenerating} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <RefreshCw size={12} className={isRegenerating === 'publishable' ? "spin" : ""} /> Roll Key
                                 </button>
                             </div>
-
-                            <div className="input-group" style={{ display: 'flex', background: 'var(--color-bg-input)', borderRadius: '6px', border: '1px solid var(--color-border)', overflow: 'hidden', marginBottom: '12px' }}>
-                                <div style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', color: '#555', borderRight: '1px solid var(--color-border)' }}>
-                                    <Key size={16} />
-                                </div>
-                                <input
-                                    readOnly
-                                    value="sk_live_••••••••••••••••••••••••"
-                                    type="password"
-                                    style={{ flex: 1, background: 'transparent', border: 'none', color: '#666', padding: '10px', fontFamily: 'monospace', fontSize: '0.9rem', outline: 'none', letterSpacing: '2px' }}
-                                />
+                            <div className="input-group" style={{ display: 'flex', background: 'var(--color-bg-input)', borderRadius: '6px', border: '1px solid var(--color-border)', overflow: 'hidden', marginBottom: '8px' }}>
+                                <div style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', color: '#555', borderRight: '1px solid var(--color-border)' }}><Key size={16} /></div>
+                                <input readOnly value="pk_live_••••••••••••••••••••••••" type="password" style={{ flex: 1, background: 'transparent', border: 'none', color: '#666', padding: '10px', fontFamily: 'monospace', fontSize: '0.9rem', outline: 'none', letterSpacing: '2px' }} />
                             </div>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0 }}>Safe for frontend use (React, Next.js). Read-only access.</p>
+                        </div>
 
-                            <div style={{
-                                background: 'rgba(255, 189, 46, 0.05)',
-                                border: '1px solid rgba(255, 189, 46, 0.1)',
-                                borderRadius: '6px',
-                                padding: '12px',
-                                display: 'flex',
-                                gap: '10px',
-                                alignItems: 'flex-start'
-                            }}>
-                                <AlertTriangle size={16} color="#FFBD2E" style={{ marginTop: '2px', flexShrink: 0 }} />
-                                <span style={{ fontSize: '0.8rem', color: '#FFBD2E', lineHeight: '1.4' }}>
-                                    This key grants full write access. Keep it secure in your backend environment (.env).
-                                </span>
+                        <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <label style={{ display: 'block', fontSize: '0.85rem', color: '#ef4444', fontWeight: 500 }}>
+                                    Secret API Key
+                                </label>
+                                <button onClick={() => handleRegenerateKey('secret')} disabled={!!isRegenerating} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <RefreshCw size={12} className={isRegenerating === 'secret' ? "spin" : ""} /> Roll Key
+                                </button>
+                            </div>
+                            <div className="input-group" style={{ display: 'flex', background: 'var(--color-bg-input)', borderRadius: '6px', border: '1px solid var(--color-border)', overflow: 'hidden', marginBottom: '12px' }}>
+                                <div style={{ padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', color: '#555', borderRight: '1px solid var(--color-border)' }}><Key size={16} /></div>
+                                <input readOnly value="sk_live_••••••••••••••••••••••••" type="password" style={{ flex: 1, background: 'transparent', border: 'none', color: '#666', padding: '10px', fontFamily: 'monospace', fontSize: '0.9rem', outline: 'none', letterSpacing: '2px' }} />
+                            </div>
+                            <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', padding: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                                <AlertTriangle size={16} color="#ef4444" style={{ marginTop: '2px', flexShrink: 0 }} />
+                                <span style={{ fontSize: '0.8rem', color: '#ef4444', lineHeight: '1.4' }}>Grants full write/delete access. Keep secure in your backend (.env).</span>
                             </div>
                         </div>
                     </div>

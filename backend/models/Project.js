@@ -29,7 +29,12 @@ const projectSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Developer'
     },
-    apiKey: {
+    publishableKey: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    secretKey: {
         type: String,
         required: true,
         unique: true
@@ -39,6 +44,11 @@ const projectSchema = new mongoose.Schema({
         required: true
     },
     collections: [collectionSchema],
+
+    allowedDomains: {
+        type: [String],
+        default: ['*']
+    },
 
     // STORAGE LIMITS (Files)
     storageUsed: { type: Number, default: 0 },

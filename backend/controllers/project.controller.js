@@ -1,5 +1,6 @@
 const mongoose = require("mongoose")
 const Project = require("../models/Project")
+const Developer = require("../models/Developer")
 const Log = require("../models/Log")
 const { getStorage } = require("../utils/storage.manager");
 const { randomUUID } = require("crypto");
@@ -27,25 +28,49 @@ const isExternalStorage = (project) =>
 
 module.exports.createProject = async (req, res) => {
     try {
-        // Validation Applied
+        // POST FOR - PROJECT CREATION
         const { name, description } = createProjectSchema.parse(req.body);
 
-        const rawApiKey = generateApiKey()
-        const hashedkey = hashApiKey(rawApiKey);
+        // --- PROJECT LIMIT CHECK ---
+        const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+        
+        // GET MAX PROJECTS
+        const dev = await Developer.findById(req.user._id);
+        const MAX_PROJECTS = dev?.maxProjects || 3;
 
-        const rawSecret = generateApiKey()
+        const isUserAdmin = req.user.email === ADMIN_EMAIL;
+        const projectCount = await Project.countDocuments({ owner: req.user._id });
+
+        if (!isUserAdmin && projectCount >= MAX_PROJECTS) {
+            return res.status(403).json({ 
+                error: `Project limit reached. Your current plan allows up to ${MAX_PROJECTS} projects.`,
+                limit: MAX_PROJECTS,
+                current: projectCount
+            });
+        }
+        // ---------------------------
+
+        const rawPublishableKey = generateApiKey('pk_live_');
+        const hashedPublishableKey = hashApiKey(rawPublishableKey);
+
+        const rawSecretKey = generateApiKey('sk_live_');
+        const hashedSecretKey = hashApiKey(rawSecretKey);
+
+        const rawJwtSecret = generateApiKey('jwt_');
 
         const newProject = new Project({
             name,
             description,
             owner: req.user._id,
-            apiKey: hashedkey,
-            jwtSecret: rawSecret
+            publishableKey: hashedPublishableKey,
+            secretKey: hashedSecretKey,
+            jwtSecret: rawJwtSecret
         });
         await newProject.save();
 
         const projectObj = newProject.toObject();
-        projectObj.apiKey = rawApiKey;
+        projectObj.publishableKey = rawPublishableKey;
+        projectObj.secretKey = rawSecretKey;
         delete projectObj.jwtSecret;
 
         res.status(201).json(projectObj);
@@ -74,14 +99,15 @@ module.exports.getSingleProject = async (req, res) => {
         project = await getProjectById(req.params.projectId);
         let projectObj;
         if (!project) {
-            project = await Project.findOne({ _id: req.params.projectId, owner: req.user._id }).select('-apiKey -jwtSecret');
+            project = await Project.findOne({ _id: req.params.projectId, owner: req.user._id }).select('-publishableKey -secretKey -jwtSecret');
             if (!project) return res.status(404).json({ error: "Project not found." });
             projectObj = project.toObject();
             await setProjectById(req.params.projectId, project);
         }
 
         projectObj = project;
-        delete projectObj.apiKey;
+        delete projectObj.publishableKey;
+        delete projectObj.secretKey;
         delete projectObj.jwtSecret;
         res.json(projectObj);
     } catch (err) {
@@ -91,32 +117,45 @@ module.exports.getSingleProject = async (req, res) => {
 
 module.exports.regenerateApiKey = async (req, res) => {
     try {
-        const newApiKey = generateApiKey();
+        const { keyType } = req.body; // 'publishable' or 'secret'
+        
+        if (keyType !== 'publishable' && keyType !== 'secret') {
+            return res.status(400).json({ error: "Invalid keyType. Must be 'publishable' or 'secret'." });
+        }
+
+        const prefix = keyType === 'publishable' ? 'pk_live_' : 'sk_live_';
+        const newApiKey = generateApiKey(prefix);
         const hashed = hashApiKey(newApiKey);
 
-        const oldApiProj = await Project.findOne({ _id: req.params.projectId, owner: req.user._id }).select('apiKey');
+        const oldApiProj = await Project.findOne({ _id: req.params.projectId, owner: req.user._id })
+            .select('publishableKey secretKey');
         if (!oldApiProj) return res.status(404).json({ error: "Project not found." });
-        await deleteProjectByApiKeyCache(oldApiProj.apiKey);
+        
+        // CLEAR CACHE
+        await deleteProjectByApiKeyCache(oldApiProj.publishableKey);
+        await deleteProjectByApiKeyCache(oldApiProj.secretKey);
 
+        const updateField = keyType === 'publishable' ? { publishableKey: hashed } : { secretKey: hashed };
 
         const project = await Project.findOneAndUpdate(
             { _id: req.params.projectId, owner: req.user._id },
-            { $set: { apiKey: hashed } },
+            { $set: updateField },
             { new: true }
         );
         if (!project) return res.status(404).json({ error: "Project not found." });
 
         const projectObj = project.toObject();
-        delete projectObj.apiKey;
+        delete projectObj.publishableKey;
+        delete projectObj.secretKey;
         delete projectObj.jwtSecret;
-        res.json({ apiKey: newApiKey, project: projectObj });
+        res.json({ apiKey: newApiKey, keyType, project: projectObj });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
 
 
-//function to validate monguri
+// VALIDATE URI
 const isSafeUri = (uri) => {
     try {
         const parsed = new URL(uri);
@@ -132,17 +171,16 @@ module.exports.updateExternalConfig = async (req, res) => {
     try {
         const { projectId } = req.params;
 
-        // 1. Zod Validation
+        // POST FOR - EXTERNAL CONFIG
         const validatedData = updateExternalConfigSchema.parse(req.body);
         const { dbUri, storageUrl, storageKey, storageProvider } = validatedData;
 
         const updateData = {};
 
-        // 2. Database URI Check & Encryption
+        // DB CONFIG
         if (dbUri) {
             if (!isSafeUri(dbUri)) return res.status(400).json({ error: "DB URI is pointing to a restricted host (localhost/internal)." });
 
-            // Naye model structure ke hisaab se save karein
             updateData['resources.db.config'] = encrypt(JSON.stringify({ dbUri }));
             updateData['resources.db.isExternal'] = true;
 
@@ -168,7 +206,7 @@ module.exports.updateExternalConfig = async (req, res) => {
             // -------------------------
         }
 
-        // 3. Storage Config Encryption
+        // STORAGE CONFIG
         if (storageUrl && storageKey) {
             const storageConfig = {
                 storageUrl,
@@ -189,7 +227,6 @@ module.exports.updateExternalConfig = async (req, res) => {
 
         res.status(200).json({ message: "External configuration updated successfully." });
     } catch (err) {
-        // Zod Error handling ko safe banayein
         if (err.name === 'ZodError') {
             return res.status(400).json({
                 error: err.errors?.[0]?.message || err.issues?.[0]?.message || "Validation failed"
@@ -263,11 +300,12 @@ module.exports.createCollection = async (req, res) => {
 
         await deleteProjectById(projectId);
         await setProjectById(projectId, project);
-        await deleteProjectByApiKeyCache(project.apiKey);
-        await deleteProjectByApiKeyCache(project.apiKey);
-        // Safe Response
+        await deleteProjectByApiKeyCache(project.publishableKey);
+        await deleteProjectByApiKeyCache(project.secretKey);
+        // RESPONSE
         const projectObj = project.toObject();
-        delete projectObj.apiKey;
+        delete projectObj.publishableKey;
+        delete projectObj.secretKey;
         delete projectObj.jwtSecret;
 
         res.status(201).json(projectObj);
@@ -340,11 +378,6 @@ module.exports.getData = async (req, res) => {
 
         const data = await features.query.lean();
 
-        //        let data = [];
-        // if (collectionsList.length > 0) {
-        //     data = await mongoose.connection.db.collection(finalCollectionName).find({}).limit(50).toArray();
-        // }
-
         res.json(data);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -386,7 +419,7 @@ module.exports.insertData = async (req, res) => {
             project.databaseUsed = (project.databaseUsed || 0) + docSize;
         }
         await project.save();
-        console.timeEnd("insert data")
+        await project.save();
 
         res.json(result);
     } catch (err) {
@@ -454,14 +487,13 @@ module.exports.editRow = async (req, res) => {
 
         const oldSize = Buffer.byteLength(JSON.stringify(docToEdit.toObject()));
 
-        // Apply updates
         docToEdit.set(req.body);
 
         const newSize = Buffer.byteLength(JSON.stringify(docToEdit.toObject()));
         const sizeDiff = newSize - oldSize;
 
         if (!project.resources.db.isExternal) {
-            const limit = project.databaseLimit || 500 * 1024 * 1024; // Default 500MB if not set
+            const limit = project.databaseLimit || 500 * 1024 * 1024;
             const currentUsed = project.databaseUsed || 0;
 
             if (currentUsed + sizeDiff > limit) {
@@ -562,7 +594,6 @@ module.exports.uploadFile = async (req, res) => {
 
         res.json({ success: true, path });
     } catch (err) {
-        console.log("upload file ke catch me hu");
         res.status(500).json({ error: err });
     }
 };
@@ -667,7 +698,40 @@ module.exports.updateProject = async (req, res) => {
             { new: true }
         );
         if (!project) return res.status(404).json({ error: "Project not found." });
+        
+        await deleteProjectById(project._id.toString());
+        await setProjectById(project._id.toString(), project);
+        
         res.json(project);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+}
+
+module.exports.updateAllowedDomains = async (req, res) => {
+    try {
+        const { domains } = req.body;
+        if (!Array.isArray(domains) || !domains.every(d => typeof d === 'string')) {
+            return res.status(400).json({ error: "domains must be an array of strings." });
+        }
+
+        const cleanedDomains = domains
+            .map(d => d.trim())
+            .filter(d => d.length > 0);
+
+        const project = await Project.findOneAndUpdate(
+            { _id: req.params.projectId, owner: req.user._id },
+            { $set: { allowedDomains: cleanedDomains } },
+            { new: true }
+        );
+
+        if (!project) return res.status(404).json({ error: "Project not found or access denied." });
+        await deleteProjectById(project._id.toString());
+        await setProjectById(project._id.toString(), project);
+        await deleteProjectByApiKeyCache(project.publishableKey);
+        await deleteProjectByApiKeyCache(project.secretKey);
+
+        res.json({ message: "Allowed domains updated", allowedDomains: project.allowedDomains });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -689,8 +753,6 @@ module.exports.deleteProject = async (req, res) => {
         if (!project) {
             return res.status(404).json({ error: "Project not found or access denied." });
         }
-
-        // collections WILL exist now
         for (const col of project.collections) {
             const collectionName = `${project._id}_${col.name}`;
             try {
@@ -702,7 +764,7 @@ module.exports.deleteProject = async (req, res) => {
             await mongoose.connection.db.dropCollection(`${project._id}_users`);
         } catch (e) { }
 
-        // DELETE ALL FILES (BYOS SAFE)
+        // DELETE FILES
         const supabase = await getStorage(project);
         const bucket = getBucket(project);
 

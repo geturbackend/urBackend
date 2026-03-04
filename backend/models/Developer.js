@@ -13,6 +13,10 @@ const developerSchema = new mongoose.Schema({
     isVerified: {
         type: Boolean,
         default: false
+    },
+    maxProjects: {
+        type: Number,
+        default: 3
     }
 }, { timestamps: true });
 

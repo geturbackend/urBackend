@@ -54,13 +54,15 @@ module.exports.createSchema = async (req, res) => {
         // Clear redis cache
         await deleteProjectById(projectId.toString());
         await setProjectById(projectId.toString(), fullProject);
-        await deleteProjectByApiKeyCache(fullProject.apiKey); 
+        await deleteProjectByApiKeyCache(fullProject.publishableKey); 
+        await deleteProjectByApiKeyCache(fullProject.secretKey); 
         if (req.hashedApiKey) {
             await deleteProjectByApiKeyCache(req.hashedApiKey);
         }
 
         const projectObj = fullProject.toObject();
-        delete projectObj.apiKey;
+        delete projectObj.publishableKey;
+        delete projectObj.secretKey;
         delete projectObj.jwtSecret;
 
         res.status(201).json({ message: "Schema created successfully", project: projectObj });

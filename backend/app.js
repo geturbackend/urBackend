@@ -16,6 +16,9 @@ app.set('trust proxy', 1);
 const GC = require('./utils/GC');
 const { getPublicIp } = require('./utils/network');
 
+// Initialize Queue Workers
+require('./queues/emailQueue');
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -34,7 +37,7 @@ const { authLimiter } = require('./middleware/auth_limiter');
 
 const adminWhitelist = ['https://urbackend.bitbros.in'];
 
-// to allow localhost in developmentt
+// DEV LOCALHOST
 if (process.env.NODE_ENV === 'development') {
     adminWhitelist.push('http://localhost:5173');
 }
@@ -46,8 +49,6 @@ const adminCorsOptions = {
         const allowed = !origin || adminWhitelist.includes(origin);
 
         const end = process.hrtime.bigint();
-        console.log("Pure CORS check time:",
-            Number(end - start) / 1e6, "ms");
 
         if (allowed) {
             callback(null, true);
@@ -65,7 +66,7 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 
-// rate limiter and loggerr IMPORTS 
+// LOGGING
 const { limiter, logger } = require('./middleware/api_usage');
 
 // Route Imports
@@ -75,6 +76,7 @@ const dataRoute = require('./routes/data');
 const userAuthRoute = require('./routes/userAuth');
 const storageRoute = require('./routes/storage');
 const schemaRoute = require('./routes/schemas');
+const releaseRoute = require('./routes/releases');
 
 // ROUTES SETUP 
 app.use('/api/auth/login', authLimiter);           // Strict limiter on login
@@ -85,6 +87,7 @@ app.use('/api/userAuth', limiter, logger, userAuthRoute);
 app.use('/api/data', limiter, cors(adminCorsOptions), logger, dataRoute);
 app.use('/api/schemas', limiter, cors(adminCorsOptions), logger, schemaRoute);
 app.use('/api/storage', limiter, cors(adminCorsOptions), logger, storageRoute);
+app.use('/api/releases', releaseRoute);
 
 app.get('/api/server-ip', async (req, res) => {
     const ip = await getPublicIp();
@@ -111,8 +114,7 @@ app.use((err, req, res, next) => {
         message: err.message
     });
 });
-//  DB and server initialization
-// (Only connect if NOT in Test Mode)
+// INITIALIZATION
 if (process.env.NODE_ENV !== 'test') {
 
     const PORT = process.env.PORT || 1234;
@@ -145,7 +147,7 @@ if (process.env.NODE_ENV !== 'test') {
         console.log(`Server running on port ${PORT}`);
     });
 
-    // handle gracefll shutdwn
+    // SHUTDOWN
     const gracefulShutdown = async () => {
         console.log('🛑 SIGTERM/SIGINT received. Shutting down gracefully...');
 

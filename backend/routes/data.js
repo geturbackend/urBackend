@@ -1,33 +1,31 @@
 const express = require('express');
 const router = express.Router();
 const verifyApiKey = require('../middleware/verifyApiKey');
+const requireSecretKey = require('../middleware/requireSecretKey');
+const projectRateLimiter = require('../middleware/projectRateLimiter');
+const { getCompiledModel } = require("../utils/injectModel");
 const { insertData, getAllData, getSingleDoc, updateSingleData, deleteSingleDoc } = require("../controllers/data.controller")
 
 
-// Dynamic POST Route
-// Example: POST /api/data/products
-router.post('/:collectionName', verifyApiKey, insertData);
+// POST REQ TO INSERT DATA
+router.post('/:collectionName', verifyApiKey, projectRateLimiter, requireSecretKey, insertData);
 
 
-// GET Route to fetch all data from a collection
-// GET /api/data/products
-router.get('/:collectionName', verifyApiKey, getAllData);
+// GET REQ ALL DATA
+router.get('/:collectionName', verifyApiKey, projectRateLimiter, getAllData);
 
 
-// GET Single Item by ID
-// GET /api/data/products/69235c0cc8e73cd3d7bbeab8
-router.get('/:collectionName/:id', verifyApiKey, getSingleDoc);
+// GET REQ SINGLE DATA
+router.get('/:collectionName/:id', verifyApiKey, projectRateLimiter, getSingleDoc);
 
 
-// DELETE Single Item by ID
-// DELETE /api/data/products/69235c0cc8e73cd3d7bbeab8
-router.delete('/:collectionName/:id', verifyApiKey, deleteSingleDoc);
+// DELETE REQ SINGLE DATA
+router.delete('/:collectionName/:id', verifyApiKey, projectRateLimiter, requireSecretKey, deleteSingleDoc);
 
 
 
-// UPDATE Single Item by ID
-// PUT /api/data/products/69235c0cc8e73cd3d7bbeab8
-router.put('/:collectionName/:id', verifyApiKey, updateSingleData);
+// PUT REQ SINGLE DATA
+router.put('/:collectionName/:id', verifyApiKey, projectRateLimiter, requireSecretKey, updateSingleData);
 
 
 module.exports = router;

@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const verifyApiKey = require('../middleware/verifyApiKey');
+const requireSecretKey = require('../middleware/requireSecretKey');
+const projectRateLimiter = require('../middleware/projectRateLimiter');
 const { checkSchema, createSchema } = require("../controllers/schema.controller");
 
-// GET Route to check if a schema exists
-// GET /api/schemas/error_logs
-router.get('/:collectionName', verifyApiKey, checkSchema);
+// GET REQ FETCH SCHEMA
+router.get('/:collectionName', verifyApiKey, projectRateLimiter, checkSchema);
 
-// POST Route to create a new schema
-// POST /api/schemas
-router.post('/', verifyApiKey, createSchema);
+// POST REQ CREATE SCHEMA
+router.post('/', verifyApiKey, projectRateLimiter, requireSecretKey, createSchema);
 
 module.exports = router;

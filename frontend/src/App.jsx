@@ -11,6 +11,8 @@ import CreateProject from './pages/CreateProject';
 import CreateCollection from './pages/CreateCollection';
 import NotFound from './pages/NotFound';
 import Analytics from './pages/Analytics';
+import Releases from './pages/Releases';
+import AdminCreateRelease from './pages/AdminCreateRelease';
 
 import Database from './pages/Database';
 import Storage from './pages/Storage';
@@ -103,6 +105,20 @@ function App() {
           <ProtectedRoute>
             <MainLayout>
               <CreateCollection />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/releases" element={
+          <MainLayout>
+            <Releases />
+          </MainLayout>
+        } />
+
+        <Route path="/admin/create-release" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <AdminCreateRelease />
             </MainLayout>
           </ProtectedRoute>
         } />

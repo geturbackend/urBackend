@@ -94,38 +94,34 @@ function CreateProject() {
                     <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', padding: '1.25rem', marginBottom: '2rem', display: 'flex', gap: '15px' }}>
                         <AlertTriangle color="#ef4444" size={24} style={{ flexShrink: 0, marginTop: '2px' }} />
                         <div>
-                            <strong style={{ color: '#ef4444', display: 'block', marginBottom: '4px' }}>Save this API Key immediately</strong>
+                            <strong style={{ color: '#ef4444', display: 'block', marginBottom: '4px' }}>Save these API Keys immediately</strong>
                             <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                                For security reasons, this key will <strong>only be shown once</strong>. If you lose it, you will need to regenerate it, which may interrupt your application.
+                                For security reasons, these keys will <strong>only be shown once</strong>. If you lose them, you will need to regenerate them.
                             </p>
                         </div>
                     </div>
 
-                    <div className="form-group" style={{ marginBottom: '2rem' }}>
-                        <label className="form-label" style={{ color: 'var(--color-text-main)', fontSize: '0.9rem' }}>Anon Public Key</label>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <div className="input-field" style={{
-                                fontFamily: 'monospace',
-                                backgroundColor: '#111',
-                                color: 'var(--color-primary)',
-                                overflowX: 'auto',
-                                whiteSpace: 'nowrap',
-                                flex: 1,
-                                padding: '12px',
-                                borderRadius: '8px',
-                                border: '1px solid var(--color-border)',
-                                fontSize: '0.95rem'
-                            }}>
-                                {newProject.apiKey}
+                    <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                        <label className="form-label" style={{ color: 'var(--color-primary)', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Publishable API Key (Frontend safe)</span>
+                        </label>
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
+                            <div className="input-field" style={{ fontFamily: 'monospace', backgroundColor: '#111', color: 'var(--color-primary)', overflowX: 'auto', whiteSpace: 'nowrap', flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '0.95rem' }}>
+                                {newProject.publishableKey}
                             </div>
-                            <button
-                                onClick={() => copyToClipboard(newProject.apiKey)}
-                                className="btn btn-secondary"
-                                title="Copy API Key"
-                                style={{ height: 'auto', padding: '0 15px' }}
-                            >
-                                <Copy size={18} />
-                            </button>
+                            <button onClick={() => copyToClipboard(newProject.publishableKey)} className="btn btn-secondary" title="Copy Publishable API Key" style={{ height: 'auto', padding: '0 15px' }}><Copy size={18} /></button>
+                        </div>
+                    </div>
+                    
+                    <div className="form-group" style={{ marginBottom: '2rem' }}>
+                        <label className="form-label" style={{ color: '#ef4444', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Secret API Key (Backend only)</span>
+                        </label>
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
+                            <div className="input-field" style={{ fontFamily: 'monospace', backgroundColor: '#111', color: '#ef4444', overflowX: 'auto', whiteSpace: 'nowrap', flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)', fontSize: '0.95rem' }}>
+                                {newProject.secretKey}
+                            </div>
+                            <button onClick={() => copyToClipboard(newProject.secretKey)} className="btn btn-secondary" style={{ height: 'auto', padding: '0 15px', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)' }} title="Copy Secret API Key"><Copy size={18} /></button>
                         </div>
                     </div>
 

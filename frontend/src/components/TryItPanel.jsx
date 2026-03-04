@@ -20,7 +20,7 @@ export default function TryItPanel({ endpoint, method = "POST" }) {
   async function sendRequest() {
     //  Stop if API key is missing
     if (!apiKey || apiKey.trim() === "") {
-      setError("You need an API key. Go to Dashboard → Create Project → Copy API key.");
+      setError("You need an API key. Go to your Project Details to copy your Publishable or Secret key.");
       return;
     }
 
@@ -60,7 +60,7 @@ export default function TryItPanel({ endpoint, method = "POST" }) {
         className="input-field"
         value={apiKey}
         onChange={(e) => setApiKey(e.target.value)}
-        placeholder="YOUR API KEY"
+        placeholder="pk_live_... OR sk_live_..."
       />
     </div>
 {endpoint.includes(":") && (

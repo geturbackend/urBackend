@@ -25,7 +25,8 @@ const {
     updateExternalConfig,
     deleteExternalDbConfig,
     deleteExternalStorageConfig,
-    analytics
+    analytics,
+    updateAllowedDomains
 } = require("../controllers/project.controller")
 
 const upload = multer({ storage: storage, limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB Limit
@@ -75,6 +76,9 @@ router.delete('/:projectId', authMiddleware, verifyEmail, deleteProject);
 
 // UPDATE PROJECT
 router.patch('/:projectId', authMiddleware, updateProject);
+
+// UPDATE ALLOWED DOMAINS
+router.patch('/:projectId/allowed-domains', authMiddleware, verifyEmail, updateAllowedDomains);
 
 // UPDATE EXTERNAL CONFIG
 router.patch('/:projectId/byod-config', authMiddleware, updateExternalConfig);

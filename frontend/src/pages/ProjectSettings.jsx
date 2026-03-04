@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
-import { Trash2, AlertTriangle, Save, CheckCircle, Copy, Server } from "lucide-react";
+import { Trash2, AlertTriangle, Save, CheckCircle, Copy, Server, Globe, Plus, X } from "lucide-react";
 import { API_URL } from "../config";
 import ConfirmationModal from "./ConfirmationModal";
 
@@ -183,7 +183,13 @@ export default function ProjectSettings() {
       </div>
 
       {/* External Configuration */}
-      <div style={{ display: "grid", gap: "2rem" }}>
+      <div style={{ display: "grid", gap: "2rem", marginBottom: "2rem" }}>
+        <AllowedDomainsForm
+          project={project}
+          projectId={projectId}
+          token={token}
+          onProjectUpdate={setProject}
+        />
         <DatabaseConfigForm
           project={project}
           projectId={projectId}
@@ -884,6 +890,183 @@ function StorageConfigForm({ project, projectId, token, onProjectUpdate }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function AllowedDomainsForm({ project, projectId, token, onProjectUpdate }) {
+  const [domains, setDomains] = useState(project?.allowedDomains || []);
+  const [newDomain, setNewDomain] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (project?.allowedDomains) {
+      setDomains(project.allowedDomains);
+    }
+  }, [project]);
+
+  const handleUpdate = async (updatedDomains) => {
+    setLoading(true);
+    try {
+      await axios.patch(
+        `${API_URL}/api/projects/${projectId}/allowed-domains`,
+        { domains: updatedDomains },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("Allowed domains updated!");
+      setDomains(updatedDomains);
+      onProjectUpdate((prev) => ({ ...prev, allowedDomains: updatedDomains }));
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to update allowed domains");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addDomain = () => {
+    const domain = newDomain.trim();
+    if (!domain) return;
+    
+    // basic validation
+    if (domains.includes(domain)) {
+      return toast.error("Domain already added");
+    }
+
+    const updated = [...domains, domain];
+    handleUpdate(updated);
+    setNewDomain("");
+  };
+
+  const removeDomain = (domainToRemove) => {
+    const updated = domains.filter((d) => d !== domainToRemove);
+    handleUpdate(updated);
+  };
+
+  return (
+    <div className="card" style={{ position: "relative", overflow: "hidden" }}>
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "4px",
+          height: "100%",
+          background: "#6366f1",
+        }}
+      ></div>
+
+      <div style={{ marginBottom: "1rem" }}>
+        <h3
+          style={{
+            fontSize: "1.1rem",
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
+          <Globe size={20} color="#6366f1" /> Allowed Domains (CORS)
+        </h3>
+        <p
+          style={{
+            color: "var(--color-text-muted)",
+            fontSize: "0.9rem",
+            marginTop: "5px",
+            lineHeight: "1.5"
+          }}
+        >
+          Restrict which websites can use your <strong>Publishable API Key</strong>. 
+          Use <code>*</code> to allow all domains, or specify domains like <code>https://example.com</code> or <code>*.example.com</code>.
+        </p>
+      </div>
+
+      <div style={{ marginTop: "1.5rem" }}>
+        <div style={{ display: "flex", gap: "10px", marginBottom: "1rem" }}>
+          <input
+            type="text"
+            className="input-field"
+            placeholder="e.g., https://mywebsite.com or *.mywebsite.com"
+            value={newDomain}
+            onChange={(e) => setNewDomain(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addDomain();
+              }
+            }}
+            style={{
+              flex: 1,
+              padding: "10px 12px",
+              background: "var(--color-bg-input)",
+              border: "1px solid var(--color-border)",
+              borderRadius: "8px",
+              color: "#fff",
+            }}
+          />
+          <button
+            onClick={addDomain}
+            className="btn btn-secondary"
+            disabled={loading || !newDomain.trim()}
+            style={{ padding: "0 16px", height: "auto" }}
+          >
+            <Plus size={18} /> Add
+          </button>
+        </div>
+
+        {domains.length === 0 ? (
+          <div style={{ padding: "1rem", textAlign: "center", color: "var(--color-text-muted)", background: "rgba(255,255,255,0.02)", borderRadius: "8px", border: "1px dashed var(--color-border)" }}>
+            No domains configured. Your publishable key won't work on the web until you add <code>*</code> or specific domains.
+          </div>
+        ) : (
+          <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "8px" }}>
+            {domains.map((domain) => (
+              <li
+                key={domain}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "10px 14px",
+                  background: "var(--color-bg-elevated)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "6px",
+                  fontSize: "0.95rem"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  {domain === "*" ? (
+                    <span style={{ color: "#10b981", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
+                       <AlertTriangle size={14} color="#10b981" /> ALLOW ALL (*)
+                    </span>
+                  ) : (
+                    <span style={{ fontFamily: "monospace" }}>{domain}</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => removeDomain(domain)}
+                  disabled={loading}
+                  aria-label="Remove domain"
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--color-text-muted)",
+                    cursor: "pointer",
+                    padding: "4px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "4px"
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.color = "#ea5455"}
+                  onMouseOut={(e) => e.currentTarget.style.color = "var(--color-text-muted)"}
+                >
+                  <X size={16} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

@@ -5,18 +5,19 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "test": "cross-env NODE_ENV=test jest --testTimeout=10000"
+    "test": "cross-env NODE_ENV=test jest --testTimeout=10000 --setupFiles ./tests/jest.setup.js"
   },
   "author": "",
   "license": "MIT",
   "dependencies": {
     "@supabase/supabase-js": "^2.84.0",
     "bcryptjs": "^3.0.2",
+    "bullmq": "^5.70.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-rate-limit": "^8.2.1",
-    "ioredis": "^5.9.2",
+    "ioredis": "^5.10.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.2",
     "multer": "^2.0.2",
