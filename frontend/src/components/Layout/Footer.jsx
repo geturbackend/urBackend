@@ -2,6 +2,12 @@ import { Link } from 'react-router-dom';
 import { Github, ArrowRight, Database } from 'lucide-react';
 import { ADMIN_EMAIL } from '../../config';
 
+/**
+ * Renders the site footer with branding, product/connect navigation, a newsletter input, social links, legal text, and a large decorative background wordmark.
+ *
+ * The component is presentational and includes responsive styles for desktop and mobile layouts.
+ * @returns {JSX.Element} The footer element containing the footer layout and embedded styles.
+ */
 export default function Footer() {
     return (
         <footer className="modern-footer">
@@ -12,9 +18,8 @@ export default function Footer() {
 
                     {/* Brand / Newsletter Column */}
                     <div className="footer-brand-col">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem' }}>
-                            <Database size={24} color="var(--color-primary)" />
-                            <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff' }}>urBackend</span>
+                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
+                            <img src="/urBACKEND_NAV_LOGO (2).png" alt="urBackend Logo" style={{ height: '80px', width: 'auto' }} />
                         </div>
                         <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem', maxWidth: '300px' }}>
                             The instant Backend-as-a-Service for frontend developers. Ship faster.

@@ -3,8 +3,18 @@ import { useLocation, matchPath } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import ProjectNavbar from './ProjectNavbar';
-import logoImage from '../../assets/logo_u.png';
+// Use the new official logo from public directory
+const logoImage = "/urBACKEND_NAV_LOGO (2).png";
 
+/**
+ * App shell that renders the global sidebar, header, or a project-specific navbar and places page content.
+ *
+ * Renders a mobile overlay and global sidebar/header when not on a project route; renders a project navbar and a full-width main area when the current path matches `/project/:projectId/*`. Adjusts top padding and content padding for project routes and for paths that include `/database`.
+ *
+ * @param {object} props - Component props.
+ * @param {import('react').ReactNode} props.children - The page content to render inside the layout.
+ * @returns {JSX.Element} The composed layout element containing navigation and the provided children.
+ */
 function MainLayout({ children }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const location = useLocation();

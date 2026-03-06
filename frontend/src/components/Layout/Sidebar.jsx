@@ -5,6 +5,15 @@ import {
     ArrowLeft, FileText, UserCog, LogOut, X, Rocket // Import Rocket
 } from 'lucide-react';
 
+/**
+ * Render the application's sidebar with navigation links for either project-specific modules or general pages.
+ *
+ * @param {Object} props
+ * @param {string} props.logo - URL or import for the logo image shown when no project is selected.
+ * @param {boolean} props.isOpen - Whether the sidebar is open on mobile (adds mobile-open class when true).
+ * @param {Function} props.onClose - Callback invoked to close the sidebar (used for mobile navigation and the header close button).
+ * @returns {JSX.Element} The sidebar React element.
+ */
 function Sidebar({ logo, isOpen, onClose }) { // Props received
     const location = useLocation();
     const { projectId } = useParams();
@@ -27,8 +36,7 @@ function Sidebar({ logo, isOpen, onClose }) { // Props received
                     </Link>
                 ) : (
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <img src={logo} alt="Logo" style={{ height: '24px' }} />
-                        <span className="sidebar-logo-text">urBackend</span>
+                        <img src={logo} alt="urBackend Logo" style={{ height: '32px', width: 'auto' }} />
                     </div>
                 )}
 

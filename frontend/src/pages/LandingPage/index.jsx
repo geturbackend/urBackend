@@ -26,6 +26,13 @@ import { motion as Motion } from 'framer-motion';
 import Footer from '../../components/Layout/Footer';
 import './style.css';
 
+/**
+ * Render the full landing page UI for the product, including responsive navigation, hero, demo panel, feature and pricing sections, BYO infrastructure content, FAQ, and footer.
+ *
+ * The component manages UI state for the mobile menu, scroll-based nav visibility, a simulated demo request, and FAQ expansion. It adapts navigation and CTAs based on authentication and provides a lightweight demo that simulates an API response.
+ *
+ * @returns {JSX.Element} The rendered landing page element.
+ */
 function LandingPage() {
     const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
@@ -114,9 +121,8 @@ function LandingPage() {
 
             <nav className={`nav-glass ${!isNavVisible ? 'nav-hidden' : ''} ${scrolled ? 'nav-scrolled' : ''}`}>
                 <div className="nav-container">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 800, fontSize: '1.2rem', flex: 1 }}>
-                        <img src="/logo_u.png" alt="urBackend Logo" style={{ height: '32px', width: 'auto' }} />
-                        <span style={{ letterSpacing: '-0.5px' }}>urBackend</span>
+                    <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                        <img src="/urBACKEND_NAV_LOGO (2).png" alt="urBackend Logo" style={{ height: '40px', width: 'auto' }} />
                     </div>
 
                     <div className="nav-links" style={{ display: window.innerWidth > 768 ? 'flex' : 'none', gap: '32px', alignItems: 'center', fontSize: '0.95rem', color: '#888', fontWeight: 500 }}>
@@ -157,8 +163,8 @@ function LandingPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, ease: "easeOut" }}
                 >
-                    Instant Backend.<br />
-                    <span className="text-gradient-primary">Just for Frontend Devs.</span>
+                    Bring your own MongoDB.<br />
+                    <span className="text-gradient-primary">Get a production-ready backend in 60 seconds.</span>
                 </Motion.h1>
 
                 <Motion.p 
@@ -167,7 +173,7 @@ function LandingPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
                 >
-                    No boilerplate. No servers. Get Database, Auth, and Storage APIs in seconds.
+                    your backend — your database — your rules.
                 </Motion.p>
 
                 <Motion.div 
@@ -284,7 +290,7 @@ function LandingPage() {
             </div>
 
             <div id="features" style={{ padding: '8rem 0', background: '#030303', borderTop: '1px solid rgba(255, 255, 255, 0.05)', position: 'relative', overflow: 'hidden' }}>
-                <div className="section-glow" style={{ bottom: '-10%', left: '-10%', background: 'radial-gradient(circle, rgba(62,207,142,0.06) 0%, transparent 70%)' }}></div>
+                <div className="section-glow" style={{ bottom: '-10%', left: '-10%', background: 'radial-gradient(circle, rgba(0, 245, 212, 0.06) 0%, transparent 70%)' }}></div>
                 <div style={{ textAlign: 'center', marginBottom: '5rem', position: 'relative', zIndex: 1 }}>
                     <h2 className="section-title">Complete Backend Suite</h2>
                     <p className="section-desc">Enterprise-grade tools packaged for individual developers.</p>
@@ -293,7 +299,7 @@ function LandingPage() {
                 <div className="bento-grid">
                     <div className="bento-item bento-span-8">
                         <div>
-                            <div className="bento-icon" style={{ background: 'rgba(62, 207, 142, 0.1)', color: '#3ECF8E', boxShadow: '0 0 20px rgba(62, 207, 142, 0.2)' }}>
+                            <div className="bento-icon" style={{ background: 'rgba(0, 245, 212, 0.1)', color: '#00f5d4', boxShadow: '0 0 20px rgba(0, 245, 212, 0.2)' }}>
                                 <Database strokeWidth={1.5} />
                             </div>
                             <h3 className="bento-title">Managed NoSQL Database</h3>
@@ -302,9 +308,9 @@ function LandingPage() {
                                 Scale from 10 to 10M records without managing servers.
                             </p>
                             <ul style={{ marginTop: '1rem', color: '#666', listStyle: 'none', padding: 0, display: 'grid', gap: '8px' }}>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={14} color="#3ECF8E" /> Strict Type Validation</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={14} color="#3ECF8E" /> Auto-generated API Endpoints</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={14} color="#3ECF8E" /> Real-time Indexing</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={14} color="#00f5d4" /> Strict Type Validation</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={14} color="#00f5d4" /> Auto-generated API Endpoints</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={14} color="#00f5d4" /> Real-time Indexing</li>
                             </ul>
                         </div>
                     </div>
@@ -363,7 +369,7 @@ function LandingPage() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
                         <div className="card" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '3rem', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                                <div style={{ padding: '12px', background: 'rgba(62, 207, 142, 0.1)', borderRadius: '12px', color: '#3ECF8E', boxShadow: '0 0 20px rgba(62, 207, 142, 0.2)' }}>
+                                <div style={{ padding: '12px', background: 'rgba(0, 245, 212, 0.1)', borderRadius: '12px', color: '#00f5d4', boxShadow: '0 0 20px rgba(0, 245, 212, 0.2)' }}>
                                     <Database strokeWidth={1.5} size={32} />
                                 </div>
                                 <h3 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#fff' }}>BYO Database</h3>
@@ -404,7 +410,7 @@ function LandingPage() {
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '6rem' }}>
                         <div className="use-case-card">
-                            <Layers strokeWidth={1.5} size={32} color="#3ECF8E" style={{ marginBottom: '1.5rem' }} />
+                            <Layers strokeWidth={1.5} size={32} color="#facc15" style={{ marginBottom: '1.5rem' }} />
                             <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem', color: '#fff' }}>SaaS Platforms</h3>
                             <p style={{ color: '#a1a1aa', lineHeight: 1.6 }}>Handle complex data relationships, multi-tenant auth, and subscriptions securely.</p>
                         </div>
@@ -433,15 +439,15 @@ function LandingPage() {
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', maxWidth: '900px', margin: '0 auto' }}>
                         <div className="pricing-card" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', padding: '3rem', borderRadius: '16px', position: 'relative' }}>
-                            <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'rgba(62, 207, 142, 0.1)', color: '#3ECF8E', padding: '4px 12px', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 700 }}>ACTIVE</div>
+                            <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'rgba(0, 245, 212, 0.1)', color: '#00f5d4', padding: '4px 12px', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 700 }}>ACTIVE</div>
                             <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff', marginBottom: '0.5rem' }}>Developer Beta</h3>
                             <div style={{ fontSize: '3rem', fontWeight: 800, color: '#fff', marginBottom: '1rem' }}>$0<span style={{ fontSize: '1rem', color: '#666', fontWeight: 400 }}>/mo</span></div>
                             <p style={{ color: '#888', marginBottom: '2rem', fontSize: '0.95rem' }}>Perfect for side projects, MVPs, and learning.</p>
                             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2rem 0', display: 'grid', gap: '12px' }}>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#3ECF8E" /> Unlimited Projects</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#3ECF8E" /> 500MB Storage</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#3ECF8E" /> Community Support</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#3ECF8E" /> BYO Infrastructure</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> Unlimited Projects</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> 500MB Storage</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> Community Support</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> BYO Infrastructure</li>
                             </ul>
                             <Link to="/signup" className="btn btn-primary" style={{ width: '100%', textAlign: 'center', padding: '12px', fontWeight: 600 }}>Get Started Now</Link>
                         </div>
@@ -461,7 +467,7 @@ function LandingPage() {
                 </div>
             </div>
 
-            <div className="cta-section" style={{ padding: '8rem 0', background: 'radial-gradient(circle at 50% 50%, rgba(62, 207, 142, 0.05) 0%, transparent 70%)', textAlign: 'center' }}>
+            <div className="cta-section" style={{ padding: '8rem 0', background: 'radial-gradient(circle at 50% 50%, rgba(0, 245, 212, 0.05) 0%, transparent 70%)', textAlign: 'center' }}>
                 <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 1.5rem' }}>
                     <h2 style={{ fontSize: '3rem', fontWeight: 800, marginBottom: '1.5rem', letterSpacing: '-0.04em' }}>Ready to ship?</h2>
                     <p style={{ fontSize: '1.25rem', color: '#a1a1aa', marginBottom: '3rem' }}>Join hundreds of developers building the future without the backend headaches.</p>
