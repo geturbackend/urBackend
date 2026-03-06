@@ -9,7 +9,6 @@ const { loginSchema, signupSchema, userSignupSchema, resetPasswordSchema, onlyEm
 const { getConnection } = require('../utils/connection.manager');
 const { getCompiledModel } = require('../utils/injectModel');
 
-// No longer using getAuthCollection, using getCompiledModel directly in handlers
 
 // POST REQ FOR SIGNUP
 module.exports.signup = async (req, res) => {
