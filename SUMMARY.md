@@ -6,6 +6,7 @@
 * [Getting Started 🛠️](docs/getting-started.md)
 * [Authentication 🔐](docs/authentication.md)
 * [Database Operations 🗄️](docs/database.md)
+* [Schema Creation 🧱](docs/schemas.md)
 * [Cloud Storage ☁️](docs/storage.md)
 * [Security & Keys 🛡️](docs/security.md)
 

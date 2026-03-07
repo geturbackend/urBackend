@@ -270,7 +270,7 @@ export default function Auth() {
             );
             setEditingUser(res.data);
             const customFields = { ...res.data };
-            ['_id', 'email', 'password', 'emailVerified', 'createdAt', 'updatedAt'].forEach(key => { delete customFields[key]; });
+            ['_id', 'password', 'emailVerified', 'createdAt', 'updatedAt'].forEach(key => { delete customFields[key]; });
             setEditFormData(customFields);
         } catch {
             toast.error("Failed to fetch user details");
