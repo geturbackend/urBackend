@@ -17,7 +17,7 @@ Traditional BaaS platforms lock you into their database and proprietary APIs. ur
 - 🛡️ **Advanced Security**: Integrated rate limiting, NoSQL injection protection, and dual-key separation (`pk_live` & `sk_live`).
 - ☁️ **BYOD (Bring Your Own Database)**: Connect your own MongoDB or Supabase instance if you need total data control.
 
-## Why urBackend?
+## The Problem We Solve
 
 Traditional backend development is slow. You have to setup servers, configure databases, write boilerplate auth logic, and manage deployments. 
 
