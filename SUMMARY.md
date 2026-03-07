@@ -1,6 +1,6 @@
 # Summary
 
-### Documentation 📚
+* [Summary](README.md)
 * [API Quick Reference 📑](docs/api-reference.md)
 * [Introduction 🚀](docs/introduction.md)
 * [Getting Started 🛠️](docs/getting-started.md)
@@ -10,7 +10,6 @@
 * [Security & Keys 🛡️](docs/security.md)
 
 ---
-
 ### Project & Community 🤝
 * [Architecture Diagram](ARCHITECTURE_DIAGRAM.md)
 * [Contributing](CONTRIBUTING.md)

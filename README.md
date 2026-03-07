@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <b>The Instant Backend-as-a-Service for Frontend Developers.</b><br/>
-  <i>Bring your own MongoDB. Get a production-ready backend in 60 seconds.</i>
+  <b>Bring your own MongoDB. Get a production-ready backend in 60 seconds.</b><br/>
+  <i>your backend — your database — your rules.</i>
 </p>
 
 <p align="center">
@@ -26,72 +26,70 @@
 
 ---
 
-## 💡 Why urBackend?
-
-Building a backend is slow, repetitive, and expensive. urBackend flips the script by giving you **full control** without the **boilerplate**.
-
-- **No Vendor Lock-in**: Connect your own MongoDB Atlas or self-hosted instance. Your data, your rules.
-- **Speed to Production**: Go from zero to a live, secure REST API in under 60 seconds.
-- **Frontend First**: Designed specifically to match the mental model of frontend developers.
-- **Scalable by Design**: Built on industrial-strength tech (Node.js, Redis, BullMQ) to handle your growth.
-
----
+urBackend is an **Open-Source BaaS** built to eliminate the complexity of backend management. It provides everything you need to power your next big idea—accessible via a unified REST API.
 
 ## 🟢 Powerful Features
 
 | Feature | Description |
 | :--- | :--- |
-| 🗄️ **Instant NoSQL** | Auto-generated REST APIs for your MongoDB collections. |
-| 🔐 **Managed Auth** | Built-in Signup, Login, and JWT session management. |
-| ☁️ **Cloud Storage** | Manage media assets with instant public CDN links. |
-| 🔌 **BYO Database** | Already have data? Plug in your existing MongoDB cluster. |
-| 🛡️ **Dual-Key Safety** | Separate Public/Secret keys for secure frontend/backend access. |
-| 📊 **Real-time Analytics** | Monitor requests, storage, and health from a beautiful UI. |
+| **Instant NoSQL** | Create collections and push JSON data instantly with zero boilerplate. |
+| **Managed Auth** | Sign Up, Login, and Profile management with JWT built-in. |
+| **Cloud Storage** | Managed file/image uploads with public CDN links. |
+| **BYO Database** | Connect your own MongoDB Atlas or self-hosted instance. |
+| **Real-time Analytics** | Monitor traffic and resource usage from a premium dashboard. |
+| **Secure Architecture** | Dual-key separation (`pk_live` & `sk_live`) for total safety. |
 
 ---
 
-## 🚀 How it Works
+## 🚀 Experience the Pulse
 
-```mermaid
-graph LR
-    A[1. Link DB] --> B[2. Define Schema]
-    B --> C[3. 🚀 Ship Fast]
-```
+Go from zero to a live backend in **under 60 seconds**.
 
-1.  **Initialize**: Create a project and link your MongoDB URI in the [Dashboard](https://urbackend.bitbros.in).
-2.  **Model**: Visually define your collections and schemas—validation is handled automatically.
-3.  **Execute**: Start hitting your auto-generated endpoints immediately.
+1.  **Initialize**: Create a project on the [Dashboard](https://urbackend.bitbros.in).
+2.  **Model**: Visually define your collections and schemas.
+3.  **Execute**: Push and pull data immediately using your Instant API Key.
 
-### One-line Integration
 ```javascript
-// Instant CRUD for any collection
-const users = await fetch('https://api.urbackend.bitbros.in/api/data/users', {
-  headers: { 'x-api-key': 'pk_live_...' }
+// Power your UI with zero backend boilerplate
+const res = await fetch('https://api.urbackend.bitbros.in/api/data/products', {
+  headers: { 'x-api-key': 'your_pk_live_key' }
 });
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## 🏗️ How it Works (The Visual Flow)
 
-urBackend is built with a focus on performance and reliability:
+```mermaid
+graph LR
+    A[1. Connect MongoDB] --> B[2. Define Collections]
+    B --> C[3. 🚀 Instant REST APIs]
+    C --> D[4. Scale & Monitor]
+```
 
-- **Runtime**: Node.js & Express
-- **State/Queue**: Redis & BullMQ
-- **Data Layer**: MongoDB (Mongoose)
-- **Frontend**: React.js (Vite)
-- **Styling**: Vanilla CSS & Lucide Icons
-- **Deployment**: Integrated CI/CD via GitHub Actions
+---
+
+## 🛠️ Infrastructure
+
+<div align="center">
+
+| **Core System** | **Developer UI** | **Data Layer** |
+| :--- | :--- | :--- |
+| Node.js & Express | React.js (Vite) | MongoDB (Mongoose) |
+| JWT Authentication | Lucide React | Redis & BullMQ |
+| Storage Manager | Recharts | Supabase (BYOD) |
+
+</div>
 
 ---
 
 ## 🤝 Community
 
-We are building a community of faster builders. Join us!
+Join hundreds of developers building faster without the backend headaches.
 
-- **Join the Discord**: [discord.gg/CXJjvJkNWn](https://discord.gg/CXJjvJkNWn)
-- **Report Bugs**: [GitHub Issues](https://github.com/yash-pouranik/urbackend/issues)
-- **Contribute**: Check out our [Contributing Guide](CONTRIBUTING.md)
+- [GitHub Issues](https://github.com/yash-pouranik/urbackend/issues): Report bugs & request features.
+- [Discord Channel](https://discord.gg/CXJjvJkNWn): Join the conversation.
+- [Contributing](CONTRIBUTING.md): Help us grow the ecosystem.
 
 ---
 
