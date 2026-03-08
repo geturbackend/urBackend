@@ -13,6 +13,7 @@
   <a href="https://urbackend.bitbros.in"><strong>Dashboard</strong></a> ·
   <a href="docs/introduction.md"><strong>Docs</strong></a> ·
   <a href="docs/getting-started.md"><strong>Quick Start</strong></a> ·
+  <a href="DEPLOYMENT.md"><strong>Self-Hosting</strong></a> ·
   <a href="https://discord.gg/CXJjvJkNWn"><strong>Discord</strong></a>
 </p>
 
@@ -48,47 +49,4 @@ Go from zero to a live backend in **under 60 seconds**.
 
 1.  **Initialize**: Create a project on the [Dashboard](https://urbackend.bitbros.in).
 2.  **Model**: Visually define your collections and schemas.
-3.  **Execute**: Push and pull data immediately using your Instant API Key.
-
-```javascript
-// Power your UI with zero backend boilerplate
-const res = await fetch('https://api.urbackend.bitbros.in/api/data/products', {
-  headers: { 'x-api-key': 'your_pk_live_key' }
-});
-```
-
----
-
-## 🏗️ How it Works (The Visual Flow)
-
-```mermaid
-graph LR
-    A[1. Connect MongoDB] --> B[2. Define Collections]
-    B --> C[3. 🚀 Instant REST APIs]
-    C --> D[4. Scale & Monitor]
-```
-
----
-
-## 🏗️ Architecture
-
-Explore our [Architecture Diagram](ARCHITECTURE_DIAGRAM.md) to understand the system design, core components, and data flow in detail.
-
----
-## 🤝 Community
-
-Join hundreds of developers building faster without the backend headaches.
-
-- [GitHub Issues](https://github.com/yash-pouranik/urbackend/issues): Report bugs & request features.
-- [Discord Channel](https://discord.gg/CXJjvJkNWn): Join the conversation.
-- [Contributing](CONTRIBUTING.md): Help us grow the ecosystem.
-
----
-
-## Contributors
-
-<a href="https://github.com/yash-pouranik/urbackend/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=yash-pouranik/urbackend" />
-</a>
-
-Built with ❤️ by the **urBackend** community.
+3.  **Execute**: Push and pull data immediately using your 
