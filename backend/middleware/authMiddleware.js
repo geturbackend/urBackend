@@ -22,6 +22,7 @@ module.exports = function (req, res, next) {
         // Verify the token using the secret key
         const verified = jwt.verify(token, process.env.JWT_SECRET);
 
+
         // Attach decoded token data to request object
         req.user = verified;
 
@@ -32,6 +33,6 @@ module.exports = function (req, res, next) {
         console.error(err);
 
         // Do not expose detailed error information in production
-        res.status(400).send('Invalid Token');
+        res.status(400).json({ error: 'Invalid Token' });
     }
 };

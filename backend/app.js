@@ -84,11 +84,7 @@ app.use('/api/projects', cors(adminCorsOptions), dashboardLimiter, projectRoute)
 app.use('/api/userAuth', cors(adminCorsOptions), limiter, logger, userAuthRoute);
 app.use('/api/releases', cors(adminCorsOptions), releaseRoute);
 
-// For project-specific routes, we handle CORS dynamically inside `verifyApiKey.js` 
-// and a custom pre-flight middleware to allow varying allowedDomains.
 const projectCorsPreflight = (req, res, next) => {
-    // Basic catch-all for OPTIONS requests so the browser doesn't get blocked
-    // verifyApiKey handles the actual domain verification for GET/POST/PUT/DELETE
     res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
     res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
     res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-api-key");
