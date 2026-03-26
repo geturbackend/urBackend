@@ -12,6 +12,7 @@ const express = require('express')
 const mongoose = require('mongoose')
 const cors = require('cors')
 const cookieParser = require('cookie-parser');
+const csurf = require('csurf');
 const rateLimit = require('express-rate-limit');
 const app = express();
 app.set('trust proxy', 1);
@@ -26,6 +27,7 @@ const { emailQueue, authEmailQueue } = require('@urbackend/common');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(csurf({ cookie: true }));
 
 const dashboardLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
