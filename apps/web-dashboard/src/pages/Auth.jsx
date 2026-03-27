@@ -143,6 +143,14 @@ export default function Auth() {
     const usersCollection = project?.collections?.find(c => c.name === 'users');
     const hasUserCollection = !!usersCollection;
 
+    const getApiErrorMessage = (err, fallback) => {
+        const data = err?.response?.data;
+        if (!data) return fallback;
+        if (typeof data.message === 'string' && data.message.trim()) return data.message;
+        if (typeof data.error === 'string' && data.error.trim()) return data.error;
+        return fallback;
+    };
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -196,7 +204,7 @@ export default function Auth() {
 
         } catch (err) {
             console.error(err);
-            toast.error("Failed to enable authentication");
+            toast.error(getApiErrorMessage(err, "Failed to enable authentication"));
         } finally {
             setIsEnabling(false);
         }
