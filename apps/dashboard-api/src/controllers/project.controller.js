@@ -18,16 +18,42 @@ const { isProjectStorageExternal, isProjectDbExternal, getBucket } = require("@u
 const { v4: uuidv4 } = require('uuid');
 const { getPublicIp } = require("@urbackend/common");
 
+const normalizeFieldKey = (key) => String(key || '').replace(/\uFEFF/g, '').trim();
+
+const sanitizeSchemaFields = (schema = []) => {
+    if (!Array.isArray(schema)) return [];
+    return schema
+        .map((field) => {
+            if (!field || typeof field !== 'object') return null;
+            const normalizedKey = normalizeFieldKey(field.key);
+            if (!normalizedKey) return null;
+
+            const next = { ...field, key: normalizedKey };
+            if (Array.isArray(field.fields)) {
+                next.fields = sanitizeSchemaFields(field.fields);
+            }
+            if (field.items && typeof field.items === 'object') {
+                next.items = { ...field.items };
+                if (Array.isArray(field.items.fields)) {
+                    next.items.fields = sanitizeSchemaFields(field.items.fields);
+                }
+            }
+            return next;
+        })
+        .filter(Boolean);
+};
+
 const validateUsersSchema = (schema) => {
     if (!Array.isArray(schema)) return false;
-    const hasEmail = schema.find(f => f.key === 'email' && f.type === 'String' && f.required);
-    const hasPassword = schema.find(f => f.key === 'password' && f.type === 'String' && f.required);
+    const sanitizedSchema = sanitizeSchemaFields(schema);
+    const hasEmail = sanitizedSchema.find(f => f.key === 'email' && f.type === 'String' && f.required);
+    const hasPassword = sanitizedSchema.find(f => f.key === 'password' && f.type === 'String' && f.required);
     return !!(hasEmail && hasPassword);
 };
 
 const getDefaultRlsForCollection = (collectionName, schema = []) => {
     const normalizedName = String(collectionName || '').toLowerCase();
-    const keys = Array.isArray(schema) ? schema.map(f => f?.key).filter(Boolean) : [];
+    const keys = sanitizeSchemaFields(schema).map(f => f.key);
 
     let ownerField = 'userId';
     if (normalizedName === 'users') {
@@ -339,6 +365,7 @@ module.exports.deleteExternalStorageConfig = async (req, res) => {
 module.exports.createCollection = async (req, res) => {
     try {
         const { projectId, collectionName, schema } = createCollectionSchema.parse(req.body);
+        const sanitizedSchema = sanitizeSchemaFields(schema);
 
         const project = await Project.findOne({ _id: projectId, owner: req.user._id });
         if (!project) return res.status(404).json({ error: 'Project not found' });
@@ -349,15 +376,15 @@ module.exports.createCollection = async (req, res) => {
         if (!project.jwtSecret) project.jwtSecret = uuidv4();
 
         if (collectionName === 'users') {
-            if (!validateUsersSchema(schema)) {
+            if (!validateUsersSchema(sanitizedSchema)) {
                 return res.status(422).json({ error: "The 'users' collection must have required 'email' and 'password' string fields." });
             }
         }
 
         project.collections.push({
             name: collectionName,
-            model: schema,
-            rls: getDefaultRlsForCollection(collectionName, schema)
+            model: sanitizedSchema,
+            rls: getDefaultRlsForCollection(collectionName, sanitizedSchema)
         });
         await project.save();
 
@@ -1007,10 +1034,20 @@ module.exports.updateCollectionRls = async (req, res) => {
             return res.status(400).json({ error: "Unsupported RLS mode. Only 'owner-write-only' is allowed in V1." });
         }
 
-        const modelKeys = (collection.model || []).map(f => f.key);
-        const nextOwnerField = ownerField || collection?.rls?.ownerField || 'userId';
+        const modelKeys = (collection.model || [])
+            .map(f => String(f?.key || '').trim())
+            .filter(Boolean);
+        const modelKeySet = new Set(modelKeys);
+        const modelKeyLowerMap = new Map(modelKeys.map(k => [k.toLowerCase(), k]));
 
-        if (nextOwnerField !== '_id' && !modelKeys.includes(nextOwnerField)) {
+        const requestedOwnerRaw = String(ownerField ?? collection?.rls?.ownerField ?? 'userId').trim();
+        const requestedOwnerLower = requestedOwnerRaw.toLowerCase();
+        const canonicalOwnerField = modelKeySet.has(requestedOwnerRaw)
+            ? requestedOwnerRaw
+            : modelKeyLowerMap.get(requestedOwnerLower);
+        const nextOwnerField = requestedOwnerRaw === '_id' ? '_id' : (canonicalOwnerField || requestedOwnerRaw);
+
+        if (nextOwnerField !== '_id' && !modelKeySet.has(nextOwnerField)) {
             return res.status(400).json({
                 error: "Invalid owner field",
                 message: `ownerField '${nextOwnerField}' not found in collection schema`

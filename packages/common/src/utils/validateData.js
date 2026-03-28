@@ -1,5 +1,23 @@
 const mongoose = require('mongoose');
 
+const normalizeKey = (key) => String(key || '').replace(/\uFEFF/g, '').trim();
+
+const buildIncomingMaps = (incomingData = {}) => {
+    const normalizedValueMap = new Map();
+    const canonicalKeyMap = new Map();
+
+    for (const [rawKey, value] of Object.entries(incomingData)) {
+        const normalized = normalizeKey(rawKey);
+        if (!normalized) continue;
+        if (!normalizedValueMap.has(normalized)) {
+            normalizedValueMap.set(normalized, value);
+            canonicalKeyMap.set(normalized, rawKey);
+        }
+    }
+
+    return { normalizedValueMap, canonicalKeyMap };
+};
+
 // Recursive data validator for schema fields
 // Returns error string or null if valid
 function validateField(value, field) {
@@ -62,8 +80,13 @@ function validateField(value, field) {
 // Returns { error } or { cleanData }
 function validateData(incomingData, schemaRules) {
     const cleanData = { ...incomingData }; // Start with all data
+    const { normalizedValueMap } = buildIncomingMaps(incomingData);
+
     for (const field of schemaRules) {
-        const value = incomingData[field.key];
+        const fieldKey = normalizeKey(field.key);
+        const value = normalizedValueMap.has(fieldKey)
+            ? normalizedValueMap.get(fieldKey)
+            : incomingData[field.key];
 
         const error = validateField(value, field);
         if (error) return { error };
@@ -79,17 +102,21 @@ function validateData(incomingData, schemaRules) {
 // Validate partial update data (non-required fields can be missing)
 function validateUpdateData(incomingData, schemaRules) {
     const updateData = { ...incomingData }; // Start with all data
-    for (const key in incomingData) {
-        const fieldRule = schemaRules.find(f => f.key === key);
+    const { normalizedValueMap } = buildIncomingMaps(incomingData);
+    const normalizedSchemaMap = new Map(
+        schemaRules.map((f) => [normalizeKey(f.key), f])
+    );
+
+    for (const [normalizedKey, value] of normalizedValueMap.entries()) {
+        const fieldRule = normalizedSchemaMap.get(normalizedKey);
         if (!fieldRule) continue; // Allow extra fields
 
-        const value = incomingData[key];
         // For updates, don't enforce 'required' — only validate type
         const tempField = { ...fieldRule, required: false };
         const error = validateField(value, tempField);
         if (error) return { error };
 
-        updateData[key] = value;
+        updateData[fieldRule.key] = value;
     }
     return { updateData };
 }

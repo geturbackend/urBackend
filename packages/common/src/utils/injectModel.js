@@ -8,6 +8,8 @@ const typeMapping = {
     Date: Date
 };
 
+const normalizeKey = (key) => String(key || '').replace(/\uFEFF/g, '').trim();
+
 // Recursive field definition builder
 function buildFieldDef(field) {
     // Object type — nested sub-schema
@@ -62,7 +64,9 @@ function buildFieldDef(field) {
 function buildMongooseSchema(fieldsArray) {
     const schemaDef = {};
     fieldsArray.forEach(field => {
-        schemaDef[field.key] = buildFieldDef(field);
+        const normalizedKey = normalizeKey(field.key);
+        if (!normalizedKey) return;
+        schemaDef[normalizedKey] = buildFieldDef(field);
     });
     return new mongoose.Schema(schemaDef, { timestamps: true, strict: false });
 }
