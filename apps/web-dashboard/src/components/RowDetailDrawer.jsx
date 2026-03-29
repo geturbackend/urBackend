@@ -158,12 +158,14 @@ export default function RowDetailDrawer({ isOpen, onClose, record, fields = [], 
             gridTemplateColumns: isWideForm ? "repeat(2, 1fr)" : "1fr",
             gap: "1.25rem",
           }}>
-            {fields.map((field) => (
+            {Object.entries(record)
+              .filter(([key]) => !['_id', '__v', 'createdAt', 'updatedAt'].includes(key))
+              .map(([key, value]) => (
               <div
-                key={field.key}
+                key={key}
                 className="form-group"
                 style={{
-                  gridColumn: (isWideForm && (field.type === "String" && field.key.length > 20)) ? "span 2" : "auto"
+                  gridColumn: (isWideForm && typeof value === 'string' && value.length > 20) ? "span 2" : "auto"
                 }}
               >
                 <label className="form-label" style={{
@@ -174,38 +176,11 @@ export default function RowDetailDrawer({ isOpen, onClose, record, fields = [], 
                   color: "var(--color-text-secondary)"
                 }}>
                   <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                    {field.key}
+                    {key}
                   </span>
-                  <span className="field-type-hint" style={{
-                    fontSize: "0.7rem",
-                    color: "var(--color-text-muted)",
-                    background: "rgba(255,255,255,0.05)",
-                    padding: "2px 6px",
-                    borderRadius: "4px"
-                  }}>{field.type}</span>
                 </label>
 
-                {/* Read Only Input Field matching AddRecordDrawer */}
-                {field.type === "Boolean" ? (
-                  <select
-                    className="form-select"
-                    disabled
-                    value={String(record[field.key] ?? "")}
-                    style={{ cursor: "default", appearance: "none" /* removes dropdown arrow */}}
-                  >
-                    <option value="">Empty</option>
-                    <option value="true">True</option>
-                    <option value="false">False</option>
-                  </select>
-                ) : field.type === "Date" ? (
-                  <input
-                    type="text"
-                    className="form-input"
-                    readOnly
-                    value={record[field.key] ? new Date(record[field.key]).toLocaleString() : "Empty"}
-                    style={{ cursor: "default" }}
-                  />
-                ) : field.type === "Object" || field.type === "Array" || typeof record[field.key] === "object" ? (
+                {typeof value === 'object' && value !== null ? (
                    <div className="form-input custom-scrollbar" style={{ 
                        padding: "12px", 
                        fontSize: "0.85rem", 
@@ -215,14 +190,16 @@ export default function RowDetailDrawer({ isOpen, onClose, record, fields = [], 
                        maxHeight: "300px",
                        overflowY: "auto"
                    }}>
-                     <JsonViewer data={record[field.key] ?? {}} />
+                     <JsonViewer data={value} />
                    </div>
                 ) : (
                   <input
                     type="text"
                     className="form-input"
                     readOnly
-                    value={record[field.key] !== null && record[field.key] !== undefined ? String(record[field.key]) : "Empty"}
+                    value={value === null || value === undefined ? '—' : 
+                           typeof value === 'boolean' ? String(value) : 
+                           String(value)}
                     style={{ cursor: "default" }}
                   />
                 )}
