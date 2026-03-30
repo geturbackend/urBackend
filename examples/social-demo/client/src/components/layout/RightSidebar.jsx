@@ -1,9 +1,11 @@
 import { Search } from 'lucide-react';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { dataApi } from '../../lib/api';
+import { authApi, dataApi } from '../../lib/api';
 import { Link } from 'react-router-dom';
 import Avatar from '../ui/Avatar';
+
+const TRENDING_COUNTS = [3200, 5100, 7400, 8900];
 
 export default function RightSidebar() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,10 +24,12 @@ export default function RightSidebar() {
     queryKey: ['search-users', searchQuery],
     queryFn: async () => {
       if (!searchQuery.trim()) return [];
-      const response = await dataApi.getProfiles({
-        username: searchQuery.toLowerCase()
-      });
-      return Array.isArray(response.data) ? response.data : (response.data?.data || []);
+      try {
+        const response = await authApi.getPublicProfile(searchQuery.toLowerCase());
+        return response.data ? [response.data] : [];
+      } catch {
+        return [];
+      }
     },
     enabled: searchQuery.trim().length > 0,
   });
@@ -56,7 +60,7 @@ export default function RightSidebar() {
         <div className="divide-y divide-gray-200 dark:divide-gray-800">
           {displayUsers?.slice(0, 5).map((user) => (
             <Link
-              key={user._id}
+              key={user._id || user.userId || user.username}
               to={`/profile/${user.username}`}
               className="flex items-center gap-3 p-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
@@ -83,7 +87,7 @@ export default function RightSidebar() {
             <div key={tag} className="p-4 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors">
               <div className="text-gray-500 text-sm">Trending #{idx + 1}</div>
               <div className="font-bold">{tag}</div>
-              <div className="text-gray-500 text-sm">{Math.floor(Math.random() * 10000)} posts</div>
+              <div className="text-gray-500 text-sm">{TRENDING_COUNTS[idx]} posts</div>
             </div>
           ))}
         </div>

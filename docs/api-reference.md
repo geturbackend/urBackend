@@ -7,6 +7,7 @@
 | **Auth** | `POST` | `/api/userAuth/refresh-token` | Rotate refresh token and issue new access token |
 | **Auth** | `POST` | `/api/userAuth/logout` | Revoke current refresh session |
 | **Auth** | `GET` | `/api/userAuth/me` | Get current user profile |
+| **Auth** | `GET` | `/api/userAuth/public/:username` | Get public-safe profile by username |
 | **Auth** | `POST` | `/api/userAuth/verify-email` | Verify user email with OTP |
 | **Auth** | `POST` | `/api/userAuth/request-password-reset` | Request password reset OTP |
 | **Auth** | `POST` | `/api/userAuth/reset-password` | Reset user password with OTP |

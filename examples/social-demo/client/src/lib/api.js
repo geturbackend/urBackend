@@ -5,13 +5,6 @@ const PROXY_URL = import.meta.env.VITE_PROXY_URL || 'http://localhost:4000/api/p
 const PUBLIC_KEY = import.meta.env.VITE_PUBLIC_KEY || '';
 const API_PREFIX = '/api';
 
-// Debug: Log configuration
-console.log('🔧 API Configuration:', {
-  API_BASE_URL,
-  PROXY_URL,
-  PUBLIC_KEY: PUBLIC_KEY ? 'Set ✓' : 'Missing ✗'
-});
-
 const getStoredAccessToken = () => localStorage.getItem('token');
 const getStoredRefreshToken = () => localStorage.getItem('refreshToken');
 
@@ -44,7 +37,6 @@ const storageProxyApi = axios.create({
 });
 
 const requestAuthInterceptor = (config) => {
-  console.log('📤 Request:', config.method?.toUpperCase(), `${config.baseURL}${config.url}`);
   const token = getStoredAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -92,7 +84,6 @@ const refreshAccessToken = async () => {
 publicApi.interceptors.response.use(
   (response) => response,
   async (error) => {
-    console.error('❌ API Error:', error.response?.status, error.response?.data || error.message);
     const originalRequest = error.config || {};
 
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -138,6 +129,7 @@ export const authApi = {
     return response;
   },
   getMe: () => publicApi.get('/userAuth/me'),
+  getPublicProfile: (username) => publicApi.get(`/userAuth/public/${encodeURIComponent(username)}`),
   updateProfile: (data) => publicApi.put('/userAuth/update-profile', data),
   changePassword: (data) => publicApi.put('/userAuth/change-password', data),
   logout: async () => {

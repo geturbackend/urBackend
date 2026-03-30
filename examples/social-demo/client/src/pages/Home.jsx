@@ -23,17 +23,10 @@ export default function Home() {
         limit: 10,
         sort: 'createdAt:-1', // urBackend format: field:order (-1 = desc)
       });
-      
-      console.log('📥 Posts API Response:', response);
-      console.log('📥 response.data:', response.data);
-      console.log('📥 response.data.data:', response.data.data);
-      console.log('📥 Is response.data an array?', Array.isArray(response.data));
-      
+
       // urBackend returns array directly, not wrapped in {data: [...]}
       const postsArray = Array.isArray(response.data) ? response.data : (response.data.data || []);
-      
-      console.log('📥 Final posts array:', postsArray);
-      
+
       return {
         data: postsArray,
         nextPage: pageParam + 1,
@@ -63,10 +56,6 @@ export default function Home() {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const posts = data?.pages.flatMap((page) => page.data) || [];
-  
-  console.log('🎯 All pages:', data?.pages);
-  console.log('🎯 Final posts to render:', posts);
-  console.log('🎯 Posts count:', posts.length);
 
   return (
     <div className="min-h-screen">

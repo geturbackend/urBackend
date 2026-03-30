@@ -237,14 +237,16 @@ describe('public userAuth refresh flow', () => {
     });
 
     test('public profile returns only safe fields', async () => {
-        mockModel.findOne.mockResolvedValueOnce({
-            _id: 'user_1',
-            username: 'yash',
-            name: 'Yash',
-            bio: 'builder',
-            email: 'private@example.com',
-            password: 'hashed_secret',
-            createdAt: '2026-01-01T00:00:00.000Z'
+        mockModel.findOne.mockReturnValueOnce({
+            lean: jest.fn().mockResolvedValue({
+                _id: 'user_1',
+                username: 'yash',
+                name: 'Yash',
+                bio: 'builder',
+                email: 'private@example.com',
+                password: 'hashed_secret',
+                createdAt: '2026-01-01T00:00:00.000Z'
+            })
         });
 
         const req = makeReq({

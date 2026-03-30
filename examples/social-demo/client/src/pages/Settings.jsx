@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { authApi, storageApi, dataApi } from '../lib/api';
 import Input from '../components/ui/Input';

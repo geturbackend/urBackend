@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Image, X } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { dataApi, storageApi } from '../../lib/api';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/useAuth';
 import { sanitizeUrl } from '../../lib/utils';
 import Avatar from '../ui/Avatar';
 import Button from '../ui/Button';
@@ -10,6 +10,7 @@ import Button from '../ui/Button';
 export default function TweetComposer({ onSuccess }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const currentUserId = user?.userId || user?._id;
   const fileInputRef = useRef(null);
   const [content, setContent] = useState('');
   const [images, setImages] = useState([]);
@@ -34,7 +35,8 @@ export default function TweetComposer({ onSuccess }) {
 
       // Create post
       return dataApi.createPost({
-        authorId: user._id,
+        userId: currentUserId,
+        authorId: currentUserId,
         authorUsername: user.username,
         authorDisplayName: user.displayName || user.username,
         authorAvatar: user.avatar || '',
@@ -48,7 +50,7 @@ export default function TweetComposer({ onSuccess }) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['posts']);
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
       setContent('');
       setImages([]);
       setPreviewUrls([]);

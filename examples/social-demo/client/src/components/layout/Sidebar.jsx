@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Search, Bell, User, Settings, LogOut, PenSquare } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/useAuth';
 import Button from '../ui/Button';
 import Avatar from '../ui/Avatar';
 
@@ -33,7 +33,9 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1">
-        {navItems.map(({ icon: Icon, label, path }) => {
+        {navItems.map((item) => {
+          const NavIcon = item.icon;
+          const { label, path } = item;
           const isActive = location.pathname === path;
           return (
             <Link
@@ -45,7 +47,7 @@ export default function Sidebar() {
                   : 'hover:bg-gray-100 dark:hover:bg-gray-900'
               }`}
             >
-              <Icon className="w-6 h-6" />
+              <NavIcon className="w-6 h-6" />
               <span className="text-xl">{label}</span>
             </Link>
           );

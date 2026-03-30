@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { dataApi } from '../lib/api';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import { ArrowLeft } from 'lucide-react';
 import PostCard from '../components/post/PostCard';
 
@@ -11,6 +11,7 @@ export default function PostDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const currentUserId = user?.userId || user?._id;
   const [content, setContent] = useState('');
 
   const commentMutation = useMutation({
@@ -20,8 +21,8 @@ export default function PostDetail() {
     },
     onSuccess: () => {
       setContent('');
-      queryClient.invalidateQueries(['comments', id]);
-      queryClient.invalidateQueries(['post', id]);
+      queryClient.invalidateQueries({ queryKey: ['comments', id] });
+      queryClient.invalidateQueries({ queryKey: ['post', id] });
     },
   });
 
@@ -30,8 +31,9 @@ export default function PostDetail() {
     if (!content.trim()) return;
     commentMutation.mutate({
       postId: id,
+      userId: currentUserId,
       content,
-      authorId: user?._id,
+      authorId: currentUserId,
       authorUsername: user?.username,
       authorDisplayName: user?.displayName,
       authorAvatar: user?.avatar,

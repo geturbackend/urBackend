@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { dataApi } from '../lib/api';
-import { useAuth } from '../contexts/AuthContext';
+import { authApi, dataApi } from '../lib/api';
+import { useAuth } from '../contexts/useAuth';
 import Avatar from '../components/ui/Avatar';
 import Button from '../components/ui/Button';
 import PostCard from '../components/post/PostCard';
@@ -13,15 +13,36 @@ export default function Profile() {
   const { username } = useParams();
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
+  const currentUserId = currentUser?.userId || currentUser?._id;
+  const isOwnProfileRoute = !!currentUser?.username && currentUser.username === username;
 
-  // Fetch user profile
-  const { data: profile, isLoading: profileLoading } = useQuery({
+  // Fetch public profile only for other users.
+  // Own profile route is sourced from /api/userAuth/me via AuthContext.
+  const { data: fetchedProfile, isLoading: profileLoading } = useQuery({
     queryKey: ['profile', username],
     queryFn: async () => {
-      const response = await dataApi.getProfiles({ username });
-      return Array.isArray(response.data) ? response.data[0] : response.data?.data?.[0];
+      const response = await authApi.getPublicProfile(username);
+      return response.data || null;
     },
+    enabled: !isOwnProfileRoute,
   });
+
+  const profile = isOwnProfileRoute && currentUser
+    ? {
+      userId: currentUserId,
+      username: currentUser.username,
+      displayName: currentUser.displayName || currentUser.username,
+      bio: currentUser.bio || '',
+      avatar: currentUser.avatar || '',
+      banner: currentUser.banner || '',
+      verified: !!currentUser.verified,
+      location: currentUser.location || '',
+      website: currentUser.website || '',
+      followersCount: Number(currentUser.followersCount || 0),
+      followingCount: Number(currentUser.followingCount || 0),
+      createdAt: currentUser.createdAt,
+    }
+    : fetchedProfile;
 
   // Fetch user posts
   const { data: posts, isLoading: postsLoading } = useQuery({
@@ -43,12 +64,12 @@ export default function Profile() {
     queryKey: ['follow-status', profile?.userId],
     queryFn: async () => {
       const response = await dataApi.getFollows({
-        followerId: currentUser.userId || currentUser._id,
+        followerId: currentUserId,
         followingId: profile.userId,
       });
-      return Array.isArray(response.data) ? response.data[0] : response.data?.data?.[0];
+      return Array.isArray(response.data) ? (response.data[0] || null) : (response.data?.data?.[0] || null);
     },
-    enabled: !!profile && !!currentUser && profile.userId !== (currentUser.userId || currentUser._id),
+    enabled: !!profile && !!currentUserId && profile.userId !== currentUserId,
   });
 
   // Follow/Unfollow mutation
@@ -58,7 +79,7 @@ export default function Profile() {
         await dataApi.deleteFollow(followData._id);
       } else {
         await dataApi.createFollow({
-          followerId: currentUser.userId || currentUser._id,
+          followerId: currentUserId,
           followingId: profile.userId,
           createdAt: new Date().toISOString(),
         });
@@ -78,8 +99,6 @@ export default function Profile() {
     );
   }
 
-  console.log('Component Render - profile:', profile, 'posts:', posts);
-
   if (!profile) {
     return (
       <div className="text-center py-12">
@@ -89,7 +108,7 @@ export default function Profile() {
     );
   }
 
-  const isOwnProfile = (currentUser?.userId || currentUser?._id) === profile.userId;
+  const isOwnProfile = currentUserId === profile.userId;
 
   return (
     <div className="min-h-screen">

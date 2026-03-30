@@ -113,6 +113,21 @@ await fetch('https://api.ub.bitbros.in/api/userAuth/me', {
 });
 ```
 
+## 6. Get Public Profile by Username
+
+Fetches a safe, public profile view for a user without requiring login.
+
+**Endpoint**: `GET /api/userAuth/public/:username`
+
+```javascript
+await fetch('https://api.ub.bitbros.in/api/userAuth/public/dev_pulse', {
+  headers: { 'x-api-key': 'YOUR_KEY' }
+});
+```
+
+> [!NOTE]
+> This endpoint never returns sensitive fields like `password` or `email`.
+
 ## Security Note
 
 - **Access Token Expiration**: Access tokens are short-lived. Use `/api/userAuth/refresh-token` for renewal.

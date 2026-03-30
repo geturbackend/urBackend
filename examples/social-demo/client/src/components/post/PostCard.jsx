@@ -1,33 +1,32 @@
-import { Heart, MessageCircle, Repeat2, Share, Trash2, MoreHorizontal } from 'lucide-react';
+import { Heart, MessageCircle, Repeat2, Share, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { sanitizeUrl } from '../../lib/utils';
 import Avatar from '../ui/Avatar';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { dataApi } from '../../lib/api';
-import { useAuth } from '../../contexts/AuthContext';
-import { useState } from 'react';
+import { useAuth } from '../../contexts/useAuth';
 
 export default function PostCard({ post }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [showMenu, setShowMenu] = useState(false);
 
-  const isOwner = user?._id === post.authorId;
+  const currentUserId = user?.userId || user?._id;
+  const isOwner = currentUserId === post.authorId;
 
   // Check if user liked this post
   const { data: userLike } = useQuery({
-    queryKey: ['like', post._id, user?._id],
+    queryKey: ['like', post._id, currentUserId],
     queryFn: async () => {
       const response = await dataApi.getLikes({
-        userId: user._id,
+        userId: currentUserId,
         targetId: post._id,
         targetType: 'post'
       });
-      return Array.isArray(response.data) ? response.data[0] : response.data?.data?.[0];
+      return Array.isArray(response.data) ? (response.data[0] || null) : (response.data?.data?.[0] || null);
     },
-    enabled: !!user,
+    enabled: !!currentUserId,
   });
 
   // Like mutation
@@ -39,7 +38,7 @@ export default function PostCard({ post }) {
         await dataApi.updatePost(post._id, { likesCount: newCount });
       } else {
         await dataApi.createLike({
-          userId: user._id,
+          userId: currentUserId,
           targetId: post._id,
           targetType: 'post',
           createdAt: new Date().toISOString(),
@@ -48,9 +47,9 @@ export default function PostCard({ post }) {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['like', post._id]);
-      queryClient.invalidateQueries(['posts']);
-      queryClient.invalidateQueries(['post', post._id]);
+      queryClient.invalidateQueries({ queryKey: ['like', post._id] });
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ['post', post._id] });
     },
   });
 
@@ -58,7 +57,7 @@ export default function PostCard({ post }) {
   const deleteMutation = useMutation({
     mutationFn: () => dataApi.deletePost(post._id),
     onSuccess: () => {
-      queryClient.invalidateQueries(['posts']);
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
   });
 
@@ -66,7 +65,8 @@ export default function PostCard({ post }) {
   const retweetMutation = useMutation({
     mutationFn: async () => {
       await dataApi.createPost({
-        authorId: user._id,
+        userId: currentUserId,
+        authorId: currentUserId,
         authorUsername: user.username,
         authorDisplayName: user.displayName || user.username,
         authorAvatar: user.avatar || '',
@@ -81,7 +81,7 @@ export default function PostCard({ post }) {
       await dataApi.updatePost(post._id, { retweetsCount: (post.retweetsCount || 0) + 1 });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['posts']);
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
   });
 
