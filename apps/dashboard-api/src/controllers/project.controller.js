@@ -344,6 +344,10 @@ module.exports.updateExternalConfig = async (req, res) => {
             if (Object.keys(storageConfig).length > 0) {
                 updateData['resources.storage.config'] = encrypt(JSON.stringify(storageConfig));
                 updateData['resources.storage.isExternal'] = true;
+            } else {
+                return res.status(400).json({ 
+                    error: `Incomplete configuration for storage provider: ${storageProvider}. Please ensure all required keys for ${storageProvider === 'supabase' ? 'Supabase' : 'S3/R2'} are provided.` 
+                });
             }
         } else if (storageUrl && storageKey) {
             // CONFIG - FALLBACK FOR LEGACY CLIENTS
@@ -363,6 +367,9 @@ module.exports.updateExternalConfig = async (req, res) => {
         );
 
         if (!project) return res.status(404).json({ error: "Project not found or access denied." });
+
+        // CACHE - INVALIDATE STORAGE CLIENT
+        storageRegistry.delete(projectId.toString());
 
         res.status(200).json({ message: "External configuration updated successfully." });
     } catch (err) {
@@ -410,6 +417,8 @@ module.exports.deleteExternalStorageConfig = async (req, res) => {
         project.resources.storage.isExternal = false;
         project.resources.storage.config = null;
 
+        // CACHE - INVALIDATE
+        storageRegistry.delete(projectId.toString());
         await deleteProjectById(projectId);
         await setProjectById(projectId, project);
         await project.save();

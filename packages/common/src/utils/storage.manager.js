@@ -17,6 +17,7 @@ function createS3Adapter(config) {
     const s3Client = new S3Client({
         region: config.region || "auto",
         endpoint: config.endpoint,
+        forcePathStyle: true,
         credentials: {
             accessKeyId: config.accessKeyId,
             secretAccessKey: config.secretAccessKey
@@ -26,7 +27,7 @@ function createS3Adapter(config) {
     return {
         storage: {
             from: (bucketOverride) => {
-                const activeBucket = config.bucket;
+                const activeBucket = bucketOverride || config.bucket;
                 return {
                     upload: async (path, buffer, options = {}) => {
                         try {
@@ -84,8 +85,13 @@ function createS3Adapter(config) {
                             return { data: { publicUrl: `${host}/${path}` } };
                         }
                         if (config.storageProvider === 'cloudflare_r2') {
-                            const host = config.endpoint.endsWith('/') ? config.endpoint.slice(0, -1) : config.endpoint;
-                            return { data: { publicUrl: `${host}/${activeBucket}/${path}` } };
+                            // R2 - WARNING: PUBLIC ACCESS MUST BE ENABLED ON BUCKET SETTINGS
+                            return { 
+                                data: { 
+                                    publicUrl: null,
+                                    error: `Cloudflare R2 requires a "Public URL Host" or a custom domain. Current endpoint [${config.endpoint}] for bucket [${activeBucket}] might not be publicly accessible.` 
+                                } 
+                            };
                         }
                         return { data: { publicUrl: `https://${activeBucket}.s3.${config.region}.amazonaws.com/${path}` } };
                     }

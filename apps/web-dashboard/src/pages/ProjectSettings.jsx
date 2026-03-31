@@ -593,6 +593,27 @@ function StorageConfigForm({ project, projectId, onProjectUpdate }) {
     setShowForm(!configured);
   }, [project]);
 
+  useEffect(() => {
+    // RESET - CLEAR OTHER PROVIDER FIELDS ON CHANGE
+    if (config.storageProvider === "supabase") {
+      setConfig(prev => ({
+        ...prev,
+        s3AccessKeyId: "",
+        s3SecretAccessKey: "",
+        s3Region: "",
+        s3Endpoint: "",
+        s3Bucket: "",
+        publicUrlHost: "",
+      }));
+    } else if (config.storageProvider === "s3" || config.storageProvider === "cloudflare_r2") {
+      setConfig(prev => ({
+        ...prev,
+        storageUrl: "",
+        storageKey: "",
+      }));
+    }
+  }, [config.storageProvider]);
+
   const handleChange = (e) =>
     setConfig({ ...config, [e.target.name]: e.target.value });
 
@@ -987,7 +1008,7 @@ function StorageConfigForm({ project, projectId, onProjectUpdate }) {
 
                 <div className="form-group">
                   <label className="form-label" style={{ marginBottom: "4px", display: "block", fontSize: "0.9rem" }}>
-                    Public URL Host / CDN Dome <span style={{ color: "var(--color-text-muted)", fontSize: "0.8rem" }}>(Optional)</span>
+                    Public URL Host / CDN Domain <span style={{ color: "var(--color-text-muted)", fontSize: "0.8rem" }}>(Optional)</span>
                   </label>
                   <span style={{ display: "block", marginBottom: "8px", fontSize: "0.8rem", color: "var(--color-text-muted)" }}>
                     If you use a custom domain or CDN (e.g. CloudFront, R2 Dev Domain), enter it here.
