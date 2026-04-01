@@ -164,56 +164,44 @@ async function findDuplicates(Model, fieldKey, isRequired) {
 }
 
 async function createUniqueIndexes(Model, fields = []) {
-  const createdIndexes = [];
+  for (const field of fields) {
+    if (!field.unique) continue;
+    if (!UNIQUE_SUPPORTED_TYPES_SET.has(field.type)) continue;
 
-  try {
-    for (const field of fields) {
-      if (!field.unique) continue;
-      if (!UNIQUE_SUPPORTED_TYPES_SET.has(field.type)) continue;
+    const normalizedKey = normalizeKey(field.key);
+    if (!normalizedKey) continue;
 
-      const duplicates = await findDuplicates(
-        Model,
-        field.key,
-        !!field.required,
+    const duplicates = await findDuplicates(
+      Model,
+      normalizedKey,
+      !!field.required,
+    );
+
+    if (duplicates.length > 0) {
+      const examples = duplicates
+        .slice(0, 3)
+        .map((d) => JSON.stringify(d._id))
+        .join(", ");
+
+      throw new Error(
+        `Cannot create unique index on '${normalizedKey}'. ${duplicates.length} duplicate values exist.${examples ? ` Examples: ${examples}` : ""}`,
       );
+    }
 
-      if (duplicates.length > 0) {
-        const examples = duplicates
-          .slice(0, 3)
-          .map((d) => JSON.stringify(d._id))
-          .join(", ");
+    const indexName = `unique_${normalizedKey}_1`;
 
-        throw new Error(
-          `Cannot create unique index on '${field.key}'. ${duplicates.length} duplicate values exist.${examples ? ` Examples: ${examples}` : ""}`,
-        );
-      }
+    const indexOptions = {
+      unique: true,
+      name: indexName,
+    };
 
-      const indexName = `unique_${field.key}_1`;
-
-      const indexOptions = {
-        unique: true,
-        name: indexName,
+    if (!field.required) {
+      indexOptions.partialFilterExpression = {
+        [normalizedKey]: { $exists: true, $ne: null },
       };
-
-      if (!field.required) {
-        indexOptions.partialFilterExpression = {
-          [field.key]: { $exists: true, $ne: null },
-        };
-      }
-
-      await Model.collection.createIndex({ [field.key]: 1 }, indexOptions);
-
-      createdIndexes.push(indexName);
     }
-  } catch (error) {
-    for (const indexName of createdIndexes) {
-      try {
-        await Model.collection.dropIndex(indexName);
-      } catch (_) {
-        // ignore rollback drop errors
-      }
-    }
-    throw error;
+
+    await Model.collection.createIndex({ [normalizedKey]: 1 }, indexOptions);
   }
 }
 
