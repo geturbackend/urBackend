@@ -570,6 +570,44 @@ module.exports.createCollection = async (req, res) => {
   }
 };
 
+// GET DOC BY ID
+module.exports.getData = async (req, res) => {
+    try {
+        const { projectId, collectionName } = req.params;
+        const project = await Project.findOne({ _id: projectId, owner: req.user._id });
+        if (!project) return res.status(404).json({ error: "Project not found." });
+
+        const collectionConfig = project.collections.find(c => c.name === collectionName);
+        if (!collectionConfig) {
+            return res.status(404).json({
+                error: "Collection not found",
+                collection: collectionName
+            });
+        }
+
+        const connection = await getConnection(projectId);
+        const model = getCompiledModel(connection, collectionConfig, projectId, project.resources.db.isExternal);
+
+        // const collectionsList = await mongoose.connection.db.listCollections({ name: finalCollectionName }).toArray();
+
+        const query = model.find();
+        if (collectionName === 'users') {
+            query.select('-password');
+        }
+
+        const features = new QueryEngine(query, req.query)
+            .filter()
+            .sort()
+            .paginate();
+
+        const data = await features.query.lean();
+
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+}
+
 module.exports.deleteCollection = async (req, res) => {
   try {
     const { projectId, collectionName } = req.params;
@@ -1253,3 +1291,76 @@ module.exports.toggleAuth = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
+// PATCH FOR UPDATING COLLECTION RLS
+module.exports.updateCollectionRls = async (req, res) => {
+    try {
+        const { projectId, collectionName } = req.params;
+        const { enabled, mode, ownerField, requireAuthForWrite } = req.body || {};
+
+        const project = await Project.findOne({ _id: projectId, owner: req.user._id });
+        if (!project) return res.status(404).json({ error: "Project not found" });
+
+        const collection = project.collections.find(c => c.name === collectionName);
+        if (!collection) return res.status(404).json({ error: "Collection not found" });
+
+        const validMode = mode || collection?.rls?.mode || 'owner-write-only';
+        if (validMode !== 'owner-write-only') {
+            return res.status(400).json({ error: "Unsupported RLS mode. Only 'owner-write-only' is allowed in V1." });
+        }
+
+        const modelKeys = (collection.model || [])
+            .map(f => String(f?.key || '').trim())
+            .filter(Boolean);
+        const modelKeySet = new Set(modelKeys);
+        const modelKeyLowerMap = new Map(modelKeys.map(k => [k.toLowerCase(), k]));
+
+        const requestedOwnerRaw = String(ownerField ?? collection?.rls?.ownerField ?? 'userId').trim();
+        const requestedOwnerLower = requestedOwnerRaw.toLowerCase();
+        const canonicalOwnerField = modelKeySet.has(requestedOwnerRaw)
+            ? requestedOwnerRaw
+            : modelKeyLowerMap.get(requestedOwnerLower);
+        const nextOwnerField = requestedOwnerRaw === '_id' ? '_id' : (canonicalOwnerField || requestedOwnerRaw);
+
+        if (nextOwnerField !== '_id' && !modelKeySet.has(nextOwnerField)) {
+            return res.status(400).json({
+                error: "Invalid owner field",
+                message: `ownerField '${nextOwnerField}' not found in collection schema`
+            });
+        }
+
+        // Restrict use of '_id' as ownerField to the 'users' collection only.
+        if (nextOwnerField === '_id' && collection.name !== 'users') {
+            return res.status(400).json({
+                error: "Invalid owner field",
+                message: "ownerField '_id' is only allowed for the 'users' collection"
+            });
+        }
+
+        collection.rls = {
+            enabled: typeof enabled === 'boolean' ? enabled : !!collection?.rls?.enabled,
+            mode: validMode,
+            ownerField: nextOwnerField,
+            requireAuthForWrite: typeof requireAuthForWrite === 'boolean'
+                ? requireAuthForWrite
+                : (collection?.rls?.requireAuthForWrite ?? true)
+        };
+
+        await project.save();
+
+        await deleteProjectById(projectId);
+        await deleteProjectByApiKeyCache(project.publishableKey);
+        await deleteProjectByApiKeyCache(project.secretKey);
+
+        res.json({
+            message: "Collection RLS updated",
+            collection: {
+                name: collection.name,
+                rls: collection.rls
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+}
