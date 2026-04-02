@@ -1,4 +1,3 @@
-const { randomUUID } = require("crypto");
 const { sanitize } = require("@urbackend/common");
 const mongoose = require('mongoose');
 const { Project } = require("@urbackend/common");
@@ -6,6 +5,9 @@ const { getConnection } = require("@urbackend/common");
 const { getCompiledModel } = require("@urbackend/common");
 const {QueryEngine} = require("@urbackend/common");
 const { validateData, validateUpdateData } = require("@urbackend/common");
+const { performance } = require('perf_hooks');
+
+const isDebug = process.env.DEBUG === 'true';
 
 // Validate MongoDB ObjectId
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -13,9 +15,8 @@ const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 // INSERT DATA
 module.exports.insertData = async (req, res) => {
     try {
-        const isDebug = process.env.DEBUG === 'true';
-        const timerLabel = isDebug ? `insert data - ${randomUUID()}` : null;
-        if (isDebug) console.time(timerLabel);
+        let start;
+        if (isDebug) start = performance.now();
         const { collectionName } = req.params;
         const project = req.project;
 
@@ -51,7 +52,7 @@ module.exports.insertData = async (req, res) => {
             );
         }
 
-        if (isDebug) console.timeEnd(timerLabel);
+        if (isDebug) console.log(`[DEBUG] insert data took ${(performance.now() - start).toFixed(2)}ms`);
         res.status(201).json(result);
     } catch (err) {
         console.error(err);
@@ -62,9 +63,8 @@ module.exports.insertData = async (req, res) => {
 // GET ALL DATA
 module.exports.getAllData = async (req, res) => {
     try {
-        const isDebug = process.env.DEBUG === 'true';
-        const timerLabel = isDebug ? `getall - ${randomUUID()}` : null;
-        if (isDebug) console.time(timerLabel);
+        let start;
+        if (isDebug) start = performance.now();
         const { collectionName } = req.params;
         const project = req.project;
 
@@ -80,7 +80,7 @@ module.exports.getAllData = async (req, res) => {
             .paginate();
 
         const data = await features.query.lean();
-        if (isDebug) console.timeEnd(timerLabel);
+        if (isDebug) console.log(`[DEBUG] getall took ${(performance.now() - start).toFixed(2)}ms`);
         res.json(data);
     } catch (err) {
         console.error(err);
