@@ -8,25 +8,41 @@ const safeStringify = (value) => {
     }
 };
 
+const pickMessage = (value) => {
+    if (typeof value === 'string' && value.trim()) return value;
+
+    if (Array.isArray(value) && value.length > 0) {
+        const first = value[0];
+        if (typeof first === 'string' && first.trim()) return first;
+        if (first && typeof first.message === 'string' && first.message.trim()) return first.message;
+        if (first && typeof first.toString === 'function') {
+            const text = first.toString();
+            if (text && text !== '[object Object]') return text;
+        }
+    }
+
+    if (value && typeof value === 'object') {
+        if (typeof value.message === 'string' && value.message.trim()) return value.message;
+        if (Array.isArray(value.errors) && value.errors[0]?.message) return value.errors[0].message;
+        if (Array.isArray(value.issues) && value.issues[0]?.message) return value.issues[0].message;
+    }
+
+    return null;
+};
+
 const toErrorMessage = (raw) => {
-    if (typeof raw === 'string' && raw.trim()) return raw;
+    const direct = pickMessage(raw);
+    if (direct) return direct;
 
-    if (Array.isArray(raw) && raw.length > 0) {
-        const first = raw[0];
-        if (typeof first === 'string') return first;
-        if (first && typeof first.message === 'string') return first.message;
-        return safeStringify(raw);
+    if (raw && typeof raw === 'object' && Object.prototype.hasOwnProperty.call(raw, 'error')) {
+        const nested = pickMessage(raw.error);
+        if (nested) return nested;
     }
 
-    if (raw && typeof raw === 'object') {
-        if (typeof raw.message === 'string' && raw.message.trim()) return raw.message;
-        if (typeof raw.error === 'string' && raw.error.trim()) return raw.error;
-        if (Array.isArray(raw.errors) && raw.errors[0]?.message) return raw.errors[0].message;
-        if (Array.isArray(raw.issues) && raw.issues[0]?.message) return raw.issues[0].message;
-        return safeStringify(raw);
-    }
-
-    return 'An unexpected error occurred';
+    const serialized = safeStringify(raw);
+    return serialized === '{}' || serialized === '[]' || serialized === 'null' || serialized === '""'
+        ? 'Unknown error'
+        : serialized;
 };
 
 module.exports = (req, res, next) => {
