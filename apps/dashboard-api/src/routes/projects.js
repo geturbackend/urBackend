@@ -28,7 +28,8 @@ const {
     analytics,
     updateAllowedDomains,
     toggleAuth,
-    updateCollectionRls
+    updateCollectionRls,
+    updateNotificationSettings
 } = require("../controllers/project.controller")
 
 const { createAdminUser, resetPassword, getUserDetails, updateAdminUser, listUserSessions, revokeUserSession } = require('../controllers/userAuth.controller');
@@ -104,6 +105,9 @@ router.patch('/:projectId/auth/toggle', authMiddleware, verifyEmail, toggleAuth)
 
 // PATCH REQ FOR COLLECTION RLS SETTINGS
 router.patch('/:projectId/collections/:collectionName/rls', authMiddleware, verifyEmail, updateCollectionRls);
+
+// PATCH REQ FOR NOTIFICATION SETTINGS
+router.patch('/:projectId/notification-settings', authMiddleware, verifyEmail, updateNotificationSettings);
 
 // ADMIN AUTH ROUTES
 const {checkAuthEnabled} = require('@urbackend/common');

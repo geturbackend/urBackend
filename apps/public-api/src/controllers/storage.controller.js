@@ -1,7 +1,5 @@
-const { getStorage } = require("@urbackend/common");
+const { getStorage, Project, isProjectStorageExternal, Developer, checkAndNotify } = require("@urbackend/common");
 const { randomUUID } = require("crypto");
-const {Project} = require("@urbackend/common");
-const { isProjectStorageExternal } = require("@urbackend/common");
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -67,6 +65,20 @@ module.exports.uploadFile = async (req, res) => {
         const { data: publicUrlData } = supabase.storage
             .from(bucket)
             .getPublicUrl(filePath);
+
+        // Fire-and-forget: check if a limit-warning email should be sent
+        // (after quota increment so currentUsage reflects the actual new value)
+        Developer.findById(project.owner).select('email').then((owner) => {
+            if (owner?.email) {
+                const postUploadUsage = (project.storageUsed || 0) + file.size;
+                checkAndNotify({
+                    project,
+                    resourceType: 'storage',
+                    currentUsage: postUploadUsage,
+                    ownerEmail: owner.email,
+                }).catch((e) => console.error('[storage] notification error:', e.message));
+            }
+        }).catch(() => {}); // swallow lookup errors
 
         return res.status(201).json({
             message: "File uploaded successfully",

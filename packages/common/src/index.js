@@ -61,6 +61,9 @@ const { getStorage } = require('./utils/storage.manager');
 const validateEnv = require('./utils/validateEnv');
 const {validateData, validateUpdateData} = require('./utils/validateData')
 const sessionManager = require('./utils/session.manager');
+const { checkAndNotify } = require('./utils/limitNotification');
+const { calculateExternalDbSize } = require('./utils/calculateExternalDbSize');
+const { sendLimitWarningEmail } = require('./utils/emailService');
 
 module.exports = {
   connectDB,
@@ -117,5 +120,8 @@ module.exports = {
   validateData,
   validateUpdateData,
   userSignupSchema,
-  ...sessionManager
+  ...sessionManager,
+  checkAndNotify,
+  calculateExternalDbSize,
+  sendLimitWarningEmail,
 };

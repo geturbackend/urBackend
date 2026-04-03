@@ -85,8 +85,74 @@ const projectSchema = new mongoose.Schema({
             isExternal: { type: Boolean, default: false },
             config: { type: resourceConfigSchema, default: null }
         }
-    }
+    },
+
+    // EMAIL NOTIFICATIONS
+    notificationSettings: {
+        type: new mongoose.Schema({
+            email: {
+                enabled: { type: Boolean, default: true },
+                storage: {
+                    type: { type: String, enum: ['percentage', 'absolute'], default: 'percentage' },
+                    thresholds: { type: [Number], default: [80, 95] },
+                    absoluteLimit: { type: Number, default: null }, // bytes — for BYOD
+                },
+                database: {
+                    type: { type: String, enum: ['percentage', 'absolute'], default: 'percentage' },
+                    thresholds: { type: [Number], default: [80, 95] },
+                    absoluteLimit: { type: Number, default: null }, // bytes — for BYOD
+                },
+            },
+        }, { _id: false }),
+        default: () => ({
+            email: {
+                enabled: true,
+                storage: { type: 'percentage', thresholds: [80, 95], absoluteLimit: null },
+                database: { type: 'percentage', thresholds: [80, 95], absoluteLimit: null },
+            },
+        }),
+    },
+
+    // Tracks when each threshold was last alerted (7-day cooldown)
+    lastLimitNotification: {
+        type: new mongoose.Schema({
+            storage: {
+                threshold80: { type: Date, default: null },
+                threshold95: { type: Date, default: null },
+                custom: { type: Date, default: null },
+            },
+            database: {
+                threshold80: { type: Date, default: null },
+                threshold95: { type: Date, default: null },
+                custom: { type: Date, default: null },
+            },
+        }, { _id: false }),
+        default: () => ({
+            storage: { threshold80: null, threshold95: null, custom: null },
+            database: { threshold80: null, threshold95: null, custom: null },
+        }),
+    },
+
+    // Cached external DB/storage stats to avoid excessive queries (1-hr TTL)
+    cachedUsageStats: {
+        type: new mongoose.Schema({
+            database: {
+                size: { type: Number, default: 0 },          // bytes
+                lastCalculated: { type: Date, default: null },
+            },
+            storage: {
+                size: { type: Number, default: 0 },          // bytes
+                lastCalculated: { type: Date, default: null },
+            },
+        }, { _id: false }),
+        default: () => ({
+            database: { size: 0, lastCalculated: null },
+            storage: { size: 0, lastCalculated: null },
+        }),
+    },
+
 }, { timestamps: true });
+
 
 projectSchema.index({ owner: 1 });
 

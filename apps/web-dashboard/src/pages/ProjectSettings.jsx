@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../utils/api";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
-import { Trash2, AlertTriangle, Save, CheckCircle, Copy, Server, Globe, Plus, X } from "lucide-react";
+import { Trash2, AlertTriangle, Save, CheckCircle, Copy, Server, Globe, Plus, X, Bell } from "lucide-react";
 import { API_URL } from "../config";
 import ConfirmationModal from "./ConfirmationModal";
 
@@ -185,6 +185,11 @@ export default function ProjectSettings() {
           onProjectUpdate={setProject}
         />
         <StorageConfigForm
+          project={project}
+          projectId={projectId}
+          onProjectUpdate={setProject}
+        />
+        <NotificationSettingsForm
           project={project}
           projectId={projectId}
           onProjectUpdate={setProject}
@@ -1232,6 +1237,263 @@ function AllowedDomainsForm({ project, projectId, onProjectUpdate }) {
           </ul>
         )}
       </div>
+    </div>
+  );
+}
+
+function NotificationSettingsForm({ project, projectId, onProjectUpdate }) {
+  const [enabled, setEnabled] = useState(
+    project?.notificationSettings?.email?.enabled ?? true
+  );
+  
+  // Storage settings
+  const [storageType, setStorageType] = useState(
+    project?.notificationSettings?.email?.storage?.type || "percentage"
+  );
+  const [storageThresholds, setStorageThresholds] = useState(
+    project?.notificationSettings?.email?.storage?.thresholds?.join(", ") || "80, 95"
+  );
+  const [storageAbsolute, setStorageAbsolute] = useState(
+    project?.notificationSettings?.email?.storage?.absoluteLimit
+      ? project.notificationSettings.email.storage.absoluteLimit / (1024 * 1024)
+      : ""
+  );
+
+  // Database settings
+  const [dbType, setDbType] = useState(
+    project?.notificationSettings?.email?.database?.type || "percentage"
+  );
+  const [dbThresholds, setDbThresholds] = useState(
+    project?.notificationSettings?.email?.database?.thresholds?.join(", ") || "80, 95"
+  );
+  const [dbAbsolute, setDbAbsolute] = useState(
+    project?.notificationSettings?.email?.database?.absoluteLimit
+      ? project.notificationSettings.email.database.absoluteLimit / (1024 * 1024)
+      : ""
+  );
+
+  const [loading, setLoading] = useState(false);
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const emailSettings = {
+        enabled,
+        storage: {
+          type: storageType,
+          thresholds: storageType === "percentage" 
+            ? storageThresholds.split(",").map(t => parseInt(t.trim())).filter(t => !isNaN(t))
+            : [],
+          absoluteLimit: storageType === "absolute" && storageAbsolute
+            ? parseInt(storageAbsolute) * 1024 * 1024
+            : null
+        },
+        database: {
+          type: dbType,
+          thresholds: dbType === "percentage" 
+            ? dbThresholds.split(",").map(t => parseInt(t.trim())).filter(t => !isNaN(t))
+            : [],
+          absoluteLimit: dbType === "absolute" && dbAbsolute
+            ? parseInt(dbAbsolute) * 1024 * 1024
+            : null
+        }
+      };
+
+      const res = await api.patch(`/api/projects/${projectId}/notification-settings`, { email: emailSettings });
+      
+      toast.success("Notification settings updated successfully");
+      onProjectUpdate(prev => ({
+        ...prev,
+        notificationSettings: res.data.settings
+      }));
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to update notification settings");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="card" style={{ position: "relative", overflow: "hidden" }}>
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "4px",
+          height: "100%",
+          background: "var(--color-primary)",
+        }}
+      ></div>
+
+      <div style={{ marginBottom: "1.5rem" }}>
+        <h3
+          style={{
+            fontSize: "1.1rem",
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
+          <Bell size={20} color="var(--color-primary)" /> Alerts & Notifications
+        </h3>
+        <p
+          style={{
+            color: "var(--color-text-muted)",
+            fontSize: "0.9rem",
+            marginTop: "5px",
+          }}
+        >
+          Configure when to receive email alerts for resource limits.
+        </p>
+      </div>
+
+      <div className="form-group" style={{ marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "10px" }}>
+        <input
+          type="checkbox"
+          id="enableEmails"
+          checked={enabled}
+          onChange={(e) => setEnabled(e.target.checked)}
+          style={{ width: "18px", height: "18px", accentColor: "var(--color-primary)" }}
+        />
+        <label htmlFor="enableEmails" style={{ cursor: "pointer", fontSize: "0.95rem" }}>
+          Enable email notifications
+        </label>
+      </div>
+
+      {enabled && (
+        <div style={{ display: "grid", gap: "1.5rem", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
+          
+          {/* Storage Alert Settings */}
+          <div style={{ background: "var(--color-bg-input)", padding: "1.5rem", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
+            <h4 style={{ fontSize: "1rem", marginBottom: "1rem", color: "var(--color-text-main)" }}>Storage Alerts</h4>
+            
+            <div className="form-group" style={{ marginBottom: "1rem" }}>
+              <label className="form-label" style={{ fontSize: "0.85rem" }}>Alert Type</label>
+              <select
+                className="input-field"
+                value={storageType}
+                onChange={(e) => setStorageType(e.target.value)}
+                style={{ width: "100%", padding: "10px" }}
+              >
+                <option value="percentage">Percentage based (Managed Storage)</option>
+                <option value="absolute">Absolute size based (BYOD Storage)</option>
+              </select>
+            </div>
+
+            {storageType === "percentage" ? (
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: "0.85rem" }}>Thresholds (%)</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={storageThresholds}
+                  onChange={(e) => setStorageThresholds(e.target.value)}
+                  placeholder="80, 95"
+                  style={{ width: "100%", padding: "10px" }}
+                />
+                <small style={{ color: "var(--color-text-muted)", marginTop: "4px", display: "block" }}>Comma separated percentages</small>
+              </div>
+            ) : (
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: "0.85rem" }}>Absolute Limit (MB)</label>
+                <input
+                  type="number"
+                  className="input-field"
+                  value={storageAbsolute}
+                  onChange={(e) => setStorageAbsolute(e.target.value)}
+                  placeholder="e.g. 500"
+                  min="1"
+                  style={{ width: "100%", padding: "10px" }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Database Alert Settings */}
+          <div style={{ background: "var(--color-bg-input)", padding: "1.5rem", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
+            <h4 style={{ fontSize: "1rem", marginBottom: "1rem", color: "var(--color-text-main)" }}>Database Alerts</h4>
+            
+            <div className="form-group" style={{ marginBottom: "1rem" }}>
+              <label className="form-label" style={{ fontSize: "0.85rem" }}>Alert Type</label>
+              <select
+                className="input-field"
+                value={dbType}
+                onChange={(e) => setDbType(e.target.value)}
+                style={{ width: "100%", padding: "10px" }}
+              >
+                <option value="percentage">Percentage based (Managed DB)</option>
+                <option value="absolute">Absolute size based (BYOD DB)</option>
+              </select>
+            </div>
+
+            {dbType === "percentage" ? (
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: "0.85rem" }}>Thresholds (%)</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={dbThresholds}
+                  onChange={(e) => setDbThresholds(e.target.value)}
+                  placeholder="80, 95"
+                  style={{ width: "100%", padding: "10px" }}
+                />
+                <small style={{ color: "var(--color-text-muted)", marginTop: "4px", display: "block" }}>Comma separated percentages</small>
+              </div>
+            ) : (
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: "0.85rem" }}>Absolute Limit (MB)</label>
+                <input
+                  type="number"
+                  className="input-field"
+                  value={dbAbsolute}
+                  onChange={(e) => setDbAbsolute(e.target.value)}
+                  placeholder="e.g. 500"
+                  min="1"
+                  style={{ width: "100%", padding: "10px" }}
+                />
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+
+      {/* Current Usage Stats */}
+      <div style={{ marginTop: "2rem", background: "var(--color-bg-input)", padding: "1.5rem", borderRadius: "8px", border: "1px solid var(--color-border)" }}>
+        <h4 style={{ fontSize: "1rem", marginBottom: "1rem", color: "var(--color-text-main)", display: "flex", alignItems: "center", gap: "8px" }}>
+          📊 Current Usage
+        </h4>
+        <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "1fr 1fr" }}>
+          <div style={{ padding: "10px", background: "rgba(0,0,0,0.2)", borderRadius: "6px" }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--color-text-muted)" }}>Storage Used</div>
+            <div style={{ fontSize: "1.1rem", fontWeight: 600 }}>{project?.cachedUsageStats?.storage?.size || project?.storageUsed || 0} MB</div>
+            {project?.resources?.storage?.isExternal && project?.cachedUsageStats?.storage?.lastCalculated && (
+               <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginTop: "4px" }}>As of {new Date(project.cachedUsageStats.storage.lastCalculated).toLocaleString()}</div>
+            )}
+          </div>
+          <div style={{ padding: "10px", background: "rgba(0,0,0,0.2)", borderRadius: "6px" }}>
+            <div style={{ fontSize: "0.85rem", color: "var(--color-text-muted)" }}>Database Used</div>
+            <div style={{ fontSize: "1.1rem", fontWeight: 600 }}>{project?.cachedUsageStats?.database?.size || project?.databaseSizeMB || 0} MB</div>
+            {project?.resources?.db?.isExternal && project?.cachedUsageStats?.database?.lastCalculated && (
+               <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginTop: "4px" }}>As of {new Date(project.cachedUsageStats.database.lastCalculated).toLocaleString()}</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1.5rem" }}>
+        <button
+          className="btn btn-primary"
+          onClick={handleSave}
+          disabled={loading}
+          style={{ padding: "10px 24px" }}
+        >
+          {loading ? "Saving..." : "Save Preferences"}
+        </button>
+      </div>
+
     </div>
   );
 }

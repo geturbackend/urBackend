@@ -1159,3 +1159,37 @@ module.exports.updateCollectionRls = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 }
+
+// PATCH REQ FOR NOTIFICATION SETTINGS
+module.exports.updateNotificationSettings = async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const { email } = req.body; // { enabled: true, storage: {...}, database: {...} }
+
+        if (!email) {
+            return res.status(400).json({ error: "Missing 'email' settings in body" });
+        }
+
+        const project = await Project.findOne({ _id: projectId, owner: req.user._id });
+        if (!project) return res.status(404).json({ error: "Project not found or access denied." });
+
+        project.notificationSettings = {
+            ...project.notificationSettings,
+            email: {
+                ...project.notificationSettings?.email,
+                ...email,
+            }
+        };
+
+        if (email.storage || email.database) {
+             project.markModified('notificationSettings');
+        }
+
+        await project.save();
+
+        await deleteProjectById(projectId);
+        res.json({ success: true, settings: project.notificationSettings });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};

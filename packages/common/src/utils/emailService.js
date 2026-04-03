@@ -214,4 +214,39 @@ async function sendAuthOtpEmail(email, { otp, type, pname }) {
     }
 }
 
-module.exports = { sendOtp, sendReleaseEmail, sendAuthOtpEmail };
+
+/**
+ * Send a resource limit warning email.
+ * @param {string} toEmail
+ * @param {Object} payload - { projectName, resourceType, currentUsage, limit, percentage, isBYOD }
+ */
+async function sendLimitWarningEmail(toEmail, payload) {
+    const limitWarningTemplate = require('./emailTemplates/limitWarning');
+    const html = limitWarningTemplate(payload);
+
+    const resourceLabel = payload.resourceType === 'storage' ? 'Storage' : 'Database';
+    const subject = payload.isBYOD
+        ? `⚠️ ${resourceLabel} alert: ${payload.currentUsage} reached — ${payload.projectName}`
+        : `⚠️ ${payload.percentage}% ${resourceLabel} limit reached — ${payload.projectName}`;
+
+    try {
+        const { data, error } = await resend.emails.send({
+            from: 'urBackend <urbackend@apps.bitbros.in>',
+            to: toEmail,
+            subject,
+            html,
+            replyTo: 'urbackend@apps.bitbros.in',
+        });
+
+        if (error) {
+            console.error('[Resend Error]', error);
+            throw new Error(error.message || 'Failed to send limit warning email');
+        }
+        return { data };
+    } catch (error) {
+        console.error('[Limit Warning Email Error]', error);
+        throw error;
+    }
+}
+
+module.exports = { sendOtp, sendReleaseEmail, sendAuthOtpEmail, sendLimitWarningEmail };

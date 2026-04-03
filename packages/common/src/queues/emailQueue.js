@@ -1,12 +1,27 @@
 const { Queue, Worker } = require('bullmq');
 const connection = require('../config/redis');
-const { sendReleaseEmail } = require('../utils/emailService');
+const { sendReleaseEmail, sendLimitWarningEmail } = require('../utils/emailService');
 
 // Create the email queue
 const emailQueue = new Queue('email-queue', { connection });
 
 // Initialize Worker with Rate Limiting
 const worker = new Worker('email-queue', async (job) => {
+    if (job.name === 'limit-warning') {
+        const { ownerEmail, projectName, resourceType, currentUsage, limit, percentage, isBYOD } = job.data;
+        console.log(`[Queue] Processing limit-warning email for: ${ownerEmail} (${resourceType})`);
+        await sendLimitWarningEmail(ownerEmail, {
+            projectName,
+            resourceType,
+            currentUsage,
+            limit,
+            percentage,
+            isBYOD,
+        });
+        return;
+    }
+
+    // Default: release email
     const { email, version, title, content } = job.data;
     try {
         console.log(`[Queue] Processing Release email for: ${email}`);
@@ -24,11 +39,12 @@ const worker = new Worker('email-queue', async (job) => {
 });
 
 worker.on('completed', (job) => {
-    console.log(`[Queue] Job ${job.id} completed successfully`);
+    console.log(`[Queue] Job ${job.id} (${job.name}) completed successfully`);
 });
 
 worker.on('failed', (job, err) => {
-    console.error(`[Queue] Job ${job.id} failed:`, err);
+    console.error(`[Queue] Job ${job.id} (${job.name}) failed:`, err);
 });
 
 module.exports = { emailQueue };
+
