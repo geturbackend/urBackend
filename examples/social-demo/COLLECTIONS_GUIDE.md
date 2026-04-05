@@ -33,10 +33,20 @@ followersCount    | Number  | No       | No     | 0
 followingCount    | Number  | No       | No     | 0
 ```
 
+For GitHub social auth in this demo, these extra `users` fields are recommended:
+
+```
+Field Name        | Type    | Required | Unique | Default
+------------------|---------|----------|--------|----------
+githubId          | String  | No       | No     | -
+authProviders     | Array   | No       | No     | []
+```
+
 **Complete `users` schema will have:**
 - email ✅ (auto-created)
 - password ✅ (auto-created)
 - username + 9 additional fields (you add these)
+- optional social-auth metadata fields for GitHub sign-in
 
 ---
 

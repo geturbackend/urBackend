@@ -12,7 +12,7 @@ A **full-featured X.com (Twitter) clone** built entirely on the **urBackend** Ba
 
 ## ✨ Features
 
-- 🔐 **Authentication** - Secure JWT-based login/signup powered by urBackend Auth.
+- 🔐 **Authentication** - Secure JWT-based login/signup plus GitHub social auth powered by urBackend Auth.
 - 📝 **Tweet Composer** - Text + multi-image uploads (up to 4 images) with previews.
 - ❤️ **Social Interactions** - Like, comment, and retweet (coming soon) capabilities.
 - 👥 **Relationship Graph** - Real-time Follow/Unfollow system.
@@ -101,6 +101,35 @@ API_KEY=sk_live_your_key_here
 PORT=4000
 ```
 
+You can copy the checked-in templates:
+```bash
+cp client/.env.example client/.env
+cp server/.env.example server/.env
+```
+
+### 4.1 GitHub Social Auth Setup
+
+The demo now includes a `Continue with GitHub` flow on both `/login` and `/signup`.
+
+In your urBackend dashboard:
+1. Go to `Project Settings` and set `Site URL` to your client URL.
+   Local development value: `http://localhost:5173`
+2. Go to `Auth`.
+3. Open `Social Auth`.
+4. Select `GitHub`.
+5. Toggle it on and paste your GitHub `Client ID` and `Client Secret`.
+6. Copy the read-only callback URL shown by urBackend and paste it into your GitHub OAuth app.
+
+In GitHub:
+1. Open `Settings -> Developer settings -> OAuth Apps`.
+2. Create a new OAuth app.
+3. Set `Homepage URL` to your app URL.
+   Local development value: `http://localhost:5173`
+4. Set `Authorization callback URL` to the callback URL shown in urBackend dashboard Auth settings.
+5. Copy the generated `Client ID` and `Client Secret` into urBackend Auth settings.
+
+No extra client `.env` variables are required for GitHub social auth. The redirect target comes from your urBackend project `Site URL`.
+
 ### 5. Run the Application
 ```bash
 # Terminal 1: Start Proxy Server (required for uploads)
@@ -134,6 +163,12 @@ This demo is now **PK-first** and aligned with the latest public APIs:
 1. **Public API Client**: Uses `pk_live_*` for `/api/userAuth/*` and `/api/data/*`.
 2. **RLS-protected writes**: `posts`, `comments`, `likes`, `follows`, and `profiles` require RLS so authenticated users can write with `pk_live`.
 3. **Upload Proxy**: A tiny local server keeps `sk_live_*` only for `/api/storage/*` uploads.
+
+### Social auth flow in this demo
+
+- The client sends users to `GET /api/userAuth/social/github/start` with the public key.
+- urBackend handles the GitHub OAuth redirect and sends users back to `<siteUrl>/auth/callback`.
+- The callback page exchanges the one-time `rtCode` for a refresh token, stores both tokens, and loads the signed-in user.
 
 ### Required RLS configuration
 
@@ -215,6 +250,8 @@ For each writable collection (`posts`, `comments`, `likes`, `follows`, `profiles
 - **Images not uploading?** Ensure the `server` is running and `API_KEY` is a secret key (`sk_live_...`) for `/storage/*`.
 - **403 Forbidden?** Double-check your **Domain Whitelisting** settings in the urBackend dashboard.
 - **Data not appearing?** Verify that your collection names and field types match the schemas above exactly.
+- **GitHub login redirects back but does not sign in?** Make sure your urBackend project `Site URL` exactly matches the demo origin, usually `http://localhost:5173`.
+- **GitHub setup fails?** Confirm the callback URL in GitHub matches the read-only callback URL shown in urBackend Auth settings.
 
 ---
 

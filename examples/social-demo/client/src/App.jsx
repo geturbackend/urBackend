@@ -6,6 +6,7 @@ import Layout from './components/layout/Layout';
 import Home from './pages/Home';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
+import SocialCallback from './pages/auth/SocialCallback';
 import Profile from './pages/Profile';
 import PostDetail from './pages/PostDetail';
 import Notifications from './pages/Notifications';
@@ -81,6 +82,7 @@ function AppRoutes() {
           </PublicRoute>
         }
       />
+      <Route path="/auth/callback" element={<SocialCallback />} />
 
       {/* Protected Routes */}
       <Route

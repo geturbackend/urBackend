@@ -315,6 +315,25 @@ console.log(data);
                             url="/api/userAuth/me"
                             comment="Get current logged in user details"
                         />
+
+                        <h3 style={{ fontSize: '1.1rem', marginTop: '2rem' }}>4. Social Auth Setup</h3>
+                        <p style={{ fontSize: '0.9rem', color: '#aaa', marginBottom: '1rem' }}>
+                            Social Auth follows a Supabase-style setup flow. You do not type callback URLs manually into urBackend.
+                        </p>
+                        <div className="card" style={{ backgroundColor: '#1a1a1a', marginBottom: '1rem' }}>
+                            <p style={{ fontSize: '0.9rem', color: '#e5e5e5', marginBottom: '0.75rem' }}>
+                                <strong>Step 1:</strong> Set your project <code>Site URL</code> in <strong>Project Settings</strong>.
+                            </p>
+                            <p style={{ fontSize: '0.9rem', color: '#e5e5e5', marginBottom: '0.75rem' }}>
+                                <strong>Step 2:</strong> Open <strong>Auth → Social Auth</strong> in the dashboard and copy the read-only callback URL shown for GitHub or Google.
+                            </p>
+                            <p style={{ fontSize: '0.9rem', color: '#e5e5e5', marginBottom: '0.75rem' }}>
+                                <strong>Step 3:</strong> Paste that callback URL into the provider console, create your OAuth app, then copy the <code>Client ID</code> and <code>Client Secret</code> back into urBackend.
+                            </p>
+                            <p style={{ fontSize: '0.9rem', color: '#e5e5e5', marginBottom: 0 }}>
+                                <strong>Step 4:</strong> Enable the provider and save. After login, urBackend redirects users back to <code>&lt;Site URL&gt;/auth/callback</code>.
+                            </p>
+                        </div>
                     </div>
                 );
 

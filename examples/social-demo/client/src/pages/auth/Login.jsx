@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/useAuth';
+import { authApi } from '../../lib/api';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 
@@ -17,6 +18,11 @@ export default function Login() {
     login(formData, {
       onSuccess: () => navigate('/'),
     });
+  };
+
+  const handleGithubLogin = () => {
+    const startUrl = authApi.getSocialStartUrl('github');
+    window.location.href = startUrl;
   };
 
   return (
@@ -64,6 +70,28 @@ export default function Login() {
             disabled={isLoginLoading}
           >
             {isLoginLoading ? 'Signing in...' : 'Sign In'}
+          </Button>
+
+          <div className="relative py-2">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200 dark:border-gray-800" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase tracking-[0.24em] text-gray-400">
+              <span className="bg-white px-3 dark:bg-black">Or continue with</span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full flex items-center justify-center gap-3"
+            size="lg"
+            onClick={handleGithubLogin}
+          >
+            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden="true">
+              <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.38 7.86 10.9.58.1.79-.25.79-.56 0-.28-.01-1.2-.02-2.18-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.35.96.1-.75.4-1.26.72-1.55-2.56-.29-5.26-1.28-5.26-5.72 0-1.27.45-2.31 1.19-3.13-.12-.29-.52-1.47.11-3.07 0 0 .98-.31 3.2 1.19.93-.26 1.93-.39 2.92-.39s1.99.13 2.92.39c2.22-1.5 3.2-1.19 3.2-1.19.63 1.6.23 2.78.11 3.07.74.82 1.19 1.86 1.19 3.13 0 4.45-2.7 5.42-5.27 5.7.41.36.78 1.08.78 2.18 0 1.58-.01 2.85-.01 3.24 0 .31.21.67.8.56A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z" />
+            </svg>
+            Continue with GitHub
           </Button>
         </form>
 

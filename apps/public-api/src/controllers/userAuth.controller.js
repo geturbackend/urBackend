@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { z } = require('zod');
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 const {redis} = require('@urbackend/common');
 const {Project} = require('@urbackend/common');
 const { authEmailQueue } = require('@urbackend/common');
@@ -9,6 +10,7 @@ const { getRefreshSession, persistRefreshSession, revokeSessionChain } = require
 const { loginSchema, userSignupSchema, resetPasswordSchema, onlyEmailSchema, verifyOtpSchema, changePasswordSchema, sanitize } = require('@urbackend/common');
 const { getConnection } = require('@urbackend/common');
 const { getCompiledModel } = require('@urbackend/common');
+const { decrypt } = require('@urbackend/common');
 const {
     assertRefreshRateLimits,
     clearRefreshCookie,
@@ -18,6 +20,335 @@ const {
     readRefreshTokenFromRequest,
     shouldExposeRefreshToken
 } = require('../utils/refreshToken');
+
+const SOCIAL_PROVIDER_KEYS = ['github', 'google'];
+const SOCIAL_STATE_TTL_SECONDS = 600;
+const SOCIAL_REFRESH_EXCHANGE_TTL_SECONDS = 60;
+
+const getPublicApiBaseUrl = () => {
+    const configured = process.env.PUBLIC_API_URL?.trim();
+    if (configured) return configured.replace(/\/$/, '');
+    const port = process.env.USER_PORT || 1235;
+    return `http://localhost:${port}`;
+};
+
+const getSocialStateKey = (state) => `project:social-auth:state:${state}`;
+const getSocialRefreshExchangeKey = (rtCode) => `project:social-auth:refresh-exchange:${rtCode}`;
+const getFrontendCallbackBaseUrl = (project) => {
+    const configured = String(project?.siteUrl || '').trim();
+    const base = configured || process.env.FRONTEND_URL || 'http://localhost:5173';
+    return `${base.replace(/\/$/, '')}/auth/callback`;
+};
+const toBase64UrlBuffer = (input) => Buffer.from(input.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(input.length / 4) * 4, '='), 'base64');
+
+const assertAuthProjectReady = (project) => {
+    if (!project?.isAuthEnabled) {
+        const err = new Error('Authentication service is disabled');
+        err.statusCode = 403;
+        throw err;
+    }
+
+    const usersCollection = project.collections?.find(c => c.name === 'users');
+    if (!usersCollection) {
+        const err = new Error("User Schema Missing");
+        err.statusCode = 403;
+        err.publicMessage = "Authentication is enabled, but the 'users' collection has not been defined.";
+        throw err;
+    }
+
+    const hasEmail = usersCollection.model.find(f => f.key === 'email' && f.type === 'String' && f.required);
+    const hasPassword = usersCollection.model.find(f => f.key === 'password' && f.type === 'String' && f.required);
+    if (!hasEmail || !hasPassword) {
+        const err = new Error('Invalid Users Schema');
+        err.statusCode = 422;
+        err.publicMessage = "The 'users' collection must contain required 'email' and 'password' String fields.";
+        throw err;
+    }
+
+    return usersCollection;
+};
+
+const getSocialProviderConfig = async (projectId, provider) => {
+    const selectClause = `name resources collections jwtSecret isAuthEnabled authProviders.${provider} +authProviders.${provider}.clientSecret`;
+    const project = await Project.findById(projectId).select(selectClause).lean();
+    if (!project) return null;
+
+    const providerConfig = project.authProviders?.[provider];
+    if (!providerConfig?.enabled || !providerConfig.clientId || !providerConfig.clientSecret) {
+        return { project, providerConfig: null };
+    }
+
+    const decryptedSecret = decrypt(providerConfig.clientSecret);
+    if (!decryptedSecret) {
+        return { project, providerConfig: null };
+    }
+
+    return {
+        project,
+        providerConfig: {
+            enabled: true,
+            clientId: providerConfig.clientId,
+            clientSecret: decryptedSecret,
+            redirectUri: `${getPublicApiBaseUrl()}/api/userAuth/social/${provider}/callback`
+        }
+    };
+};
+
+const buildGithubAuthorizeUrl = ({ clientId, redirectUri, state }) => {
+    const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        scope: 'read:user user:email',
+        state,
+    });
+    return `https://github.com/login/oauth/authorize?${params.toString()}`;
+};
+
+const buildGoogleAuthorizeUrl = ({ clientId, redirectUri, state }) => {
+    const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        response_type: 'code',
+        scope: 'openid email profile',
+        state,
+        access_type: 'offline',
+        prompt: 'consent',
+    });
+    return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+};
+
+const exchangeGithubCodeForToken = async ({ code, clientId, clientSecret, redirectUri }) => {
+    const response = await fetch('https://github.com/login/oauth/access_token', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+            client_id: clientId,
+            client_secret: clientSecret,
+            code,
+            redirect_uri: redirectUri,
+        }),
+    });
+
+    const payload = await response.json();
+    if (!response.ok || payload.error || !payload.access_token) {
+        throw new Error(payload.error_description || payload.error || 'GitHub token exchange failed');
+    }
+
+    return {
+        accessToken: payload.access_token,
+        tokenType: payload.token_type || 'bearer',
+    };
+};
+
+const exchangeGoogleCodeForToken = async ({ code, clientId, clientSecret, redirectUri }) => {
+    const params = new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+    });
+
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString(),
+    });
+
+    const payload = await response.json();
+    if (!response.ok || payload.error || !payload.id_token) {
+        throw new Error(payload.error_description || payload.error || 'Google token exchange failed');
+    }
+
+    return payload;
+};
+
+const fetchGithubProfile = async (accessToken) => {
+    const headers = {
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'urBackend-social-auth',
+    };
+
+    const [profileResponse, emailsResponse] = await Promise.all([
+        fetch('https://api.github.com/user', { headers }),
+        fetch('https://api.github.com/user/emails', { headers }),
+    ]);
+
+    const profile = await profileResponse.json();
+    const emails = await emailsResponse.json();
+
+    if (!profileResponse.ok) {
+        throw new Error(profile.message || 'Failed to fetch GitHub profile');
+    }
+    if (!emailsResponse.ok || !Array.isArray(emails)) {
+        throw new Error('Failed to fetch GitHub email addresses');
+    }
+
+    const primaryEmail = emails.find((entry) => entry.primary) || emails.find((entry) => entry.verified) || emails[0];
+    return {
+        providerUserId: String(profile.id || ''),
+        email: primaryEmail?.email || profile.email || '',
+        emailVerified: !!primaryEmail?.verified,
+        username: profile.login || '',
+        name: profile.name || profile.login || '',
+        avatarUrl: profile.avatar_url || '',
+        rawProfile: profile,
+    };
+};
+
+const verifyGoogleIdToken = async ({ idToken, clientId }) => {
+    const parts = String(idToken || '').split('.');
+    if (parts.length !== 3) {
+        throw new Error('Invalid Google id_token format');
+    }
+
+    const [encodedHeader, encodedPayload, encodedSignature] = parts;
+    const header = JSON.parse(toBase64UrlBuffer(encodedHeader).toString('utf8'));
+    const payload = JSON.parse(toBase64UrlBuffer(encodedPayload).toString('utf8'));
+
+    if (header.alg !== 'RS256' || !header.kid) {
+        throw new Error('Unsupported Google id_token signature');
+    }
+
+    const certsResponse = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+    const certsPayload = await certsResponse.json();
+    const signingKey = certsPayload.keys?.find((key) => key.kid === header.kid);
+    if (!certsResponse.ok || !signingKey) {
+        throw new Error('Unable to verify Google id_token signing key');
+    }
+
+    const publicKey = crypto.createPublicKey({ key: signingKey, format: 'jwk' });
+    const verified = crypto.verify(
+        'RSA-SHA256',
+        Buffer.from(`${encodedHeader}.${encodedPayload}`),
+        publicKey,
+        toBase64UrlBuffer(encodedSignature)
+    );
+
+    if (!verified) {
+        throw new Error('Invalid Google id_token signature');
+    }
+
+    const validIssuers = new Set(['accounts.google.com', 'https://accounts.google.com']);
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const audienceMatches = Array.isArray(payload.aud)
+        ? payload.aud.includes(clientId)
+        : payload.aud === clientId;
+
+    if (!audienceMatches) {
+        throw new Error('Google id_token audience mismatch');
+    }
+    if (!validIssuers.has(payload.iss)) {
+        throw new Error('Google id_token issuer mismatch');
+    }
+    if (!payload.exp || Number(payload.exp) <= nowSeconds) {
+        throw new Error('Google id_token has expired');
+    }
+
+    return payload;
+};
+
+const fetchGoogleProfile = async ({ idToken, clientId }) => {
+    const claims = await verifyGoogleIdToken({ idToken, clientId });
+    return {
+        providerUserId: String(claims.sub || ''),
+        email: claims.email || '',
+        emailVerified: !!claims.email_verified,
+        username: claims.email ? String(claims.email).split('@')[0] : '',
+        name: claims.name || '',
+        avatarUrl: claims.picture || '',
+        rawProfile: claims,
+    };
+};
+
+const socialProviders = {
+    github: {
+        buildAuthorizeUrl: buildGithubAuthorizeUrl,
+        exchangeCodeForToken: exchangeGithubCodeForToken,
+        fetchProfile: async ({ tokenResponse }) => fetchGithubProfile(tokenResponse.accessToken),
+    },
+    google: {
+        buildAuthorizeUrl: buildGoogleAuthorizeUrl,
+        exchangeCodeForToken: exchangeGoogleCodeForToken,
+        fetchProfile: async ({ tokenResponse, providerConfig }) => fetchGoogleProfile({
+            idToken: tokenResponse.id_token,
+            clientId: providerConfig.clientId,
+        }),
+    },
+};
+
+const buildSocialAuthUserPayload = async (usersColConfig, profile) => {
+    const randomPassword = crypto.randomBytes(24).toString('hex');
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(randomPassword, salt);
+
+    return buildAuthUserPayload(
+        usersColConfig,
+        {
+            email: profile.email,
+            password: randomPassword,
+            username: profile.username,
+            name: profile.name,
+            avatarUrl: profile.avatarUrl,
+        },
+        hashedPassword,
+        profile.emailVerified
+    );
+};
+
+const findOrCreateSocialUser = async ({ project, usersColConfig, Model, provider, profile }) => {
+    const providerIdField = `${provider}Id`;
+    const providerName = provider;
+
+    let user = await Model.findOne({ [providerIdField]: profile.providerUserId });
+    if (user) {
+        return { user, isNewUser: false, linkedByEmail: false };
+    }
+
+    if (!profile.email) {
+        const err = new Error(`${providerName} did not return an email address for this account.`);
+        err.statusCode = 422;
+        throw err;
+    }
+
+    user = await Model.findOne({ email: profile.email });
+    if (user) {
+        const update = {
+            $set: {
+                [providerIdField]: profile.providerUserId,
+                ...(profile.avatarUrl ? { avatarUrl: profile.avatarUrl } : {}),
+            },
+            $addToSet: { authProviders: providerName },
+        };
+
+        if (profile.emailVerified) {
+            const verificationField = getVerificationField(usersColConfig);
+            if (verificationField) {
+                update.$set[verificationField] = true;
+            }
+        }
+
+        await Model.updateOne({ _id: user._id }, update);
+        user = await Model.findOne({ _id: user._id });
+        return { user, isNewUser: false, linkedByEmail: true };
+    }
+
+    const newUserPayload = await buildSocialAuthUserPayload(usersColConfig, profile);
+    newUserPayload[providerIdField] = profile.providerUserId;
+    newUserPayload.authProviders = [providerName];
+    if (profile.avatarUrl && newUserPayload.avatarUrl === undefined) {
+        newUserPayload.avatarUrl = profile.avatarUrl;
+    }
+
+    user = await Model.create(newUserPayload);
+    return { user, isNewUser: true, linkedByEmail: false };
+};
 
 const getUsersModel = async (project) => {
     const usersColConfig = project.collections.find(c => c.name === 'users');
@@ -99,6 +430,197 @@ const sanitizePublicProfile = (userDoc, usersColConfig) => {
     if (userDoc.createdAt) result.createdAt = userDoc.createdAt;
     if (userDoc.updatedAt) result.updatedAt = userDoc.updatedAt;
     return result;
+};
+
+module.exports.startSocialAuth = async (req, res) => {
+    try {
+        const provider = String(req.params.provider || '').trim().toLowerCase();
+        if (!SOCIAL_PROVIDER_KEYS.includes(provider)) {
+            return res.status(404).json({ error: 'Unsupported social auth provider' });
+        }
+
+        assertAuthProjectReady(req.project);
+
+        const { project, providerConfig } = await getSocialProviderConfig(req.project._id, provider);
+        if (!project || !providerConfig) {
+            return res.status(422).json({
+                error: 'Provider not configured',
+                message: `${provider} social auth is disabled or incomplete for this project.`,
+            });
+        }
+
+        const state = crypto.randomBytes(24).toString('hex');
+        await redis.set(
+            getSocialStateKey(state),
+            JSON.stringify({
+                projectId: String(project._id),
+                provider,
+                callbackUrl: getFrontendCallbackBaseUrl(project),
+            }),
+            'EX',
+            SOCIAL_STATE_TTL_SECONDS
+        );
+
+        const authUrl = socialProviders[provider].buildAuthorizeUrl({
+            clientId: providerConfig.clientId,
+            redirectUri: providerConfig.redirectUri,
+            state,
+        });
+
+        return res.redirect(authUrl);
+    } catch (err) {
+        return res.status(err.statusCode || 500).json({
+            error: err.publicMessage || err.message,
+        });
+    }
+};
+
+module.exports.handleSocialAuthCallback = async (req, res) => {
+    try {
+        const provider = String(req.params.provider || '').trim().toLowerCase();
+        if (!SOCIAL_PROVIDER_KEYS.includes(provider)) {
+            return res.status(404).json({ error: 'Unsupported social auth provider' });
+        }
+
+        const code = String(req.query.code || '').trim();
+        const state = String(req.query.state || '').trim();
+        if (!code || !state) {
+            return res.status(400).json({ error: 'Missing code or state' });
+        }
+
+        const stateKey = getSocialStateKey(state);
+        const rawState = await redis.get(stateKey);
+        if (!rawState) {
+            return res.status(400).json({ error: 'Invalid or expired OAuth state' });
+        }
+
+        await redis.del(stateKey);
+
+        const parsedState = JSON.parse(rawState);
+        if (parsedState.provider !== provider || !parsedState.projectId) {
+            return res.status(400).json({ error: 'OAuth state mismatch' });
+        }
+
+        const { project, providerConfig } = await getSocialProviderConfig(parsedState.projectId, provider);
+        if (!project || !providerConfig) {
+            return res.status(422).json({
+                error: 'Provider not configured',
+                message: `${provider} social auth is disabled or incomplete for this project.`,
+            });
+        }
+
+        const usersColConfig = assertAuthProjectReady(project);
+        const connection = await getConnection(project._id);
+        const Model = getCompiledModel(connection, usersColConfig, project._id, project.resources.db.isExternal);
+
+        const tokenResponse = await socialProviders[provider].exchangeCodeForToken({
+            code,
+            clientId: providerConfig.clientId,
+            clientSecret: providerConfig.clientSecret,
+            redirectUri: providerConfig.redirectUri,
+        });
+
+        const profile = await socialProviders[provider].fetchProfile({
+            tokenResponse,
+            providerConfig,
+        });
+        const { user, isNewUser, linkedByEmail } = await findOrCreateSocialUser({
+            project,
+            usersColConfig,
+            Model,
+            provider,
+            profile,
+        });
+
+        const issuedTokens = await issueAuthTokens({
+            project,
+            userId: user._id,
+            req,
+            res,
+        });
+        const rtCode = crypto.randomBytes(16).toString('hex');
+        await redis.set(
+            getSocialRefreshExchangeKey(rtCode),
+            JSON.stringify({
+                token: issuedTokens.accessToken,
+                refreshToken: issuedTokens.refreshToken,
+            }),
+            'EX',
+            SOCIAL_REFRESH_EXCHANGE_TTL_SECONDS
+        );
+
+        const callbackBaseUrl = parsedState.callbackUrl || getFrontendCallbackBaseUrl(project);
+        const callbackUrl = new URL(callbackBaseUrl);
+        callbackUrl.searchParams.set('token', issuedTokens.accessToken);
+        callbackUrl.searchParams.set('rtCode', rtCode);
+        callbackUrl.searchParams.set('provider', provider);
+        callbackUrl.searchParams.set('userId', String(user._id));
+        callbackUrl.searchParams.set('projectId', String(project._id));
+        callbackUrl.searchParams.set('isNewUser', String(isNewUser));
+        callbackUrl.searchParams.set('linkedByEmail', String(linkedByEmail));
+
+        return res.redirect(callbackUrl.toString());
+    } catch (err) {
+        return res.status(err.statusCode || 500).json({
+            error: err.message || 'Social authentication failed',
+        });
+    }
+};
+
+module.exports.exchangeSocialRefreshToken = async (req, res) => {
+    try {
+        const rtCode = String(req.body?.rtCode || '').trim();
+        const token = String(req.body?.token || '').trim();
+
+        if (!rtCode || !token) {
+            return res.status(400).json({
+                success: false,
+                message: 'rtCode and token are required',
+            });
+        }
+
+        const exchangeKey = getSocialRefreshExchangeKey(rtCode);
+        const rawExchange = await redis.get(exchangeKey);
+        if (!rawExchange) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired refresh token exchange code',
+            });
+        }
+
+        let parsedExchange;
+        try {
+            parsedExchange = JSON.parse(rawExchange);
+        } catch (err) {
+            await redis.del(exchangeKey);
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired refresh token exchange code',
+            });
+        }
+
+        if (parsedExchange.token !== token || !parsedExchange.refreshToken) {
+            await redis.del(exchangeKey);
+            return res.status(403).json({
+                success: false,
+                message: 'Invalid refresh token exchange payload',
+            });
+        }
+
+        await redis.del(exchangeKey);
+        return res.status(200).json({
+            success: true,
+            data: {
+                refreshToken: parsedExchange.refreshToken,
+            },
+            message: 'Refresh token exchanged successfully',
+        });
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            message: err.message || 'Failed to exchange refresh token',
+        });
+    }
 };
 
 

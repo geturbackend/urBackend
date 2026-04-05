@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import { Shield, Trash2, User, Search, Mail, UserPlus, Key, X, AlertCircle, Edit2, Save, Settings, Monitor, LogOut } from 'lucide-react';
+import { PUBLIC_API_URL } from '../config';
 
 // FUNCTION - DYNAMIC USER FORM
 const DynamicUserForm = ({ schema, formData, onChange, isEdit = false }) => {
@@ -126,7 +127,14 @@ export default function Auth() {
 
     const [project, setProject] = useState(null);
     const [isEnabling, setIsEnabling] = useState(false);
+    const [isSavingProviders, setIsSavingProviders] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isSocialAuthModalOpen, setIsSocialAuthModalOpen] = useState(false);
+    const [selectedProvider, setSelectedProvider] = useState('github');
+    const [authProviders, setAuthProviders] = useState({
+        github: { enabled: false, clientId: '', clientSecret: '', hasClientSecret: false },
+        google: { enabled: false, clientId: '', clientSecret: '', hasClientSecret: false }
+    });
     
     const [addFormData, setAddFormData] = useState({ email: '', password: '', username: '' });
     const [isAdding, setIsAdding] = useState(false);
@@ -144,6 +152,12 @@ export default function Auth() {
     const [userSessions, setUserSessions] = useState([]);
     const [loadingSessions, setLoadingSessions] = useState(false);
     const [revokingSessionId, setRevokingSessionId] = useState(null);
+
+    const siteUrl = project?.siteUrl || '';
+    const githubCallbackUrl = `${PUBLIC_API_URL}/api/userAuth/social/github/callback`;
+    const googleCallbackUrl = `${PUBLIC_API_URL}/api/userAuth/social/google/callback`;
+    const activeProvider = selectedProvider === 'google' ? authProviders.google : authProviders.github;
+    const activeCallbackUrl = selectedProvider === 'google' ? googleCallbackUrl : githubCallbackUrl;
 
     const usersCollection = project?.collections?.find(c => c.name === 'users');
     const hasUserCollection = !!usersCollection;
@@ -165,12 +179,28 @@ export default function Auth() {
         return fallback;
     };
 
+    const normalizeAuthProviders = (providers = {}) => ({
+        github: {
+            enabled: !!providers?.github?.enabled,
+            clientId: providers?.github?.clientId || '',
+            clientSecret: '',
+            hasClientSecret: !!providers?.github?.hasClientSecret,
+        },
+        google: {
+            enabled: !!providers?.google?.enabled,
+            clientId: providers?.google?.clientId || '',
+            clientSecret: '',
+            hasClientSecret: !!providers?.google?.hasClientSecret,
+        }
+    });
+
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const projRes = await api.get(`/api/projects/${projectId}`);
                 
                 setProject(projRes.data);
+                setAuthProviders(normalizeAuthProviders(projRes.data.authProviders));
 
                 if (projRes.data.isAuthEnabled) {
                     try {
@@ -226,6 +256,44 @@ export default function Auth() {
 
     const goToUsersSchemaPreset = () => {
         navigate(`/project/${projectId}/create-collection?name=users&preset=auth-users`);
+    };
+
+    const handleProviderFieldChange = (provider, field, value) => {
+        setAuthProviders((prev) => ({
+            ...prev,
+            [provider]: {
+                ...prev[provider],
+                [field]: value,
+            }
+        }));
+    };
+
+    const handleSaveProviders = async () => {
+        setIsSavingProviders(true);
+        try {
+            const payload = {
+                github: {
+                    enabled: !!authProviders.github.enabled,
+                    clientId: authProviders.github.clientId,
+                    ...(authProviders.github.clientSecret ? { clientSecret: authProviders.github.clientSecret } : {})
+                },
+                google: {
+                    enabled: !!authProviders.google.enabled,
+                    clientId: authProviders.google.clientId,
+                    ...(authProviders.google.clientSecret ? { clientSecret: authProviders.google.clientSecret } : {})
+                }
+            };
+
+            const res = await api.patch(`/api/projects/${projectId}/auth/providers`, payload);
+            const nextProviders = normalizeAuthProviders(res.data.authProviders);
+            setAuthProviders(nextProviders);
+            setProject((prev) => prev ? { ...prev, authProviders: res.data.authProviders } : prev);
+            toast.success('Social auth settings saved');
+        } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Failed to save social auth settings'));
+        } finally {
+            setIsSavingProviders(false);
+        }
     };
 
 // POST REQ FOR ADD USER (ADMIN)
@@ -473,6 +541,193 @@ export default function Auth() {
                         >
                             Open Prefilled Users Schema
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {project?.isAuthEnabled && hasUserCollection && hasRequiredUsersSchema && (
+                <div className="card" style={{ marginBottom: '2rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', marginBottom: '1.5rem' }}>
+                        <div>
+                            <h3 style={{ margin: 0, fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Settings size={18} color="var(--color-primary)" /> Social Auth
+                            </h3>
+                            <p style={{ margin: '8px 0 0 0', color: 'var(--color-text-muted)', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                                Keep provider setup hidden by default. Open the Social Auth settings modal, choose GitHub or Google, then configure just that provider.
+                            </p>
+                        </div>
+                        <button className="btn btn-primary" onClick={() => setIsSocialAuthModalOpen(true)} style={{ whiteSpace: 'nowrap' }}>
+                            Open Social Auth
+                        </button>
+                    </div>
+
+                    <div style={{ display: 'grid', gap: '0.85rem' }}>
+                        {[
+                            { key: 'github', label: 'GitHub', enabled: authProviders.github.enabled, secret: authProviders.github.hasClientSecret },
+                            { key: 'google', label: 'Google', enabled: authProviders.google.enabled, secret: authProviders.google.hasClientSecret }
+                        ].map((provider) => (
+                            <button
+                                key={provider.key}
+                                type="button"
+                                className="btn btn-ghost"
+                                onClick={() => {
+                                    setSelectedProvider(provider.key);
+                                    setIsSocialAuthModalOpen(true);
+                                }}
+                                style={{
+                                    justifyContent: 'space-between',
+                                    width: '100%',
+                                    padding: '14px 16px',
+                                    border: '1px solid var(--color-border)',
+                                    borderRadius: '12px',
+                                    background: 'rgba(255,255,255,0.02)',
+                                    textAlign: 'left'
+                                }}
+                            >
+                                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                                    <span style={{ color: 'var(--color-text-main)', fontWeight: 600 }}>{provider.label}</span>
+                                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.82rem' }}>
+                                        {provider.enabled ? 'Enabled' : 'Disabled'} {provider.secret ? '• Secret saved' : '• Secret missing'}
+                                    </span>
+                                </span>
+                                <span style={{ color: 'var(--color-primary)', fontSize: '0.85rem', fontWeight: 600 }}>Configure</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {isSocialAuthModalOpen && (
+                <div
+                    className="modal-overlay"
+                    style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+                    onClick={() => setIsSocialAuthModalOpen(false)}
+                >
+                    <div
+                        className="card modal-content"
+                        style={{ width: '100%', maxWidth: '720px', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button className="btn-icon" style={{ position: 'absolute', top: '16px', right: '16px' }} onClick={() => setIsSocialAuthModalOpen(false)}>
+                            <X size={20} />
+                        </button>
+
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <h2 style={{ fontSize: '1.35rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Settings size={20} color="var(--color-primary)" /> Social Auth Settings
+                            </h2>
+                            <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>
+                                Select one provider, configure it, then save. Keep the main Auth page clean and only dive into details when needed.
+                            </p>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+                            <button
+                                type="button"
+                                className={`btn ${selectedProvider === 'github' ? 'btn-primary' : 'btn-secondary'}`}
+                                onClick={() => setSelectedProvider('github')}
+                            >
+                                GitHub
+                            </button>
+                            <button
+                                type="button"
+                                className={`btn ${selectedProvider === 'google' ? 'btn-primary' : 'btn-secondary'}`}
+                                onClick={() => setSelectedProvider('google')}
+                            >
+                                Google
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'grid', gap: '1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '1.05rem' }}>{selectedProvider === 'google' ? 'Google' : 'GitHub'}</h3>
+                                    <p style={{ margin: '6px 0 0 0', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                                        {selectedProvider === 'google'
+                                            ? 'Use Google Cloud Console, then paste only the client credentials here.'
+                                            : 'Use GitHub OAuth Apps, then paste only the client credentials here.'}
+                                    </p>
+                                </div>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-main)', fontSize: '0.9rem' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={!!activeProvider.enabled}
+                                        onChange={(e) => handleProviderFieldChange(selectedProvider, 'enabled', e.target.checked)}
+                                        style={{ accentColor: 'var(--color-primary)' }}
+                                    />
+                                    Enable {selectedProvider === 'google' ? 'Google' : 'GitHub'}
+                                </label>
+                            </div>
+
+                            <div style={{ padding: '12px', borderRadius: '10px', background: 'rgba(0,0,0,0.18)', border: '1px solid var(--color-border)' }}>
+                                <div style={{ fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.04em', color: 'var(--color-text-muted)', marginBottom: '8px' }}>SETUP FLOW</div>
+                                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', lineHeight: '1.6' }}>
+                                    {selectedProvider === 'google' ? (
+                                        <>
+                                            1. Set your Project <strong>Site URL</strong> in Project Settings.<br />
+                                            2. Google Cloud Console: create a project and configure the OAuth consent screen.<br />
+                                            3. Create OAuth Client ID as <strong>Web application</strong>.<br />
+                                            4. Authorized JavaScript origins: <code>{siteUrl || 'Set Project Site URL first in Project Settings'}</code><br />
+                                            5. Authorized redirect URI: <code>{activeCallbackUrl}</code><br />
+                                            6. Paste Client ID and Client Secret here, enable Google, then save.
+                                        </>
+                                    ) : (
+                                        <>
+                                            1. Set your Project <strong>Site URL</strong> in Project Settings.<br />
+                                            2. GitHub: Settings → Developer settings → OAuth Apps → Register a new application.<br />
+                                            3. Homepage URL: <code>{siteUrl || 'Set Project Site URL first in Project Settings'}</code><br />
+                                            4. Authorization callback URL: <code>{activeCallbackUrl}</code><br />
+                                            5. Paste Client ID and Client Secret here, enable GitHub, then save.
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Client ID</label>
+                                <input
+                                    className="input-field"
+                                    value={activeProvider.clientId}
+                                    onChange={(e) => handleProviderFieldChange(selectedProvider, 'clientId', e.target.value)}
+                                    placeholder={selectedProvider === 'google' ? 'Google OAuth client ID' : 'GitHub OAuth app client ID'}
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Client Secret</label>
+                                <input
+                                    type="password"
+                                    className="input-field"
+                                    value={activeProvider.clientSecret}
+                                    onChange={(e) => handleProviderFieldChange(selectedProvider, 'clientSecret', e.target.value)}
+                                    placeholder={activeProvider.hasClientSecret ? 'Saved. Enter to replace.' : 'Provider client secret'}
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Callback URL</label>
+                                <div className="input-field" style={{ display: 'flex', alignItems: 'center', minHeight: '46px', color: 'var(--color-text-main)' }}>
+                                    <code style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{activeCallbackUrl}</code>
+                                </div>
+                                <p style={{ margin: '8px 0 0 0', color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
+                                    Read-only. Paste this exact URL into the provider console.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '2rem' }}>
+                            <button type="button" className="btn btn-secondary" onClick={() => setIsSocialAuthModalOpen(false)}>
+                                Close
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={handleSaveProviders}
+                                disabled={isSavingProviders}
+                            >
+                                {isSavingProviders ? 'Saving...' : 'Save Social Auth'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

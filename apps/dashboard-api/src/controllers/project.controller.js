@@ -8,6 +8,7 @@ const {
   createProjectSchema,
   createCollectionSchema,
   updateExternalConfigSchema,
+  updateAuthProvidersSchema,
 } = require("@urbackend/common");
 const { generateApiKey, hashApiKey } = require("@urbackend/common");
 const { z } = require("zod");
@@ -126,10 +127,51 @@ const getDefaultRlsForCollection = (collectionName, schema = []) => {
   };
 };
 
+const SOCIAL_PROVIDER_KEYS = ["github", "google"];
+
+const sanitizeAuthProviders = (authProviders = {}) => {
+  return SOCIAL_PROVIDER_KEYS.reduce((acc, provider) => {
+    const config = authProviders?.[provider] || {};
+    acc[provider] = {
+      enabled: !!config.enabled,
+      clientId: config.clientId || "",
+      hasClientSecret: !!config.clientSecret?.encrypted,
+    };
+    return acc;
+  }, {});
+};
+
+const sanitizeProjectResponse = (projectObj) => {
+  delete projectObj.publishableKey;
+  delete projectObj.secretKey;
+  delete projectObj.jwtSecret;
+
+  projectObj.authProviders = sanitizeAuthProviders(projectObj.authProviders);
+
+  if (projectObj.collections && Array.isArray(projectObj.collections)) {
+    projectObj.collections = projectObj.collections.map((col) => {
+      if (col.name === "users" && col.model) {
+        return {
+          ...col,
+          model: col.model.filter((m) => m.key !== "password"),
+          rls: col.rls || getDefaultRlsForCollection(col.name, col.model),
+        };
+      }
+
+      return {
+        ...col,
+        rls: col.rls || getDefaultRlsForCollection(col.name, col.model),
+      };
+    });
+  }
+
+  return projectObj;
+};
+
 module.exports.createProject = async (req, res) => {
   try {
     // POST FOR - PROJECT CREATION
-    const { name, description } = createProjectSchema.parse(req.body);
+    const { name, description, siteUrl } = createProjectSchema.parse(req.body);
 
     // --- PROJECT LIMIT CHECK ---
     const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
@@ -165,6 +207,7 @@ module.exports.createProject = async (req, res) => {
       publishableKey: hashedPublishableKey,
       secretKey: hashedSecretKey,
       jwtSecret: rawJwtSecret,
+      siteUrl: siteUrl || "",
     });
     await newProject.save();
 
@@ -172,6 +215,7 @@ module.exports.createProject = async (req, res) => {
     projectObj.publishableKey = rawPublishableKey;
     projectObj.secretKey = rawSecretKey;
     delete projectObj.jwtSecret;
+    projectObj.authProviders = sanitizeAuthProviders(projectObj.authProviders);
 
     res.status(201).json(projectObj);
   } catch (err) {
@@ -214,30 +258,7 @@ module.exports.getSingleProject = async (req, res) => {
       return res.status(403).json({ error: "Access denied." });
     }
 
-    // Just to be safe, we remove sensitive fields again even if from cache
-    delete projectObj.publishableKey;
-    delete projectObj.secretKey;
-    delete projectObj.jwtSecret;
-
-    // SANITIZE COLLECTION MODELS: Remove "password" from "users" collection schema
-    if (projectObj.collections && Array.isArray(projectObj.collections)) {
-      projectObj.collections = projectObj.collections.map((col) => {
-        if (col.name === "users" && col.model) {
-          return {
-            ...col,
-            model: col.model.filter((m) => m.key !== "password"),
-            rls: col.rls || getDefaultRlsForCollection(col.name, col.model),
-          };
-        }
-
-        return {
-          ...col,
-          rls: col.rls || getDefaultRlsForCollection(col.name, col.model),
-        };
-      });
-    }
-
-    res.json(projectObj);
+    res.json(sanitizeProjectResponse(projectObj));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1048,10 +1069,26 @@ module.exports.deleteAllFiles = async (req, res) => {
 
 module.exports.updateProject = async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, siteUrl } = req.body;
+    const updateFields = {};
+    if (name !== undefined) updateFields.name = name;
+    if (siteUrl !== undefined) {
+      if (siteUrl !== "" && typeof siteUrl !== "string") {
+        return res.status(400).json({ error: "siteUrl must be a string." });
+      }
+      if (siteUrl) {
+        try {
+          new URL(siteUrl);
+        } catch {
+          return res.status(400).json({ error: "Invalid Site URL format." });
+        }
+      }
+      updateFields.siteUrl = siteUrl || "";
+    }
+
     const project = await Project.findOneAndUpdate(
       { _id: req.params.projectId, owner: req.user._id },
-      { $set: { name } },
+      { $set: updateFields },
       { new: true },
     );
     if (!project) return res.status(404).json({ error: "Project not found." });
@@ -1260,27 +1297,7 @@ module.exports.toggleAuth = async (req, res) => {
     await deleteProjectByApiKeyCache(project.publishableKey);
     await deleteProjectByApiKeyCache(project.secretKey);
 
-    const projectObj = project.toObject();
-    delete projectObj.publishableKey;
-    delete projectObj.secretKey;
-    delete projectObj.jwtSecret;
-
-    if (projectObj.collections && Array.isArray(projectObj.collections)) {
-      projectObj.collections = projectObj.collections.map((col) => {
-        if (col.name === "users" && col.model) {
-          return {
-            ...col,
-            model: col.model.filter((m) => m.key !== "password"),
-            rls: col.rls || getDefaultRlsForCollection(col.name, col.model),
-          };
-        }
-
-        return {
-          ...col,
-          rls: col.rls || getDefaultRlsForCollection(col.name, col.model),
-        };
-      });
-    }
+    const projectObj = sanitizeProjectResponse(project.toObject());
 
     res.json({
       message: `Authentication ${project.isAuthEnabled ? "enabled" : "disabled"} successfully`,
@@ -1289,6 +1306,67 @@ module.exports.toggleAuth = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+module.exports.updateAuthProviders = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const parsed = updateAuthProvidersSchema.parse(req.body || {});
+
+    const project = await Project.findOne({
+      _id: projectId,
+      owner: req.user._id,
+    }).select("+authProviders.github.clientSecret +authProviders.google.clientSecret");
+
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    project.authProviders = project.authProviders || {};
+
+    for (const provider of SOCIAL_PROVIDER_KEYS) {
+      const incoming = parsed[provider];
+      if (!incoming) continue;
+
+      const current = project.authProviders?.[provider] || {};
+      const nextEnabled =
+        typeof incoming.enabled === "boolean" ? incoming.enabled : !!current.enabled;
+      const nextClientId =
+        incoming.clientId !== undefined ? incoming.clientId : (current.clientId || "");
+      const nextClientSecret =
+        incoming.clientSecret !== undefined
+          ? encrypt(incoming.clientSecret)
+          : (current.clientSecret || null);
+
+      if (nextEnabled && (!nextClientId || !nextClientSecret)) {
+        return res.status(422).json({
+          error: "Incomplete provider config",
+          message: `${provider} requires clientId and clientSecret before it can be enabled.`,
+        });
+      }
+
+      project.authProviders[provider] = {
+        enabled: nextEnabled,
+        clientId: nextClientId,
+        clientSecret: nextClientSecret,
+        redirectUri: current.redirectUri || "",
+      };
+    }
+
+    await project.save();
+
+    await deleteProjectById(projectId);
+    await deleteProjectByApiKeyCache(project.publishableKey);
+    await deleteProjectByApiKeyCache(project.secretKey);
+
+    return res.json({
+      message: "Auth providers updated",
+      authProviders: sanitizeAuthProviders(project.toObject().authProviders),
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: err.issues });
+    }
+    return res.status(500).json({ error: err.message });
   }
 };
 

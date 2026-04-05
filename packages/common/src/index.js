@@ -49,6 +49,7 @@ const {
   sanitize,
   userSignupSchema,
   updateExternalConfigSchema,
+  updateAuthProvidersSchema,
 } = require("./utils/input.validation");
 const { garbageCollect, storageGarbageCollect } = require("./utils/GC");
 const { generateApiKey, hashApiKey } = require("./utils/api");
@@ -97,6 +98,7 @@ module.exports = {
   createSchemaApiKeySchema,
   sanitize,
   updateExternalConfigSchema,
+  updateAuthProvidersSchema,
   garbageCollect,
   storageGarbageCollect,
   generateApiKey,

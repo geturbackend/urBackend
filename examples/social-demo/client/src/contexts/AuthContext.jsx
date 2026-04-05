@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { authApi, dataApi } from '../lib/api';
+import { authApi, clearAuthStorage, dataApi, storeTokens } from '../lib/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import AuthContext from './auth-context';
 
@@ -59,13 +59,17 @@ export const AuthProvider = ({ children }) => {
       await authApi.logout();
     } catch (logoutError) {
       console.error('Logout request failed:', logoutError);
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
+      clearAuthStorage();
     } finally {
       setToken(null);
       queryClient.clear();
     }
+  };
+
+  const completeSocialAuth = async ({ accessToken, refreshToken }) => {
+    storeTokens({ accessToken, refreshToken });
+    setToken(accessToken);
+    await queryClient.invalidateQueries({ queryKey: ['me'] });
   };
 
   const value = {
@@ -80,6 +84,7 @@ export const AuthProvider = ({ children }) => {
     signupError: signupMutation.error,
     isLoginLoading: loginMutation.isPending,
     isSignupLoading: signupMutation.isPending,
+    completeSocialAuth,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

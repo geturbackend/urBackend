@@ -28,6 +28,7 @@ const {
     analytics,
     updateAllowedDomains,
     toggleAuth,
+    updateAuthProviders,
     updateCollectionRls
 } = require("../controllers/project.controller")
 
@@ -101,6 +102,9 @@ router.get('/:projectId/analytics', authMiddleware, analytics);
 
 // PATCH REQ FOR TOGGLE AUTH
 router.patch('/:projectId/auth/toggle', authMiddleware, verifyEmail, toggleAuth);
+
+// PATCH REQ FOR SOCIAL AUTH PROVIDERS
+router.patch('/:projectId/auth/providers', authMiddleware, verifyEmail, updateAuthProviders);
 
 // PATCH REQ FOR COLLECTION RLS SETTINGS
 router.patch('/:projectId/collections/:collectionName/rls', authMiddleware, verifyEmail, updateCollectionRls);

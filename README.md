@@ -139,6 +139,26 @@ const postRes = await fetch('https://api.ub.bitbros.in/api/data/posts', {
 
 ---
 
+## Social Auth
+
+Social Auth is configured in a Supabase-style flow:
+
+1. Set your project's `Site URL` in Project Settings.
+2. Open `Auth -> Social Auth` in the dashboard.
+3. Copy the read-only callback URL shown for GitHub or Google.
+4. Register that callback URL in the provider console.
+5. Paste the provider `Client ID` and `Client Secret` into urBackend and enable the provider.
+
+After a successful provider login, urBackend redirects users back to:
+`<Site URL>/auth/callback`
+
+GitHub and Google both support:
+- linking existing users by verified email
+- creating new users automatically when no matching account exists
+- issuing the same urBackend access and refresh tokens used by normal auth flows
+
+---
+
 ## 👤 User Authentication
 
 User accounts are managed through `/api/userAuth/*` endpoints — **not** through the data API. Direct access to `/api/data/users*` is blocked for security.

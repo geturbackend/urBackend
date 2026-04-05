@@ -21,6 +21,7 @@ export default function ProjectSettings() {
 
   // --- NEW STATE FOR RENAME ---
   const [newName, setNewName] = useState("");
+  const [siteUrl, setSiteUrl] = useState("");
   const [renaming, setRenaming] = useState(false);
 
   useEffect(() => {
@@ -30,6 +31,7 @@ export default function ProjectSettings() {
         setProject(res.data);
         // Set initial name for renaming
         setNewName(res.data.name);
+        setSiteUrl(res.data.siteUrl || "");
       } catch {
         toast.error("Failed to load project");
       } finally {
@@ -40,18 +42,18 @@ export default function ProjectSettings() {
   }, [projectId, user]);
 
   // --- NEW: HANDLE RENAME ---
-  const handleRename = async () => {
+    const handleRename = async () => {
     if (!newName.trim()) return toast.error("Project name cannot be empty");
 
     setRenaming(true);
     try {
       await api.patch(
         `/api/projects/${projectId}`,
-        { name: newName }
+        { name: newName, siteUrl }
       );
       toast.success("Project renamed successfully!");
       // Update local state to reflect change immediately
-      setProject((prev) => ({ ...prev, name: newName }));
+      setProject((prev) => ({ ...prev, name: newName, siteUrl }));
     } catch {
       toast.error("Failed to rename project");
     } finally {
@@ -161,10 +163,41 @@ export default function ProjectSettings() {
               }}
             />
           </div>
+          <div style={{ flex: 1, minWidth: "250px" }}>
+            <label
+              className="form-label"
+              style={{
+                display: "block",
+                marginBottom: "8px",
+                fontSize: "0.9rem",
+                color: "var(--color-text-muted)",
+              }}
+            >
+              Site URL
+            </label>
+            <input
+              type="url"
+              className="input-field"
+              value={siteUrl}
+              onChange={(e) => setSiteUrl(e.target.value)}
+              placeholder="https://your-app.com"
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: "var(--color-bg-input)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "8px",
+                color: "#fff",
+              }}
+            />
+            <small style={{ display: "block", marginTop: "8px", color: "var(--color-text-muted)" }}>
+              Used by Social Auth to send users back to <code>/auth/callback</code> after GitHub or Google login.
+            </small>
+          </div>
           <button
             onClick={handleRename}
             className="btn btn-primary"
-            disabled={renaming || newName === project?.name}
+            disabled={renaming || (newName === project?.name && siteUrl === (project?.siteUrl || ""))}
             style={{ padding: "12px 24px", height: "45px" }}
           >
             {renaming ? "Saving..." : "Save Changes"}

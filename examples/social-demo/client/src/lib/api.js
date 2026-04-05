@@ -8,7 +8,7 @@ const API_PREFIX = '/api';
 const getStoredAccessToken = () => localStorage.getItem('token');
 const getStoredRefreshToken = () => localStorage.getItem('refreshToken');
 
-const storeTokens = ({ accessToken, refreshToken }) => {
+export const storeTokens = ({ accessToken, refreshToken }) => {
   if (accessToken) {
     localStorage.setItem('token', accessToken);
   }
@@ -17,7 +17,7 @@ const storeTokens = ({ accessToken, refreshToken }) => {
   }
 };
 
-const clearAuthStorage = () => {
+export const clearAuthStorage = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
@@ -127,6 +127,17 @@ export const authApi = {
       refreshToken: response.data?.refreshToken,
     });
     return response;
+  },
+  getSocialStartUrl: (provider) => (
+    `${API_BASE_URL}${API_PREFIX}/userAuth/social/${encodeURIComponent(provider)}/start`
+  ),
+  exchangeSocialAuth: async ({ token, rtCode }) => {
+    const response = await axios.post(
+      `${API_BASE_URL}${API_PREFIX}/userAuth/social/exchange`,
+      { token, rtCode }
+    );
+
+    return response.data;
   },
   getMe: () => publicApi.get('/userAuth/me'),
   getPublicProfile: (username) => publicApi.get(`/userAuth/public/${encodeURIComponent(username)}`),

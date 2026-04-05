@@ -43,6 +43,16 @@ const collectionSchema = new mongoose.Schema({
   },
 });
 
+const authProviderSchema = new mongoose.Schema(
+  {
+    enabled: { type: Boolean, default: false },
+    clientId: { type: String, default: "" },
+    clientSecret: { type: resourceConfigSchema, default: null },
+    redirectUri: { type: String, default: "" },
+  },
+  { _id: false },
+);
+
 const projectSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -66,6 +76,11 @@ const projectSchema = new mongoose.Schema(
       required: true,
     },
     isAuthEnabled: { type: Boolean, default: false },
+    siteUrl: { type: String, default: "" },
+    authProviders: {
+      github: { type: authProviderSchema, default: () => ({}) },
+      google: { type: authProviderSchema, default: () => ({}) },
+    },
     collections: [collectionSchema],
 
     allowedDomains: {

@@ -92,6 +92,19 @@ await fetch('/api/data/posts', {
 // Saved document: { _id: '...', userId: '<alice id>', title: 'Hello', content: 'World' }
 ```
 
+### Social Auth setup
+
+Social Auth follows a dashboard-driven setup similar to Supabase:
+
+1. Set the project's `Site URL` in Project Settings.
+2. Open `Auth -> Social Auth` in the dashboard.
+3. Copy the read-only callback URL shown for GitHub or Google.
+4. Register that callback URL in the provider's OAuth app settings.
+5. Paste the provider `Client ID` and `Client Secret` back into urBackend and enable the provider.
+
+After successful login, users are redirected to:
+`<Site URL>/auth/callback`
+
 ### Common failure cases
 
 | Error response | Root cause | Fix |
