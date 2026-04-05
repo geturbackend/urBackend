@@ -90,13 +90,13 @@ Add these extra fields to the `users` schema:
 ```env
 VITE_PUBLIC_KEY=pk_live_your_key_here
 VITE_API_URL=https://api.ub.bitbros.in
-# Required for image uploads only
+# Required for image uploads and GitHub social auth start
 VITE_PROXY_URL=http://localhost:4000/api/proxy
 ```
 
 **Server (`server/.env`)**
 ```env
-# Used only by upload proxy (/storage/*)
+# Used by the local proxy for uploads and social auth start
 API_KEY=sk_live_your_key_here
 PORT=4000
 ```
@@ -129,6 +129,7 @@ In GitHub:
 5. Copy the generated `Client ID` and `Client Secret` into urBackend Auth settings.
 
 No extra client `.env` variables are required for GitHub social auth. The redirect target comes from your urBackend project `Site URL`.
+The local `server` must be running because the demo starts GitHub OAuth through the proxy so it can attach the required API key header.
 
 ### 5. Run the Application
 ```bash
@@ -162,11 +163,12 @@ social-demo/
 This demo is now **PK-first** and aligned with the latest public APIs:
 1. **Public API Client**: Uses `pk_live_*` for `/api/userAuth/*` and `/api/data/*`.
 2. **RLS-protected writes**: `posts`, `comments`, `likes`, `follows`, and `profiles` require RLS so authenticated users can write with `pk_live`.
-3. **Upload Proxy**: A tiny local server keeps `sk_live_*` only for `/api/storage/*` uploads.
+3. **Upload Proxy**: A tiny local server keeps `sk_live_*` only for `/api/storage/*` uploads and starts social auth safely.
 
 ### Social auth flow in this demo
 
-- The client sends users to `GET /api/userAuth/social/github/start` with the public key.
+- The client sends users to the local proxy route `GET /api/proxy/userAuth/social/github/start`.
+- The proxy attaches your configured API key and forwards the request to urBackend.
 - urBackend handles the GitHub OAuth redirect and sends users back to `<siteUrl>/auth/callback`.
 - The callback page exchanges the one-time `rtCode` for a refresh token, stores both tokens, and loads the signed-in user.
 
@@ -248,6 +250,7 @@ For each writable collection (`posts`, `comments`, `likes`, `follows`, `profiles
 - **Profile/search pages empty?** Ensure `profiles` collection exists and RLS is enabled with `ownerField=userId`.
 - **403 on create/update/delete?** Ensure RLS is enabled on that collection for `pk_live` writes.
 - **Images not uploading?** Ensure the `server` is running and `API_KEY` is a secret key (`sk_live_...`) for `/storage/*`.
+- **GitHub button shows `API key not found`?** Make sure the local `server` is running and `VITE_PROXY_URL` points to it. The demo starts GitHub OAuth through the proxy, not directly from the browser.
 - **403 Forbidden?** Double-check your **Domain Whitelisting** settings in the urBackend dashboard.
 - **Data not appearing?** Verify that your collection names and field types match the schemas above exactly.
 - **GitHub login redirects back but does not sign in?** Make sure your urBackend project `Site URL` exactly matches the demo origin, usually `http://localhost:5173`.

@@ -129,7 +129,7 @@ export const authApi = {
     return response;
   },
   getSocialStartUrl: (provider) => (
-    `${API_BASE_URL}${API_PREFIX}/userAuth/social/${encodeURIComponent(provider)}/start?key=${encodeURIComponent(PUBLIC_KEY)}`
+    `${PROXY_URL}/userAuth/social/${encodeURIComponent(provider)}/start`
   ),
   exchangeSocialAuth: async ({ token, rtCode }) => {
     const response = await axios.post(

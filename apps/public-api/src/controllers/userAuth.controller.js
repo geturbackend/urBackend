@@ -109,7 +109,19 @@ const assertAuthProjectReady = (project) => {
  * @returns {Promise<{project: Object, providerConfig: Object|null}|null>}
  */
 const getSocialProviderConfig = async (projectId, provider) => {
-    const selectClause = `name resources collections jwtSecret isAuthEnabled authProviders.${provider} +authProviders.${provider}.clientSecret.encrypted +authProviders.${provider}.clientSecret.iv +authProviders.${provider}.clientSecret.tag`;
+    const selectClause = [
+        'name',
+        'resources',
+        'collections',
+        'jwtSecret',
+        'isAuthEnabled',
+        `authProviders.${provider}.enabled`,
+        `authProviders.${provider}.clientId`,
+        `authProviders.${provider}.redirectUri`,
+        `+authProviders.${provider}.clientSecret.encrypted`,
+        `+authProviders.${provider}.clientSecret.iv`,
+        `+authProviders.${provider}.clientSecret.tag`,
+    ].join(' ');
     const project = await Project.findById(projectId).select(selectClause).lean();
     if (!project) return null;
 
