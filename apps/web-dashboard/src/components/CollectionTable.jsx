@@ -365,6 +365,8 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                     <button
                         className="btn btn-secondary btn-sm"
                         aria-label={showColumnMenu ? "Close column menu" : "Open column menu"}
+                        aria-hashpopup="menu"
+                        aria-expanded={showColumnMenu}
                         onClick={() => setShowColumnMenu(!showColumnMenu)}
                         style={{
                             display: 'flex',

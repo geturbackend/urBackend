@@ -37,7 +37,7 @@ export default function DatabaseSidebar({
                     </button>
                     <button
                         className="btn-icon add-col-btn"
-                        aria-label="Create new database collection"
+                        aria-label="New collection"
                         onClick={() => navigate(`/project/${projectId}/create-collection`)}
                         title="New Collection"
                     >
