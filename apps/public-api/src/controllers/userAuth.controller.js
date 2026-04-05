@@ -32,7 +32,7 @@ const getPublicApiBaseUrl = () => {
     return `http://localhost:${port}`;
 };
 
-const getSocialStateKey = (state) => `project:social-auth:state:${state}`;
+const getSocialStateKey = (state) => `project:auth:oauth:state:${state}`;
 const getSocialRefreshExchangeKey = (rtCode) => `project:social-auth:refresh-exchange:${rtCode}`;
 const getFrontendCallbackBaseUrl = (project) => {
     const configured = String(project?.siteUrl || '').trim();
@@ -69,7 +69,7 @@ const assertAuthProjectReady = (project) => {
 };
 
 const getSocialProviderConfig = async (projectId, provider) => {
-    const selectClause = `name resources collections jwtSecret isAuthEnabled authProviders.${provider} +authProviders.${provider}.clientSecret`;
+    const selectClause = `name resources collections jwtSecret isAuthEnabled authProviders.${provider} +authProviders.${provider}.clientSecret.encrypted +authProviders.${provider}.clientSecret.iv +authProviders.${provider}.clientSecret.tag`;
     const project = await Project.findById(projectId).select(selectClause).lean();
     if (!project) return null;
 
@@ -190,11 +190,11 @@ const fetchGithubProfile = async (accessToken) => {
         throw new Error('Failed to fetch GitHub email addresses');
     }
 
-    const primaryEmail = emails.find((entry) => entry.primary) || emails.find((entry) => entry.verified) || emails[0];
+    const verifiedEmail = emails.find((entry) => entry.primary && entry.verified) || emails.find((entry) => entry.verified);
     return {
         providerUserId: String(profile.id || ''),
-        email: primaryEmail?.email || profile.email || '',
-        emailVerified: !!primaryEmail?.verified,
+        email: verifiedEmail?.email || profile.email || '',
+        emailVerified: !!verifiedEmail?.verified,
         username: profile.login || '',
         name: profile.name || profile.login || '',
         avatarUrl: profile.avatar_url || '',
@@ -318,7 +318,7 @@ const findOrCreateSocialUser = async ({ project, usersColConfig, Model, provider
     }
 
     user = await Model.findOne({ email: profile.email });
-    if (user) {
+    if (user && profile.emailVerified) {
         const update = {
             $set: {
                 [providerIdField]: profile.providerUserId,
@@ -496,7 +496,12 @@ module.exports.handleSocialAuthCallback = async (req, res) => {
 
         await redis.del(stateKey);
 
-        const parsedState = JSON.parse(rawState);
+        let parsedState;
+        try {
+            parsedState = JSON.parse(rawState);
+        } catch (parseErr) {
+            return res.status(400).json({ error: 'Invalid or expired OAuth state' });
+        }
         if (parsedState.provider !== provider || !parsedState.projectId) {
             return res.status(400).json({ error: 'OAuth state mismatch' });
         }
@@ -551,13 +556,15 @@ module.exports.handleSocialAuthCallback = async (req, res) => {
 
         const callbackBaseUrl = parsedState.callbackUrl || getFrontendCallbackBaseUrl(project);
         const callbackUrl = new URL(callbackBaseUrl);
-        callbackUrl.searchParams.set('token', issuedTokens.accessToken);
         callbackUrl.searchParams.set('rtCode', rtCode);
         callbackUrl.searchParams.set('provider', provider);
         callbackUrl.searchParams.set('userId', String(user._id));
         callbackUrl.searchParams.set('projectId', String(project._id));
         callbackUrl.searchParams.set('isNewUser', String(isNewUser));
         callbackUrl.searchParams.set('linkedByEmail', String(linkedByEmail));
+        const fragmentParams = new URLSearchParams();
+        fragmentParams.set('token', issuedTokens.accessToken);
+        callbackUrl.hash = fragmentParams.toString();
 
         return res.redirect(callbackUrl.toString());
     } catch (err) {

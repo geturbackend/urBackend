@@ -19,7 +19,10 @@ function AuthCallback() {
         let isActive = true;
 
         const completeSocialAuth = async () => {
-            const token = searchParams.get('token');
+            const fragmentParams = new URLSearchParams(
+                window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash
+            );
+            const token = fragmentParams.get('token');
             const rtCode = searchParams.get('rtCode');
             const error = searchParams.get('error');
 

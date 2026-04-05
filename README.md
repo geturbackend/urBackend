@@ -153,7 +153,7 @@ After a successful provider login, urBackend redirects users back to:
 `<Site URL>/auth/callback`
 
 GitHub and Google both support:
-- linking existing users by verified email
+- linking existing users by email when the provider returns a verified email matching an existing account
 - creating new users automatically when no matching account exists
 - issuing the same urBackend access and refresh tokens used by normal auth flows
 

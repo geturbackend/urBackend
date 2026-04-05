@@ -8,8 +8,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-// const API_URL = 'https://api.ub.bitbros.in';
-const API_URL = 'http://localhost:1235';
+const API_URL = process.env.API_URL || 'http://localhost:1235';
 const API_KEY = process.env.API_KEY || 'YOUR_SECRET_API_KEY';
 
 // Enable CORS

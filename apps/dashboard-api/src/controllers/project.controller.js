@@ -132,10 +132,15 @@ const SOCIAL_PROVIDER_KEYS = ["github", "google"];
 const sanitizeAuthProviders = (authProviders = {}) => {
   return SOCIAL_PROVIDER_KEYS.reduce((acc, provider) => {
     const config = authProviders?.[provider] || {};
+    const cs = config.clientSecret;
+    const hasClientSecret =
+      cs != null &&
+      typeof cs === "object" &&
+      Object.keys(cs).length > 0;
     acc[provider] = {
       enabled: !!config.enabled,
       clientId: config.clientId || "",
-      hasClientSecret: !!config.clientSecret?.encrypted,
+      hasClientSecret,
     };
     return acc;
   }, {});
@@ -246,7 +251,15 @@ module.exports.getSingleProject = async (req, res) => {
       const project = await Project.findOne({
         _id: req.params.projectId,
         owner: req.user._id,
-      }).select("-publishableKey -secretKey -jwtSecret");
+      }).select(
+        "-publishableKey -secretKey -jwtSecret " +
+          "+authProviders.github.clientSecret.encrypted " +
+          "+authProviders.github.clientSecret.iv " +
+          "+authProviders.github.clientSecret.tag " +
+          "+authProviders.google.clientSecret.encrypted " +
+          "+authProviders.google.clientSecret.iv " +
+          "+authProviders.google.clientSecret.tag",
+      );
       if (!project)
         return res.status(404).json({ error: "Project not found." });
       projectObj = project.toObject();
@@ -1317,7 +1330,14 @@ module.exports.updateAuthProviders = async (req, res) => {
     const project = await Project.findOne({
       _id: projectId,
       owner: req.user._id,
-    }).select("+authProviders.github.clientSecret +authProviders.google.clientSecret");
+    }).select(
+      "+authProviders.github.clientSecret.encrypted " +
+        "+authProviders.github.clientSecret.iv " +
+        "+authProviders.github.clientSecret.tag " +
+        "+authProviders.google.clientSecret.encrypted " +
+        "+authProviders.google.clientSecret.iv " +
+        "+authProviders.google.clientSecret.tag",
+    );
 
     if (!project) return res.status(404).json({ error: "Project not found" });
 

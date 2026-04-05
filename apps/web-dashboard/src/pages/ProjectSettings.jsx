@@ -51,11 +51,11 @@ export default function ProjectSettings() {
         `/api/projects/${projectId}`,
         { name: newName, siteUrl }
       );
-      toast.success("Project renamed successfully!");
+      toast.success("Project settings saved!");
       // Update local state to reflect change immediately
       setProject((prev) => ({ ...prev, name: newName, siteUrl }));
     } catch {
-      toast.error("Failed to rename project");
+      toast.error("Failed to save project settings");
     } finally {
       setRenaming(false);
     }
