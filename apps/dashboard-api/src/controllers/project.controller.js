@@ -1343,7 +1343,7 @@ module.exports.toggleAuth = async (req, res) => {
 /**
  * Updates GitHub/Google OAuth provider settings for a project.
  * Preserves existing encrypted client secrets when not provided in the update.
- * @route PUT /api/projects/:projectId/auth-providers
+ * `@route` PATCH /api/projects/:projectId/auth/providers
  */
 module.exports.updateAuthProviders = async (req, res) => {
   try {
