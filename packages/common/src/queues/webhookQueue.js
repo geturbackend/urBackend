@@ -190,7 +190,7 @@ function initWebhookWorker() {
 
       // Determine if we should retry
       const is4xx = statusCode >= 400 && statusCode < 500;
-      const shouldRetry = !success && !is4xx && attemptNumber < MAX_ATTEMPTS;
+      const shouldRetry = !success && !is4xx && attemptNumber <= MAX_ATTEMPTS;
 
       if (success) {
         await WebhookDelivery.findByIdAndUpdate(deliveryId, {
