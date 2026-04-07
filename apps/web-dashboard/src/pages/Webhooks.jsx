@@ -251,58 +251,75 @@ export default function Webhooks() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {webhooks.map((webhook) => (
             <div key={webhook._id} className="card" style={{ padding: '1.25rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, minWidth: '200px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '0.5rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{webhook.name}</h3>
-                    <span style={{
-                      padding: '2px 8px',
-                      borderRadius: '12px',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      background: webhook.enabled ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                      color: webhook.enabled ? '#22c55e' : '#ef4444'
-                    }}>
-                      {webhook.enabled ? 'Active' : 'Disabled'}
-                    </span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1.5rem', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '300px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1rem' }}>
+                    <div style={{ width: '40px', height: '40px', background: 'rgba(62, 207, 142, 0.1)', color: 'var(--color-primary)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Webhook size={20} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {webhook.name}
+                        <span style={{
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontSize: '0.7rem',
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          background: webhook.enabled ? 'rgba(62, 207, 142, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                          color: webhook.enabled ? 'var(--color-primary)' : '#ef4444',
+                          border: `1px solid ${webhook.enabled ? 'rgba(62, 207, 142, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+                        }}>
+                          {webhook.enabled ? 'Active' : 'Disabled'}
+                        </span>
+                      </h3>
+                    </div>
                   </div>
-                  <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', margin: 0, wordBreak: 'break-all' }}>
-                    {webhook.url}
-                  </p>
-                  <div style={{ marginTop: '0.75rem', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  
+                  <div style={{ background: 'var(--color-bg-input)', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--color-border)', marginBottom: '1rem', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+                    <span style={{ color: '#666', fontSize: '0.8rem', marginRight: '10px', userSelect: 'none' }}>POST</span>
+                    <code style={{ color: 'var(--color-text-main)', fontSize: '0.85rem', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {webhook.url}
+                    </code>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center' }}>Triggers on:</span>
                     {Object.entries(webhook.events || {}).map(([coll, events]) => 
                       Object.entries(events).filter(([, v]) => v).map(([action]) => (
                         <span key={`${coll}-${action}`} style={{
-                          padding: '2px 8px',
-                          borderRadius: '4px',
+                          padding: '4px 10px',
+                          borderRadius: '20px',
                           fontSize: '0.75rem',
-                          background: 'var(--color-bg-secondary)',
-                          border: '1px solid var(--color-border)'
+                          fontWeight: 500,
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid var(--color-border)',
+                          color: 'var(--color-text-main)'
                         }}>
-                          {coll}.{action}
+                          {coll} <span style={{ color: 'var(--color-text-muted)' }}>→</span> <span style={{ color: 'var(--color-primary)' }}>{action}</span>
                         </span>
                       ))
                     )}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <button
-                    className="btn btn-ghost"
-                    onClick={() => handleTest(webhook)}
-                    disabled={testingWebhookId === webhook._id}
-                    title="Send test webhook"
-                  >
-                    {testingWebhookId === webhook._id ? <RefreshCw size={16} className="spin" /> : <Play size={16} />}
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '140px' }}>
+                  <button className="btn btn-primary" onClick={() => handleTest(webhook)} disabled={testingWebhookId === webhook._id} style={{ width: '100%', justifyContent: 'center' }}>
+                    {testingWebhookId === webhook._id ? <RefreshCw size={16} className="spin" /> : <Play size={16} />} 
+                    Test
                   </button>
-                  <button className="btn btn-ghost" onClick={() => openDeliveries(webhook)} title="View delivery history">
-                    <Eye size={16} />
+                  <button className="btn btn-secondary" onClick={() => openDeliveries(webhook)} style={{ width: '100%', justifyContent: 'center' }}>
+                    <Clock size={16} /> History
                   </button>
-                  <button className="btn btn-ghost" onClick={() => openEditModal(webhook)} title="Edit webhook">
-                    <Edit2 size={16} />
-                  </button>
-                  <button className="btn btn-ghost" onClick={() => setDeleteTarget(webhook)} style={{ color: 'var(--color-danger)' }} title="Delete webhook">
-                    <Trash2 size={16} />
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                    <button className="btn btn-secondary" onClick={() => openEditModal(webhook)} style={{ flex: 1, padding: '6px' }} title="Edit">
+                      <Edit2 size={16} />
+                    </button>
+                    <button className="btn btn-danger" onClick={() => setDeleteTarget(webhook)} style={{ flex: 1, padding: '6px' }} title="Delete">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
               {/* Test Result */}
@@ -567,6 +584,41 @@ export default function Webhooks() {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        .modal-overlay {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(0,0,0,0.7);
+          backdrop-filter: blur(5px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          padding: 1rem;
+        }
+        .modal-content {
+          background: var(--color-bg-card);
+          border: 1px solid var(--color-border);
+          border-radius: 12px;
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 1rem 1.5rem;
+          border-bottom: 1px solid var(--color-border);
+        }
+        .modal-header h2 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+        .modal-footer {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          padding: 1rem 1.5rem;
+          border-top: 1px solid var(--color-border);
         }
       `}</style>
     </div>

@@ -59,6 +59,7 @@ function Sidebar({ logo, isOpen, onClose }) { // Props received
                         <Link to={`/project/${projectId}/webhooks`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/webhooks`) ? 'active' : ''}`}>
                             <Webhook size={18} /> <span>Webhooks</span>
                         </Link>
+
                         <Link to={`/project/${projectId}/storage`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/storage`) ? 'active' : ''}`}>
                             <HardDrive size={18} /> <span>Storage</span>
                         </Link>
