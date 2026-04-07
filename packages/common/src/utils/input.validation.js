@@ -458,3 +458,22 @@ module.exports.updateWebhookSchema = z.object({
   (data) => Object.keys(data).length > 0,
   { message: "At least one field must be provided for update." }
 );
+
+module.exports.sendMailSchema = z
+  .object({
+    to: z.string().email("Invalid recipient email format"),
+    subject: z
+      .string()
+      .min(1, "Subject is required")
+      .max(200, "Subject is too long"),
+    html: z.string().optional(),
+    text: z.string().optional(),
+  })
+  .refine(
+    (data) =>
+      (typeof data.html === "string" && data.html.trim().length > 0) ||
+      (typeof data.text === "string" && data.text.trim().length > 0),
+    {
+      message: "Provide at least one of html or text content.",
+    },
+  );

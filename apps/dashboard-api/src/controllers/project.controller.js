@@ -156,6 +156,12 @@ const sanitizeProjectResponse = (projectObj) => {
   delete projectObj.publishableKey;
   delete projectObj.secretKey;
   delete projectObj.jwtSecret;
+  const resendConfig = projectObj.resendApiKey;
+  projectObj.hasResendApiKey =
+    resendConfig != null &&
+    typeof resendConfig === "object" &&
+    Object.keys(resendConfig).length > 0;
+  delete projectObj.resendApiKey;
 
   projectObj.authProviders = sanitizeAuthProviders(projectObj.authProviders);
 
@@ -264,7 +270,10 @@ module.exports.getSingleProject = async (req, res) => {
           "+authProviders.github.clientSecret.tag " +
           "+authProviders.google.clientSecret.encrypted " +
           "+authProviders.google.clientSecret.iv " +
-          "+authProviders.google.clientSecret.tag",
+          "+authProviders.google.clientSecret.tag " +
+          "+resendApiKey.encrypted " +
+          "+resendApiKey.iv " +
+          "+resendApiKey.tag",
       );
       if (!project)
         return res.status(404).json({ error: "Project not found." });
@@ -1088,9 +1097,15 @@ module.exports.deleteAllFiles = async (req, res) => {
 
 module.exports.updateProject = async (req, res) => {
   try {
-    const { name, siteUrl } = req.body;
+    const { name, siteUrl, resendApiKey, resendFromEmail } = req.body;
     const updateFields = {};
     if (name !== undefined) updateFields.name = name;
+    if (resendFromEmail !== undefined) {
+      if (typeof resendFromEmail !== "string") {
+        return res.status(400).json({ error: "resendFromEmail must be a string." });
+      }
+      updateFields.resendFromEmail = resendFromEmail.trim();
+    }
     if (siteUrl !== undefined) {
       if (siteUrl !== "" && typeof siteUrl !== "string") {
         return res.status(400).json({ error: "siteUrl must be a string." });
@@ -1116,11 +1131,23 @@ module.exports.updateProject = async (req, res) => {
       }
       updateFields.siteUrl = siteUrl || "";
     }
+    if (resendApiKey !== undefined) {
+      if (typeof resendApiKey !== "string" || !resendApiKey.trim()) {
+        return res
+          .status(400)
+          .json({ error: "resendApiKey must be a non-empty string." });
+      }
+      updateFields.resendApiKey = encrypt(resendApiKey.trim());
+    }
 
     const project = await Project.findOneAndUpdate(
       { _id: req.params.projectId, owner: req.user._id },
       { $set: updateFields },
-      { new: true },
+      {
+        new: true,
+        select:
+          "+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag",
+      },
     );
     if (!project) return res.status(404).json({ error: "Project not found." });
 

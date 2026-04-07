@@ -60,6 +60,7 @@ const {
   updateAuthProvidersSchema,
   createWebhookSchema,
   updateWebhookSchema,
+  sendMailSchema,
 } = require("./utils/input.validation");
 const { garbageCollect, storageGarbageCollect } = require("./utils/GC");
 const { generateApiKey, hashApiKey } = require("./utils/api");
@@ -117,6 +118,7 @@ module.exports = {
   updateAuthProvidersSchema,
   createWebhookSchema,
   updateWebhookSchema,
+  sendMailSchema,
   garbageCollect,
   storageGarbageCollect,
   generateApiKey,

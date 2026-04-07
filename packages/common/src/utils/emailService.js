@@ -134,7 +134,7 @@ async function sendReleaseEmail(email, { version, title, content }) {
 }
 
     // FUNCTION - SEND AUTH OTP EMAIL
-async function sendAuthOtpEmail(email, { otp, type, pname }) {
+async function sendAuthOtpEmail(email, { otp, type, pname, byokKey, byokFrom }) {
     const rawPname = pname || "urBackend";
 
     let safeEmailHandle = rawPname.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
@@ -194,8 +194,15 @@ async function sendAuthOtpEmail(email, { otp, type, pname }) {
 
 
 
-        const fromAddress = `${finalDisplayName} <${safeEmailHandle}.urbackend@apps.bitbros.in>`;
-        const { data, error } = await resend.emails.send({
+        let mailClient = resend;
+        let fromAddress = `${finalDisplayName} <${safeEmailHandle}.urbackend@apps.bitbros.in>`;
+
+        if (byokKey) {
+            mailClient = new Resend(byokKey);
+            fromAddress = byokFrom || "onboarding@resend.dev";
+        }
+
+        const { data, error } = await mailClient.emails.send({
             from: fromAddress,
             to: email,
             subject: subject,

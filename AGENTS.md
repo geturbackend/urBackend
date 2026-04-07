@@ -166,3 +166,11 @@ Social auth (GitHub + Google) shipped. Next: v0.9.0 — Webhooks + BYOK Resend m
 - BYOK Resend mail key: project-level Resend API key, custom domain mail
 - Follow same encryption pattern as authProviders for storing Resend key
 - Webhook model: separate MongoDB collection (not embedded in Project)
+
+## Webhook system (v0.9.0) - Already done
+- Model: packages/common/src/models/Webhook.js
+- Delivery log: packages/common/src/models/WebhookDelivery.js
+- Dispatcher: apps/public-api/src/utils/webhookDispatcher.js
+- Queue: BullMQ + existing Redis connection
+- Retry: exponential backoff, max 5 attempts, stop on 4xx
+- Signature: HMAC-SHA256 in X-urBackend-Signature header

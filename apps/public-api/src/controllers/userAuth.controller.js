@@ -893,7 +893,8 @@ module.exports.signup = async (req, res) => {
             email,
             otp,
             type: 'verification',
-            pname: project.name
+            pname: project.name,
+            projectId: String(project._id)
         });
 
         const issuedTokens = await issueAuthTokens({
@@ -1162,7 +1163,7 @@ module.exports.requestPasswordReset = async (req, res) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         await redis.set(`project:${project._id}:otp:reset:${email}`, otp, 'EX', 300);
 
-        await authEmailQueue.add('send-reset-email', { email, otp, type: 'password_reset', pname: project.name });
+        await authEmailQueue.add('send-reset-email', { email, otp, type: 'password_reset', pname: project.name, projectId: String(project._id) });
 
         res.json({ message: "If that email exists, a reset code has been sent." });
     } catch (err) {

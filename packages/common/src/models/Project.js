@@ -81,6 +81,8 @@ const projectSchema = new mongoose.Schema(
       github: { type: authProviderSchema, default: () => ({}) },
       google: { type: authProviderSchema, default: () => ({}) },
     },
+    resendApiKey: { type: resourceConfigSchema, default: null },
+    resendFromEmail: { type: String, default: "" },
     collections: [collectionSchema],
 
     allowedDomains: {

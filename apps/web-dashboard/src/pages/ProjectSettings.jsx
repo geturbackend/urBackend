@@ -18,6 +18,10 @@ export default function ProjectSettings() {
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [hasResendKey, setHasResendKey] = useState(false);
+  const [resendKeyValue, setResendKeyValue] = useState("");
+  const [resendFromEmailValue, setResendFromEmailValue] = useState("");
+  const [resendKeyLoading, setResendKeyLoading] = useState(false);
 
   // --- NEW STATE FOR RENAME ---
   const [newName, setNewName] = useState("");
@@ -29,6 +33,8 @@ export default function ProjectSettings() {
       try {
         const res = await api.get(`/api/projects/${projectId}`);
         setProject(res.data);
+        setHasResendKey(!!res.data?.hasResendApiKey);
+        setResendFromEmailValue(res.data.resendFromEmail || "");
         // Set initial name for renaming
         setNewName(res.data.name);
         setSiteUrl(res.data.siteUrl || "");
@@ -42,7 +48,7 @@ export default function ProjectSettings() {
   }, [projectId, user]);
 
   // --- NEW: HANDLE RENAME ---
-    const handleRename = async () => {
+  const handleRename = async () => {
     if (!newName.trim()) return toast.error("Project name cannot be empty");
 
     setRenaming(true);
@@ -58,6 +64,41 @@ export default function ProjectSettings() {
       toast.error("Failed to save project settings");
     } finally {
       setRenaming(false);
+    }
+  };
+
+  const handleResendKeySave = async () => {
+    const trimmedKey = resendKeyValue.trim();
+    const trimmedEmail = resendFromEmailValue.trim();
+
+    const payload = {};
+    if (trimmedKey) payload.resendApiKey = trimmedKey;
+    if (trimmedEmail !== project?.resendFromEmail) payload.resendFromEmail = trimmedEmail;
+
+    if (Object.keys(payload).length === 0) {
+      return toast.error("Nothing to update.");
+    }
+
+    setResendKeyLoading(true);
+    try {
+      await api.patch(`/api/projects/${projectId}`, payload);
+      toast.success("Mail settings saved.");
+      
+      const updates = {};
+      if (payload.resendApiKey) {
+        setResendKeyValue("");
+        setHasResendKey(true);
+        updates.hasResendApiKey = true;
+      }
+      if (payload.resendFromEmail !== undefined) {
+        updates.resendFromEmail = payload.resendFromEmail;
+      }
+      
+      setProject((prev) => (prev ? { ...prev, ...updates } : prev));
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to save mail settings");
+    } finally {
+      setResendKeyLoading(false);
     }
   };
 
@@ -202,6 +243,96 @@ export default function ProjectSettings() {
           >
             {renaming ? "Saving..." : "Save Changes"}
           </button>
+        </div>
+      </div>
+
+      <div
+        className="card"
+        style={{ marginBottom: "2rem", borderColor: "#f0abfc" }}
+      >
+        <h3
+          style={{
+            fontSize: "1.1rem",
+            marginBottom: "1.5rem",
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
+          <Save size={20} color="#c084fc" /> Custom Mail (Resend BYOK)
+        </h3>
+        <p
+          style={{
+            color: "var(--color-text-muted)",
+            fontSize: "0.9rem",
+            marginTop: "-0.5rem",
+            marginBottom: "1.25rem",
+          }}
+        >
+          Upload a per-project Resend API key to send mail from your own account.
+          The repository never exposes the key after you save it.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
+          <div>
+            <label className="form-label" style={{ display: "block", marginBottom: "8px", fontSize: "0.9rem", color: "var(--color-text-muted)" }}>
+              Resend API Key Status:{" "}
+              <span style={{ fontWeight: 600, color: hasResendKey ? "#22c55e" : "#f97316" }}>
+                {hasResendKey ? "Configured" : "Not configured"}
+              </span>
+            </label>
+            <input
+              type="password"
+              className="input-field"
+              placeholder="Paste new Resend API key to update"
+              value={resendKeyValue}
+              onChange={(e) => setResendKeyValue(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: "var(--color-bg-input)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "8px",
+                color: "#fff",
+                fontFamily: "monospace",
+              }}
+            />
+          </div>
+
+          <div>
+            <label className="form-label" style={{ display: "block", marginBottom: "8px", fontSize: "0.9rem", color: "var(--color-text-muted)" }}>
+              Default Sent-From Address
+            </label>
+            <input
+              type="email"
+              className="input-field"
+              placeholder="e.g. Acme <info@acme.com>"
+              value={resendFromEmailValue}
+              onChange={(e) => setResendFromEmailValue(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: "var(--color-bg-input)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "8px",
+                color: "#fff",
+              }}
+            />
+            <small style={{ display: "block", marginTop: "8px", color: "var(--color-text-muted)" }}>
+              The verified domain associated with your Resend API key. Left blank, default <code>onboarding@resend.dev</code> will be used.
+            </small>
+          </div>
+
+          <div>
+            <button
+              onClick={handleResendKeySave}
+              className="btn btn-primary"
+              disabled={resendKeyLoading || (!resendKeyValue.trim() && resendFromEmailValue.trim() === (project?.resendFromEmail || ""))}
+              style={{ padding: "12px 24px", height: "45px" }}
+            >
+              {resendKeyLoading ? "Saving..." : "Save Settings"}
+            </button>
+          </div>
         </div>
       </div>
 

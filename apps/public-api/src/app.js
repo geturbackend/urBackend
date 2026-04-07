@@ -57,6 +57,7 @@ const dataRoute = require('./routes/data');
 const userAuthRoute = require('./routes/userAuth');
 const storageRoute = require('./routes/storage');
 const schemaRoute = require('./routes/schemas');
+const mailRoute = require('./routes/mail');
 
 // ROUTES SETUP 
 app.use('/api/userAuth', limiter, logger, userAuthRoute);
@@ -74,6 +75,7 @@ const projectCorsPreflight = (req, res, next) => {
 app.use('/api/data', projectCorsPreflight, limiter, logger, dataRoute);
 app.use('/api/schemas', projectCorsPreflight, limiter, logger, schemaRoute);
 app.use('/api/storage', projectCorsPreflight, limiter, logger, storageRoute);
+app.use('/api/mail', projectCorsPreflight, limiter, logger, mailRoute);
 
 app.get('/api/server-ip', async (req, res) => {
     const ip = await getPublicIp();
