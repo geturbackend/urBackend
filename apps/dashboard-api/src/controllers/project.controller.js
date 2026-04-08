@@ -1345,6 +1345,8 @@ module.exports.toggleAuth = async (req, res) => {
 
     // Ensure user owns project, and load authProviders secrets so sanitizeAuthProviders
     // can correctly compute hasClientSecret in the response.
+    // NOTE: If new OAuth providers are added to SOCIAL_PROVIDER_KEYS, extend this select list
+    // to include their clientSecret fields as well.
     const project = await Project.findOne({
       _id: projectId,
       owner: req.user._id,

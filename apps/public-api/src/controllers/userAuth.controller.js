@@ -75,11 +75,13 @@ const toBase64UrlBuffer = (input) => Buffer.from(input.replace(/-/g, '+').replac
 /**
  * In-memory cache for Google's public JWK keys.
  * Keys are refreshed when the cache expires (based on Cache-Control max-age).
+ * An in-flight promise is stored to prevent redundant concurrent fetches (single-flight).
  */
-const googleJwkCache = { keys: null, expiresAt: 0 };
+const googleJwkCache = { keys: null, expiresAt: 0, inflight: null };
 
 /**
  * Fetches Google's public JWK keys, using an in-memory cache keyed by Cache-Control max-age.
+ * Uses a single-flight pattern so that concurrent requests share one fetch instead of many.
  * @returns {Promise<Array>} Array of JWK key objects
  */
 const getGooglePublicKeys = async () => {
@@ -88,25 +90,38 @@ const getGooglePublicKeys = async () => {
         return googleJwkCache.keys;
     }
 
-    const certsResponse = await fetch('https://www.googleapis.com/oauth2/v3/certs');
-    if (!certsResponse.ok) {
-        throw new Error('Unable to fetch Google JWK keys');
+    // Single-flight: reuse in-flight promise if a fetch is already in progress.
+    if (googleJwkCache.inflight) {
+        return googleJwkCache.inflight;
     }
 
-    const certsPayload = await certsResponse.json();
-    const keys = certsPayload.keys || [];
+    googleJwkCache.inflight = (async () => {
+        try {
+            const certsResponse = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+            if (!certsResponse.ok) {
+                throw new Error('Unable to fetch Google JWK keys');
+            }
 
-    // Parse Cache-Control max-age from response headers to determine TTL.
-    const cacheControl = (typeof certsResponse.headers?.get === 'function')
-        ? (certsResponse.headers.get('cache-control') || '')
-        : '';
-    const maxAgeMatch = cacheControl.match(/max-age=(\d+)/);
-    const ttlMs = maxAgeMatch ? parseInt(maxAgeMatch[1], 10) * 1000 : 3600 * 1000;
+            const certsPayload = await certsResponse.json();
+            const keys = certsPayload.keys || [];
 
-    googleJwkCache.keys = keys;
-    googleJwkCache.expiresAt = now + ttlMs;
+            // Parse Cache-Control max-age from response headers to determine TTL.
+            const cacheControl = (typeof certsResponse.headers?.get === 'function')
+                ? (certsResponse.headers.get('cache-control') || '')
+                : '';
+            const maxAgeMatch = cacheControl.match(/max-age=(\d+)/);
+            const ttlMs = maxAgeMatch ? parseInt(maxAgeMatch[1], 10) * 1000 : 3600 * 1000;
 
-    return keys;
+            googleJwkCache.keys = keys;
+            googleJwkCache.expiresAt = Date.now() + ttlMs;
+
+            return keys;
+        } finally {
+            googleJwkCache.inflight = null;
+        }
+    })();
+
+    return googleJwkCache.inflight;
 };
 
 /**
