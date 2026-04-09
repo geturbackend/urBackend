@@ -116,7 +116,7 @@ module.exports.register = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const newDev = new Developer({ email, password: hashedPassword });
+        const newDev = new Developer({ email: email.toLowerCase().trim(), password: hashedPassword });
         await newDev.save();
 
         res.status(201).json({ message: "Registered successfully" });
@@ -132,7 +132,7 @@ module.exports.login = async (req, res) => {
     try {
         const { email, password } = loginSchema.parse(req.body);
 
-        const dev = await Developer.findOne({ email });
+        const dev = await Developer.findOne({ email: email.toLowerCase().trim() });
         if (!dev) return res.status(400).json({ error: "User not found" });
 
         const validPass = await bcrypt.compare(password, dev.password);
@@ -200,11 +200,13 @@ module.exports.deleteAccount = async (req, res) => {
 module.exports.sendOtp = async (req, res) => {
     try {
         const { email } = onlyEmailSchema.parse(req.body);
+        const normalizedEmail = email.toLowerCase().trim();
 
-        const existingUser = await Developer.findOne({ email });
+        const existingUser = await Developer.findOne({ email: normalizedEmail });
         if (!existingUser) {
             return res.status(400).json({ error: "User not found. Ensure you are using the correct email." });
         }
+
 
         if (existingUser.isVerified) {
             return res.status(400).json({ error: "Account is already verified. Please login." });

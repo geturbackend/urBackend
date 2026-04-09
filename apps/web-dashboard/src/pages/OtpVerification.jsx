@@ -10,8 +10,8 @@ function OtpVerification() {
     const { user, login, isLoading: authLoading } = useAuth(); // Destructure login
     const [otp, setOtp] = useState('');
 
-    // Derived email to avoid stale state if user is still loading
-    const email = location.state?.email || user?.email || '';
+    // Derived email with normalization to avoid stale/incorrect state
+    const email = (location.state?.email || user?.email || '').toLowerCase().trim();
 
     // Ref to track if we have already auto-sent OTP to prevent double sends in StrictMode
     const hasSentOtp = useRef(false);

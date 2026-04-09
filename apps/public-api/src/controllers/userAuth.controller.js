@@ -939,6 +939,7 @@ module.exports.signup = async (req, res) => {
         const project = req.project;
 
         const { email, password, username, ...otherData } = userSignupSchema.parse(req.body);
+        const normalizedEmail = email.toLowerCase().trim();
 
         // Get Mongoose Model
         const usersColConfig = project.collections.find(c => c.name === 'users');
@@ -947,7 +948,8 @@ module.exports.signup = async (req, res) => {
         const connection = await getConnection(project._id);
         const Model = getCompiledModel(connection, usersColConfig, project._id, project.resources.db.isExternal);
 
-        const existingUser = await Model.findOne({ email });
+        const existingUser = await Model.findOne({ email: normalizedEmail });
+
         if (existingUser) {
             // Check if user is unverified. If so, we can trigger a resend instead of a hard error.
             const verificationField = getVerificationField(usersColConfig);
@@ -1040,6 +1042,7 @@ module.exports.login = async (req, res) => {
     try {
         const project = req.project;
         const { email, password } = loginSchema.parse(req.body);
+        const normalizedEmail = email.toLowerCase().trim();
 
         const usersColConfig = project.collections.find(c => c.name === 'users');
         if (!usersColConfig) return res.status(404).json({ error: "Auth collection not found" });
@@ -1047,7 +1050,8 @@ module.exports.login = async (req, res) => {
         const connection = await getConnection(project._id);
         const Model = getCompiledModel(connection, usersColConfig, project._id, project.resources.db.isExternal);
 
-        const user = await Model.findOne({ email });
+        const user = await Model.findOne({ email: normalizedEmail });
+
         if (!user) return res.status(400).json({ error: "Invalid email or password" });
 
         const validPass = await bcrypt.compare(password, user.password);
@@ -1222,11 +1226,13 @@ module.exports.verifyEmail = async (req, res) => {
     try {
         const project = req.project;
         const { email, otp } = verifyOtpSchema.parse(req.body);
+        const normalizedEmail = email.toLowerCase().trim();
 
-        const redisKey = `project:${project._id}:otp:verification:${email}`;
+        const redisKey = `project:${project._id}:otp:verification:${normalizedEmail}`;
         const storedOtp = await redis.get(redisKey);
 
         if (!storedOtp || storedOtp !== otp) {
+
             return res.status(400).json({ error: "Invalid or expired OTP" });
         }
 
@@ -1261,11 +1267,13 @@ module.exports.resendVerificationOtp = async (req, res) => {
     try {
         const project = req.project;
         const { email } = onlyEmailSchema.parse(req.body);
+        const normalizedEmail = email.toLowerCase().trim();
 
         const { usersColConfig, Model } = await getUsersModel(project);
         if (!Model) return res.status(404).json({ error: "Auth collection not found" });
 
-        const user = await Model.findOne({ email });
+        const user = await Model.findOne({ email: normalizedEmail });
+
         if (!user) {
             return res.status(400).json({ error: "User not found with this email." });
         }
