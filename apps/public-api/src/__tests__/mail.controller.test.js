@@ -20,6 +20,7 @@ jest.mock('@urbackend/common', () => {
         incr: jest.fn(),
         expire: jest.fn(),
         decr: jest.fn(),
+        eval: jest.fn(),
     };
 
     return {
@@ -66,14 +67,13 @@ describe('mail.controller', () => {
         const req = makeReq();
         const res = makeRes();
 
-        mockProjectConfig({ _id: 'proj_1', resendApiKey: {} });
+        mockProjectConfig({ _id: 'proj_1', resendApiKey: { encrypted: '...' } });
         decrypt.mockReturnValue('byok-key');
-        redis.incr.mockResolvedValue(1);
+        redis.eval.mockResolvedValue(1);
 
         await mailController.sendMail(req, res);
 
-        expect(redis.incr).toHaveBeenCalledTimes(1);
-        expect(redis.expire).toHaveBeenCalledTimes(1);
+        expect(redis.eval).toHaveBeenCalledTimes(1);
         expect(res.status).toHaveBeenCalledWith(200);
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
             success: true,
@@ -87,7 +87,7 @@ describe('mail.controller', () => {
 
         mockProjectConfig({ _id: 'proj_1', resendApiKey: null });
         decrypt.mockReturnValue(null);
-        redis.incr.mockResolvedValue(2);
+        redis.eval.mockResolvedValue(2);
 
         await mailController.sendMail(req, res);
 
@@ -103,14 +103,15 @@ describe('mail.controller', () => {
 
         mockProjectConfig({ _id: 'proj_1', resendApiKey: null });
         decrypt.mockReturnValue(null);
-        redis.incr.mockResolvedValue(101);
+        redis.eval.mockResolvedValue(101);
 
         await mailController.sendMail(req, res);
 
         expect(redis.decr).toHaveBeenCalledTimes(1);
         expect(res.status).toHaveBeenCalledWith(429);
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-            error: 'Monthly mail limit exceeded.',
+            success: false,
+            message: 'Monthly mail limit exceeded.',
         }));
     });
 });

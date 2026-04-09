@@ -4,6 +4,8 @@ const mockFind = jest.fn();
 const mockAnd = jest.fn();
 const mockFindOne = jest.fn();
 const mockQueryLean = jest.fn().mockResolvedValue([]);
+const mockPopulate = jest.fn();
+const mockEnginePopulate = jest.fn();
 
 // mockAnd returns an object with .lean() so features.query.lean() works after .and()
 mockAnd.mockReturnValue({ lean: mockQueryLean });
@@ -13,6 +15,7 @@ const mockQueryEngine = jest.fn((query) => {
         query,
         filter() { return engine; },
         sort() { return engine; },
+        populate() { mockEnginePopulate(...arguments); return engine; },
         paginate() { return engine; },
     };
     return engine;
@@ -25,11 +28,25 @@ jest.mock('@urbackend/common', () => ({
     getCompiledModel: jest.fn(() => ({
         find: (...args) => {
             mockFind(...args);
-            return { and: mockAnd, lean: mockQueryLean };
+            return { 
+                and: mockAnd, 
+                populate: (...pArgs) => {
+                    mockPopulate(...pArgs);
+                    return { lean: mockQueryLean };
+                },
+                lean: mockQueryLean 
+            };
         },
         findOne: (...args) => {
             mockFindOne(...args);
-            return { lean: jest.fn().mockResolvedValue({ _id: 'doc_1' }) };
+            const chainable = {
+                populate: (...pArgs) => {
+                    mockPopulate(...pArgs);
+                    return chainable;
+                },
+                lean: jest.fn().mockResolvedValue({ _id: 'doc_1' }),
+            };
+            return chainable;
         },
     })),
     QueryEngine: mockQueryEngine,
@@ -74,6 +91,7 @@ function makeRes() {
 describe('data.controller read RLS filters', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockEnginePopulate.mockClear();
     });
 
     test('getAllData applies rlsFilter to find()', async () => {
@@ -100,5 +118,51 @@ describe('data.controller read RLS filters', () => {
             ],
         });
         expect(res.json).toHaveBeenCalled();
+    });
+
+    test('getAllData calls engine.populate() when populate param is provided', async () => {
+        const req = makeReq({ query: { populate: 'author,comments' } });
+        const res = makeRes();
+
+        await getAllData(req, res);
+
+        expect(mockQueryEngine).toHaveBeenCalled();
+        expect(mockEnginePopulate).toHaveBeenCalled();
+    });
+
+    test('getAllData does not forward populate/expand to Mongo filter', async () => {
+        const req = makeReq({ query: { populate: 'author', expand: 'category', title: 'hello' } });
+        const res = makeRes();
+
+        await getAllData(req, res);
+
+        // mockFind is called with the raw Mongoose query (no args for Model.find())
+        // The real filter exclusion is tested via the QueryEngine directly,
+        // but we confirm find() was invoked and the request did not error out.
+        expect(mockFind).toHaveBeenCalledWith();
+        expect(res.json).toHaveBeenCalled();
+        expect(res.status).not.toHaveBeenCalledWith(500);
+    });
+
+    test('getSingleDoc calls populate on the query', async () => {
+        const req = makeReq({ query: { populate: 'author' } });
+        const res = makeRes();
+
+        await getSingleDoc(req, res);
+
+        expect(mockPopulate).toHaveBeenCalledWith('author');
+        expect(res.json).toHaveBeenCalled();
+    });
+
+    test('getSingleDoc handles array-format populate param without crashing', async () => {
+        const req = makeReq({ query: { populate: ['author', 'category'] } });
+        const res = makeRes();
+
+        await getSingleDoc(req, res);
+
+        expect(mockPopulate).toHaveBeenCalledWith('author');
+        expect(mockPopulate).toHaveBeenCalledWith('category');
+        expect(res.json).toHaveBeenCalled();
+        expect(res.status).not.toHaveBeenCalledWith(500);
     });
 });

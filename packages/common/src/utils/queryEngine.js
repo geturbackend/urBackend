@@ -6,7 +6,7 @@ class QueryEngine {
 
     filter() {
         const queryObj = { ...this.queryString };
-        const excludedFields = ['page', 'sort', 'limit', 'fields'];
+        const excludedFields = ['page', 'sort', 'limit', 'fields', 'populate', 'expand'];
         excludedFields.forEach(el => delete queryObj[el]);
 
         const mongoQuery = {};
@@ -53,11 +53,22 @@ class QueryEngine {
 
     paginate() {
         const page = parseInt(this.queryString.page, 10) || 1;
-        const limit = parseInt(this.queryString.limit, 10) || 100;
+        const limit = Math.min(parseInt(this.queryString.limit, 10) || 100, 100);
         const skip = (page - 1) * limit;
 
         this.query = this.query.skip(skip).limit(limit);
         
+        return this;
+    }
+
+    populate() {
+        const rawParam = this.queryString.populate || this.queryString.expand;
+        if (!rawParam) return this;
+        const populateParam = Array.isArray(rawParam) ? rawParam.join(',') : String(rawParam);
+        const fields = populateParam.split(',').map(f => f.trim()).filter(Boolean);
+        fields.forEach(f => {
+            this.query = this.query.populate(f);
+        });
         return this;
     }
 }
