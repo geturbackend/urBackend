@@ -60,6 +60,7 @@ const userAuthRoute = require('./routes/userAuth');
 const storageRoute = require('./routes/storage');
 const schemaRoute = require('./routes/schemas');
 const mailRoute = require('./routes/mail');
+const healthRoute = require('./routes/health');
 
 // ROUTES SETUP 
 app.use('/api/userAuth', limiter, logger, userAuthRoute);
@@ -78,6 +79,7 @@ app.use('/api/data', projectCorsPreflight, limiter, logger, dataRoute);
 app.use('/api/schemas', projectCorsPreflight, limiter, logger, schemaRoute);
 app.use('/api/storage', projectCorsPreflight, limiter, logger, storageRoute);
 app.use('/api/mail', projectCorsPreflight, limiter, logger, mailRoute);
+app.use('/api/health', limiter, logger, healthRoute);
 
 app.get('/api/server-ip', async (req, res) => {
     const ip = await getPublicIp();
