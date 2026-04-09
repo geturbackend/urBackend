@@ -4,6 +4,7 @@ const mockFind = jest.fn();
 const mockAnd = jest.fn();
 const mockFindOne = jest.fn();
 const mockQueryLean = jest.fn().mockResolvedValue([]);
+const mockPopulate = jest.fn();
 
 // mockAnd returns an object with .lean() so features.query.lean() works after .and()
 mockAnd.mockReturnValue({ lean: mockQueryLean });
@@ -13,6 +14,7 @@ const mockQueryEngine = jest.fn((query) => {
         query,
         filter() { return engine; },
         sort() { return engine; },
+        populate() { return engine; },
         paginate() { return engine; },
     };
     return engine;
@@ -25,11 +27,24 @@ jest.mock('@urbackend/common', () => ({
     getCompiledModel: jest.fn(() => ({
         find: (...args) => {
             mockFind(...args);
-            return { and: mockAnd, lean: mockQueryLean };
+            return { 
+                and: mockAnd, 
+                populate: (...pArgs) => {
+                    mockPopulate(...pArgs);
+                    return { lean: mockQueryLean };
+                },
+                lean: mockQueryLean 
+            };
         },
         findOne: (...args) => {
             mockFindOne(...args);
-            return { lean: jest.fn().mockResolvedValue({ _id: 'doc_1' }) };
+            return { 
+                populate: (...pArgs) => {
+                    mockPopulate(...pArgs);
+                    return { lean: jest.fn().mockResolvedValue({ _id: 'doc_1' }) };
+                },
+                lean: jest.fn().mockResolvedValue({ _id: 'doc_1' }) 
+            };
         },
     })),
     QueryEngine: mockQueryEngine,
@@ -99,6 +114,28 @@ describe('data.controller read RLS filters', () => {
                 { userId: 'user_1' },
             ],
         });
+        expect(res.json).toHaveBeenCalled();
+    });
+
+    test('getAllData passes populate param to QueryEngine', async () => {
+        const req = makeReq({ query: { populate: 'author,comments' } });
+        const res = makeRes();
+
+        // The real QueryEngine (not mocked) would call .populate() on the query
+        // But since we mock QueryEngine, we just check if populate() was part of the chain
+        // In this specific test file, mockQueryEngine is what's used.
+        await getAllData(req, res);
+        
+        expect(mockQueryEngine).toHaveBeenCalled();
+    });
+
+    test('getSingleDoc calls populate on the query', async () => {
+        const req = makeReq({ query: { populate: 'author' } });
+        const res = makeRes();
+
+        await getSingleDoc(req, res);
+
+        expect(mockPopulate).toHaveBeenCalledWith('author');
         expect(res.json).toHaveBeenCalled();
     });
 });

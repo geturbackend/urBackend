@@ -10,7 +10,7 @@ const typeMapping = {
 };
 
 // Recursive field definition builder
-function buildFieldDef(field) {
+function buildFieldDef(field, projectId, isExternal) {
   // Object type — nested sub-schema
   if (field.type === "Object" && field.fields && field.fields.length > 0) {
     const subSchema = {};
@@ -18,7 +18,7 @@ function buildFieldDef(field) {
       const normalizedKey = normalizeKey(f.key);
       if (!normalizedKey) return;
 
-      subSchema[normalizedKey] = buildFieldDef(f);
+      subSchema[normalizedKey] = buildFieldDef(f, projectId, isExternal);
     });
     return { type: subSchema, required: !!field.required };
   }
@@ -42,14 +42,15 @@ function buildFieldDef(field) {
         const normalizedKey = normalizeKey(f.key);
         if (!normalizedKey) return;
 
-        subSchema[normalizedKey] = buildFieldDef(f);
+        subSchema[normalizedKey] = buildFieldDef(f, projectId, isExternal);
       });
       return { type: [subSchema], required: !!field.required };
     }
     // Array of Ref
-    if (field.items.type === "Ref") {
+    if (field.items && field.items.type === "Ref") {
+      const targetRef = isExternal ? field.items.ref : `${projectId}_${field.items.ref}`;
       return {
-        type: [{ type: mongoose.Schema.Types.ObjectId }],
+        type: [{ type: mongoose.Schema.Types.ObjectId, ref: targetRef }],
         required: !!field.required,
       };
     }
@@ -61,8 +62,10 @@ function buildFieldDef(field) {
 
   // Ref type — stores ObjectId
   if (field.type === "Ref") {
+    const targetRef = isExternal ? field.ref : `${projectId}_${field.ref}`;
     return {
       type: mongoose.Schema.Types.ObjectId,
+      ref: targetRef,
       required: !!field.required,
     };
   }
@@ -79,14 +82,14 @@ function normalizeKey(key) {
     .trim();
 }
 
-function buildMongooseSchema(fieldsArray = []) {
+function buildMongooseSchema(fieldsArray = [], projectId, isExternal) {
   const schemaDef = {};
 
   fieldsArray.forEach((field) => {
     const normalizedKey = normalizeKey(field.key);
     if (!normalizedKey) return;
 
-    schemaDef[normalizedKey] = buildFieldDef(field);
+    schemaDef[normalizedKey] = buildFieldDef(field, projectId, isExternal);
   });
 
   return new mongoose.Schema(schemaDef, {
@@ -123,7 +126,7 @@ function getCompiledModel(connection, collectionData, projectId, isExternal) {
   }
 
   // Build schema + compile
-  const schema = buildMongooseSchema(collectionData.model);
+  const schema = buildMongooseSchema(collectionData.model, projectId, isExternal);
   const model = connection.model(collectionName, schema);
 
   // Cache it

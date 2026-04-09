@@ -122,6 +122,7 @@ module.exports.getAllData = async (req, res) => {
 
     features
       .sort()
+      .populate()
       .paginate();
 
     const data = await features.query.lean();
@@ -158,7 +159,18 @@ module.exports.getSingleDoc = async (req, res) => {
     );
 
     const baseFilter = req.rlsFilter && typeof req.rlsFilter === 'object' ? req.rlsFilter : {};
-    const doc = await Model.findOne({ $and: [{ _id: id }, baseFilter] }).lean();
+    let query = Model.findOne({ $and: [{ _id: id }, baseFilter] });
+
+    // Handle population for single doc
+    const populateParam = req.query.populate || req.query.expand;
+    if (populateParam) {
+      const fields = populateParam.split(',').map(f => f.trim()).filter(Boolean);
+      fields.forEach(f => {
+        query = query.populate(f);
+      });
+    }
+
+    const doc = await query.lean();
     if (!doc) return res.status(404).json({ error: "Document not found." });
 
     res.json(doc);

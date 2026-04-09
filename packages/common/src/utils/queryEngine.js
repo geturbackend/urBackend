@@ -60,6 +60,17 @@ class QueryEngine {
         
         return this;
     }
+
+    populate() {
+        const populateParam = this.queryString.populate || this.queryString.expand;
+        if (populateParam) {
+            const fields = populateParam.split(',').map(f => f.trim()).filter(Boolean);
+            fields.forEach(f => {
+                this.query = this.query.populate(f);
+            });
+        }
+        return this;
+    }
 }
 
 module.exports = QueryEngine;

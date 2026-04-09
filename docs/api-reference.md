@@ -24,6 +24,18 @@
 | **Storage** | `POST` | `/api/storage/upload` | Upload a file |
 | **Storage** | `DELETE` | `/api/storage/file` | Delete a file by path |
 
+## Data Query Parameters
+
+| Parameter | Example | Description |
+| :--- | :--- | :--- |
+| `populate` | `?populate=author` | Expand Reference fields into objects |
+| `expand` | `?expand=author` | Alias for `populate` |
+| `sort` | `?sort=field:asc` | Sort order (`asc`, `desc`, `1`, `-1`) |
+| `limit` | `?limit=50` | Limit results (default 100) |
+| `page` | `?page=1` | Pagination page number |
+| `field_gt` | `?price_gt=100` | Greater than filter |
+| `field_lt` | `?price_lt=50` | Less than filter |
+
 ## Common Headers
 
 | Header | Required | Purpose |

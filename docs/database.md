@@ -56,12 +56,36 @@ curl "https://api.ub.bitbros.in/api/data/posts" ^
 ### Fetch Single Document
 **Endpoint**: `GET /api/data/:collectionName/:id`
 
-```bash
 curl "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234" ^
   -H "x-api-key: pk_live_xxx"
 ```
 
-## 3. Update a Document
+## 2.1 Query Parameters
+
+You can refine your `GET` requests using the following query parameters:
+
+| Parameter | Type | Example | Description |
+| :--- | :--- | :--- | :--- |
+| `populate` | `String` | `?populate=author,category` | Expand `Ref` fields into full objects. |
+| `expand` | `String` | `?expand=author` | Alias for `populate`. |
+| `sort` | `String` | `?sort=createdAt:desc` | Sort results by field and order. |
+| `limit` | `Number` | `?limit=25` | Number of documents to return (max 100). |
+| `page` | `Number` | `?page=2` | Pagination offset. |
+
+### Relational Data (Population) 🔗
+
+If you have fields defined as `Ref` (singular) or `Array of Ref` in your schema, urBackend can automatically join those documents for you. 
+
+By default, urBackend returns raw IDs for references. Use `?populate=` to get the full nested object.
+
+```bash
+# Get posts with full author and category objects
+curl "https://api.ub.bitbros.in/api/data/posts?populate=author,category" ^
+  -H "x-api-key: pk_live_xxx"
+```
+
+> [!TIP]
+> This solves the N+1 query problem, allowing you to fetch complex relational data in a single request.
 
 **Endpoint**: `PUT /api/data/:collectionName/:id`
 
