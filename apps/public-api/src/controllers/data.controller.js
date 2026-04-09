@@ -17,6 +17,12 @@ const isDuplicateKeyError = (err) => {
   return err && err.code === 11000;
 };
 
+const normalizePopulateParam = (value) => {
+  if (Array.isArray(value)) return value.join(',');
+  if (typeof value === 'string') return value;
+  return null;
+};
+
 // INSERT DATA
 module.exports.insertData = async (req, res) => {
   try {
@@ -162,7 +168,9 @@ module.exports.getSingleDoc = async (req, res) => {
     let query = Model.findOne({ $and: [{ _id: id }, baseFilter] });
 
     // Handle population for single doc
-    const populateParam = req.query.populate || req.query.expand;
+    const populateParam = normalizePopulateParam(
+      req.query.populate ?? req.query.expand
+    );
     if (populateParam) {
       const fields = populateParam.split(',').map(f => f.trim()).filter(Boolean);
       fields.forEach(f => {

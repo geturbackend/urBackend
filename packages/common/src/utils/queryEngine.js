@@ -6,7 +6,7 @@ class QueryEngine {
 
     filter() {
         const queryObj = { ...this.queryString };
-        const excludedFields = ['page', 'sort', 'limit', 'fields'];
+        const excludedFields = ['page', 'sort', 'limit', 'fields', 'populate', 'expand'];
         excludedFields.forEach(el => delete queryObj[el]);
 
         const mongoQuery = {};
@@ -62,7 +62,9 @@ class QueryEngine {
     }
 
     populate() {
-        const populateParam = this.queryString.populate || this.queryString.expand;
+        const populateParam = this.normalizePopulateParam(
+            this.queryString.populate ?? this.queryString.expand
+        );
         if (populateParam) {
             const fields = populateParam.split(',').map(f => f.trim()).filter(Boolean);
             fields.forEach(f => {
@@ -70,6 +72,12 @@ class QueryEngine {
             });
         }
         return this;
+    }
+
+    normalizePopulateParam(value) {
+        if (Array.isArray(value)) return value.join(',');
+        if (typeof value === 'string') return value;
+        return null;
     }
 }
 
