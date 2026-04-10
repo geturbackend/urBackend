@@ -97,6 +97,20 @@ test('patch sends PATCH request', async () => {
   );
 });
 
+test('getOne with populate builds correct query string', async () => {
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    headers: new Headers({ 'content-type': 'application/json' }),
+    json: () => Promise.resolve({ success: true, data: { _id: '1' } }),
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  await client.db.getOne('products', '1', { populate: 'category' });
+
+  const url = fetchMock.mock.calls[0][0] as string;
+  expect(url).toContain('?populate=category');
+});
+
 test('delete returns { deleted: true } and handles token', async () => {
   const fetchMock = vi.fn().mockResolvedValue({
     ok: true,
