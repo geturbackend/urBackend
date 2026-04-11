@@ -1,0 +1,175 @@
+---
+title: "Database"
+description: "Read, insert, update, and delete documents in any collection using the SDK database module."
+keywords: ["database", "collections", "crud", "sdk", "typescript"]
+---
+
+Access database methods via `client.db`. Collections must be created in the [urBackend Dashboard](https://urbackend.bitbros.in) before you can write to them. Once registered, you can optionally define a schema or write arbitrary JSON documents.
+
+All methods accept a generic type parameter `T` (extending `DocumentData`) so the returned documents are typed:
+
+```typescript
+interface DocumentData {
+  _id: string;
+  [key: string]: unknown;
+}
+```
+
+<Note>
+Use a `pk_live_...` (publishable) key for read operations in frontend code. Use a `sk_live_...` (secret) key for writes in server-side code only.
+</Note>
+
+---
+
+## getAll
+
+Fetch all documents from a collection.
+
+```typescript
+getAll<T extends DocumentData>(collection: string): Promise<T[]>
+```
+
+Returns an empty array if the collection does not exist yet.
+
+**Example**
+
+```typescript
+interface Product {
+  _id: string;
+  name: string;
+  price: number;
+}
+
+const products = await client.db.getAll<Product>('products');
+// products is Product[]
+```
+
+---
+
+## getOne
+
+Fetch a single document by its ID.
+
+```typescript
+getOne<T extends DocumentData>(collection: string, id: string): Promise<T>
+```
+
+Throws `NotFoundError` if no document with that ID exists.
+
+**Example**
+
+```typescript
+const product = await client.db.getOne<Product>('products', '507f1f77bcf86cd799439011');
+console.log(product.name); // 'Chair'
+```
+
+---
+
+## insert
+
+Insert a new document into a collection. The collection must already exist in the dashboard.
+
+```typescript
+insert<T extends DocumentData>(collection: string, data: Record<string, unknown>): Promise<T>
+```
+
+Returns the inserted document, including its server-assigned `_id`.
+
+**Example**
+
+```typescript
+const product = await client.db.insert<Product>('products', {
+  name: 'Chair',
+  price: 99,
+});
+
+console.log(product._id); // '507f1f77bcf86cd799439011'
+```
+
+---
+
+## update
+
+Update an existing document by its ID. The `data` object is merged into the existing document.
+
+```typescript
+update<T extends DocumentData>(collection: string, id: string, data: Record<string, unknown>): Promise<T>
+```
+
+Returns the updated document.
+
+**Example**
+
+```typescript
+const updated = await client.db.update<Product>('products', '507f1f77bcf86cd799439011', {
+  price: 79,
+});
+
+console.log(updated.price); // 79
+```
+
+---
+
+## delete
+
+Delete a document by its ID.
+
+```typescript
+delete(collection: string, id: string): Promise<{ deleted: boolean }>
+```
+
+**Example**
+
+```typescript
+const result = await client.db.delete('products', '507f1f77bcf86cd799439011');
+console.log(result.deleted); // true
+```
+
+---
+
+## TypeScript generics
+
+Passing a generic type to database methods gives you full type inference on the returned document. Define an interface that extends the `_id: string` field:
+
+```typescript
+interface BlogPost {
+  _id: string;
+  title: string;
+  body: string;
+  publishedAt: string;
+}
+
+// Typed array
+const posts = await client.db.getAll<BlogPost>('posts');
+
+// Typed document
+const post = await client.db.getOne<BlogPost>('posts', id);
+post.title; // string — no type assertion needed
+```
+
+---
+
+## Error handling
+
+```typescript
+import urBackend, { NotFoundError, AuthError, RateLimitError } from '@urbackend/sdk';
+
+const client = urBackend({ apiKey: process.env.URBACKEND_API_KEY });
+
+try {
+  const product = await client.db.getOne<Product>('products', id);
+} catch (e) {
+  if (e instanceof NotFoundError) {
+    // Document does not exist
+    console.error('Product not found');
+  } else if (e instanceof AuthError) {
+    // Invalid or missing API key
+    console.error('Unauthorized');
+  } else if (e instanceof RateLimitError) {
+    // Exceeded 100 requests per 15 minutes per IP
+    console.error(`Rate limited. Retry after ${e.retryAfter}s`);
+  } else {
+    throw e;
+  }
+}
+```

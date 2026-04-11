@@ -1,0 +1,128 @@
+---
+title: "Storage"
+description: "Upload files and get back public CDN URLs using the SDK storage module."
+keywords: ["storage", "upload", "files", "cdn", "sdk"]
+---
+
+Access storage methods via `client.storage`. Uploaded files are served from a public CDN — no extra configuration required.
+
+<Note>
+Storage operations accept both `pk_live_...` and `sk_live_...` keys. Use `pk_live_...` in browser code for user-initiated uploads, and `sk_live_...` for server-side uploads. Never expose your secret key in browser code.
+</Note>
+
+---
+
+## upload
+
+Upload a file to storage.
+
+```typescript
+upload(file: File | Blob | Buffer, filename?: string): Promise<{ url: string; path: string }>
+```
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `file` | `File \| Blob \| Buffer` | Yes | The file to upload. |
+| `filename` | `string` | No | Override the stored filename. |
+
+**Returns**
+
+| Field | Type | Description |
+|---|---|---|
+| `url` | `string` | Public CDN URL for the uploaded file. |
+| `path` | `string` | Storage path — required to delete the file later. |
+
+<Note>
+Store the `path` alongside the `url` in your database. You need it to delete the file.
+</Note>
+
+**Example — browser file input**
+
+```typescript
+const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+const file = input.files[0];
+
+const { url, path } = await client.storage.upload(file);
+console.log(url);  // 'https://cdn.example.com/uploads/abc123.jpg'
+console.log(path); // 'uploads/abc123.jpg'
+
+// Store both so you can delete the file later
+await client.db.insert('product_images', { url, path });
+```
+
+**Example — custom filename**
+
+```typescript
+const { url, path } = await client.storage.upload(file, 'profile-photo.jpg');
+```
+
+**Example — Node.js Buffer**
+
+```typescript
+import { readFileSync } from 'fs';
+
+const buffer = readFileSync('./report.pdf');
+const { url, path } = await client.storage.upload(buffer, 'report.pdf');
+```
+
+---
+
+## deleteFile
+
+Delete a previously uploaded file by its storage path.
+
+```typescript
+deleteFile(path: string): Promise<{ deleted: boolean }>
+```
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `path` | `string` | Yes | The `path` returned by `upload()`. |
+
+**Example**
+
+```typescript
+// Retrieve the stored path
+const image = await client.db.getOne('product_images', id);
+
+const result = await client.storage.deleteFile(image.path);
+console.log(result.deleted); // true
+```
+
+---
+
+## Limits
+
+| Limit | Value |
+|---|---|
+| Max file size | 5 MB per file |
+| Total storage per project | 100 MB |
+
+<Note>
+Uploads that exceed 5 MB are rejected with a `StorageError`. Check `file.size` before calling `upload()` if you need to show a friendly error to your users.
+</Note>
+
+**Example — checking file size before upload**
+
+```typescript
+import { StorageError } from '@urbackend/sdk';
+
+const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+
+if (file.size > MAX_BYTES) {
+  console.error('File must be 5 MB or smaller');
+  return;
+}
+
+try {
+  const { url, path } = await client.storage.upload(file);
+} catch (e) {
+  if (e instanceof StorageError) {
+    console.error('Upload failed:', e.message);
+  }
+}
+```

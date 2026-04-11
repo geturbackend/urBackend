@@ -1,0 +1,120 @@
+---
+title: "Quick Start"
+description: "Go from a blank project to live read/write API endpoints in under 60 seconds."
+---
+
+## Prerequisites
+
+You need a [urBackend account](https://urbackend.bitbros.in) and a MongoDB connection string (Atlas free tier works). The base URL for all API calls is `https://api.ub.bitbros.in`.
+
+<Steps>
+  <Step title="Create a project and get your API keys">
+    Open the [urBackend Dashboard](https://urbackend.bitbros.in) and create a new project. During setup, you will provide your MongoDB connection string.
+
+    Once the project is created, navigate to **Settings** to find your two API keys:
+
+    - **`pk_live_...`** — your publishable key, safe to use in frontend and mobile code.
+    - **`sk_live_...`** — your secret key, for server-side use only. Never expose this in client code.
+
+    Store both keys in environment variables:
+
+    ```bash
+    VITE_URBACKEND_KEY=pk_live_xxxxxx
+    URBACKEND_SECRET=sk_live_yyyyyy
+    ```
+  </Step>
+
+  <Step title="Create a collection in the Database tab">
+    Collections must be registered in the dashboard before you can send data to them.
+
+    1. Go to the **Database** tab in your project.
+    2. Click **Create Collection**.
+    3. Enter a name, for example `products`.
+    4. Optionally define a schema (field names and types). You can also skip this and post arbitrary JSON — urBackend will store it as-is.
+    5. Click **Save**.
+
+    Your collection endpoint is now live at `/api/data/products`.
+  </Step>
+
+  <Step title="Insert a document using your secret key">
+    Write operations require your `sk_live` key when called from a server. Send a `POST` request with a JSON body to insert a document.
+
+    <CodeGroup>
+
+    ```bash curl
+    curl -X POST "https://api.ub.bitbros.in/api/data/products" \
+      -H "x-api-key: sk_live_..." \
+      -H "Content-Type: application/json" \
+      -d '{"name": "Widget", "price": 9.99, "inStock": true}'
+    ```
+
+    ```javascript fetch
+    const response = await fetch('https://api.ub.bitbros.in/api/data/products', {
+      method: 'POST',
+      headers: {
+        'x-api-key': 'sk_live_...',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name: 'Widget', price: 9.99, inStock: true })
+    });
+
+    const result = await response.json();
+    // { success: true, data: { _id: '...', name: 'Widget', price: 9.99, inStock: true }, message: '...' }
+    console.log(result.data);
+    ```
+
+    </CodeGroup>
+
+    A successful insert returns HTTP `201` with the saved document, including its generated `_id`.
+  </Step>
+
+  <Step title="Read documents using your publishable key">
+    Read operations work with your `pk_live` key and are safe to call directly from a browser or mobile app.
+
+    <CodeGroup>
+
+    ```bash curl
+    curl "https://api.ub.bitbros.in/api/data/products" \
+      -H "x-api-key: pk_live_..."
+    ```
+
+    ```javascript fetch
+    const response = await fetch('https://api.ub.bitbros.in/api/data/products', {
+      headers: {
+        'x-api-key': 'pk_live_...'
+      }
+    });
+
+    const { data } = await response.json();
+    // data is an array of documents
+    console.log(data);
+    ```
+
+    </CodeGroup>
+
+    You can narrow results with query parameters:
+
+    ```bash
+    # Page 2, 10 results per page, sorted by price descending
+    GET /api/data/products?page=2&limit=10&sort=-price
+    ```
+
+    To fetch a single document by its `_id`:
+
+    ```bash
+    GET /api/data/products/<document-id>
+    ```
+  </Step>
+</Steps>
+
+## What's next?
+
+You now have a working backend — collections, inserts, and reads are all live. A few natural next steps:
+
+- **Add user authentication.** The Auth API (`/api/userAuth/*`) handles sign-up, login, JWTs, and social login. See the [Authentication guide](/guides/authentication).
+- **Let frontend users write data.** Enable Row-Level Security on a collection so authenticated users can write their own documents with `pk_live`. See [Row-Level Security](/concepts/row-level-security).
+- **Enforce data shape.** Define field types, required constraints, and unique fields in the collection schema. See [Collections & Schemas](/concepts/collections-schemas).
+
+<Note>
+  To allow your frontend users to create or update documents without exposing your secret key, you need to enable Row-Level Security on the collection and have users authenticate first. The [Authentication guide](/guides/authentication) covers the full sign-up and login flow.
+</Note>

@@ -1,0 +1,242 @@
+---
+title: "Social Auth"
+description: "Let your users sign in with GitHub or Google using OAuth."
+---
+
+urBackend supports OAuth sign-in via GitHub and Google. Once configured, your users can authenticate without creating a password — urBackend creates or links their account automatically.
+
+**Base URL:** `https://api.ub.bitbros.in`
+
+## How the flow works
+
+```
+Your app  →  urBackend /start  →  GitHub / Google  →  urBackend /callback
+                                                              ↓
+Your app (/auth/callback)  ←  urBackend redirects with tokens
+```
+
+After a successful login, urBackend redirects the user to `<your-site>/auth/callback` with an access token in the URL fragment and a short-lived exchange code in the query string.
+
+## Dashboard setup (one time)
+
+<Steps>
+  <Step title="Set your site URL">
+    Go to **Project Settings** in the urBackend dashboard and enter your frontend URL (e.g., `https://myapp.com`). urBackend uses this as the base for the post-login redirect.
+  </Step>
+
+  <Step title="Open Social Auth settings">
+    Go to **Auth → Social Auth** and select the provider you want to configure (GitHub or Google).
+  </Step>
+
+  <Step title="Copy the callback URL">
+    urBackend displays a read-only callback URL for the selected provider:
+
+    ```
+    https://api.ub.bitbros.in/api/userAuth/social/github/callback
+    ```
+
+    Copy this URL — you will register it with the provider in the next step.
+  </Step>
+
+  <Step title="Register the callback URL with the provider">
+    Paste the callback URL into the provider's developer console:
+
+    - **GitHub:** **Settings → Developer settings → OAuth Apps → New OAuth App**
+    - **Google:** **Google Cloud Console → APIs & Services → Credentials → Create OAuth Client**
+  </Step>
+
+  <Step title="Paste credentials and enable">
+    Copy the **Client ID** and **Client Secret** from the provider console, paste them into the urBackend Social Auth form, and toggle the provider on.
+  </Step>
+</Steps>
+
+## Frontend implementation
+
+### 1. Add login buttons
+
+When a user clicks "Login with GitHub" or "Login with Google", redirect their browser to urBackend's start endpoint. Pass your publishable key as a query parameter (since this is a browser redirect, not a `fetch` call).
+
+```jsx
+// components/LoginButtons.jsx
+const API_KEY = 'pk_live_YOUR_KEY';
+const API_URL = 'https://api.ub.bitbros.in';
+
+function LoginButtons() {
+  const handleGitHubLogin = () => {
+    window.location.href = `${API_URL}/api/userAuth/social/github/start?x-api-key=${API_KEY}`;
+  };
+
+  const handleGoogleLogin = () => {
+    window.location.href = `${API_URL}/api/userAuth/social/google/start?x-api-key=${API_KEY}`;
+  };
+
+  return (
+    <div>
+      <button onClick={handleGitHubLogin}>Login with GitHub</button>
+      <button onClick={handleGoogleLogin}>Login with Google</button>
+    </div>
+  );
+}
+```
+
+### 2. Create the callback page
+
+You **must** create a page at `/auth/callback` in your frontend. After the provider login completes, urBackend redirects the user here with tokens in the URL.
+
+The callback page should:
+1. Check for an error in the query string
+2. Extract `token` from the URL fragment and `rtCode` from the query string
+3. Exchange `rtCode` for a refresh token by calling `/api/userAuth/social/exchange`
+4. Store the tokens and redirect to your app
+
+```jsx
+// pages/AuthCallback.jsx
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+function AuthCallback() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    async function handleCallback() {
+      // Check for errors
+      const queryParams = new URLSearchParams(window.location.search);
+      const error = queryParams.get('error');
+
+      if (error) {
+        alert('Login failed: ' + error);
+        navigate('/login');
+        return;
+      }
+
+      // Extract tokens from URL
+      const hashParams = new URLSearchParams(window.location.hash.slice(1));
+      const accessToken = hashParams.get('token');
+      const rtCode = queryParams.get('rtCode');
+
+      if (!accessToken || !rtCode) {
+        alert('Missing tokens');
+        navigate('/login');
+        return;
+      }
+
+      // Exchange rtCode for a refresh token
+      const response = await fetch('https://api.ub.bitbros.in/api/userAuth/social/exchange', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': 'pk_live_YOUR_KEY'
+        },
+        body: JSON.stringify({ token: accessToken, rtCode })
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        alert('Token exchange failed');
+        navigate('/login');
+        return;
+      }
+
+      // Store tokens and continue
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', data.data.refreshToken);
+
+      // Optional: store provider metadata
+      localStorage.setItem('provider', queryParams.get('provider'));
+      localStorage.setItem('userId', queryParams.get('userId'));
+
+      navigate('/dashboard');
+    }
+
+    handleCallback();
+  }, [navigate]);
+
+  return <div>Completing login...</div>;
+}
+
+export default AuthCallback;
+```
+
+## What urBackend sends to your callback URL
+
+After a successful provider login, urBackend redirects to:
+
+```
+https://your-site.com/auth/callback?rtCode=abc&provider=github&projectId=p1&userId=u1&isNewUser=false&linkedByEmail=true#token=eyJ...
+```
+
+| Parameter | Location | Description |
+| --- | --- | --- |
+| `token` | URL fragment (`#`) | Access token (JWT) for API calls |
+| `rtCode` | Query string | One-time code to exchange for a refresh token |
+| `provider` | Query string | `github` or `google` |
+| `projectId` | Query string | Your urBackend project ID |
+| `userId` | Query string | The user's ID in your database |
+| `isNewUser` | Query string | `true` if the account was just created |
+| `linkedByEmail` | Query string | `true` if an existing account was linked by email |
+| `error` | Query string | Error message (only present on failure) |
+
+<Note>
+  The access token is placed in the URL fragment (`#`) intentionally. Fragments are never sent to servers in HTTP requests, which prevents the token from leaking through referrer headers or server logs.
+</Note>
+
+## Exchange endpoint
+
+**Endpoint:** `POST /api/userAuth/social/exchange`
+
+**Headers:**
+
+```json
+{
+  "Content-Type": "application/json",
+  "x-api-key": "pk_live_YOUR_KEY"
+}
+```
+
+**Request body:**
+
+```json
+{
+  "token": "eyJ... (access token from URL fragment)",
+  "rtCode": "abc123 (one-time code from query string)"
+}
+```
+
+**Success response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "refreshToken": "REFRESH_TOKEN_VALUE"
+  },
+  "message": "Refresh token exchanged successfully"
+}
+```
+
+<Warning>
+  `rtCode` expires after **60 seconds** and is **one-time use**. Exchange it immediately after the redirect. If it has expired or been used, you will receive `"Invalid or expired refresh token exchange code"` and the user will need to log in again.
+</Warning>
+
+## Complete flow summary
+
+| Step | What happens | Who does it |
+| --- | --- | --- |
+| 1 | User clicks "Login with GitHub" | Your frontend |
+| 2 | Browser redirects to `/api/userAuth/social/github/start` | Your frontend |
+| 3 | urBackend redirects to GitHub login page | urBackend |
+| 4 | User logs in on GitHub | User |
+| 5 | GitHub redirects to urBackend callback | GitHub |
+| 6 | urBackend creates or links the user, generates tokens | urBackend |
+| 7 | urBackend redirects to `<your-site>/auth/callback?rtCode=...#token=...` | urBackend |
+| 8 | Callback page extracts `token` and `rtCode` from URL | Your frontend |
+| 9 | Callback page calls `/api/userAuth/social/exchange` with both | Your frontend |
+| 10 | urBackend returns `refreshToken` | urBackend |
+| 11 | App stores tokens and redirects to dashboard | Your frontend |
+
+## Account linking
+
+If a user signs in with a social provider and their provider account has a verified email that matches an existing urBackend user, the accounts are automatically linked. The `linkedByEmail` parameter in the callback URL will be `true` in this case.
+
+New users created via social auth receive an internally generated hashed password to satisfy the `users` collection contract. They can set a real password later using the change-password endpoint.

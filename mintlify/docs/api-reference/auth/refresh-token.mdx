@@ -1,0 +1,105 @@
+---
+title: "Refresh Token"
+description: "Exchange a valid refresh token for a new access token without requiring the user to log in again."
+---
+
+## POST `/api/userAuth/refresh-token`
+
+Issues a new access token using the current refresh token. The refresh token is automatically rotated — the old one is invalidated and a new one is issued.
+
+<Tip>
+  Call this endpoint whenever you receive a `401 Unauthorized` response on any other request.
+  It is safe to call proactively when the access token is about to expire.
+</Tip>
+
+### Required Header
+
+`x-api-key`: your `pk_live_…` key.
+
+### Two Modes
+
+Depending on your client type, you send the refresh token differently.
+
+#### Web (browser)
+
+The refresh token is stored in an HTTP-only cookie set during login. You do not need to read or send it manually — just include `credentials: 'include'` so the browser attaches the cookie automatically.
+
+#### Mobile / non-browser
+
+Include the refresh token in the `x-refresh-token` header, and set `x-refresh-token-mode` to `'header'` to tell urBackend to read it from there.
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  `true` when a new access token was issued.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="data">
+    <ResponseField name="accessToken" type="string">
+      The new short-lived JWT access token.
+    </ResponseField>
+    <ResponseField name="expiresIn" type="string">
+      Human-readable duration until the new access token expires (e.g., `"15m"`).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable status message.
+</ResponseField>
+
+### Code Examples
+
+<CodeGroup>
+
+```javascript Web (cookie)
+// Browser: credentials: 'include' sends the HTTP-only cookie automatically
+const res = await fetch('https://api.ub.bitbros.in/api/userAuth/refresh-token', {
+  method: 'POST',
+  headers: {
+    'x-api-key': 'pk_live_YOUR_KEY'
+  },
+  credentials: 'include'
+});
+
+const { data } = await res.json();
+const newAccessToken = data.accessToken;
+```
+
+```javascript Mobile (header)
+// Mobile / non-browser: pass the refresh token explicitly in a header
+const res = await fetch('https://api.ub.bitbros.in/api/userAuth/refresh-token', {
+  method: 'POST',
+  headers: {
+    'x-api-key': 'pk_live_YOUR_KEY',
+    'x-refresh-token': storedRefreshToken,
+    'x-refresh-token-mode': 'header'
+  }
+});
+
+const { data } = await res.json();
+const newAccessToken = data.accessToken;
+// Persist the new refresh token returned in the x-refresh-token response header
+```
+
+</CodeGroup>
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresIn": "15m"
+  },
+  "message": "Token refreshed successfully"
+}
+```
+
+### Errors
+
+| Status | Cause |
+| :--- | :--- |
+| `401 Unauthorized` | Refresh token missing, invalid, or already rotated |

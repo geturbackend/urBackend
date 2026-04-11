@@ -1,0 +1,159 @@
+---
+title: "Collections & Schemas"
+description: "Collections are the tables of urBackend. You create them in the dashboard, optionally define a schema, and interact with them through the REST API."
+---
+
+## What is a collection?
+
+A collection is a named container for JSON documents — conceptually equivalent to a MongoDB collection or a database table. Every collection you create in the dashboard gets its own REST endpoint at:
+
+```
+/api/data/:collectionName
+```
+
+**Collections must be created in the dashboard before you can write to them.** The API will reject requests to endpoints that do not correspond to a registered collection. Creating a collection registers it under your project and connects it to your MongoDB database.
+
+<Warning>
+  The `users` collection is reserved. All user account operations go through `/api/userAuth/*`. Requests to `/api/data/users` or any path starting with `/api/data/users` are blocked with a `403` response.
+</Warning>
+
+## Flexible mode vs. schema-enforced mode
+
+When you create a collection, you choose whether to define a schema.
+
+**Flexible mode (no schema):** urBackend stores whatever JSON you send. There is no type validation. This is useful for prototyping or for collections where the shape varies between documents.
+
+**Schema-enforced mode:** You define the fields, their types, and any constraints. The API validates every incoming document against the schema before saving. This prevents bad data and enables features like required fields and unique constraints.
+
+You can switch between modes and evolve your schema over time from the dashboard.
+
+## Supported field types
+
+| Type | Description | Example JSON value |
+|------|-------------|-------------------|
+| `String` | Text data | `"Hello World"` |
+| `Number` | Integer or decimal | `19.99` |
+| `Boolean` | True or false | `true` |
+| `Date` | ISO date string or valid date value | `"2024-03-07"` |
+| `Object` | Nested JSON structure | `{ "views": 10, "likes": 4 }` |
+| `Array` | List of values | `["electronics", "deals"]` |
+| `Ref` | MongoDB ObjectId referencing another document | `"642f9abc1234567890abcdef"` |
+
+### Type matching rules
+
+The schema engine is strict about types:
+
+- A `String` field must receive a string — `"42"` is valid, `42` is not.
+- A `Number` field must receive a number — not a stringified number.
+- A `Boolean` field must receive `true` or `false`, not `"true"` or `1`.
+- An `Object` field must receive a JSON object `{}`.
+- An `Array` field must receive a JSON array `[]`.
+- A `Ref` field should store a valid MongoDB ObjectId string.
+
+Sending the wrong type returns a `400` validation error.
+
+## Defining field constraints
+
+### Required fields
+
+Mark a field as **required** in the dashboard to prevent documents from being saved without it. Any `POST` or `PUT` request missing a required field returns:
+
+```json
+{
+  "success": false,
+  "message": "Validation failed: email is required"
+}
+```
+
+### Unique constraints
+
+Mark a field as **unique** to enforce that no two documents in the collection share the same value for that field. This is enforced at the database level and is useful for fields like `username` or `email` in custom collections.
+
+## Field type examples
+
+### String
+
+```json
+{
+  "title": "Getting started with urBackend",
+  "slug": "getting-started"
+}
+```
+
+### Number
+
+```json
+{
+  "price": 19.99,
+  "quantity": 100
+}
+```
+
+### Boolean
+
+```json
+{
+  "isPublished": true,
+  "isPremium": false
+}
+```
+
+### Date
+
+```json
+{
+  "publishedAt": "2024-03-07",
+  "expiresAt": "2025-01-01T00:00:00.000Z"
+}
+```
+
+### Object
+
+Use the `Object` type for nested structures. In the dashboard, add sub-fields inside the object field. In the API, send a regular nested JSON object:
+
+```json
+{
+  "profile": {
+    "avatar": "https://cdn.example.com/avatar.png",
+    "bio": "Developer and coffee enthusiast"
+  }
+}
+```
+
+### Array
+
+```json
+{
+  "tags": ["tech", "ai", "tutorial"],
+  "scores": [98, 87, 92]
+}
+```
+
+### Ref
+
+Use `Ref` to store a reference to a document in another collection. Store the target document's `_id` as a string:
+
+```json
+{
+  "content": "Great post!",
+  "authorId": "642f9abc1234567890abcdef",
+  "postId": "651a7def9876543210fedcba"
+}
+```
+
+<Tip>
+  References are stored as plain ObjectId strings. urBackend does not automatically populate or join referenced documents in GET responses — your application is responsible for resolving references if needed.
+</Tip>
+
+## The users collection
+
+The `users` collection has a fixed schema contract required by the auth system:
+
+- `email` — required `String`
+- `password` — required `String`
+
+You can add additional fields (such as `name`, `avatar`, or `role`) on top of this contract. Define the full schema in the dashboard before enabling authentication to ensure your custom fields are validated correctly.
+
+<Note>
+  Always interact with user records through `/api/userAuth/*` endpoints, not through the data API. The data API blocks all access to `/api/data/users*`.
+</Note>

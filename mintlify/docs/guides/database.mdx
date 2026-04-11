@@ -1,0 +1,184 @@
+---
+title: "Database"
+description: "Create, read, update, and delete documents in your MongoDB collections using a simple REST API."
+---
+
+urBackend gives you a REST interface for your MongoDB collections with no SQL or aggregation pipelines required. Define your collections in the dashboard, then read and write data immediately.
+
+**Base URL:** `https://api.ub.bitbros.in`  
+**Pattern:** `https://api.ub.bitbros.in/api/data/:collectionName`
+
+Replace `:collectionName` with the name of your collection (e.g., `posts`, `products`, `orders`).
+
+<Warning>
+  The `users` collection is special. Direct access to `/api/data/users*` is blocked. Use `/api/userAuth/*` for all user management. See the [Authentication guide](/guides/authentication).
+</Warning>
+
+## API keys and write access
+
+| Scenario | Key | Auth token | Result |
+| --- | --- | --- | --- |
+| Read any collection | `pk_live` | Not required | Allowed |
+| Write (RLS disabled) | `sk_live` | Not required | Allowed |
+| Write (RLS disabled) | `pk_live` | Any | Blocked |
+| Write (RLS enabled, valid user token) | `pk_live` | `Bearer <user_jwt>` | Allowed |
+| Write (RLS enabled, wrong owner) | `pk_live` | Token with different `userId` | Blocked |
+
+Use `sk_live` for server-side writes. Use `pk_live` + RLS + a user JWT to let authenticated frontend users write their own data. See [Row-Level Security](/concepts/row-level-security) for details.
+
+## Create a document
+
+**Endpoint:** `POST /api/data/:collectionName`
+
+By default, write operations require your secret key (`sk_live_...`). If you enable RLS on the collection, you can also write with a publishable key and a valid user JWT.
+
+```javascript
+const res = await fetch('https://api.ub.bitbros.in/api/data/posts', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'sk_live_YOUR_KEY'
+  },
+  body: JSON.stringify({
+    title: 'Why BaaS is the future',
+    body: 'Content goes here...',
+    tags: ['tech', 'development'],
+    meta: { views: 0, likes: 0 }
+  })
+});
+
+const { data } = await res.json();
+// data contains the created document including its _id
+```
+
+<Note>
+  When writing with `pk_live` and RLS enabled, you can omit the owner field from the body. urBackend will automatically set it to the authenticated user's ID.
+</Note>
+
+## Read documents
+
+Read operations use your publishable key (`pk_live_...`) and never expose your secret key in frontend code.
+
+### Fetch all documents
+
+**Endpoint:** `GET /api/data/:collectionName`
+
+```bash
+curl "https://api.ub.bitbros.in/api/data/posts" \
+  -H "x-api-key: pk_live_YOUR_KEY"
+```
+
+**Response shape:**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "_id": "64fd1234abcd5678ef901234", "title": "...", "body": "..." }
+  ],
+  "message": ""
+}
+```
+
+### Fetch a single document
+
+**Endpoint:** `GET /api/data/:collectionName/:id`
+
+```bash
+curl "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234" \
+  -H "x-api-key: pk_live_YOUR_KEY"
+```
+
+### Query parameters
+
+Use query parameters to filter, sort, and paginate results.
+
+| Parameter | Description | Example |
+| --- | --- | --- |
+| `page` | Page number (1-indexed) | `?page=2` |
+| `limit` | Results per page | `?limit=20` |
+| `sort` | Field to sort by, prefix `-` for descending | `?sort=-createdAt` |
+| `filter[field][op]` | Filter by field value | `?filter[status][eq]=published` |
+
+**Filtering example — published posts, newest first, page 2:**
+
+```bash
+curl "https://api.ub.bitbros.in/api/data/posts?filter[status][eq]=published&sort=-createdAt&page=2&limit=10" \
+  -H "x-api-key: pk_live_YOUR_KEY"
+```
+
+## Update a document
+
+`PUT` replaces specified fields using `$set` logic — you only send the fields you want to change, not the entire document. Nested field updates are supported using dot notation.
+
+**Endpoint:** `PUT /api/data/:collectionName/:id`
+
+```javascript
+const postId = '64fd1234abcd5678ef901234';
+
+const res = await fetch(`https://api.ub.bitbros.in/api/data/posts/${postId}`, {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'sk_live_YOUR_KEY'
+  },
+  body: JSON.stringify({
+    'meta.views': 105  // nested field update using dot notation
+  })
+});
+```
+
+## Partial update
+
+`PATCH` works the same way as `PUT` for partial updates. Use it when you want to update a subset of fields.
+
+**Endpoint:** `PATCH /api/data/:collectionName/:id`
+
+```javascript
+const res = await fetch(`https://api.ub.bitbros.in/api/data/posts/${postId}`, {
+  method: 'PATCH',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'sk_live_YOUR_KEY'
+  },
+  body: JSON.stringify({
+    title: 'Updated title only'
+  })
+});
+```
+
+## Delete a document
+
+**Endpoint:** `DELETE /api/data/:collectionName/:id`
+
+```bash
+curl -X DELETE "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234" \
+  -H "x-api-key: sk_live_YOUR_KEY"
+```
+
+## Schema validation
+
+If you define a schema for a collection in the dashboard, urBackend enforces it on every `POST` and `PUT` request. Supported field types include:
+
+- **String, Number, Boolean, Date** — scalar values
+- **Object** — nested JSON structures
+- **Array** — lists of values
+- **Ref** — references to documents in another collection (stores `_id`)
+
+If a request fails validation, urBackend returns a `400 Bad Request` with a message describing which field failed and why.
+
+```json
+{
+  "success": false,
+  "message": "Validation failed: title is required"
+}
+```
+
+## Common failure cases
+
+| Status | Cause | Fix |
+| --- | --- | --- |
+| `400 Bad Request` | Schema validation failed (wrong type or missing required field) | Check the error message and fix the request body |
+| `401 Unauthorized` | Missing or invalid API key, or missing JWT for `pk_live` writes with RLS | Add a valid `x-api-key` and, if required, `Authorization: Bearer <token>` |
+| `403 Forbidden` | Owner mismatch under RLS, or write attempted with `pk_live` when RLS is disabled | Ensure the user is writing their own data, or use `sk_live` for server-side writes |
+| `404 Not Found` | Collection or document ID does not exist | Verify the collection name and document `_id` |

@@ -1,0 +1,149 @@
+---
+title: "Get Profile"
+description: "Retrieve the currently authenticated user's profile, or fetch a public profile by username."
+---
+
+## GET `/api/userAuth/me`
+
+Returns the full profile of the currently signed-in user. The response never includes the `password` field.
+
+### Required Headers
+
+| Header | Value |
+| :--- | :--- |
+| `x-api-key` | Your `pk_live_…` key |
+| `Authorization` | `Bearer <accessToken>` |
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  `true` when the profile was retrieved successfully.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="data">
+    <ResponseField name="user" type="object">
+      <Expandable title="user">
+        <ResponseField name="_id" type="string">
+          MongoDB ObjectId of the user.
+        </ResponseField>
+        <ResponseField name="email" type="string">
+          The user's email address.
+        </ResponseField>
+        <ResponseField name="name" type="string">
+          The user's display name.
+        </ResponseField>
+        <ResponseField name="...additional fields" type="any">
+          All other fields from your `users` collection schema, except `password`.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable status message.
+</ResponseField>
+
+### Code Examples
+
+<CodeGroup>
+
+```javascript fetch
+const res = await fetch('https://api.ub.bitbros.in/api/userAuth/me', {
+  headers: {
+    'x-api-key': 'pk_live_YOUR_KEY',
+    'Authorization': `Bearer ${accessToken}`
+  }
+});
+
+const { success, data, message } = await res.json();
+const { user } = data;
+```
+
+```bash curl
+curl "https://api.ub.bitbros.in/api/userAuth/me" \
+  -H "x-api-key: pk_live_YOUR_KEY" \
+  -H "Authorization: Bearer ACCESS_TOKEN"
+```
+
+</CodeGroup>
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "_id": "64fd1234abcd5678ef901234",
+      "email": "alice@example.com",
+      "name": "Alice",
+      "username": "alice_dev"
+    }
+  },
+  "message": "User fetched successfully"
+}
+```
+
+### Errors
+
+| Status | Cause |
+| :--- | :--- |
+| `401 Unauthorized` | Missing or expired `Authorization` token |
+
+---
+
+## GET `/api/userAuth/public/:username`
+
+Returns a public-safe view of a user's profile. No authentication is required.
+
+<Note>
+  This endpoint never returns sensitive fields such as `password` or `email`.
+  Only fields considered safe for public display are included.
+</Note>
+
+### Path Parameters
+
+<ParamField path="username" type="string" required>
+  The username of the user whose public profile you want to retrieve.
+</ParamField>
+
+### Required Header
+
+`x-api-key`: your `pk_live_…` key.
+
+### Code Example
+
+```javascript
+const res = await fetch('https://api.ub.bitbros.in/api/userAuth/public/alice_dev', {
+  headers: {
+    'x-api-key': 'pk_live_YOUR_KEY'
+  }
+});
+
+const { data } = await res.json();
+const { user } = data;
+```
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "_id": "64fd1234abcd5678ef901234",
+      "name": "Alice",
+      "username": "alice_dev"
+    }
+  },
+  "message": "Public profile fetched successfully"
+}
+```
+
+### Errors
+
+| Status | Cause |
+| :--- | :--- |
+| `404 Not Found` | No user found with that username |

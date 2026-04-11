@@ -1,0 +1,145 @@
+{
+  "projectType": "saas",
+  "projectName": "urBackend",
+  "projectDescription": "A Backend-as-a-Service that instantly generates secure CRUD REST APIs for your frontend by connecting to your own MongoDB database.",
+  "theme": "luma",
+  "primaryColor": "#53e5ae",
+  "lightColor": "#347c64",
+  "darkColor": "#050706",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Docs",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/api-keys",
+              "concepts/collections-schemas",
+              "concepts/row-level-security"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/authentication",
+              "guides/social-auth",
+              "guides/database",
+              "guides/storage",
+              "guides/webhooks"
+            ]
+          },
+          {
+            "group": "SDK",
+            "pages": [
+              "sdk/overview",
+              "sdk/auth",
+              "sdk/database",
+              "sdk/storage"
+            ]
+          },
+          {
+            "group": "Security & Limits",
+            "pages": [
+              "security",
+              "limits-and-quotas"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/overview"
+            ]
+          },
+          {
+            "group": "Authentication",
+            "pages": [
+              "api-reference/auth/signup",
+              "api-reference/auth/login",
+              "api-reference/auth/me",
+              "api-reference/auth/refresh-token",
+              "api-reference/auth/logout",
+              "api-reference/auth/social"
+            ]
+          },
+          {
+            "group": "Database",
+            "pages": [
+              "api-reference/data/get-all",
+              "api-reference/data/get-one",
+              "api-reference/data/insert",
+              "api-reference/data/update",
+              "api-reference/data/delete"
+            ]
+          },
+          {
+            "group": "Storage",
+            "pages": [
+              "api-reference/storage/upload",
+              "api-reference/storage/delete"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Instant REST APIs for any MongoDB collection",
+    "Built-in user authentication with JWT (signup, login, refresh, social OAuth)",
+    "Row-Level Security (RLS) for per-user data ownership enforcement",
+    "Cloud file/image storage with public CDN URLs",
+    "Bring Your Own Database (BYOD) — connect your own MongoDB instance",
+    "Dual-key system (pk_live / sk_live) for safe frontend and server-side usage",
+    "Social Auth via GitHub and Google OAuth",
+    "Webhook system with HMAC-SHA256 signing and retry logic",
+    "Visual schema builder with type validation and unique constraints",
+    "Dashboard analytics and resource monitoring"
+  ],
+  "publicApiSurface": [
+    "POST /api/userAuth/signup",
+    "POST /api/userAuth/login",
+    "GET /api/userAuth/me",
+    "PUT /api/userAuth/update-profile",
+    "PUT /api/userAuth/change-password",
+    "POST /api/userAuth/refresh-token",
+    "POST /api/userAuth/logout",
+    "POST /api/userAuth/verify-email",
+    "POST /api/userAuth/request-password-reset",
+    "POST /api/userAuth/reset-password",
+    "GET /api/userAuth/public/:username",
+    "GET /api/userAuth/social/:provider/start",
+    "POST /api/userAuth/social/exchange",
+    "GET /api/data/:collectionName",
+    "GET /api/data/:collectionName/:id",
+    "POST /api/data/:collectionName",
+    "PUT /api/data/:collectionName/:id",
+    "PATCH /api/data/:collectionName/:id",
+    "DELETE /api/data/:collectionName/:id",
+    "POST /api/storage/upload",
+    "DELETE /api/storage/file",
+    "urBackend({ apiKey })",
+    "client.auth.signUp({ email, password, name })",
+    "client.auth.login({ email, password })",
+    "client.auth.me()",
+    "client.auth.logout()",
+    "client.db.getAll(collection)",
+    "client.db.getOne(collection, id)",
+    "client.db.insert(collection, data)",
+    "client.db.update(collection, id, data)",
+    "client.db.delete(collection, id)",
+    "client.storage.upload(file)",
+    "client.storage.deleteFile(path)"
+  ]
+}

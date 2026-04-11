@@ -1,0 +1,133 @@
+---
+title: "Sign Up"
+description: "Register a new user in your project's users collection."
+---
+
+## POST `/api/userAuth/signup`
+
+Creates a new user account and returns an access token. Any extra fields defined in your `users` collection schema are accepted and validated automatically.
+
+<Note>
+  Your project must have a `users` collection with at least an `email` (String, required, unique)
+  and a `password` (String, required) field before this endpoint will work.
+</Note>
+
+### Required Header
+
+`x-api-key`: your `pk_live_…` key.
+
+### Request Body
+
+<ParamField body="email" type="string" required>
+  The user's email address. Must be unique within the project.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The user's password. Stored as a bcrypt hash — the raw value is never persisted.
+</ParamField>
+
+<ParamField body="name" type="string">
+  The user's display name.
+</ParamField>
+
+<ParamField body="...custom fields" type="any">
+  Any additional fields your `users` collection schema defines (e.g., `username`, `avatar`,
+  `preferences`). urBackend validates them against your schema automatically.
+</ParamField>
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  `true` when the user was created successfully.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="data">
+    <ResponseField name="user" type="object">
+      <Expandable title="user">
+        <ResponseField name="_id" type="string">
+          MongoDB ObjectId of the newly created user.
+        </ResponseField>
+        <ResponseField name="email" type="string">
+          The registered email address.
+        </ResponseField>
+        <ResponseField name="name" type="string">
+          The user's name, if provided.
+        </ResponseField>
+        <ResponseField name="...custom fields" type="any">
+          Any other fields stored during signup.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="accessToken" type="string">
+      A short-lived JWT to use in `Authorization: Bearer` headers. Prefer `accessToken`
+      over the deprecated `token` alias.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable status message.
+</ResponseField>
+
+### Code Examples
+
+<CodeGroup>
+
+```javascript fetch
+const res = await fetch('https://api.ub.bitbros.in/api/userAuth/signup', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'pk_live_YOUR_KEY'
+  },
+  body: JSON.stringify({
+    email: 'alice@example.com',
+    password: 'securePassword123',
+    name: 'Alice',
+    username: 'alice_dev',
+    preferences: { theme: 'dark', notifications: true }
+  })
+});
+
+const { success, data, message } = await res.json();
+const { user, accessToken } = data;
+```
+
+```bash curl
+curl -X POST "https://api.ub.bitbros.in/api/userAuth/signup" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: pk_live_YOUR_KEY" \
+  -d '{
+    "email": "alice@example.com",
+    "password": "securePassword123",
+    "name": "Alice"
+  }'
+```
+
+</CodeGroup>
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "_id": "64fd1234abcd5678ef901234",
+      "email": "alice@example.com",
+      "name": "Alice",
+      "username": "alice_dev"
+    },
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  },
+  "message": "User registered successfully"
+}
+```
+
+### Errors
+
+| Status | Cause |
+| :--- | :--- |
+| `400 Bad Request` | Missing required fields or schema validation failure |
+| `409 Conflict` | An account with that email address already exists |

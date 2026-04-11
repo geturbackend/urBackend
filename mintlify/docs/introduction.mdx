@@ -1,0 +1,62 @@
+---
+title: "Introduction"
+description: "urBackend is a Backend-as-a-Service that gives you instant REST APIs on your own MongoDB database — no server code required."
+---
+
+## What is urBackend?
+
+urBackend is an open-source **Backend-as-a-Service (BaaS)** built on the principle of **Bring Your Own Database (BYOD)**. You connect your own MongoDB instance, define your collections, and get a production-ready REST API in seconds — without writing a single line of server code.
+
+Your data stays in your database. urBackend provides the API layer, authentication, file storage, and security on top of it.
+
+## Why use urBackend?
+
+**No backend boilerplate.** Create a collection in the dashboard and your REST endpoint is live immediately. There is no server to provision and no routing to configure.
+
+**Dual-key security built in.** Every project gets a publishable key (`pk_live`) for safe use in frontend code and a secret key (`sk_live`) for server-side operations. The two keys have different trust levels and are enforced at the API layer.
+
+**Auth is included.** Sign-up, login, JWT issuance, profile management, password reset, email verification, and social login (GitHub and Google) are all available out of the box through the `/api/userAuth/*` endpoints.
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Database" icon="database" href="/guides/database">
+    Create collections, define schemas, and read or write JSON documents through a standard REST API. Supports filtering, pagination, and sorting.
+  </Card>
+  <Card title="Auth" icon="lock" href="/guides/authentication">
+    Built-in user authentication with JWT tokens. Supports sign-up, login, email verification, password reset, and social login via GitHub and Google.
+  </Card>
+  <Card title="Storage" icon="folder-open" href="/guides/storage">
+    Upload files and images and receive public CDN links automatically. Delete files by path when they are no longer needed.
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/guides/webhooks">
+    Receive HTTP callbacks on data events. Secured with HMAC-SHA256 signatures, with automatic retries and delivery logs.
+  </Card>
+  <Card title="SDK" icon="code" href="/sdk/overview">
+    A typed JavaScript/TypeScript client that wraps the REST API. Covers auth, database reads and writes, and storage operations.
+  </Card>
+  <Card title="Row-Level Security" icon="shield-check" href="/concepts/row-level-security">
+    Let authenticated frontend users write their own data safely using their publishable key and a user JWT — no secret key exposure required.
+  </Card>
+</CardGroup>
+
+## Your first API call
+
+Once you have a project and a collection set up, reading data requires only your publishable key:
+
+```javascript
+const response = await fetch('https://api.ub.bitbros.in/api/data/products', {
+  headers: {
+    'x-api-key': 'pk_live_...'
+  }
+});
+
+const { data } = await response.json();
+console.log(data);
+```
+
+The `pk_live` key is safe to include in frontend and mobile code — it grants read access only. Write operations require either the `sk_live` key (server-side) or a user JWT with Row-Level Security enabled on the collection.
+
+<Note>
+  Ready to build? Follow the [Quick Start](/quickstart) to go from a blank project to live read/write endpoints in under 60 seconds.
+</Note>

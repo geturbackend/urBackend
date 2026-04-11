@@ -1,0 +1,55 @@
+---
+title: "Limits & Quotas"
+description: "Rate limits, storage quotas, database size caps, and HTTP status codes for urBackend projects."
+---
+
+## Rate limits
+
+urBackend enforces per-IP rate limits to keep the service stable for all projects.
+
+| Endpoint group | Limit |
+| :--- | :--- |
+| Global API | 100 requests per 15 minutes per IP |
+| Auth endpoints (`/api/userAuth/*`) | Stricter per-IP limit |
+
+Requests that exceed the limit receive a `429 Too Many Requests` response. Design your client to back off and retry after the rate limit window resets.
+
+## Storage limits
+
+| Resource | Limit |
+| :--- | :--- |
+| File upload via REST API | 10 MB per file |
+| File upload via SDK | 5 MB per file |
+| Storage quota per project | 100 MB |
+
+<Note>
+The REST API and the SDK enforce different per-file size limits. If you upload files directly through `POST /api/storage/upload`, the limit is 10 MB. If you use `client.storage.upload()` from the SDK, the limit is 5 MB. Use the REST API directly for larger files.
+</Note>
+
+Files that exceed the limit return `413 Payload Too Large`.
+
+## Database limits
+
+| Resource | Limit |
+| :--- | :--- |
+| Database size per project | 50 MB |
+
+When your project approaches the database quota, writes may be rejected with `403 Forbidden`. Monitor your usage in the Dashboard.
+
+## HTTP status codes
+
+| Code | Meaning | Common cause |
+| :--- | :--- | :--- |
+| `200 OK` | Request succeeded | — |
+| `201 Created` | Resource created | Successful `POST` insert |
+| `400 Bad Request` | Invalid request | Schema validation failure, missing required field |
+| `401 Unauthorized` | Authentication failed | Missing or invalid API key, expired JWT |
+| `403 Forbidden` | Access denied | RLS policy violation, quota exceeded, write blocked for `pk_live_` |
+| `404 Not Found` | Resource not found | Document ID does not exist, invalid file path |
+| `413 Payload Too Large` | Upload too big | File exceeds the per-file size limit |
+| `429 Too Many Requests` | Rate limit exceeded | Too many requests from the same IP within the window |
+| `500 Internal Server Error` | Server-side error | Unexpected failure; contact support if it persists |
+
+<Tip>
+If you are using webhooks, respond to incoming webhook requests within 10 seconds. urBackend retries failed deliveries with exponential backoff, so a slow response can trigger unintended duplicate processing on your end.
+</Tip>

@@ -1,0 +1,271 @@
+---
+title: "Authentication"
+description: "Manage user sign-up, login, tokens, and profiles using the /api/userAuth/* endpoints."
+---
+
+User accounts in urBackend are managed through `/api/userAuth/*` endpoints. Do **not** use the generic data API (`/api/data/users*`) for user management — that route is blocked.
+
+All auth endpoints require your publishable key (`pk_live_...`) in the `x-api-key` header.
+
+**Base URL:** `https://api.ub.bitbros.in`
+
+## The `users` collection contract
+
+Before using authentication, create a collection named `users` in your project. It must include at least these two fields:
+
+| Field | Type | Constraints |
+| --- | --- | --- |
+| `email` | String | Required, Unique |
+| `password` | String | Required |
+
+You can add any extra fields (e.g., `username`, `avatar`, `preferences`). urBackend validates them automatically during sign-up based on your schema.
+
+<Note>
+  Passwords are hashed with Bcrypt before storage. Neither you nor your users can retrieve the raw password.
+</Note>
+
+## Sign up, log in, and call the API
+
+<Steps>
+  <Step title="Sign up a new user">
+    Send a `POST` request to create an account. You can include any extra fields defined in your `users` schema.
+
+    ```javascript
+    const res = await fetch('https://api.ub.bitbros.in/api/userAuth/signup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': 'pk_live_YOUR_KEY'
+      },
+      body: JSON.stringify({
+        email: 'dev@example.com',
+        password: 'securePassword123',
+        username: 'dev_pulse',
+        preferences: { theme: 'dark', notifications: true }
+      })
+    });
+
+    const data = await res.json();
+    ```
+
+    On success, urBackend returns a short-lived access token and a 7-day refresh token.
+  </Step>
+
+  <Step title="Log in">
+    Authenticate with email and password to receive an access token.
+
+    ```javascript
+    const res = await fetch('https://api.ub.bitbros.in/api/userAuth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': 'pk_live_YOUR_KEY'
+      },
+      body: JSON.stringify({
+        email: 'dev@example.com',
+        password: 'securePassword123'
+      })
+    });
+
+    const { accessToken, expiresIn } = await res.json();
+    ```
+
+    <Warning>
+      The response also includes `token` as a backward-compatible alias for `accessToken`. Migrate your clients to use `accessToken` — the `token` field will be removed in a future release.
+    </Warning>
+  </Step>
+
+  <Step title="Call authenticated endpoints">
+    Pass the access token in the `Authorization` header for any endpoint that requires authentication.
+
+    ```javascript
+    const res = await fetch('https://api.ub.bitbros.in/api/userAuth/me', {
+      headers: {
+        'x-api-key': 'pk_live_YOUR_KEY',
+        'Authorization': `Bearer ${accessToken}`
+      }
+    });
+
+    const { data } = await res.json();
+    // data contains the current user's profile
+    ```
+  </Step>
+
+  <Step title="Refresh the access token">
+    Access tokens are short-lived. When one expires, request a new one using the refresh token.
+
+    **Web clients** — the refresh token cookie is sent automatically:
+
+    ```javascript
+    const res = await fetch('https://api.ub.bitbros.in/api/userAuth/refresh-token', {
+      method: 'POST',
+      headers: { 'x-api-key': 'pk_live_YOUR_KEY' },
+      credentials: 'include'
+    });
+    ```
+
+    **Mobile or non-browser clients** — send the refresh token in a header:
+
+    ```javascript
+    const res = await fetch('https://api.ub.bitbros.in/api/userAuth/refresh-token', {
+      method: 'POST',
+      headers: {
+        'x-api-key': 'pk_live_YOUR_KEY',
+        'x-refresh-token': REFRESH_TOKEN,
+        'x-refresh-token-mode': 'header'
+      }
+    });
+    ```
+
+    <Note>
+      Refresh tokens are rotated on every use and are replay-protected.
+    </Note>
+  </Step>
+
+  <Step title="Log out">
+    Revoke the current refresh session. After this call the refresh token is invalidated.
+
+    ```javascript
+    await fetch('https://api.ub.bitbros.in/api/userAuth/logout', {
+      method: 'POST',
+      headers: { 'x-api-key': 'pk_live_YOUR_KEY' },
+      credentials: 'include'
+    });
+    ```
+  </Step>
+</Steps>
+
+## Profile management
+
+### Get current user profile
+
+Returns the profile of the currently authenticated user.
+
+**Endpoint:** `GET /api/userAuth/me`
+
+```javascript
+const res = await fetch('https://api.ub.bitbros.in/api/userAuth/me', {
+  headers: {
+    'x-api-key': 'pk_live_YOUR_KEY',
+    'Authorization': `Bearer ${accessToken}`
+  }
+});
+```
+
+### Update profile
+
+Update editable profile fields for the authenticated user.
+
+**Endpoint:** `PUT /api/userAuth/update-profile`
+
+```javascript
+const res = await fetch('https://api.ub.bitbros.in/api/userAuth/update-profile', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'pk_live_YOUR_KEY',
+    'Authorization': `Bearer ${accessToken}`
+  },
+  body: JSON.stringify({
+    username: 'new_username',
+    preferences: { theme: 'light' }
+  })
+});
+```
+
+### Change password
+
+**Endpoint:** `PUT /api/userAuth/change-password`
+
+```javascript
+const res = await fetch('https://api.ub.bitbros.in/api/userAuth/change-password', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'pk_live_YOUR_KEY',
+    'Authorization': `Bearer ${accessToken}`
+  },
+  body: JSON.stringify({
+    currentPassword: 'oldPassword123',
+    newPassword: 'newSecurePassword456'
+  })
+});
+```
+
+### Public profile
+
+Fetch a safe, public view of any user's profile by username. No authentication is required. Sensitive fields like `password` and `email` are never returned.
+
+**Endpoint:** `GET /api/userAuth/public/:username`
+
+```javascript
+const res = await fetch('https://api.ub.bitbros.in/api/userAuth/public/dev_pulse', {
+  headers: { 'x-api-key': 'pk_live_YOUR_KEY' }
+});
+```
+
+## Password reset
+
+<Steps>
+  <Step title="Request a password reset">
+    Send the user's email address to trigger a reset email.
+
+    **Endpoint:** `POST /api/userAuth/request-password-reset`
+
+    ```javascript
+    const res = await fetch('https://api.ub.bitbros.in/api/userAuth/request-password-reset', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': 'pk_live_YOUR_KEY'
+      },
+      body: JSON.stringify({ email: 'dev@example.com' })
+    });
+    ```
+  </Step>
+
+  <Step title="Reset the password">
+    Submit the reset token (from the email link) along with the new password.
+
+    **Endpoint:** `POST /api/userAuth/reset-password`
+
+    ```javascript
+    const res = await fetch('https://api.ub.bitbros.in/api/userAuth/reset-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': 'pk_live_YOUR_KEY'
+      },
+      body: JSON.stringify({
+        token: 'RESET_TOKEN_FROM_EMAIL',
+        newPassword: 'newSecurePassword456'
+      })
+    });
+    ```
+  </Step>
+</Steps>
+
+## Email verification
+
+After sign-up, you can prompt users to verify their email address.
+
+**Endpoint:** `POST /api/userAuth/verify-email`
+
+```javascript
+const res = await fetch('https://api.ub.bitbros.in/api/userAuth/verify-email', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'pk_live_YOUR_KEY'
+  },
+  body: JSON.stringify({ token: 'VERIFICATION_TOKEN_FROM_EMAIL' })
+});
+```
+
+## Required headers reference
+
+| Header | Value | When required |
+| --- | --- | --- |
+| `x-api-key` | `pk_live_...` | All auth endpoints |
+| `Content-Type` | `application/json` | POST and PUT requests |
+| `Authorization` | `Bearer <accessToken>` | Endpoints that require a logged-in user |

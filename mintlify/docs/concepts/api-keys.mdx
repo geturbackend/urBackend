@@ -1,0 +1,121 @@
+---
+title: "API Keys"
+description: "Every urBackend project has two keys with different trust levels. Understanding which key to use prevents the most common integration mistakes."
+---
+
+## The two keys
+
+Every project gets exactly two API keys when it is created.
+
+| Key | Prefix | Where to use | Default write access |
+|-----|--------|-------------|---------------------|
+| Publishable key | `pk_live_...` | Frontend, browser, mobile app | Read-only — writes blocked unless RLS is enabled |
+| Secret key | `sk_live_...` | Server-side only (Node.js, serverless functions, etc.) | Full read and write access |
+
+Both keys are found in **Settings** in your project dashboard.
+
+## How to pass the key
+
+Include the key in the `x-api-key` request header on every API call:
+
+```http
+x-api-key: pk_live_...
+```
+
+No other authentication format is accepted for project-level authorization. The header name is lowercase and hyphenated exactly as shown.
+
+## Using the publishable key
+
+Use `pk_live` for all read operations from client-side code. It is safe to bundle in browser JavaScript, React Native apps, or any publicly visible context.
+
+```javascript
+// Safe — pk_live is read-only by default
+const response = await fetch('https://api.ub.bitbros.in/api/data/products', {
+  headers: {
+    'x-api-key': 'pk_live_...'
+  }
+});
+
+const { data } = await response.json();
+```
+
+By default, `pk_live` is **blocked from all write operations** (`POST`, `PUT`, `PATCH`, `DELETE`). Attempting a write with only `pk_live` returns:
+
+```json
+{ "success": false, "message": "Write blocked for publishable key" }
+```
+
+### Enabling writes with pk_live
+
+You can allow authenticated frontend users to write their own data by enabling **Row-Level Security (RLS)** on a collection. When RLS is on, `pk_live` writes are accepted — but only when the request also includes a valid user JWT in the `Authorization` header, and only for documents the user owns.
+
+```javascript
+// pk_live write with RLS enabled — user must be logged in
+const response = await fetch('https://api.ub.bitbros.in/api/data/posts', {
+  method: 'POST',
+  headers: {
+    'x-api-key': 'pk_live_...',
+    'Authorization': `Bearer ${userToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ title: 'My post', content: '...' })
+});
+```
+
+See [Row-Level Security](/concepts/row-level-security) for the full setup and behavior details.
+
+## Using the secret key
+
+Use `sk_live` for all server-side operations: seeding data, admin scripts, serverless API routes, and any write that happens outside a user's own browser session.
+
+```javascript
+// Server-side only — never expose sk_live in client code
+const response = await fetch('https://api.ub.bitbros.in/api/data/products', {
+  method: 'POST',
+  headers: {
+    'x-api-key': 'sk_live_...',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ name: 'Widget', price: 9.99 })
+});
+```
+
+`sk_live` bypasses RLS entirely and always has full read and write access on all collections (except `/api/data/users*`, which is always blocked — use `/api/userAuth/*` instead).
+
+<Warning>
+  Never include your `sk_live` key in frontend code, client-side JavaScript bundles, mobile apps, or any public repository. Treat it like a database password. If it is exposed, rotate it immediately from your project settings.
+</Warning>
+
+## Environment variable pattern
+
+Store your keys in environment variables and never commit them to source control:
+
+```bash
+# .env (add to .gitignore)
+VITE_URBACKEND_KEY=pk_live_xxxxxx   # safe to expose to the browser via VITE_
+URBACKEND_SECRET=sk_live_yyyyyy      # server-side only, never prefix with VITE_
+```
+
+```javascript
+// In your frontend code
+const apiKey = import.meta.env.VITE_URBACKEND_KEY; // pk_live
+
+// In your server/API route
+const secretKey = process.env.URBACKEND_SECRET; // sk_live
+```
+
+## Key behavior summary
+
+| Scenario | Key | Token | Result |
+|----------|-----|-------|--------|
+| Read any collection | `pk_live` | Not required | Allowed |
+| Write, RLS disabled | `pk_live` | Any | 403 blocked |
+| Write, RLS enabled, no token | `pk_live` | Missing | 401 unauthorized |
+| Write, RLS enabled, correct owner | `pk_live` | Matching `userId` | Allowed |
+| Write, RLS enabled, wrong owner | `pk_live` | Different `userId` | 403 owner mismatch |
+| Any write | `sk_live` | Not required | Allowed |
+| Access `/api/data/users*` | Any | Any | 403 blocked — use `/api/userAuth/*` |
+
+<Tip>
+  A good rule of thumb: use `pk_live` for everything your users' browsers do, and `sk_live` for everything your server does.
+</Tip>

@@ -1,0 +1,55 @@
+---
+title: "urBackend Documentation"
+description: "Bring your own MongoDB. Get a production-ready backend in 60 seconds."
+---
+
+urBackend is a Backend-as-a-Service (BaaS) that gives your frontend instant, secure REST APIs backed by your own MongoDB database. Skip the boilerplate — connect your database, define your collections, and start reading and writing data immediately.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Go from zero to a live backend in under 60 seconds.
+  </Card>
+  <Card title="Core Concepts" icon="lightbulb" href="/concepts/api-keys">
+    Understand API keys, collections, and Row-Level Security.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/overview">
+    Full reference for every endpoint with request and response examples.
+  </Card>
+  <Card title="JavaScript SDK" icon="npm" href="/sdk/overview">
+    Install the official TypeScript SDK and start building immediately.
+  </Card>
+</CardGroup>
+
+## How it works
+
+<Steps>
+  <Step title="Create a project">
+    Sign up at the [urBackend Dashboard](https://urbackend.bitbros.in) and create a new project. You'll receive a publishable key (`pk_live_...`) and a secret key (`sk_live_...`).
+  </Step>
+  <Step title="Define your collections">
+    In the **Database** tab, create collections and optionally define schemas with field types and validation rules.
+  </Step>
+  <Step title="Call the API">
+    Use your API key in the `x-api-key` header to read and write data instantly. No server setup required.
+  </Step>
+  <Step title="Add auth (optional)">
+    Enable built-in user authentication and Row-Level Security so your frontend users can safely manage their own data.
+  </Step>
+</Steps>
+
+## Key capabilities
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/guides/authentication">
+    Built-in signup, login, JWT tokens, and social OAuth (GitHub & Google).
+  </Card>
+  <Card title="Database" icon="database" href="/guides/database">
+    Full CRUD operations via REST with optional schema validation.
+  </Card>
+  <Card title="Storage" icon="cloud" href="/guides/storage">
+    Upload files and images with public CDN links generated automatically.
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/guides/webhooks">
+    Get notified of data events in real time with HMAC-signed payloads.
+  </Card>
+</CardGroup>

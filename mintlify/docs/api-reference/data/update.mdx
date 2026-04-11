@@ -1,0 +1,162 @@
+---
+title: "Update Document"
+description: "Update an existing document in a collection using PUT (full update) or PATCH (partial update)."
+---
+
+Both `PUT` and `PATCH` update an existing document by ID. You only need to send the fields you want to change — unmentioned fields are left unchanged.
+
+## PUT `/api/data/:collectionName/:id`
+
+Typically used for full logical updates. Send only the fields you intend to change; fields you omit are left unchanged.
+
+## PATCH `/api/data/:collectionName/:id`
+
+Explicitly signals a partial update. Semantically equivalent to `PUT` in urBackend — both merge changes into the existing document without replacing unmentioned fields.
+
+<Note>
+  Nested field updates using dot notation are supported.
+  For example, sending `"meta.views": 105` updates only the `views` key inside the `meta` object
+  without affecting any other keys in `meta`.
+</Note>
+
+### Required Header
+
+`x-api-key`: `sk_live_…` by default. `pk_live_…` is accepted only when the collection has **RLS enabled** and the request includes `Authorization: Bearer <accessToken>`.
+
+### Path Parameters
+
+<ParamField path="collectionName" type="string" required>
+  The name of the collection containing the document.
+</ParamField>
+
+<ParamField path="id" type="string" required>
+  The MongoDB ObjectId string of the document to update.
+</ParamField>
+
+### Request Body
+
+A JSON object containing the fields to update and their new values.
+
+<Warning>
+  The owner field (e.g., `userId`) is **immutable**. If you include it in the request body with
+  a different value, the request is rejected with `403 Owner field immutable`. Remove it from
+  the update body entirely.
+</Warning>
+
+### RLS Behavior
+
+When using `pk_live` with RLS enabled, urBackend fetches the existing document and compares its owner field against the authenticated user's ID. If they don't match, the request is rejected with `403`.
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  `true` when the update succeeded.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  The updated document with all current field values.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable status message.
+</ResponseField>
+
+### Code Examples
+
+<CodeGroup>
+
+```javascript PUT — full update
+const postId = '64fd1234abcd5678ef901234';
+
+const res = await fetch(
+  `https://api.ub.bitbros.in/api/data/posts/${postId}`,
+  {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': 'sk_live_YOUR_SECRET_KEY'
+    },
+    body: JSON.stringify({
+      title: 'Updated title',
+      'meta.views': 105   // Dot notation updates nested fields safely
+    })
+  }
+);
+
+const { success, data } = await res.json();
+```
+
+```javascript PATCH — partial update
+const postId = '64fd1234abcd5678ef901234';
+
+const res = await fetch(
+  `https://api.ub.bitbros.in/api/data/posts/${postId}`,
+  {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': 'sk_live_YOUR_SECRET_KEY'
+    },
+    body: JSON.stringify({
+      title: 'Edited title only'
+    })
+  }
+);
+```
+
+```javascript pk_live + RLS (client-side)
+const postId = '64fd1234abcd5678ef901234';
+
+const res = await fetch(
+  `https://api.ub.bitbros.in/api/data/posts/${postId}`,
+  {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': 'pk_live_YOUR_KEY',
+      'Authorization': `Bearer ${accessToken}`
+    },
+    body: JSON.stringify({
+      title: 'My updated title'
+      // Do NOT include the owner field here
+    })
+  }
+);
+```
+
+```bash curl
+curl -X PUT "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
+  -d '{"title": "Updated title", "meta.views": 105}'
+```
+
+</CodeGroup>
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "64fd1234abcd5678ef901234",
+    "title": "Updated title",
+    "body": "Content goes here...",
+    "meta": {
+      "views": 105,
+      "likes": 12
+    },
+    "userId": "64fd0000abcd5678ef900001"
+  },
+  "message": "Document updated successfully"
+}
+```
+
+### Errors
+
+| Status | Cause |
+| :--- | :--- |
+| `400 Bad Request` | Schema validation failed |
+| `401 Unauthorized` | Missing/invalid API key, or missing Bearer token on an RLS-enabled collection |
+| `403 Forbidden` | `pk_live` without RLS, owner field mismatch, or attempt to change the owner field |
+| `404 Not Found` | No document with that ID exists |

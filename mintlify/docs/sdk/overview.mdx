@@ -1,0 +1,131 @@
+---
+title: "SDK Overview"
+description: "Install the official TypeScript SDK and start reading and writing data from your frontend or server."
+keywords: ["sdk", "javascript", "typescript", "install", "quickstart"]
+---
+
+The `@urbackend/sdk` package is the official TypeScript SDK for urBackend. It wraps the REST API with typed methods for auth, database, and storage — no manual `fetch` calls required.
+
+## Installation
+
+```bash
+npm install @urbackend/sdk
+```
+
+## Initialize the client
+
+Import the default export and call it with your API key:
+
+```typescript
+import urBackend from '@urbackend/sdk';
+
+const client = urBackend({ apiKey: 'YOUR_API_KEY' });
+```
+
+The factory accepts a `UrBackendConfig` object:
+
+| Option | Type | Required | Description |
+|---|---|---|---|
+| `apiKey` | `string` | Yes | Your project's API key. |
+| `baseUrl` | `string` | No | Override the default API base URL. |
+| `headers` | `Record<string, string>` | No | Additional headers sent with every request. |
+
+## Quick example
+
+```typescript
+import urBackend from '@urbackend/sdk';
+
+const client = urBackend({ apiKey: process.env.URBACKEND_API_KEY });
+
+// Sign up a new user
+const user = await client.auth.signUp({
+  email: 'alice@example.com',
+  password: 'secret123',
+  name: 'Alice',
+});
+
+// Insert a document (collection must be created in the dashboard first)
+const product = await client.db.insert('products', { name: 'Chair', price: 99 });
+
+// Fetch all documents
+const products = await client.db.getAll('products');
+
+// Upload a file (browser)
+const input = document.querySelector('input[type="file"]');
+const { url, path } = await client.storage.upload(input.files[0]);
+```
+
+## TypeScript generics
+
+Database methods accept a generic type parameter so returned documents are fully typed:
+
+```typescript
+interface Product {
+  _id: string;
+  name: string;
+  price: number;
+}
+
+const products = await client.db.getAll<Product>('products');
+// products is Product[]
+
+const product = await client.db.getOne<Product>('products', '507f1f77bcf86cd799439011');
+// product is Product
+```
+
+## Error handling
+
+Import the error classes to handle specific failure modes:
+
+```typescript
+import urBackend, { AuthError, NotFoundError, RateLimitError } from '@urbackend/sdk';
+
+const client = urBackend({ apiKey: process.env.URBACKEND_API_KEY });
+
+try {
+  const product = await client.db.getOne('products', id);
+} catch (e) {
+  if (e instanceof NotFoundError) {
+    console.error('Document not found');
+  } else if (e instanceof AuthError) {
+    console.error('Invalid or missing API key');
+  } else if (e instanceof RateLimitError) {
+    console.error(`Rate limited. Retry after ${e.retryAfter}s`);
+  } else {
+    throw e;
+  }
+}
+```
+
+| Error class | HTTP status | When thrown |
+|---|---|---|
+| `AuthError` | 401 / 403 | Invalid API key or missing token |
+| `NotFoundError` | 404 | Document or resource not found |
+| `RateLimitError` | 429 | Too many requests (100 req / 15 min per IP) |
+| `ValidationError` | 400 | Request body failed validation |
+| `StorageError` | varies | Storage-specific failures |
+| `UrBackendError` | varies | Base class for all SDK errors |
+
+## API key security
+
+<Warning>
+Use `pk_live_...` (publishable key) in frontend/browser code. It allows read operations only.
+
+Use `sk_live_...` (secret key) in server-side code only. It allows reads and writes. Never expose it in client-side bundles or public repositories.
+</Warning>
+
+The SDK logs a console warning if it detects you are using it in a browser context, as a reminder to check which key you are passing.
+
+## Explore the SDK
+
+<CardGroup cols={3}>
+  <Card title="Auth" icon="lock" href="/sdk/auth">
+    Sign up, log in, and fetch the current user.
+  </Card>
+  <Card title="Database" icon="database" href="/sdk/database">
+    Read and write documents in any collection.
+  </Card>
+  <Card title="Storage" icon="cloud" href="/sdk/storage">
+    Upload files and get back a public CDN URL.
+  </Card>
+</CardGroup>

@@ -1,0 +1,200 @@
+---
+title: "Social Auth"
+description: "Let users sign in with GitHub or Google using OAuth 2.0."
+---
+
+Social auth is a two-step process: you redirect the user to the provider login page, then exchange a short-lived code for a refresh token once they return.
+
+## Setup (one-time, in the dashboard)
+
+Before using these endpoints you need to configure the OAuth provider in your project:
+
+1. Go to **Project Settings** and add your frontend URL as the **Site URL** (e.g., `https://myapp.com`).
+2. Go to **Auth → Social Auth** and select GitHub or Google.
+3. Copy the read-only **Callback URL** shown by urBackend (e.g., `https://api.ub.bitbros.in/api/userAuth/social/github/callback`).
+4. Register that callback URL in the provider's OAuth app settings (GitHub: **Developer Settings → OAuth Apps**; Google: **Cloud Console → Credentials**).
+5. Paste the provider's **Client ID** and **Client Secret** into urBackend and enable the provider.
+
+---
+
+## Step 1 — Start the OAuth Flow
+
+### GET `/api/userAuth/social/:provider/start`
+
+Redirects the user's browser to the provider login page. Because this is a browser redirect (not a `fetch` call), pass your API key as a query parameter.
+
+<ParamField path="provider" type="string" required>
+  OAuth provider name. Accepted values: `github`, `google`.
+</ParamField>
+
+<ParamField query="x-api-key" type="string" required>
+  Your `pk_live_…` key. Can also be sent as a header if you are making a non-redirect request.
+</ParamField>
+
+**Response:** HTTP redirect to the provider login page. The browser handles this automatically.
+
+```javascript
+// Redirect the user to start the OAuth flow
+window.location.href =
+  'https://api.ub.bitbros.in/api/userAuth/social/github/start?x-api-key=pk_live_YOUR_KEY';
+
+// Or for Google:
+window.location.href =
+  'https://api.ub.bitbros.in/api/userAuth/social/google/start?x-api-key=pk_live_YOUR_KEY';
+```
+
+After the user authenticates with the provider, urBackend redirects them to:
+
+```
+https://your-site.com/auth/callback?rtCode=abc&provider=github&userId=u1&isNewUser=false&linkedByEmail=false#token=eyJ...
+```
+
+| Param | Location | Description |
+| :--- | :--- | :--- |
+| `token` | URL fragment (`#`) | Access token (JWT) — use for API calls |
+| `rtCode` | Query string | One-time code to exchange for a refresh token |
+| `provider` | Query string | `github` or `google` |
+| `userId` | Query string | The user's ID in your database |
+| `isNewUser` | Query string | `true` if the account was just created |
+| `linkedByEmail` | Query string | `true` if an existing account was linked by email |
+| `error` | Query string | Error message — only present on failure |
+
+<Note>
+  The access token is placed in the URL **fragment** (`#...`) intentionally. Fragments are never
+  sent to servers in HTTP requests, which prevents token leakage through referrer headers or
+  server logs.
+</Note>
+
+---
+
+## Step 2 — Exchange `rtCode` for a Refresh Token
+
+### POST `/api/userAuth/social/exchange`
+
+Your `/auth/callback` page must call this endpoint to convert the one-time `rtCode` into a long-lived refresh token.
+
+<Warning>
+  `rtCode` is **one-time use** and expires in **60 seconds**. Exchange it immediately when your
+  callback page loads.
+</Warning>
+
+### Required Headers
+
+| Header | Value |
+| :--- | :--- |
+| `x-api-key` | Your `pk_live_…` key |
+| `Content-Type` | `application/json` |
+
+### Request Body
+
+<ParamField body="token" type="string" required>
+  The access token extracted from the URL fragment (`#token=…`).
+</ParamField>
+
+<ParamField body="rtCode" type="string" required>
+  The one-time exchange code from the query string (`?rtCode=…`).
+</ParamField>
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  `true` when the exchange succeeded.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="data">
+    <ResponseField name="refreshToken" type="string">
+      The long-lived refresh token. Store this securely — use it with
+      `/api/userAuth/refresh-token` to get new access tokens.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable status message.
+</ResponseField>
+
+### Full Callback Page Example
+
+```javascript
+// pages/AuthCallback.jsx (React)
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+function AuthCallback() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    async function handleCallback() {
+      const queryParams = new URLSearchParams(window.location.search);
+      const error = queryParams.get('error');
+
+      if (error) {
+        console.error('OAuth error:', error);
+        navigate('/login');
+        return;
+      }
+
+      // Extract token from fragment, rtCode from query string
+      const hashParams = new URLSearchParams(window.location.hash.slice(1));
+      const accessToken = hashParams.get('token');
+      const rtCode = queryParams.get('rtCode');
+
+      if (!accessToken || !rtCode) {
+        navigate('/login');
+        return;
+      }
+
+      // Exchange rtCode for refresh token
+      const res = await fetch('https://api.ub.bitbros.in/api/userAuth/social/exchange', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': 'pk_live_YOUR_KEY'
+        },
+        body: JSON.stringify({ token: accessToken, rtCode })
+      });
+
+      const { success, data } = await res.json();
+
+      if (!success) {
+        navigate('/login');
+        return;
+      }
+
+      // Store tokens and proceed
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      navigate('/dashboard');
+    }
+
+    handleCallback();
+  }, [navigate]);
+
+  return <div>Completing login…</div>;
+}
+
+export default AuthCallback;
+```
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "refreshToken": "REFRESH_TOKEN_VALUE"
+  },
+  "message": "Refresh token exchanged successfully"
+}
+```
+
+### Error Responses
+
+```json
+{ "success": false, "data": {}, "message": "rtCode and token are required" }
+```
+
+```json
+{ "success": false, "data": {}, "message": "Invalid or expired refresh token exchange code" }
+```

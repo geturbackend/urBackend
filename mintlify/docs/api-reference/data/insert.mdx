@@ -1,0 +1,124 @@
+---
+title: "Insert Document"
+description: "Create a new document in a collection."
+---
+
+## POST `/api/data/:collectionName`
+
+Inserts a new document into the specified collection and returns the created document on success.
+
+### Required Header
+
+`x-api-key`: `sk_live_…` by default. `pk_live_…` is accepted only when the collection has **RLS enabled** and the request includes a valid `Authorization: Bearer <accessToken>` header.
+
+### Path Parameters
+
+<ParamField path="collectionName" type="string" required>
+  The name of the collection to insert into (e.g., `posts`, `orders`).
+</ParamField>
+
+### Request Body
+
+Send a JSON object containing the document fields. The fields must conform to the collection's schema if one is defined.
+
+<Note>
+  When using `pk_live` with RLS enabled, the owner field (e.g., `userId`) is automatically
+  injected from the authenticated user's JWT if you omit it. If you include the owner field
+  but it doesn't match the token's user ID, the request is rejected with `403`.
+</Note>
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  `true` when the document was created.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  The newly created document, including its assigned `_id` and any auto-injected fields.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable status message.
+</ResponseField>
+
+### Code Examples
+
+<CodeGroup>
+
+```javascript sk_live (server-side)
+// Use sk_live from your server — never expose it in frontend code
+const res = await fetch('https://api.ub.bitbros.in/api/data/posts', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'sk_live_YOUR_SECRET_KEY'
+  },
+  body: JSON.stringify({
+    title: 'Why BaaS is the future',
+    body: 'Content goes here...',
+    tags: ['tech', 'development'],
+    meta: { views: 0, likes: 0 },
+    userId: 'USER_ID'
+  })
+});
+
+const { success, data } = await res.json();
+// data is the created document
+```
+
+```javascript pk_live + RLS (client-side)
+// Use pk_live + user JWT when collection has RLS enabled
+// userId is auto-injected from the JWT — no need to include it
+const res = await fetch('https://api.ub.bitbros.in/api/data/posts', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'pk_live_YOUR_KEY',
+    'Authorization': `Bearer ${accessToken}`
+  },
+  body: JSON.stringify({
+    title: 'My first post',
+    body: 'Hello world'
+  })
+});
+
+const { success, data } = await res.json();
+// data.userId is set to the authenticated user's ID automatically
+```
+
+```bash curl (sk_live)
+curl -X POST "https://api.ub.bitbros.in/api/data/posts" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
+  -d '{
+    "title": "Server-side insert",
+    "body": "Content goes here...",
+    "userId": "USER_ID"
+  }'
+```
+
+</CodeGroup>
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "64fd1234abcd5678ef901234",
+    "title": "My first post",
+    "body": "Hello world",
+    "userId": "64fd0000abcd5678ef900001",
+    "createdAt": "2024-01-15T10:30:00.000Z"
+  },
+  "message": "Document created successfully"
+}
+```
+
+### Errors
+
+| Status | Cause |
+| :--- | :--- |
+| `400 Bad Request` | Schema validation failed — missing required field or wrong type |
+| `401 Unauthorized` | Missing/invalid API key, or missing Bearer token when using `pk_live` with RLS |
+| `403 Forbidden` | `pk_live` without RLS enabled, or owner field in body doesn't match the token's user ID |

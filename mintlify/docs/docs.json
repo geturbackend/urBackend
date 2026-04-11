@@ -1,0 +1,110 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "luma",
+  "name": "urBackend",
+  "colors": {
+    "primary": "#53e5ae",
+    "light": "#347c64",
+    "dark": "#050706"
+  },
+  "logo": {
+    "light": "https://media.brand.dev/4b788915-4c6f-48d5-b961-63e90c4e3c5e.png",
+    "dark": "https://media.brand.dev/4b788915-4c6f-48d5-b961-63e90c4e3c5e.png"
+  },
+  "favicon": "https://media.brand.dev/98c8a636-fed2-4095-a2d6-1ed768aca5dd.png",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/geturbackend/urBackend"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Docs",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/api-keys",
+              "concepts/collections-schemas",
+              "concepts/row-level-security"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/authentication",
+              "guides/social-auth",
+              "guides/database",
+              "guides/storage",
+              "guides/webhooks"
+            ]
+          },
+          {
+            "group": "SDK",
+            "pages": [
+              "sdk/overview",
+              "sdk/auth",
+              "sdk/database",
+              "sdk/storage"
+            ]
+          },
+          {
+            "group": "Security & Limits",
+            "pages": [
+              "security",
+              "limits-and-quotas"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/overview"
+            ]
+          },
+          {
+            "group": "Authentication",
+            "pages": [
+              "api-reference/auth/signup",
+              "api-reference/auth/login",
+              "api-reference/auth/me",
+              "api-reference/auth/refresh-token",
+              "api-reference/auth/logout",
+              "api-reference/auth/social"
+            ]
+          },
+          {
+            "group": "Database",
+            "pages": [
+              "api-reference/data/get-all",
+              "api-reference/data/get-one",
+              "api-reference/data/insert",
+              "api-reference/data/update",
+              "api-reference/data/delete"
+            ]
+          },
+          {
+            "group": "Storage",
+            "pages": [
+              "api-reference/storage/upload",
+              "api-reference/storage/delete"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

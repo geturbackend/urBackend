@@ -1,0 +1,163 @@
+---
+title: "Auth"
+description: "Create accounts, log in users, and retrieve the current session with the SDK auth module."
+keywords: ["auth", "authentication", "login", "signup", "sdk"]
+---
+
+Access auth methods via `client.auth`. The module stores the session token from `login()` automatically, so you do not need to thread it through subsequent calls manually.
+
+## signUp
+
+Create a new user account.
+
+```typescript
+signUp(payload: SignUpPayload): Promise<AuthUser>
+```
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `email` | `string` | Yes | User's email address. |
+| `password` | `string` | Yes | User's password. |
+| `name` | `string` | No | Display name. |
+
+**Returns** `AuthUser`
+
+```typescript
+interface AuthUser {
+  _id: string;
+  email: string;
+  name?: string;
+  [key: string]: unknown;
+}
+```
+
+**Example**
+
+```typescript
+const user = await client.auth.signUp({
+  email: 'alice@example.com',
+  password: 'secret123',
+  name: 'Alice',
+});
+
+console.log(user._id); // '507f1f77bcf86cd799439011'
+```
+
+---
+
+## login
+
+Authenticate an existing user. The returned token is stored internally in the auth module and used automatically by `me()`.
+
+```typescript
+login(payload: LoginPayload): Promise<AuthResponse>
+```
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `email` | `string` | Yes | User's email address. |
+| `password` | `string` | Yes | User's password. |
+
+**Returns** `AuthResponse`
+
+```typescript
+interface AuthResponse {
+  token: string;   // accessToken — store this securely
+  user: AuthUser;
+}
+```
+
+**Example**
+
+```typescript
+const { token, user } = await client.auth.login({
+  email: 'alice@example.com',
+  password: 'secret123',
+});
+
+console.log(token); // 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+console.log(user.name); // 'Alice'
+```
+
+<Note>
+Store `token` securely — for example in `localStorage` or an HTTP-only cookie — and pass it to authenticated API calls. Never expose it in URLs or logs.
+</Note>
+
+---
+
+## me
+
+Fetch the profile of the currently authenticated user. If you call `login()` first, you do not need to pass a token explicitly — the module uses the stored session token automatically.
+
+```typescript
+me(token?: string): Promise<AuthUser>
+```
+
+**Parameters**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `token` | `string` | No | Override the stored session token. |
+
+**Returns** `AuthUser`
+
+**Example — using the stored token after login()**
+
+```typescript
+await client.auth.login({ email: 'alice@example.com', password: 'secret123' });
+
+const user = await client.auth.me();
+console.log(user.email); // 'alice@example.com'
+```
+
+**Example — passing a token directly**
+
+```typescript
+const token = localStorage.getItem('urbackend_token');
+const user = await client.auth.me(token);
+```
+
+<Note>
+Calling `me()` without a token and without a prior `login()` in the same client instance throws an `AuthError`. Always pass the token explicitly if the client is newly initialized (for example, on page reload).
+</Note>
+
+---
+
+## logout
+
+Clear the locally stored session token. This does not invalidate the token on the server.
+
+```typescript
+logout(): void
+```
+
+**Example**
+
+```typescript
+client.auth.logout();
+// The stored session token is cleared.
+// Subsequent calls to me() will require a token to be passed explicitly.
+```
+
+---
+
+## Error handling
+
+```typescript
+import urBackend, { AuthError } from '@urbackend/sdk';
+
+const client = urBackend({ apiKey: process.env.URBACKEND_API_KEY });
+
+try {
+  await client.auth.login({ email: 'alice@example.com', password: 'wrong' });
+} catch (e) {
+  if (e instanceof AuthError) {
+    console.error('Login failed:', e.message);
+    // e.statusCode is 401 or 403
+  }
+}
+```

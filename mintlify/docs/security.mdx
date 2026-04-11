@@ -1,0 +1,105 @@
+---
+title: "Security"
+description: "How urBackend protects your project: dual API keys, injection prevention, rate limiting, and key storage best practices."
+---
+
+## Dual-key system
+
+Every urBackend project has two API keys with different trust levels. Use the right key in the right environment.
+
+| Key type | Prefix | Where to use | Access level |
+| :--- | :--- | :--- | :--- |
+| Publishable | `pk_live_` | Frontend / mobile clients | Read by default; writes only with RLS + user JWT |
+| Secret | `sk_live_` | Server-side / backend only | Full read/write access (CRUD) |
+
+<Warning>
+**Never expose your `sk_live_` key in frontend code or version control.** If committed to a public repository, rotate it immediately from the Dashboard.
+</Warning>
+
+## NoSQL injection prevention
+
+urBackend sanitizes top-level JSON keys that begin with `$` before they reach your database. This prevents common MongoDB operator injection attacks such as `{ "$where": "..." }`.
+
+<Note>
+Nested object keys are not yet recursively sanitized. Validate and sanitize nested user input in your own application logic until recursive sanitization is added.
+</Note>
+
+## Rate limiting
+
+urBackend enforces rate limits per IP address to protect against DDoS attacks and brute-force attempts.
+
+| Endpoint group | Limit |
+| :--- | :--- |
+| Global API | 100 requests per 15 minutes per IP |
+| Auth endpoints (`/api/userAuth/*`) | Stricter per-IP limit |
+
+When you exceed the limit, the API returns `429 Too Many Requests`. If you are using the SDK, catch `RateLimitError`:
+
+```javascript
+import { RateLimitError } from '@urbackend/sdk';
+
+try {
+  await client.db.getAll('products');
+} catch (e) {
+  if (e instanceof RateLimitError) {
+    // Back off and retry after the window resets
+  }
+}
+```
+
+## Domain whitelisting
+
+You can restrict API access to specific domains from the **Dashboard → Project Settings**. When you enable domain whitelisting, urBackend rejects any request whose `Origin` header does not match your allowlist.
+
+This prevents other websites from using your `pk_live_` key to make unauthorized requests to your project.
+
+## Schema enforcement
+
+When you define a schema for a collection, urBackend validates every incoming document against your schema before saving. Documents with wrong field types, missing required fields, or unexpected structure are rejected at the API layer — no extra validation code needed on your end.
+
+## Special case: the `users` collection
+
+Direct access to `/api/data/users*` is intentionally blocked. You cannot read, write, or query user records through the data API.
+
+All user-related operations must go through the dedicated auth endpoints:
+
+```
+POST /api/userAuth/signup    — register a new user
+POST /api/userAuth/login     — log in; returns { token, user }
+GET  /api/userAuth/me        — get current user profile
+```
+
+<Info>
+This restriction exists to prevent accidental exposure of password hashes and other sensitive user fields through the general-purpose data API.
+</Info>
+
+## Key storage best practices
+
+Store your API keys in environment variables, never hard-coded in source files.
+
+```bash
+# .env
+URBACKEND_PUBLISHABLE_KEY=pk_live_...
+URBACKEND_SECRET_KEY=sk_live_...
+```
+
+Then reference them in your code:
+
+```javascript
+const client = urBackend({
+  apiKey: process.env.URBACKEND_SECRET_KEY,
+});
+```
+
+Add `.env` to your `.gitignore` to prevent accidental commits:
+
+```bash
+# .gitignore
+.env
+.env.local
+.env.*.local
+```
+
+<Tip>
+If you use a CI/CD platform, store your `sk_live_` key as an encrypted secret (e.g., GitHub Actions Secrets, Vercel Environment Variables) rather than in a `.env` file checked into your repository.
+</Tip>

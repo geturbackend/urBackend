@@ -1,0 +1,99 @@
+---
+title: "Storage"
+description: "Upload files and images to get public CDN URLs. No S3 buckets or complex configuration required."
+---
+
+urBackend handles file and image uploads for you. Upload a file and receive a public CDN URL you can use directly in your application.
+
+**Base URL:** `https://api.ub.bitbros.in`
+
+<Warning>
+  All uploaded files are **publicly accessible** via the returned URL. Do not upload sensitive or private documents.
+</Warning>
+
+## Upload a file
+
+Send a `POST` request with a `multipart/form-data` body containing the file.
+
+**Endpoint:** `POST /api/storage/upload`
+
+```javascript
+const formData = new FormData();
+formData.append('file', fileInput.files[0]);
+
+const res = await fetch('https://api.ub.bitbros.in/api/storage/upload', {
+  method: 'POST',
+  headers: {
+    'x-api-key': 'YOUR_KEY'
+  },
+  body: formData
+});
+
+const { url, path, provider } = await res.json();
+// Save `path` if you need to delete the file later
+```
+
+<Note>
+  Do **not** set the `Content-Type` header manually. When you pass a `FormData` object, the browser sets the correct `multipart/form-data` boundary automatically. Setting it yourself will break the upload.
+</Note>
+
+**Response:**
+
+```json
+{
+  "message": "File uploaded successfully",
+  "url": "https://xyz.supabase.co/storage/v1/object/public/dev-files/PROJECT_ID/file.png",
+  "path": "PROJECT_ID/file.png",
+  "provider": "internal"
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `url` | Publicly accessible CDN URL for the file |
+| `path` | Storage path — save this to delete the file later |
+| `provider` | The underlying storage provider used |
+
+## Delete a file
+
+To delete a file, pass the `path` returned from the upload response.
+
+**Endpoint:** `DELETE /api/storage/file`
+
+```javascript
+await fetch('https://api.ub.bitbros.in/api/storage/file', {
+  method: 'DELETE',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'YOUR_KEY'
+  },
+  body: JSON.stringify({
+    path: 'YOUR_PROJECT_ID/your_file_name.png'
+  })
+});
+```
+
+If the path is invalid or the file has already been removed, the API returns `404`.
+
+## Limits
+
+| Limit | Value |
+| --- | --- |
+| Maximum file size | 10 MB per file |
+| Total storage per project | 100 MB (default plan) |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="400 Bad Request">
+    The `file` field is missing from the multipart form body. Make sure you are appending the file to a `FormData` object with the key `file` before sending.
+  </Accordion>
+
+  <Accordion title="401 Unauthorized">
+    The `x-api-key` header is missing or contains an invalid key. Check that you are using a valid key from your project dashboard.
+  </Accordion>
+
+  <Accordion title="413 Payload Too Large">
+    The file exceeds the 10 MB per-file limit. Compress or resize the file before uploading.
+  </Accordion>
+</AccordionGroup>

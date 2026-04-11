@@ -1,0 +1,121 @@
+---
+title: "Upload File"
+description: "Upload a file and receive a public CDN URL and a path you can use to delete it later."
+---
+
+## POST `/api/storage/upload`
+
+Uploads a file using a `multipart/form-data` request and returns a public CDN URL. Save the `path` field from the response — you need it to delete the file later.
+
+### Required Header
+
+`x-api-key`: your `pk_live_…` or `sk_live_…` key.
+
+<Warning>
+  Do **not** set the `Content-Type` header manually when uploading files. When you pass a
+  `FormData` object, the browser (or HTTP client) automatically sets the correct
+  `multipart/form-data` boundary. Setting it manually will break the upload.
+</Warning>
+
+### Request Body
+
+Send the request as `multipart/form-data` with a single field:
+
+<ParamField body="file" type="file" required>
+  The file to upload. Accepted as a binary file input (e.g., from an `<input type="file">` element
+  or a file buffer in Node.js).
+</ParamField>
+
+### Response Fields
+
+<ResponseField name="message" type="string">
+  Human-readable confirmation (e.g., `"File uploaded successfully"`).
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  The public CDN URL where the file can be accessed. All uploaded files are publicly accessible —
+  do not upload sensitive or private documents.
+</ResponseField>
+
+<ResponseField name="path" type="string">
+  The internal storage path in the format `PROJECT_ID/filename.ext`. **Save this value** — you
+  must provide it when deleting the file.
+</ResponseField>
+
+<ResponseField name="provider" type="string">
+  The storage backend used (e.g., `"internal"`).
+</ResponseField>
+
+### File Limits
+
+| Limit | Value |
+| :--- | :--- |
+| Max file size | 10 MB per file |
+| Total storage quota | 100 MB (default plan) |
+
+### Code Examples
+
+<CodeGroup>
+
+```javascript fetch (browser)
+const fileInput = document.querySelector('input[type="file"]');
+const formData = new FormData();
+formData.append('file', fileInput.files[0]);
+
+// Do NOT set Content-Type — the browser handles it automatically with FormData
+const res = await fetch('https://api.ub.bitbros.in/api/storage/upload', {
+  method: 'POST',
+  headers: {
+    'x-api-key': 'pk_live_YOUR_KEY'
+    // No Content-Type header here!
+  },
+  body: formData
+});
+
+const { url, path, provider } = await res.json();
+
+// Store `path` so you can delete the file later
+console.log('File URL:', url);
+console.log('File path (save this):', path);
+```
+
+```javascript Node.js (form-data)
+import FormData from 'form-data';
+import fs from 'fs';
+import fetch from 'node-fetch';
+
+const form = new FormData();
+form.append('file', fs.createReadStream('./image.png'));
+
+const res = await fetch('https://api.ub.bitbros.in/api/storage/upload', {
+  method: 'POST',
+  headers: {
+    'x-api-key': 'sk_live_YOUR_SECRET_KEY',
+    ...form.getHeaders() // Includes correct Content-Type with boundary
+  },
+  body: form
+});
+
+const { url, path } = await res.json();
+```
+
+</CodeGroup>
+
+### Success Response
+
+```json
+{
+  "message": "File uploaded successfully",
+  "url": "https://xyz.supabase.co/storage/v1/object/public/dev-files/PROJECT_ID/image.png",
+  "path": "PROJECT_ID/image.png",
+  "provider": "internal"
+}
+```
+
+### Errors
+
+| Status | Cause |
+| :--- | :--- |
+| `400 Bad Request` | Missing `file` field in the multipart form |
+| `401 Unauthorized` | Missing or invalid API key |
+| `413 Payload Too Large` | File exceeds the 10 MB size limit |

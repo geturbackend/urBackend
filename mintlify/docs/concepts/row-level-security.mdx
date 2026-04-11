@@ -1,0 +1,131 @@
+---
+title: "Row-Level Security"
+description: "Row-Level Security lets authenticated frontend users safely write their own data using the publishable key — without exposing your secret key."
+---
+
+## What is Row-Level Security?
+
+By default, your `pk_live` key is read-only. Any write attempt with it is blocked. This is safe for public reads, but it means your frontend cannot create or update documents on behalf of a logged-in user without sending your `sk_live` key — which you must never do.
+
+**Row-Level Security (RLS)** solves this by gating `pk_live` writes on user identity. When you enable RLS on a collection, urBackend allows `pk_live` write requests — but only when the request carries a valid user JWT, and only for documents the authenticated user owns. Users cannot read or modify each other's data.
+
+This is the correct pattern for user-generated content: posts, comments, profile data, preferences, and anything else where each record belongs to one user.
+
+## RLS modes
+
+RLS is configured per collection. Two modes are available:
+
+| Mode | Who can read | Who can write |
+|------|-------------|--------------|
+| `public-read` | Anyone (no token required) | Authenticated owner only |
+| `private` | Authenticated owner only | Authenticated owner only |
+
+Choose `public-read` for content that should be publicly visible (for example, published posts or product reviews). Choose `private` for content only the owner should see (for example, saved drafts, private notes, or personal settings).
+
+<Note>
+  A third value, `owner-write-only`, exists for legacy projects and behaves identically to `public-read`. New collections should use `public-read` or `private`.
+</Note>
+
+## Enabling RLS on a collection
+
+1. Open your project in the [urBackend Dashboard](https://urbackend.bitbros.in).
+2. Navigate to the **Database** tab and select the collection.
+3. Open the collection's **Settings**.
+4. Toggle **Row-Level Security** on.
+5. Choose an RLS mode: `public-read` or `private`.
+6. Choose the **owner field** — the name of the document field that will store the authenticated user's ID. A common choice is `userId`.
+7. Save the settings.
+
+Once saved, all write operations on that collection via `pk_live` enforce ownership through the owner field you chose.
+
+## How ownership works
+
+### On insert (POST)
+
+When a `pk_live` request with a valid user JWT creates a new document:
+
+- If the request body **omits** the owner field (e.g., `userId`), urBackend automatically injects the authenticated user's ID. You do not need to send it manually.
+- If the request body **includes** the owner field and it matches the JWT's `userId`, the insert proceeds normally.
+- If the request body **includes** the owner field but it does not match the JWT's `userId`, the request is rejected with `403`.
+
+### On update and delete (PUT, PATCH, DELETE)
+
+urBackend fetches the existing document and compares its owner field value against the JWT's `userId`. If they do not match, the request is rejected with `403`. The user can only modify their own records.
+
+Additionally, attempting to change the owner field in a `PATCH` or `PUT` body is always rejected — ownership is immutable after insert.
+
+### sk_live bypasses RLS
+
+The `sk_live` key always has full write access and is never subject to RLS checks. This lets your server-side code manage data freely regardless of collection settings.
+
+## Behavior matrix
+
+| Request type | Key | Token | RLS enabled | Result |
+|--------------|-----|-------|-------------|--------|
+| Write | `pk_live` | Any | No | 403 — write blocked for publishable key |
+| Write | `pk_live` | Missing | Yes | 401 — authentication required |
+| Write | `pk_live` | Valid, correct owner | Yes | Allowed |
+| Write | `pk_live` | Valid, wrong owner | Yes | 403 — RLS owner mismatch |
+| Write (POST, no owner field in body) | `pk_live` | Valid | Yes | Allowed — `userId` auto-injected |
+| Write | `sk_live` | Not required | Any | Allowed |
+| Read (public-read mode) | `pk_live` | Not required | Yes | Allowed |
+| Read (private mode) | `pk_live` | Missing | Yes | 401 — authentication required |
+| Read (private mode) | `pk_live` | Valid | Yes | Returns only the user's own documents |
+
+## Common error messages
+
+| Error message | Cause | Fix |
+|---------------|-------|-----|
+| `Write blocked for publishable key` | RLS is not enabled on the collection | Enable RLS in the dashboard, or use `sk_live` for the write |
+| `Authentication required` | No `Authorization` header was sent with the `pk_live` request | Add `Authorization: Bearer <user_jwt>` to the request |
+| `RLS owner mismatch` | The JWT's `userId` does not match the document's owner field | Ensure the user is only writing or modifying their own documents |
+| `Insert denied` (when ownerField is `_id`) | `_id` cannot be used as an owner field for new inserts | Change the owner field to `userId` or another writable field |
+| `Owner field immutable` | A `PATCH` or `PUT` body included the owner field | Remove the owner field from the update body |
+
+## Example: user creates a post
+
+This is the complete client-side flow for an authenticated user creating a document in a collection with RLS enabled.
+
+```javascript
+// Step 1 — log the user in to get their JWT
+const loginResponse = await fetch('https://api.ub.bitbros.in/api/userAuth/login', {
+  method: 'POST',
+  headers: {
+    'x-api-key': 'pk_live_...',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ email: 'alice@example.com', password: 'secret' })
+});
+
+const { data } = await loginResponse.json();
+const token = data.accessToken; // Use accessToken (token is a deprecated alias)
+// Store the access token in memory or session storage for subsequent requests
+
+// Step 2 — create a post using pk_live + the user's JWT
+// The `userId` owner field is auto-injected — you do not need to include it
+const postResponse = await fetch('https://api.ub.bitbros.in/api/data/posts', {
+  method: 'POST',
+  headers: {
+    'x-api-key': 'pk_live_...',
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    title: 'Hello World',
+    content: 'This is my first post.'
+  })
+});
+
+const result = await postResponse.json();
+// result.data will include the auto-injected owner field:
+// { _id: '...', userId: '<alice id>', title: 'Hello World', content: '...' }
+console.log(result.data);
+```
+
+<Tip>
+  You do not need to include the owner field (e.g., `userId`) in your POST body. urBackend reads the `userId` from the JWT and injects it automatically. If you do include it, it must match the JWT — otherwise the request is rejected.
+</Tip>
+
+## RLS and the users collection
+
+RLS settings do not apply to the `users` collection. User account management always goes through `/api/userAuth/*`, regardless of any collection-level RLS configuration.

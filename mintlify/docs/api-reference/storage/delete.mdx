@@ -1,0 +1,77 @@
+---
+title: "Delete File"
+description: "Permanently delete a previously uploaded file using its stored path."
+---
+
+## DELETE `/api/storage/file`
+
+Permanently removes a file from storage. You must provide the `path` value that was returned when the file was uploaded. This operation cannot be undone.
+
+### Required Headers
+
+| Header | Value |
+| :--- | :--- |
+| `x-api-key` | Your `pk_live_…` or `sk_live_…` key |
+| `Content-Type` | `application/json` |
+
+### Request Body
+
+<ParamField body="path" type="string" required>
+  The storage path of the file to delete, in the format `PROJECT_ID/filename.ext`.
+  This is the `path` field returned by the upload endpoint — not the public URL.
+</ParamField>
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  `true` when the file was deleted successfully.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable confirmation message.
+</ResponseField>
+
+### Code Examples
+
+<CodeGroup>
+
+```javascript fetch
+const res = await fetch('https://api.ub.bitbros.in/api/storage/file', {
+  method: 'DELETE',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'pk_live_YOUR_KEY'
+  },
+  body: JSON.stringify({
+    path: 'PROJECT_ID/image.png'
+  })
+});
+
+const { success, message } = await res.json();
+```
+
+```bash curl
+curl -X DELETE "https://api.ub.bitbros.in/api/storage/file" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: pk_live_YOUR_KEY" \
+  -d '{"path": "PROJECT_ID/image.png"}'
+```
+
+</CodeGroup>
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": {},
+  "message": "File deleted successfully"
+}
+```
+
+### Errors
+
+| Status | Cause |
+| :--- | :--- |
+| `401 Unauthorized` | Missing or invalid API key |
+| `404 Not Found` | The path does not exist or the file was already deleted |

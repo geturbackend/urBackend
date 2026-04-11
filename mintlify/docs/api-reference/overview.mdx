@@ -1,0 +1,105 @@
+---
+title: "Overview"
+description: "Base URL, authentication, response format, and a full quick-reference for every urBackend endpoint."
+---
+
+## Base URL
+
+All API requests are made to:
+
+```
+https://api.ub.bitbros.in
+```
+
+## Authentication
+
+Every request must include an `x-api-key` header. urBackend issues two keys per project with different trust levels:
+
+| Key prefix | Where to use | Write access |
+| :--- | :--- | :--- |
+| `pk_live_…` | Frontend / mobile clients | Reads only — writes require RLS + Bearer token |
+| `sk_live_…` | Server-side only (never expose in client code) | Full read/write access |
+
+<Warning>
+  Never expose your `sk_live` key in frontend or mobile code. Anyone who obtains
+  it has unrestricted write access to your project data.
+</Warning>
+
+## Common Headers
+
+| Header | Required | Purpose |
+| :--- | :--- | :--- |
+| `x-api-key` | Yes | Your project API key (`pk_live_…` or `sk_live_…`) |
+| `Authorization: Bearer <jwt>` | Required for `pk_live` writes with RLS enabled | End-user identity for owner-based write checks |
+| `x-refresh-token` | Mobile/non-browser refresh only | Provide refresh token when cookies are not available |
+| `x-refresh-token-mode: header` | Paired with `x-refresh-token` | Signals that the refresh token is in a header, not a cookie |
+| `Content-Type: application/json` | Required for all JSON request bodies | Body parsing and validation |
+
+## Response Format
+
+Every endpoint returns the same envelope:
+
+```json
+{
+  "success": true,
+  "data": {},
+  "message": "Human-readable status message"
+}
+```
+
+On error, `success` is `false` and `data` is omitted or empty. The `message` field describes what went wrong.
+
+## Endpoint Quick Reference
+
+| Area | Method | Endpoint | Description |
+| :--- | :--- | :--- | :--- |
+| **Auth** | `POST` | `/api/userAuth/signup` | Register a new user |
+| **Auth** | `POST` | `/api/userAuth/login` | Log in and get a JWT access token |
+| **Auth** | `POST` | `/api/userAuth/refresh-token` | Rotate refresh token and issue a new access token |
+| **Auth** | `POST` | `/api/userAuth/logout` | Revoke the current refresh session |
+| **Auth** | `GET` | `/api/userAuth/me` | Get the current user's profile |
+| **Auth** | `GET` | `/api/userAuth/public/:username` | Get a public-safe profile by username |
+| **Auth** | `GET` | `/api/userAuth/social/:provider/start` | Start GitHub or Google OAuth flow |
+| **Auth** | `POST` | `/api/userAuth/social/exchange` | Exchange callback `rtCode` for a refresh token |
+| **Auth** | `POST` | `/api/userAuth/verify-email` | Verify a user's email with OTP |
+| **Auth** | `POST` | `/api/userAuth/request-password-reset` | Request a password reset OTP |
+| **Auth** | `POST` | `/api/userAuth/reset-password` | Reset password using OTP |
+| **Auth** | `PUT` | `/api/userAuth/update-profile` | Update the current user's profile |
+| **Auth** | `PUT` | `/api/userAuth/change-password` | Change the current user's password |
+| **Data** | `GET` | `/api/data/:collectionName` | List all documents in a collection |
+| **Data** | `GET` | `/api/data/:collectionName/:id` | Get a single document by ID |
+| **Data** | `POST` | `/api/data/:collectionName` | Insert a new document |
+| **Data** | `PUT` | `/api/data/:collectionName/:id` | Full update of a document by ID |
+| **Data** | `PATCH` | `/api/data/:collectionName/:id` | Partial update of a document by ID |
+| **Data** | `DELETE` | `/api/data/:collectionName/:id` | Delete a document by ID |
+| **Storage** | `POST` | `/api/storage/upload` | Upload a file and receive a public CDN URL |
+| **Storage** | `DELETE` | `/api/storage/file` | Delete a file by its stored path |
+
+## Status Codes
+
+| Code | Meaning |
+| :--- | :--- |
+| `200 OK` | Request succeeded |
+| `201 Created` | Document, user, or file created successfully |
+| `400 Bad Request` | Validation failure or malformed JSON |
+| `401 Unauthorized` | Missing or invalid API key, or expired JWT |
+| `403 Forbidden` | Resource quota exceeded, RLS policy violation, or owner mismatch |
+| `404 Not Found` | Collection, document, or file does not exist |
+| `413 Payload Too Large` | Uploaded file exceeds the size limit |
+| `500 Server Error` | Unexpected problem on our end |
+
+## Write Access Matrix
+
+Use this table to determine which key and token combination you need for write operations on non-`users` collections:
+
+| Key | User Token | RLS Enabled | Outcome |
+| :--- | :--- | :--- | :--- |
+| `pk_live` | No | Any | Write blocked |
+| `pk_live` | Yes | No | Write blocked |
+| `pk_live` | Yes | Yes | Allowed — owner-constrained writes only |
+| `sk_live` | Not required | Any | Allowed — server-trusted context |
+
+<Note>
+  The `users` collection is managed exclusively through `/api/userAuth/*`.
+  Direct access via `/api/data/users*` is blocked for all keys.
+</Note>

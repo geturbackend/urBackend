@@ -1,0 +1,96 @@
+---
+title: "Delete Document"
+description: "Permanently delete a document from a collection by its ID."
+---
+
+## DELETE `/api/data/:collectionName/:id`
+
+Permanently removes the document with the given ID from the collection. This operation cannot be undone.
+
+### Required Header
+
+`x-api-key`: `sk_live_…` by default. `pk_live_…` is accepted only when the collection has **RLS enabled** and the request includes `Authorization: Bearer <accessToken>`.
+
+### Path Parameters
+
+<ParamField path="collectionName" type="string" required>
+  The name of the collection containing the document.
+</ParamField>
+
+<ParamField path="id" type="string" required>
+  The MongoDB ObjectId string of the document to delete.
+</ParamField>
+
+### RLS Ownership Check
+
+When using `pk_live` with RLS enabled, urBackend compares the existing document's owner field against the authenticated user's ID. Users can only delete their own documents — attempting to delete another user's document returns `403`.
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  `true` when the document was deleted.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable confirmation message.
+</ResponseField>
+
+### Code Examples
+
+<CodeGroup>
+
+```javascript fetch (sk_live)
+const docId = '64fd1234abcd5678ef901234';
+
+const res = await fetch(
+  `https://api.ub.bitbros.in/api/data/posts/${docId}`,
+  {
+    method: 'DELETE',
+    headers: {
+      'x-api-key': 'sk_live_YOUR_SECRET_KEY'
+    }
+  }
+);
+
+const { success, message } = await res.json();
+```
+
+```javascript fetch (pk_live + RLS)
+const docId = '64fd1234abcd5678ef901234';
+
+const res = await fetch(
+  `https://api.ub.bitbros.in/api/data/posts/${docId}`,
+  {
+    method: 'DELETE',
+    headers: {
+      'x-api-key': 'pk_live_YOUR_KEY',
+      'Authorization': `Bearer ${accessToken}`
+    }
+  }
+);
+```
+
+```bash curl
+curl -X DELETE "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY"
+```
+
+</CodeGroup>
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": {},
+  "message": "Document deleted successfully"
+}
+```
+
+### Errors
+
+| Status | Cause |
+| :--- | :--- |
+| `401 Unauthorized` | Missing/invalid API key, or missing Bearer token on an RLS-enabled collection |
+| `403 Forbidden` | `pk_live` without RLS, or the authenticated user doesn't own the document |
+| `404 Not Found` | No document with that ID exists in the collection |

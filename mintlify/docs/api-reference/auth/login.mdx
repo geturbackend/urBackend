@@ -1,0 +1,131 @@
+---
+title: "Login"
+description: "Authenticate a user with email and password and receive an access token."
+---
+
+## POST `/api/userAuth/login`
+
+Validates the user's credentials and returns a short-lived JWT access token. A refresh token is also issued to keep the session alive without requiring the user to log in again.
+
+### Required Header
+
+`x-api-key`: your `pk_live_…` key.
+
+### Request Body
+
+<ParamField body="email" type="string" required>
+  The user's registered email address.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The user's password.
+</ParamField>
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  `true` on successful authentication.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="data">
+    <ResponseField name="accessToken" type="string">
+      Short-lived JWT. Include this in the `Authorization: Bearer` header for authenticated requests.
+    </ResponseField>
+    <ResponseField name="expiresIn" type="string">
+      Human-readable duration until the access token expires (e.g., `"15m"`).
+    </ResponseField>
+    <ResponseField name="user" type="object">
+      <Expandable title="user">
+        <ResponseField name="_id" type="string">
+          MongoDB ObjectId of the authenticated user.
+        </ResponseField>
+        <ResponseField name="email" type="string">
+          The user's email address.
+        </ResponseField>
+        <ResponseField name="name" type="string">
+          The user's name.
+        </ResponseField>
+        <ResponseField name="...additional fields" type="any">
+          Any other non-sensitive fields from your `users` collection.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable status message.
+</ResponseField>
+
+<Note>
+  The response also includes a `token` field as a backward-compatibility alias of `accessToken`.
+  The `token` alias will be removed in a future release — migrate your clients to `accessToken` now.
+</Note>
+
+### Refresh Token Delivery
+
+The refresh token is issued alongside the access token and delivered differently depending on the client type:
+
+- **Web (browser)**: issued as an HTTP-only cookie. Your browser stores and sends it automatically — you do not need to handle it manually.
+- **Mobile / non-browser**: returned in the `x-refresh-token` response header. Store it securely and include it when calling `/api/userAuth/refresh-token`.
+
+### Code Examples
+
+<CodeGroup>
+
+```javascript fetch
+const res = await fetch('https://api.ub.bitbros.in/api/userAuth/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'pk_live_YOUR_KEY'
+  },
+  credentials: 'include', // Include for web: stores the refresh cookie
+  body: JSON.stringify({
+    email: 'alice@example.com',
+    password: 'securePassword123'
+  })
+});
+
+const { success, data, message } = await res.json();
+const { accessToken, expiresIn, user } = data;
+```
+
+```bash curl
+curl -X POST "https://api.ub.bitbros.in/api/userAuth/login" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: pk_live_YOUR_KEY" \
+  -c cookies.txt \
+  -d '{
+    "email": "alice@example.com",
+    "password": "securePassword123"
+  }'
+```
+
+</CodeGroup>
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresIn": "15m",
+    "user": {
+      "_id": "64fd1234abcd5678ef901234",
+      "email": "alice@example.com",
+      "name": "Alice"
+    }
+  },
+  "message": "Login successful"
+}
+```
+
+### Errors
+
+| Status | Cause |
+| :--- | :--- |
+| `400 Bad Request` | Missing `email` or `password` |
+| `401 Unauthorized` | Invalid credentials |

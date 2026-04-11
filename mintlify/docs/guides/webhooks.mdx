@@ -1,0 +1,101 @@
+---
+title: "Webhooks"
+description: "Receive real-time HTTP notifications when data is created, updated, or deleted in your collections."
+---
+
+Webhooks let urBackend notify your server the moment data changes in your collections. You can use them to trigger workflows, sync external systems, send notifications, or connect to services like AWS Lambda or Zapier.
+
+**Base URL:** `https://api.ub.bitbros.in`
+
+## Creating a webhook
+
+1. Go to the **Webhooks** section in your urBackend dashboard.
+2. Enter the URL of the server endpoint that will receive the events.
+3. Either copy the auto-generated signing secret or enter your own. Store this secret securely — you will use it to verify incoming requests.
+4. Save the webhook. urBackend will begin sending events to your URL immediately.
+
+## Payload format
+
+Every webhook event is delivered as a `POST` request with a JSON body in this shape:
+
+```json
+{
+  "event": "insert",
+  "collection": "posts",
+  "payload": {
+    "_id": "64fd1234abcd5678ef901234",
+    "title": "Hello World",
+    "body": "Content here..."
+  }
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `event` | The operation that occurred: `insert`, `update`, or `delete` |
+| `collection` | The name of the collection where the event occurred |
+| `payload` | The full document that was created, updated, or deleted |
+
+## Verifying webhook signatures
+
+Your webhook URL is public, so anyone could send data to it. urBackend signs every payload with your signing secret using HMAC-SHA256 and includes the signature in the `X-urBackend-Signature` header. Always verify this signature before processing the event.
+
+### How verification works
+
+1. urBackend computes `HMAC-SHA256(signingSecret, JSON.stringify(requestBody))`.
+2. The resulting hex digest is sent in `X-urBackend-Signature`.
+3. Your server performs the same computation and compares the result.
+4. If the signatures match, the request is authentic.
+
+### Node.js / Express example
+
+```javascript
+const express = require('express');
+const crypto = require('crypto');
+const app = express();
+
+const URBACKEND_WEBHOOK_SECRET = process.env.URBACKEND_WEBHOOK_SECRET;
+
+app.post('/urbackend-webhook', express.json(), (req, res) => {
+  // 1. Extract the signature header sent by urBackend
+  const signature = req.headers['x-urbackend-signature'];
+
+  // 2. Serialize the request body
+  const payload = JSON.stringify(req.body);
+
+  // 3. Compute the expected HMAC-SHA256 digest
+  const expectedSignature = crypto
+    .createHmac('sha256', URBACKEND_WEBHOOK_SECRET)
+    .update(payload)
+    .digest('hex');
+
+  // 4. Compare signatures — reject if they don't match
+  if (!signature || signature !== expectedSignature) {
+    console.error('Webhook verification failed — potential spoofing attempt');
+    return res.status(401).send('Invalid signature');
+  }
+
+  // 5. Signature is valid — process the event
+  const { event, collection, payload: data } = req.body;
+
+  console.log(`Received ${event} event on ${collection}`);
+  console.log('Record ID:', data._id);
+
+  // Respond quickly to prevent timeouts
+  res.status(200).send('Webhook received');
+});
+
+app.listen(3000);
+```
+
+<Warning>
+  Always respond with a `2xx` status code as quickly as possible. If your endpoint takes longer than 10 seconds to respond or returns a `4xx`/`5xx` status, urBackend marks the delivery as failed and will retry it.
+</Warning>
+
+## Retry logic
+
+If a delivery fails (timeout over 10 seconds, or a `4xx`/`5xx` response), urBackend will automatically retry. You can inspect every delivery attempt — including the exact payload sent and the response received — in the **Delivery History** panel of your webhook's dashboard page. You can also manually replay failed deliveries from there.
+
+<Tip>
+  Keep your webhook handler fast. Acknowledge the request immediately with a `200`, then process the event asynchronously (e.g., push it onto a queue). This prevents timeouts and avoids unnecessary retries.
+</Tip>

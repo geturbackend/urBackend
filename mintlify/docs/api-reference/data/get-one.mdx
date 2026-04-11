@@ -1,0 +1,91 @@
+---
+title: "Get Document"
+description: "Retrieve a single document from a collection by its MongoDB ObjectId."
+---
+
+## GET `/api/data/:collectionName/:id`
+
+Fetches one document by its `_id`. Returns `404` if no document with that ID exists in the collection.
+
+### Required Header
+
+`x-api-key`: your `pk_live_…` or `sk_live_…` key.
+
+### Path Parameters
+
+<ParamField path="collectionName" type="string" required>
+  The name of the collection (e.g., `posts`, `products`).
+</ParamField>
+
+<ParamField path="id" type="string" required>
+  The MongoDB ObjectId string of the document to retrieve (e.g., `64fd1234abcd5678ef901234`).
+</ParamField>
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  `true` when the document was found.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  The full document object, including `_id` and all stored fields.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable status message.
+</ResponseField>
+
+### Code Examples
+
+<CodeGroup>
+
+```javascript fetch
+const docId = '64fd1234abcd5678ef901234';
+
+const res = await fetch(
+  `https://api.ub.bitbros.in/api/data/posts/${docId}`,
+  {
+    headers: {
+      'x-api-key': 'pk_live_YOUR_KEY'
+    }
+  }
+);
+
+const { success, data, message } = await res.json();
+// data is the document object
+```
+
+```bash curl
+curl "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234" \
+  -H "x-api-key: pk_live_YOUR_KEY"
+```
+
+</CodeGroup>
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "64fd1234abcd5678ef901234",
+    "title": "Why BaaS is the future",
+    "body": "Content goes here...",
+    "status": "published",
+    "tags": ["tech", "development"],
+    "meta": {
+      "views": 105,
+      "likes": 12
+    },
+    "createdAt": "2024-01-15T10:30:00.000Z"
+  },
+  "message": "Document fetched successfully"
+}
+```
+
+### Errors
+
+| Status | Cause |
+| :--- | :--- |
+| `401 Unauthorized` | Missing or invalid API key, or missing Bearer token on a private collection |
+| `404 Not Found` | No document with that ID exists in the collection |

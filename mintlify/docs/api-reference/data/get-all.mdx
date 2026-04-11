@@ -1,0 +1,135 @@
+---
+title: "List Documents"
+description: "Retrieve all documents in a collection with optional filtering, sorting, and pagination."
+---
+
+## GET `/api/data/:collectionName`
+
+Returns a list of documents from the specified collection. Supports pagination, sorting, and field-level filtering via query parameters.
+
+<Warning>
+  `/api/data/users*` is blocked for all keys. Use `/api/userAuth/*` for user management.
+</Warning>
+
+### Required Header
+
+`x-api-key`: your `pk_live_…` or `sk_live_…` key.
+
+### Path Parameters
+
+<ParamField path="collectionName" type="string" required>
+  The name of the collection to query (e.g., `posts`, `comments`, `inventory`).
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="page" type="number">
+  Page number for pagination. Defaults to `1`.
+</ParamField>
+
+<ParamField query="limit" type="number">
+  Number of documents per page. Defaults to `20`.
+</ParamField>
+
+<ParamField query="sort" type="string">
+  Field to sort by. Prefix with `-` for descending order (e.g., `sort=-createdAt` for newest
+  first, `sort=title` for ascending alphabetical).
+</ParamField>
+
+<ParamField query="filter[field][op]" type="string">
+  Filter documents by field value. Replace `field` with the document field name and `op` with
+  a comparison operator. Example: `filter[status][eq]=published&filter[views][gt]=100`
+</ParamField>
+
+### RLS Behavior
+
+If the collection has **RLS** enabled:
+
+- `public-read` mode: anyone can read all documents with a valid `x-api-key`.
+- `private` mode: requires `Authorization: Bearer <accessToken>` — only the owner's documents are returned.
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  `true` when the request succeeded.
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of document objects matching the query. Each document includes its `_id` and all stored fields.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable status message.
+</ResponseField>
+
+### Code Examples
+
+<CodeGroup>
+
+```javascript Filtered + paginated
+const params = new URLSearchParams({
+  page: '1',
+  limit: '10',
+  sort: '-createdAt',
+  'filter[status][eq]': 'published'
+});
+
+const res = await fetch(
+  `https://api.ub.bitbros.in/api/data/posts?${params}`,
+  {
+    headers: {
+      'x-api-key': 'pk_live_YOUR_KEY'
+    }
+  }
+);
+
+const { success, data, message } = await res.json();
+// data is an array of matching documents
+```
+
+```bash curl
+curl "https://api.ub.bitbros.in/api/data/posts?page=1&limit=10&sort=-createdAt&filter[status][eq]=published" \
+  -H "x-api-key: pk_live_YOUR_KEY"
+```
+
+```javascript Private collection (RLS)
+const res = await fetch('https://api.ub.bitbros.in/api/data/notes', {
+  headers: {
+    'x-api-key': 'pk_live_YOUR_KEY',
+    'Authorization': `Bearer ${accessToken}` // Required for private-mode collections
+  }
+});
+```
+
+</CodeGroup>
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "64fd1234abcd5678ef901234",
+      "title": "Why BaaS is the future",
+      "status": "published",
+      "createdAt": "2024-01-15T10:30:00.000Z"
+    },
+    {
+      "_id": "64fd5678abcd1234ef905678",
+      "title": "Getting started with urBackend",
+      "status": "published",
+      "createdAt": "2024-01-14T08:00:00.000Z"
+    }
+  ],
+  "message": "Documents fetched successfully"
+}
+```
+
+### Errors
+
+| Status | Cause |
+| :--- | :--- |
+| `401 Unauthorized` | Missing/invalid API key, or missing Bearer token on a private collection |
+| `403 Forbidden` | `pk_live` write attempt without RLS, or quota exceeded |
+| `404 Not Found` | Collection does not exist |

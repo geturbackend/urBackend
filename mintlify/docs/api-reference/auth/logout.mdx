@@ -1,0 +1,77 @@
+---
+title: "Logout"
+description: "Revoke the current refresh session so the user's tokens can no longer be used."
+---
+
+## POST `/api/userAuth/logout`
+
+Invalidates the current refresh session. After calling this endpoint, the refresh token can no longer be used to obtain new access tokens. Any subsequent requests using the old access token will fail once it expires.
+
+### Required Header
+
+`x-api-key`: your `pk_live_…` key.
+
+### Sending the Refresh Token
+
+Like the refresh endpoint, logout needs to read the current refresh token to know which session to revoke.
+
+- **Web (browser)**: include `credentials: 'include'` — the browser sends the HTTP-only cookie automatically.
+- **Mobile / non-browser**: include the `x-refresh-token` header with the stored refresh token.
+
+### Response Fields
+
+<ResponseField name="success" type="boolean">
+  `true` when the session was revoked.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable confirmation message.
+</ResponseField>
+
+### Code Examples
+
+<CodeGroup>
+
+```javascript Web (cookie)
+await fetch('https://api.ub.bitbros.in/api/userAuth/logout', {
+  method: 'POST',
+  headers: {
+    'x-api-key': 'pk_live_YOUR_KEY'
+  },
+  credentials: 'include' // Sends the HTTP-only cookie to identify the session
+});
+```
+
+```javascript Mobile (header)
+await fetch('https://api.ub.bitbros.in/api/userAuth/logout', {
+  method: 'POST',
+  headers: {
+    'x-api-key': 'pk_live_YOUR_KEY',
+    'x-refresh-token': storedRefreshToken
+  }
+});
+```
+
+```bash curl
+curl -X POST "https://api.ub.bitbros.in/api/userAuth/logout" \
+  -H "x-api-key: pk_live_YOUR_KEY" \
+  -b cookies.txt
+```
+
+</CodeGroup>
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": {},
+  "message": "Logged out successfully"
+}
+```
+
+### Errors
+
+| Status | Cause |
+| :--- | :--- |
+| `401 Unauthorized` | Refresh token missing or already invalidated |
