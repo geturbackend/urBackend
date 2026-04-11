@@ -1,9 +1,11 @@
 # urbackend-sdk
 
-Official TypeScript SDK for [urBackend](https://urbackend.bitbros.in) — the instant Backend-as-a-Service for frontend developers.
+Official TypeScript SDK for [urBackend](https://urbackend.bitbros.in) — the instant Backend-as-a-Service for MongoDB.
 
 ## Installation
+```bash
 npm install @urbackend/sdk
+```
 
 ## Quick Start
 ```javascript
@@ -12,49 +14,80 @@ import urBackend from '@urbackend/sdk';
 const client = urBackend({ apiKey: 'YOUR_API_KEY' });
 
 // Auth
-await client.auth.signUp({ email, password, name });
-await client.auth.login({ email, password });
-await client.auth.me();
+const { accessToken } = await client.auth.login({ email, password });
+const user = await client.auth.me();
 
-// Database — collections are auto-created on first insert
-await client.db.insert('products', { name: 'Chair', price: 99 });
-await client.db.getAll('products');
-await client.db.getOne('products', id);
-await client.db.update('products', id, { price: 79 });
-await client.db.delete('products', id);
+// Database — collections are managed via the urBackend Dashboard
+await client.db.insert('posts', { title: 'Hello World' }, client.auth.getToken());
+await client.db.getAll('posts', { sort: 'createdAt:desc', limit: 10 });
 
 // Storage
-await client.storage.upload(file);
-await client.storage.deleteFile(path);
+const { url } = await client.storage.upload(file);
+
+// Mail (Requires Secret Key)
+await client.mail.send({ 
+  to: 'user@example.com', 
+  subject: 'Welcome!', 
+  text: 'Glad to have you.' 
+});
 ```
 
 ## API Reference
 
-### Client initialization
+### Client Initialization
 `urBackend({ apiKey: string, baseUrl?: string })`
 
-### Auth
-| Method | Params | Returns |
-|--------|--------|---------|
-| signUp | { email, password, name? } | AuthUser |
-| login  | { email, password } | { token, user } |
-| me     | token? | AuthUser |
-| logout | — | void |
+---
 
-### Database
+### Auth (`client.auth`)
 | Method | Params | Returns |
 |--------|--------|---------|
-| getAll<T> | collection | T[] |
-| getOne<T> | collection, id | T |
-| insert<T> | collection, data | T |
-| update<T> | collection, id, data | T |
-| delete | collection, id | { deleted: boolean } |
+| `signUp` | `{ email, password, username?, name?, ... }` | `AuthUser` |
+| `login` | `{ email, password }` | `AuthResponse` |
+| `me` | `token?` | `AuthUser` |
+| `logout` | `token?` | `{ success: boolean }` |
+| `refreshToken` | `refreshToken?` | `AuthResponse` |
+| `updateProfile`| `payload, token?` | `{ message: string }` |
+| `changePassword`| `payload, token?` | `{ message: string }` |
+| `verifyEmail` | `{ email, otp }` | `{ message: string }` |
+| `publicProfile`| `username` | `AuthUser` |
+| `socialStart` | `provider ('github'\|'google')` | `string` (Redirect URL) |
+| `socialExchange`| `{ token, rtCode }` | `SocialExchangeResponse` |
 
-### Storage
+---
+
+### Database (`client.db`)
+Support for **Row-Level Security (RLS)** is built-in. Pass the user's `accessToken` as the final parameter to write routes if RLS is enabled for the collection.
+
 | Method | Params | Returns |
 |--------|--------|---------|
-| upload | file, filename? | { url, path } |
-| deleteFile | path | { deleted: boolean } |
+| `getAll<T>` | `collection, params?` | `T[]` |
+| `getOne<T>` | `collection, id, options?` | `T` |
+| `insert<T>` | `collection, data, token?` | `T` |
+| `update<T>` | `collection, id, data, token?` | `T` (Full Replace) |
+| `patch<T>` | `collection, id, data, token?` | `T` (Partial Update) |
+| `delete` | `collection, id, token?` | `{ deleted: boolean }` |
+
+**Query Parameters (`params`):**
+- `filter`: `{ price_gt: 100 }`
+- `sort`: `"createdAt:desc"`
+- `limit`: `50`
+- `page`: `1`
+- `populate`: `"author"` (Expand Reference fields)
+
+---
+
+### Storage (`client.storage`)
+| Method | Params | Returns |
+|--------|--------|---------|
+| `upload` | `file (Buffer\|Blob), filename?` | `{ url, path, provider }` |
+| `deleteFile` | `path` | `{ deleted: boolean }` |
+
+---
+
+### New Modules
+- **`client.schema`**: Use `getSchema(collection)` to fetch visual field definitions.
+- **`client.mail`**: Use `send(payload)` to send emails via Resend (Requires Secret Key).
 
 ## Error Handling
 ```javascript
@@ -63,23 +96,13 @@ import { AuthError, NotFoundError, RateLimitError } from '@urbackend/sdk';
 try {
   await client.db.getOne('products', id);
 } catch (e) {
-  if (e instanceof NotFoundError) console.log('Not found');
-  if (e instanceof RateLimitError) console.log('Slow down');
+  if (e instanceof AuthError) console.error('Invalid token or insufficient RLS permissions');
+  if (e instanceof NotFoundError) console.error('Resource not found');
+  if (e instanceof RateLimitError) console.error('Too many requests');
 }
 ```
 
-## TypeScript Support
-```typescript
-interface Product { _id: string; name: string; price: number; }
-const products = await client.db.getAll<Product>('products');
-```
-
-## Limits
-- Rate limit: 100 requests / 15 mins per IP
-- Database: 50 MB per project
-- Storage: 100 MB per project
-- File upload: 5 MB per file
-
 ## Security
-⚠️ Never expose your API key in client-side/browser code.
-Use environment variables: `process.env.URBACKEND_API_KEY`
+- **Never expose your Secret Key (`sk_live_...`)** in frontend/browser code.
+- Use **Publishable Keys (`pk_live_...`)** for client-side applications.
+- Enable **RLS** in the urBackend Dashboard to allow secure writes from the frontend using the user's access token.
