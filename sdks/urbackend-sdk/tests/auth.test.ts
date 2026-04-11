@@ -2,11 +2,11 @@ import { expect, test, vi, beforeEach } from 'vitest';
 import urBackend from '../src/index';
 
 const mockApiKey = 'pk_live_test';
-const client = urBackend({ apiKey: mockApiKey });
+let client: ReturnType<typeof urBackend>;
 
-beforeEach(async () => {
+beforeEach(() => {
   vi.resetAllMocks();
-  await client.auth.logout();
+  client = urBackend({ apiKey: mockApiKey });
 });
 
 test('signUp returns user object on success', async () => {
