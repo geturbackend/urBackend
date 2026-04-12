@@ -23,6 +23,19 @@ const developerSchema = new mongoose.Schema({
         type: String,
         default: null,
         select: false
+    },
+    githubId: {
+        type: String,
+        default: null,
+        index: true
+    },
+    githubUsername: {
+        type: String,
+        default: null
+    },
+    avatarUrl: {
+        type: String,
+        default: null
     }
 }, { timestamps: true });
 

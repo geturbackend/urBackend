@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail } from 'lucide-react';
+import { Eye, EyeOff, Github, Mail } from 'lucide-react';
 
 import AuthShell from '../components/AuthShell';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
+import { API_URL } from '../config';
 
 function Login() {
   const location = useLocation();
@@ -24,6 +25,23 @@ function Login() {
       navigate('/dashboard', { replace: true });
     }
   }, [authLoading, isAuthenticated, navigate]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const error = params.get('error');
+
+    if (!error) {
+      return;
+    }
+
+    toast.error(error);
+    navigate(
+      {
+        pathname: location.pathname,
+      },
+      { replace: true }
+    );
+  }, [location.pathname, location.search, navigate]);
 
   if (authLoading) {
     return null;
@@ -72,6 +90,10 @@ function Login() {
     }
   };
 
+  const handleGithubSignIn = () => {
+    window.location.assign(`${API_URL}/api/auth/github/start`);
+  };
+
   return (
     <AuthShell
       modeLabel="Sign in"
@@ -82,6 +104,20 @@ function Login() {
       alternateTo="/signup"
     >
       <form className="auth-form" onSubmit={handleSubmit}>
+        <button
+          type="button"
+          className="btn btn-secondary auth-submit"
+          onClick={handleGithubSignIn}
+          disabled={isLoading}
+        >
+          <Github size={17} />
+          Continue with GitHub
+        </button>
+
+        <div className="auth-divider">
+          <span>or</span>
+        </div>
+
         <div className="auth-field">
           <label htmlFor="login-email">Email address</label>
           <div className="auth-input-wrap">

@@ -32,6 +32,8 @@ jest.mock('../controllers/auth.controller', () => ({
     logout: jest.fn((_req, res) => res.json({ message: 'logged out' })),
     refreshToken: jest.fn((_req, res) => res.json({ token: 'new-token' })),
     getMe: jest.fn((_req, res) => res.json({ user: {} })),
+    startGithubAuth: jest.fn((_req, res) => res.redirect('https://github.com/login/oauth/authorize')),
+    handleGithubCallback: jest.fn((_req, res) => res.redirect('http://localhost:5173/dashboard')),
 }));
 
 // ---------------------------------------------------------------------------
@@ -83,6 +85,24 @@ describe('auth routes', () => {
 
             expect(res.status).toBe(200);
             expect(authController.login).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('GET /api/auth/github/start', () => {
+        test('is wired and redirects', async () => {
+            const res = await request(app).get('/api/auth/github/start');
+
+            expect(res.status).toBe(302);
+            expect(authController.startGithubAuth).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('GET /api/auth/github/callback', () => {
+        test('is wired and redirects', async () => {
+            const res = await request(app).get('/api/auth/github/callback?code=test&state=test');
+
+            expect(res.status).toBe(302);
+            expect(authController.handleGithubCallback).toHaveBeenCalledTimes(1);
         });
     });
 

@@ -1,6 +1,6 @@
-const {Developer} = require("@urbackend/common");
-const {Otp} = require("@urbackend/common");
-const {Project} = require("@urbackend/common")
+const { Developer } = require("@urbackend/common");
+const { Otp } = require("@urbackend/common");
+const { Project } = require("@urbackend/common");
 const bcrypt = require("bcryptjs");
 const z = require("zod");
 const jwt = require("jsonwebtoken");
@@ -18,8 +18,171 @@ const {
 const ACCESS_TOKEN_EXPIRES_IN = '15m';
 const REFRESH_TOKEN_EXPIRES_IN = '7d';
 const OTP_MAX_ATTEMPTS = 5;
+const GITHUB_STATE_COOKIE = 'dashboardGithubOauthState';
+const GITHUB_STATE_TTL_MS = 10 * 60 * 1000;
 
-const sendTokenResponse = async (user, statusCode, res) => {
+const normalizeOrigin = (value) => {
+    if (!value || typeof value !== 'string') {
+        return null;
+    }
+
+    try {
+        const parsed = new URL(value);
+        if (!['http:', 'https:'].includes(parsed.protocol)) {
+            return null;
+        }
+        return parsed.origin;
+    } catch (_err) {
+        return null;
+    }
+};
+
+const getCookieOptions = () => {
+    const cookieOptions = {
+        httpOnly: true,
+        expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    };
+
+    if (process.env.NODE_ENV === 'production') {
+        cookieOptions.secure = true;
+    }
+
+    return cookieOptions;
+};
+
+const getDashboardFrontendUrl = () => {
+    return (
+        normalizeOrigin(process.env.FRONTEND_URL) ||
+        'http://localhost:5173'
+    ).replace(/\/+$/, '');
+};
+
+const buildDashboardApiBaseUrl = (req) => {
+    const forwardedProto = req.headers['x-forwarded-proto'];
+    const protocol = typeof forwardedProto === 'string' ? forwardedProto.split(',')[0].trim() : req.protocol;
+    return `${protocol}://${req.get('host')}`;
+};
+
+const getGithubCallbackUrl = (req) => `${buildDashboardApiBaseUrl(req)}/api/auth/github/callback`;
+
+const buildGithubRedirectUrl = (path, params = {}) => {
+    const url = new URL(`${getDashboardFrontendUrl()}${path}`);
+    Object.entries(params).forEach(([key, value]) => {
+        if (value) {
+            url.searchParams.set(key, value);
+        }
+    });
+    return url.toString();
+};
+
+const clearGithubStateCookie = (res) => {
+    res.cookie(GITHUB_STATE_COOKIE, 'none', {
+        ...getCookieOptions(),
+        expires: new Date(Date.now() + 10 * 1000),
+    });
+};
+
+const fetchJson = async (url, options, defaultMessage) => {
+    const response = await fetch(url, options);
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok) {
+        const message =
+            payload?.error_description ||
+            payload?.error ||
+            payload?.message ||
+            defaultMessage;
+        throw new Error(message);
+    }
+
+    return payload;
+};
+
+const exchangeGithubCodeForToken = async ({ code, req }) => {
+    return fetchJson(
+        'https://github.com/login/oauth/access_token',
+        {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                client_id: process.env.DASHBOARD_GITHUB_CLIENT_ID,
+                client_secret: process.env.DASHBOARD_GITHUB_CLIENT_SECRET,
+                code,
+                redirect_uri: getGithubCallbackUrl(req),
+            }),
+        },
+        'Failed to complete GitHub authentication.'
+    );
+};
+
+const fetchGithubProfile = async (accessToken) => {
+    const headers = {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'urBackend-dashboard-auth',
+    };
+
+    const [profile, emails] = await Promise.all([
+        fetchJson('https://api.github.com/user', { headers }, 'Failed to load GitHub profile.'),
+        fetchJson('https://api.github.com/user/emails', { headers }, 'Failed to load GitHub email.'),
+    ]);
+
+    const primaryEmail = Array.isArray(emails)
+        ? emails.find((entry) => entry.primary && entry.verified) ||
+          emails.find((entry) => entry.verified)
+        : null;
+
+    if (!primaryEmail?.email || !primaryEmail.verified) {
+        throw new Error('GitHub account must have a verified email address.');
+    }
+
+    return {
+        githubId: String(profile.id || ''),
+        email: String(primaryEmail.email).toLowerCase().trim(),
+        githubUsername: profile.login || null,
+        avatarUrl: profile.avatar_url || null,
+    };
+};
+
+const findOrCreateGithubDeveloper = async (profile) => {
+    let developer = await Developer.findOne({ githubId: profile.githubId }).select('+password +refreshToken');
+    if (developer) {
+        return developer;
+    }
+
+    developer = await Developer.findOne({ email: profile.email }).select('+password +refreshToken');
+    if (developer) {
+        developer.githubId = profile.githubId;
+        developer.githubUsername = profile.githubUsername;
+        developer.avatarUrl = profile.avatarUrl;
+        developer.isVerified = true;
+        await developer.save();
+        return developer;
+    }
+
+    const generatedPassword = crypto.randomBytes(32).toString('hex');
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(generatedPassword, salt);
+
+    developer = new Developer({
+        email: profile.email,
+        password: hashedPassword,
+        isVerified: true,
+        githubId: profile.githubId,
+        githubUsername: profile.githubUsername,
+        avatarUrl: profile.avatarUrl,
+    });
+
+    await developer.save();
+    return developer;
+};
+
+const issueDashboardSession = async (user, res) => {
     const accessToken = jwt.sign(
         { _id: user._id, isVerified: user.isVerified, maxProjects: user.maxProjects },
         process.env.JWT_SECRET,
@@ -35,32 +198,27 @@ const sendTokenResponse = async (user, statusCode, res) => {
     user.refreshToken = refreshToken;
     await user.save();
 
-    const cookieOptions = {
-        httpOnly: true,
-        expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
-    };
+    const cookieOptions = getCookieOptions();
 
-    if (process.env.NODE_ENV === 'production') {
-        cookieOptions.secure = true;
-    }
+    res.cookie('accessToken', accessToken, {
+        ...cookieOptions,
+        expires: new Date(Date.now() + 15 * 60 * 1000)
+    });
+    res.cookie('refreshToken', refreshToken, cookieOptions);
+};
 
-    res.status(statusCode)
-        .cookie('accessToken', accessToken, { 
-            ...cookieOptions, 
-            expires: new Date(Date.now() + 15 * 60 * 1000) // 15 mins
-        })
-        .cookie('refreshToken', refreshToken, cookieOptions)
-        .json({
-            success: true,
-            user: {
-                _id: user._id,
-                email: user.email,
-                isVerified: user.isVerified,
-                maxProjects: user.maxProjects
-            }
-        });
+const sendTokenResponse = async (user, statusCode, res) => {
+    await issueDashboardSession(user, res);
+
+    return res.status(statusCode).json({
+        success: true,
+        user: {
+            _id: user._id,
+            email: user.email,
+            isVerified: user.isVerified,
+            maxProjects: user.maxProjects
+        }
+    });
 };
 
 async function createAndStoreOtp(userId) {
@@ -150,6 +308,70 @@ module.exports.login = async (req, res) => {
         res.status(500).json({ error: "Internal Server Error" });
     }
 }
+
+module.exports.startGithubAuth = async (req, res) => {
+    if (!process.env.DASHBOARD_GITHUB_CLIENT_ID || !process.env.DASHBOARD_GITHUB_CLIENT_SECRET) {
+        return res.status(503).json({ error: 'GitHub login is not configured.' });
+    }
+
+    const state = crypto.randomBytes(24).toString('hex');
+    const authUrl = new URL('https://github.com/login/oauth/authorize');
+    authUrl.searchParams.set('client_id', process.env.DASHBOARD_GITHUB_CLIENT_ID);
+    authUrl.searchParams.set('redirect_uri', getGithubCallbackUrl(req));
+    authUrl.searchParams.set('scope', 'read:user user:email');
+    authUrl.searchParams.set('state', state);
+
+    res.cookie(GITHUB_STATE_COOKIE, state, {
+        ...getCookieOptions(),
+        expires: new Date(Date.now() + GITHUB_STATE_TTL_MS),
+    });
+
+    return res.redirect(authUrl.toString());
+};
+
+module.exports.handleGithubCallback = async (req, res) => {
+    const githubError = String(req.query.error || '').trim();
+    const githubErrorDescription = String(req.query.error_description || '').trim();
+
+    if (githubError) {
+        clearGithubStateCookie(res);
+        return res.redirect(
+            buildGithubRedirectUrl('/login', {
+                error: githubErrorDescription || githubError || 'GitHub authentication failed.',
+            })
+        );
+    }
+
+    const { code, state } = req.query;
+    const storedState = req.cookies?.[GITHUB_STATE_COOKIE];
+
+    if (!code || !state || !storedState || state !== storedState) {
+        clearGithubStateCookie(res);
+        return res.redirect(
+            buildGithubRedirectUrl('/login', {
+                error: 'GitHub authentication state is invalid or expired.',
+            })
+        );
+    }
+
+    try {
+        const tokenResponse = await exchangeGithubCodeForToken({ code: String(code), req });
+        const profile = await fetchGithubProfile(tokenResponse.access_token);
+        const developer = await findOrCreateGithubDeveloper(profile);
+
+        clearGithubStateCookie(res);
+        await issueDashboardSession(developer, res);
+        return res.redirect(buildGithubRedirectUrl('/dashboard'));
+    } catch (err) {
+        clearGithubStateCookie(res);
+        console.error('GitHub dashboard auth failed:', err);
+        return res.redirect(
+            buildGithubRedirectUrl('/login', {
+                error: err.message || 'GitHub authentication failed.',
+            })
+        );
+    }
+};
 
 
 module.exports.changePassword = async (req, res) => {

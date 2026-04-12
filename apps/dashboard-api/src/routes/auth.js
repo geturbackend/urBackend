@@ -12,7 +12,9 @@ const {
     resetPassword,
     logout,
     refreshToken,
-    getMe
+    getMe,
+    startGithubAuth,
+    handleGithubCallback
 } = require('../controllers/auth.controller');
 
 
@@ -29,6 +31,8 @@ const dashboardLimiter = rateLimit({
 router.post('/register', authLimiter, register);
 
 router.post('/login', authLimiter, login);
+router.get('/github/start', startGithubAuth);
+router.get('/github/callback', handleGithubCallback);
 
 router.use(dashboardLimiter);
 

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff, Lock, Mail, UserRound } from 'lucide-react';
+import { Eye, EyeOff, Github, Lock, Mail, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import AuthShell from '../components/AuthShell';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
+import { API_URL } from '../config';
 
 function Signup() {
   const navigate = useNavigate();
@@ -89,6 +90,10 @@ function Signup() {
     }
   };
 
+  const handleGithubSignIn = () => {
+    window.location.assign(`${API_URL}/api/auth/github/start`);
+  };
+
   return (
     <AuthShell
       modeLabel="Create account"
@@ -99,6 +104,20 @@ function Signup() {
       alternateTo="/login"
     >
       <form className="auth-form" onSubmit={handleSubmit}>
+        <button
+          type="button"
+          className="btn btn-secondary auth-submit"
+          onClick={handleGithubSignIn}
+          disabled={isSubmitting}
+        >
+          <Github size={17} />
+          Continue with GitHub
+        </button>
+
+        <div className="auth-divider">
+          <span>or</span>
+        </div>
+
         <div className="auth-field">
           <label htmlFor="signup-name">Full name</label>
           <div className="auth-input-wrap">
