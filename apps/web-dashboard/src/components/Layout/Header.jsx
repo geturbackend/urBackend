@@ -1,7 +1,7 @@
 import { useAuth } from '../../context/AuthContext';
 import { Menu } from 'lucide-react'; // Import Menu Icon
 
-function Header({ onToggleSidebar, showToggle = true }) { // Default showToggle to true
+function Header({ onToggleSidebar, showToggle = true, children }) { // Default showToggle to true
     const { user } = useAuth();
     const initial = user?.email ? user.email[0].toUpperCase() : 'D';
 
@@ -52,8 +52,10 @@ function Header({ onToggleSidebar, showToggle = true }) { // Default showToggle 
                 </button>
             )}
 
-            {/* Spacer to push User Profile to right */}
-            <div style={{ flex: 1 }}></div>
+            {/* Search / Center Content Slot */}
+            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: '0 2rem' }}>
+                {children}
+            </div>
 
             {/* User Profile */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

@@ -3,12 +3,15 @@ import { useLocation, matchPath } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import ProjectNavbar from './ProjectNavbar';
+import { useLayout } from '../../context/LayoutContext';
+
 // Use the new official logo from public directory
 const logoImage = "https://cdn.jsdelivr.net/gh/yash-pouranik/urBackend@main/frontend/public/logo.png";
 
 function MainLayout({ children }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const location = useLocation();
+    const { headerContent } = useLayout();
 
     // Check if we are inside a project route to toggle layout mode
     // Paths like /project/:projectId/...
@@ -45,7 +48,9 @@ function MainLayout({ children }) {
                         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                         // Hide toggle button if sidebar is hidden
                         showToggle={true}
-                    />
+                    >
+                        {headerContent}
+                    </Header>
                 )}
 
                 {/* Project Navigation Bar - Only visible in project routes */}

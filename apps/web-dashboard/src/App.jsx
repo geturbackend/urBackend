@@ -25,11 +25,11 @@ import Settings from './pages/Settings';
 import ProjectSettings from './pages/ProjectSettings';
 import Webhooks from './pages/Webhooks';
 
-
+import { LayoutProvider } from './context/LayoutContext';
 
 function App() {
   return (
-    <div>
+    <LayoutProvider>
       <Toaster position="top-center" reverseOrder={false}
         toastOptions={{
           style: {
@@ -133,7 +133,7 @@ function App() {
         <Route path="*" element={<NotFound />} />
 
       </Routes>
-    </div>
+    </LayoutProvider>
   );
 }
 
