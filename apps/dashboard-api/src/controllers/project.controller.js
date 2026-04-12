@@ -1137,7 +1137,7 @@ module.exports.updateProject = async (req, res) => {
             parsed.protocol !== "https:" &&
             !(
               parsed.protocol === "http:" &&
-              parsed.hostname === "localhost"
+              ["localhost", "127.0.0.1", "::1"].includes(parsed.hostname)
             )
           ) {
             return res.status(400).json({

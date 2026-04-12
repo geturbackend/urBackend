@@ -52,7 +52,7 @@ const setPublicOtpCooldown = async (projectId, email, type = 'verification') => 
 
 
 /**
- * Returns the public API base URL from env or defaults to localhost.
+ * Returns the base URL for the public API, used for redirect URI construction.
  * @returns {string}
  */
 const getPublicApiBaseUrl = () => {
@@ -63,15 +63,15 @@ const getPublicApiBaseUrl = () => {
 };
 
 /**
- * Returns the Redis key for OAuth state CSRF protection.
- * @param {string} state - Random state token
+ * Returns the Redis key for storing OAuth state.
+ * @param {string} state - CSRF state token
  * @returns {string}
  */
 const getSocialStateKey = (state) => `project:auth:oauth:state:${state}`;
 
 /**
- * Returns the Redis key for a one-time social refresh token exchange code.
- * @param {string} rtCode - One-time exchange code
+ * Returns the Redis key for storing the temporary social refresh exchange code.
+ * @param {string} rtCode - Exchange code
  * @returns {string}
  */
 const getSocialRefreshExchangeKey = (rtCode) => `project:social-auth:refresh-exchange:${rtCode}`;
@@ -336,10 +336,10 @@ const exchangeGoogleCodeForToken = async ({ code, clientId, clientSecret, redire
 };
 
 /**
- * Fetches and normalizes the GitHub user profile using an OAuth access token.
- * Prefers verified primary emails for account linking.
- * @param {string} accessToken - GitHub OAuth access token
- * @returns {Promise<{providerUserId: string, email: string, emailVerified: boolean, name: string, avatarUrl: string}>}
+ * Fetches the user profile from GitHub using an access token.
+ * Includes user email fetching as a secondary step.
+ * @param {string} accessToken
+ * @returns {Promise<Object>} Normalized profile
  */
 const fetchGithubProfile = async (accessToken) => {
     const headers = {
@@ -434,11 +434,11 @@ const verifyGoogleIdToken = async ({ idToken, clientId }) => {
 };
 
 /**
- * Fetches and normalizes the Google user profile from an id_token.
+ * Verifies a Google ID token and returns the normalized user profile.
  * @param {Object} params
- * @param {string} params.idToken - Google JWT id_token
- * @param {string} params.clientId - OAuth client ID
- * @returns {Promise<{providerUserId: string, email: string, emailVerified: boolean, name: string, avatarUrl: string}>}
+ * @param {string} params.idToken
+ * @param {string} params.clientId
+ * @returns {Promise<Object>} Normalized profile
  */
 const fetchGoogleProfile = async ({ idToken, clientId }) => {
     const claims = await verifyGoogleIdToken({ idToken, clientId });
@@ -598,12 +598,12 @@ const getVerificationField = (usersColConfig) => {
 };
 
 /**
- * Builds a complete user document payload for signup, including email, username, and verified field.
+ * Builds a user payload for registration or social login, mapping flat data to the users collection schema.
  * @param {Object} usersColConfig - Users collection config
- * @param {Object} parsedData - Validated user input
- * @param {string} hashedPassword - BCrypt-hashed password
- * @param {*} verifiedValue - Value to set on the verification field, if present
- * @returns {Object} User document fields
+ * @param {Object} parsedData - Raw user data (email, name, etc.)
+ * @param {string} hashedPassword - Hashed password string
+ * @param {boolean} verifiedValue - Default value for the verification field
+ * @returns {Object} Mongoose-ready user document payload
  */
 const buildAuthUserPayload = (usersColConfig, parsedData, hashedPassword, verifiedValue) => {
     const { email, password: _password, username, ...otherData } = parsedData;
@@ -673,8 +673,8 @@ const sanitizePublicProfile = (userDoc, usersColConfig) => {
 };
 
 /**
- * Initiates the OAuth flow for a social auth provider.
- * Generates a CSRF state token, stores it in Redis, and redirects to the provider's auth page.
+ * Initiates the social authentication flow for a given provider.
+ * Generates a secure state, stores it in Redis, and redirects the user to the provider's OAuth page.
  * Requires x-api-key header or ?key query param and auth enabled on the project.
  * @route GET /api/userAuth/social/:provider/start
  */
@@ -933,7 +933,11 @@ module.exports.exchangeSocialRefreshToken = async (req, res) => {
 };
 
 
-// POST REQ FOR SIGNUP
+/**
+ * Handles traditional email/password user registration.
+ * Hashes the password and triggers a verification email if mandatory.
+ * @route POST /api/userAuth/signup
+ */
 module.exports.signup = async (req, res) => {
     try {
         const project = req.project;
@@ -1037,7 +1041,11 @@ module.exports.signup = async (req, res) => {
     }
 }
 
-// POST REQ FOR LOGIN
+/**
+ * Authenticates a user with email and password.
+ * Issues access and refresh tokens upon successful authentication.
+ * @route POST /api/userAuth/login
+ */
 module.exports.login = async (req, res) => {
     try {
         const project = req.project;
@@ -1077,7 +1085,10 @@ module.exports.login = async (req, res) => {
     }
 }
 
-// FUNCTION - GET CURRENT USER
+/**
+ * Returns the currently authenticated user's profile based on the JWT token.
+ * @route GET /api/userAuth/me
+ */
 module.exports.me = async (req, res) => {
     try {
         const project = req.project;

@@ -43,6 +43,10 @@ const collectionSchema = new mongoose.Schema({
   },
 });
 
+/**
+ * Schema for OAuth providers like GitHub and Google.
+ * Sensitive data like clientSecret is stored in an encrypted format.
+ */
 const authProviderSchema = new mongoose.Schema(
   {
     enabled: { type: Boolean, default: false },
@@ -77,6 +81,9 @@ const projectSchema = new mongoose.Schema(
     },
     isAuthEnabled: { type: Boolean, default: false },
     siteUrl: { type: String, default: "" },
+    /**
+     * Managed OAuth providers for project user authentication.
+     */
     authProviders: {
       github: { type: authProviderSchema, default: () => ({}) },
       google: { type: authProviderSchema, default: () => ({}) },

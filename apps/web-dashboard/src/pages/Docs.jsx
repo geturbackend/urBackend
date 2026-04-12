@@ -340,6 +340,9 @@ console.log(data);
                             <p style={{ fontSize: '0.9rem', color: '#ddd', marginBottom: '0.75rem' }}>
                                 Handle the redirect on your frontend route <code>/auth/callback</code>. urBackend sends the access token in the hash and the refresh-token exchange code in the query string.
                             </p>
+                            <div style={{ padding: '0.75rem', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderLeft: '3px solid #60a5fa', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                                <strong>💡 Security Tip:</strong> Access tokens are sent via the URL hash fragment (<code>#token=...</code>). Hash fragments are never sent to the server by browsers, which prevents your tokens from leaking into server access logs.
+                            </div>
                             <RefTable
                                 headers={['Location', 'Field', 'Meaning']}
                                 rows={[

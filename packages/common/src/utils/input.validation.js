@@ -76,7 +76,7 @@ module.exports.createProjectSchema = z.object({
             return (
               parsed.protocol === "https:" ||
               (parsed.protocol === "http:" &&
-                parsed.hostname === "localhost")
+                ["localhost", "127.0.0.1", "::1"].includes(parsed.hostname))
             );
           } catch {
             return false;
