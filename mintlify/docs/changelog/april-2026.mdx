@@ -1,0 +1,37 @@
+---
+title: Changelog
+description: What's new in urBackend — new features, improvements, and fixes.
+---
+
+<Update label="2026-04-13" description="Week of April 7–13" tags={["Feature", "Improvement", "Fix"]}>
+## New features
+
+**Webhook system** — You can now receive HTTP callbacks when data changes in your collections. Webhooks are secured with HMAC-SHA256 signatures, support automatic retries, and include delivery logs. Configure them from the new Webhooks page in the dashboard. [Learn more](/guides/webhooks)
+
+**Aggregation API with row-level security** — Run MongoDB aggregation pipelines through the REST API. Aggregation queries respect row-level security rules, so authenticated frontend users can run them safely with a publishable key.
+
+**Bring-your-own-key (BYOK) mail** — Connect your own Resend API key to send transactional email from your project. Auth emails (verification, password reset) are automatically routed through your key when configured. Monthly quota tracking is enforced per project. [Learn more](/sdk/mail)
+
+**Relational population** — Use the `populate` query parameter on read endpoints to resolve references between collections in a single request, similar to SQL joins. Pagination limits are clamped automatically for safety. [Learn more](/guides/database)
+
+**API health endpoint** — A new `GET /api/health` endpoint returns the status of MongoDB and Redis dependencies, useful for uptime monitoring and deployment checks.
+
+**Dashboard GitHub OAuth login** — Sign in to the urBackend dashboard with your GitHub account. Existing email-based accounts are linked automatically.
+
+## Improvements
+
+**Redesigned dashboard** — The main dashboard now shows overall usage across all your projects, including API calls, storage, and mail quotas. An onboarding checklist and quick-links section help you get started faster.
+
+**SDK v0.2.0** — The JavaScript/TypeScript SDK now covers the full API surface, including auth (social login, password reset, email verification), database operations with populate support, mail, and schema management. [View SDK docs](/sdk/overview)
+
+**Hardened social authentication** — Query-parameter API keys are now restricted to publishable keys only and are stripped from the request after validation. JWK caching uses single-flight loading to prevent thundering-herd issues.
+
+## Bug fixes
+
+- Fixed OTP verification failures on the dashboard login flow
+- Fixed mail sending from the dashboard UI
+- Resolved a password field leak when populating user-linked collections
+- Fixed schema index rollback errors when pre-existing indexes conflicted with new schema definitions
+- Standardized API response parsing across all endpoints
+- Fixed monthly mail quota not rolling back on failed BYOK deliveries
+</Update>
