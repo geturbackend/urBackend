@@ -148,9 +148,13 @@ describe('public userAuth refresh flow', () => {
         );
         expect(res.json).toHaveBeenCalledWith(
             expect.objectContaining({
-                token: 'signed_access_token',
-                accessToken: 'signed_access_token',
-                expiresIn: expect.any(String),
+                success: true,
+                message: "Login successful",
+                data: expect.objectContaining({
+                    token: 'signed_access_token',
+                    accessToken: 'signed_access_token',
+                    expiresIn: expect.any(String),
+                })
             })
         );
     });
@@ -203,9 +207,13 @@ describe('public userAuth refresh flow', () => {
         expect(res.status).toHaveBeenCalledWith(200);
         expect(res.json).toHaveBeenCalledWith(
             expect.objectContaining({
-                token: 'signed_access_token',
-                accessToken: 'signed_access_token',
-                refreshToken: expect.any(String),
+                success: true,
+                message: "Login successful",
+                data: expect.objectContaining({
+                    token: 'signed_access_token',
+                    accessToken: 'signed_access_token',
+                    refreshToken: expect.any(String),
+                })
             })
         );
     });

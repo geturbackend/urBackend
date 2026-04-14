@@ -84,7 +84,11 @@ module.exports.insertData = async (req, res) => {
     });
 
     if (isDebug) console.log(`[DEBUG] insert data took ${(performance.now() - start).toFixed(2)}ms`);
-    res.status(201).json(result);
+    res.status(201).json({
+      success: true,
+      data: result,
+      message: "Data inserted successfully."
+    });
   } catch (err) {
     console.error(err);
 
@@ -136,7 +140,11 @@ module.exports.getAllData = async (req, res) => {
 
     const data = await features.query.lean();
     if (isDebug) console.log(`[DEBUG] getall took ${(performance.now() - start).toFixed(2)}ms`);
-    res.json(data);
+    res.status(200).json({
+      success: true,
+      data: data,
+      message: "Data retrieved successfully."
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });

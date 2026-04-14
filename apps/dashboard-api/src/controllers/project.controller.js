@@ -493,12 +493,8 @@ module.exports.updateExternalConfig = async (req, res) => {
 
 module.exports.deleteExternalDbConfig = async (req, res) => {
   try {
-    const parsedBody = z
-      .object({
-        projectId: z.string(),
-      })
-      .parse(req.body);
-    const { projectId } = parsedBody;
+    const projectId = String(req.params.projectId || '').trim();
+    if (!projectId) return res.status(400).json({ error: "Project ID is required." });
 
     const project = await Project.findOne({
       _id: { $eq: projectId },
@@ -513,6 +509,9 @@ module.exports.deleteExternalDbConfig = async (req, res) => {
     project.resources.db.config = null;
     await project.save();
 
+    await deleteProjectById(projectId);
+    await setProjectById(projectId, project.toObject());
+
     res
       .status(200)
       .json({ message: "External configuration deleted successfully." });
@@ -523,12 +522,8 @@ module.exports.deleteExternalDbConfig = async (req, res) => {
 
 module.exports.deleteExternalStorageConfig = async (req, res) => {
   try {
-    const parsedBody = z
-      .object({
-        projectId: z.string(),
-      })
-      .parse(req.body);
-    const { projectId } = parsedBody;
+    const projectId = String(req.params.projectId || '').trim();
+    if (!projectId) return res.status(400).json({ error: "Project ID is required." });
 
     const project = await Project.findOne({
       _id: { $eq: projectId },

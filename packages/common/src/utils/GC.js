@@ -1,5 +1,6 @@
 const { registry, storageRegistry } = require("./registry");
 function garbageCollect() {
+    console.log("Garbage Collecting");
     setInterval(() => {
         console.log("20 minutes passed");
         const now = new Date();
@@ -27,7 +28,6 @@ function storageGarbageCollect() {
         }
     }, 24 * 60 * 60 * 1000);
 }
-console.log("Garbage Collecting");
 
 
 module.exports = { garbageCollect, storageGarbageCollect };
