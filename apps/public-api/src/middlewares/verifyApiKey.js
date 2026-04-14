@@ -45,6 +45,8 @@ module.exports = async (req, res, next) => {
                     jwtSecret
                     allowedDomains
                     isAuthEnabled
+                    siteUrl
+                    authProviders
                 `)
                 .populate('owner', 'isVerified')
                 .lean();

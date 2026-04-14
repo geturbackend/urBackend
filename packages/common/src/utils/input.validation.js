@@ -285,13 +285,19 @@ module.exports.aggregateSchema = z.object({
 });
 
 module.exports.sanitize = (obj) => {
-  const clean = {};
-  for (const key in obj) {
-    if (!key.startsWith("$")) {
-      clean[key] = obj[key];
-    }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => module.exports.sanitize(item));
   }
-  return clean;
+  if (obj !== null && typeof obj === "object") {
+    const clean = {};
+    for (const key in obj) {
+      if (!key.startsWith("$")) {
+        clean[key] = module.exports.sanitize(obj[key]);
+      }
+    }
+    return clean;
+  }
+  return obj;
 };
 
 const emptyToUndefined = z.preprocess(
