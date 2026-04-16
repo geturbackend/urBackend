@@ -99,6 +99,143 @@ module.exports.insertData = async (req, res) => {
   }
 };
 
+// INSERT BULK DATA
+module.exports.insertBulkData = async (req, res) => {
+  try {
+    let start;
+    if (isDebug) start = performance.now();
+    const { collectionName } = req.params;
+    const project = req.project;
+
+    const collectionConfig = project.collections.find(
+      (c) => c.name === collectionName,
+    );
+    if (!collectionConfig)
+      return res.status(404).json({ error: "Collection not found" });
+
+    const schemaRules = collectionConfig.model;
+    const incomingDataArray = req.body;
+
+    if (!Array.isArray(incomingDataArray)) {
+      return res.status(400).json({ error: "Payload must be an array of objects." });
+    }
+
+    if (incomingDataArray.length === 0) {
+      return res.status(400).json({ error: "Payload array cannot be empty." });
+    }
+
+    const validDataToInsert = [];
+    const errors = [];
+    const validIndicesMap = new Map();
+
+    for (let i = 0; i < incomingDataArray.length; i++) {
+        const item = incomingDataArray[i];
+        
+        if (typeof item !== 'object' || Array.isArray(item) || item === null) {
+            errors.push({ index: i, error: "Item must be a JSON object" });
+            continue;
+        }
+
+        const { error, cleanData } = validateData(item, schemaRules);
+        if (error) {
+            errors.push({ index: i, error });
+        } else {
+            const safeData = sanitize(cleanData);
+            validDataToInsert.push(safeData);
+            validIndicesMap.set(validDataToInsert.length - 1, i);
+        }
+    }
+
+    if (validDataToInsert.length === 0) {
+        return res.status(400).json({ 
+            success: false, 
+            message: "All documents failed validation.", 
+            errors,
+            insertedCount: 0,
+            insertedData: []
+        });
+    }
+
+    let batchDocSize = 0;
+    if (!project.resources.db.isExternal) {
+      batchDocSize = Buffer.byteLength(JSON.stringify(validDataToInsert));
+      if ((project.databaseUsed || 0) + batchDocSize > project.databaseLimit) {
+        return res.status(403).json({ error: "Database limit exceeded. Additional size: " + batchDocSize + " bytes." });
+      }
+    }
+
+    const connection = await getConnection(project._id);
+    const Model = getCompiledModel(
+      connection,
+      collectionConfig,
+      project._id,
+      project.resources.db.isExternal,
+    );
+
+    let insertedData = [];
+    try {
+        insertedData = await Model.insertMany(validDataToInsert, { ordered: false });
+    } catch (err) {
+        if (err.name === 'MongoBulkWriteError' || err.code === 11000 || err.name === 'BulkWriteError') {
+            insertedData = err.insertedDocs || [];
+            if (err.writeErrors) {
+                for (const writeErr of err.writeErrors) {
+                    const originalIndex = validIndicesMap.get(writeErr.index);
+                    errors.push({ 
+                        index: originalIndex !== undefined ? originalIndex : -1, 
+                        error: writeErr.errmsg || err.message 
+                    });
+                }
+            } else if (err.message) {
+               // Fallback if writeErrors not populated but it's a duplicate error
+               errors.push({ index: -1, error: err.message });
+            }
+        } else {
+            throw err;
+        }
+    }
+
+    let actualInsertedSize = 0;
+    if (!project.resources.db.isExternal && insertedData.length > 0) {
+        const plainDocs = insertedData.map(doc => doc.toObject ? doc.toObject() : doc);
+        actualInsertedSize = Buffer.byteLength(JSON.stringify(plainDocs));
+        
+        await Project.updateOne(
+            { _id: project._id },
+            { $inc: { databaseUsed: actualInsertedSize } },
+        );
+    }
+
+    // Fire-and-forget webhook dispatch for each successfully inserted document
+    for (const doc of insertedData) {
+        const plainDoc = doc.toObject ? doc.toObject() : doc;
+        dispatchWebhooks({
+            projectId: project._id,
+            collection: collectionName,
+            action: 'insert',
+            document: plainDoc,
+            documentId: plainDoc._id,
+        });
+    }
+
+    if (isDebug) console.log(`[DEBUG] insertBulkData took ${(performance.now() - start).toFixed(2)}ms`);
+
+    const status = errors.length > 0 ? 207 : 201;
+
+    return res.status(status).json({
+        success: errors.length === 0,
+        message: errors.length > 0 ? "Partial success or validation errors occurred." : "All documents inserted successfully.",
+        insertedCount: insertedData.length,
+        errors: errors.sort((a, b) => a.index - b.index),
+        insertedData: insertedData,
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // GET ALL DATA
 module.exports.getAllData = async (req, res) => {
   try {
@@ -266,7 +403,9 @@ module.exports.aggregateData = async (req, res) => {
       message: "Aggregation executed successfully.",
     });
   } catch (err) {
-    console.error(err);
+    if (!(err instanceof z.ZodError) && process.env.NODE_ENV !== 'test') {
+      console.error(err);
+    }
 
     if (err instanceof z.ZodError) {
       return res.status(400).json({

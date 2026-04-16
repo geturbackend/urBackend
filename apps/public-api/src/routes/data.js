@@ -6,11 +6,14 @@ const authorizeWriteOperation = require('../middlewares/authorizeWriteOperation'
 const authorizeReadOperation = require('../middlewares/authorizeReadOperation');
 const projectRateLimiter = require('../middlewares/projectRateLimiter');
 const blockUsersCollectionDataAccess = require('../middlewares/blockUsersCollectionDataAccess');
-const { insertData, getAllData, getSingleDoc, updateSingleData, deleteSingleDoc, aggregateData } = require("../controllers/data.controller")
+const { insertData, insertBulkData, getAllData, getSingleDoc, updateSingleData, deleteSingleDoc, aggregateData } = require("../controllers/data.controller")
 
 
 // POST REQ TO INSERT DATA
 router.post('/:collectionName', verifyApiKey, blockUsersCollectionDataAccess, resolvePublicAuthContext, projectRateLimiter, authorizeWriteOperation, insertData);
+
+// POST REQ TO INSERT BULK DATA
+router.post('/:collectionName/bulk', verifyApiKey, blockUsersCollectionDataAccess, resolvePublicAuthContext, projectRateLimiter, authorizeWriteOperation, insertBulkData);
 
 
 // GET REQ ALL DATA
