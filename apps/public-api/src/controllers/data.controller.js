@@ -101,6 +101,7 @@ module.exports.insertData = async (req, res) => {
 
 // INSERT BULK DATA
 module.exports.insertBulkData = async (req, res) => {
+  let batchDocSizeReserved = 0;
   try {
     let start;
     if (isDebug) start = performance.now();
@@ -117,11 +118,19 @@ module.exports.insertBulkData = async (req, res) => {
     const incomingDataArray = req.body;
 
     if (!Array.isArray(incomingDataArray)) {
-      return res.status(400).json({ error: "Payload must be an array of objects." });
+      return res.status(400).json({
+        success: false,
+        data: {},
+        message: "Payload must be an array of objects.",
+      });
     }
 
     if (incomingDataArray.length === 0) {
-      return res.status(400).json({ error: "Payload array cannot be empty." });
+      return res.status(400).json({
+        success: false,
+        data: {},
+        message: "Payload array cannot be empty.",
+      });
     }
 
     const validDataToInsert = [];
@@ -129,39 +138,63 @@ module.exports.insertBulkData = async (req, res) => {
     const validIndicesMap = new Map();
 
     for (let i = 0; i < incomingDataArray.length; i++) {
-        const item = incomingDataArray[i];
-        
-        if (typeof item !== 'object' || Array.isArray(item) || item === null) {
-            errors.push({ index: i, error: "Item must be a JSON object" });
-            continue;
-        }
+      const item = incomingDataArray[i];
 
-        const { error, cleanData } = validateData(item, schemaRules);
-        if (error) {
-            errors.push({ index: i, error });
-        } else {
-            const safeData = sanitize(cleanData);
-            validDataToInsert.push(safeData);
-            validIndicesMap.set(validDataToInsert.length - 1, i);
-        }
+      if (typeof item !== "object" || Array.isArray(item) || item === null) {
+        errors.push({ index: i, error: "Item must be a JSON object" });
+        continue;
+      }
+
+      const { error, cleanData } = validateData(item, schemaRules);
+      if (error) {
+        errors.push({ index: i, error });
+      } else {
+        const safeData = sanitize(cleanData);
+        validDataToInsert.push(safeData);
+        validIndicesMap.set(validDataToInsert.length - 1, i);
+      }
     }
 
     if (validDataToInsert.length === 0) {
-        return res.status(400).json({ 
-            success: false, 
-            message: "All documents failed validation.", 
-            errors,
-            insertedCount: 0,
-            insertedData: []
-        });
+      return res.status(400).json({
+        success: false,
+        data: {
+          insertedCount: 0,
+          errors: errors.sort((a, b) => a.index - b.index),
+          insertedData: [],
+        },
+        message: "All documents failed validation.",
+      });
     }
 
-    let batchDocSize = 0;
+    batchDocSizeReserved = 0;
     if (!project.resources.db.isExternal) {
-      batchDocSize = Buffer.byteLength(JSON.stringify(validDataToInsert));
-      if ((project.databaseUsed || 0) + batchDocSize > project.databaseLimit) {
-        return res.status(403).json({ error: "Database limit exceeded. Additional size: " + batchDocSize + " bytes." });
+      const batchDocSize = Buffer.byteLength(JSON.stringify(validDataToInsert));
+
+      const updatedProject = await Project.findOneAndUpdate(
+        {
+          _id: project._id,
+          $expr: {
+            $lte: [
+              { $add: [{ $ifNull: ["$databaseUsed", 0] }, batchDocSize] },
+              "$databaseLimit",
+            ],
+          },
+        },
+        { $inc: { databaseUsed: batchDocSize } },
+        { new: true },
+      ).lean();
+
+      if (!updatedProject) {
+        return res.status(403).json({
+          success: false,
+          data: {},
+          message: `Database limit exceeded. Bulk insert would exceed project capacity by ${batchDocSize} bytes.`,
+        });
       }
+
+      batchDocSizeReserved = batchDocSize;
+      req.project.databaseUsed = updatedProject.databaseUsed;
     }
 
     const connection = await getConnection(project._id);
@@ -174,65 +207,100 @@ module.exports.insertBulkData = async (req, res) => {
 
     let insertedData = [];
     try {
-        insertedData = await Model.insertMany(validDataToInsert, { ordered: false });
+      insertedData = await Model.insertMany(validDataToInsert, {
+        ordered: false,
+      });
     } catch (err) {
-        if (err.name === 'MongoBulkWriteError' || err.code === 11000 || err.name === 'BulkWriteError') {
-            insertedData = err.insertedDocs || [];
-            if (err.writeErrors) {
-                for (const writeErr of err.writeErrors) {
-                    const originalIndex = validIndicesMap.get(writeErr.index);
-                    errors.push({ 
-                        index: originalIndex !== undefined ? originalIndex : -1, 
-                        error: writeErr.errmsg || err.message 
-                    });
-                }
-            } else if (err.message) {
-               // Fallback if writeErrors not populated but it's a duplicate error
-               errors.push({ index: -1, error: err.message });
-            }
-        } else {
-            throw err;
+      if (
+        err.name === "MongoBulkWriteError" ||
+        err.code === 11000 ||
+        err.name === "BulkWriteError"
+      ) {
+        insertedData = err.insertedDocs || [];
+        if (err.writeErrors) {
+          for (const writeErr of err.writeErrors) {
+            const originalIndex = validIndicesMap.get(writeErr.index);
+            errors.push({
+              index: originalIndex !== undefined ? originalIndex : -1,
+              error:
+                writeErr.code === 11000
+                  ? "Duplicate value violates unique constraint."
+                  : "Validation or database error occurred during insertion.",
+            });
+          }
+        } else if (err.message) {
+          errors.push({
+            index: -1,
+            error:
+              err.code === 11000
+                ? "Duplicate value violates unique constraint."
+                : "Validation or database error occurred.",
+          });
         }
+      } else {
+        throw err;
+      }
     }
 
-    let actualInsertedSize = 0;
-    if (!project.resources.db.isExternal && insertedData.length > 0) {
-        const plainDocs = insertedData.map(doc => doc.toObject ? doc.toObject() : doc);
-        actualInsertedSize = Buffer.byteLength(JSON.stringify(plainDocs));
-        
-        await Project.updateOne(
-            { _id: project._id },
-            { $inc: { databaseUsed: actualInsertedSize } },
+    if (batchDocSizeReserved > 0) {
+      let actualInsertedSize = 0;
+      if (insertedData.length > 0) {
+        const plainDocs = insertedData.map((doc) =>
+          doc.toObject ? doc.toObject() : doc,
         );
+        actualInsertedSize = Buffer.byteLength(JSON.stringify(plainDocs));
+      }
+
+      await Project.updateOne(
+        { _id: project._id },
+        { $inc: { databaseUsed: actualInsertedSize - batchDocSizeReserved } },
+      );
     }
 
     // Fire-and-forget webhook dispatch for each successfully inserted document
     for (const doc of insertedData) {
-        const plainDoc = doc.toObject ? doc.toObject() : doc;
-        dispatchWebhooks({
-            projectId: project._id,
-            collection: collectionName,
-            action: 'insert',
-            document: plainDoc,
-            documentId: plainDoc._id,
-        });
+      const plainDoc = doc.toObject ? doc.toObject() : doc;
+      dispatchWebhooks({
+        projectId: project._id,
+        collection: collectionName,
+        action: "insert",
+        document: plainDoc,
+        documentId: plainDoc._id,
+      });
     }
 
-    if (isDebug) console.log(`[DEBUG] insertBulkData took ${(performance.now() - start).toFixed(2)}ms`);
+    if (isDebug)
+      console.log(
+        `[DEBUG] insertBulkData took ${(performance.now() - start).toFixed(2)}ms`,
+      );
 
     const status = errors.length > 0 ? 207 : 201;
 
     return res.status(status).json({
-        success: errors.length === 0,
-        message: errors.length > 0 ? "Partial success or validation errors occurred." : "All documents inserted successfully.",
+      success: errors.length === 0,
+      data: {
         insertedCount: insertedData.length,
         errors: errors.sort((a, b) => a.index - b.index),
         insertedData: insertedData,
+      },
+      message:
+        errors.length > 0
+          ? "Partial success or validation errors occurred during bulk insert."
+          : "All documents inserted successfully.",
     });
-
   } catch (err) {
+    if (batchDocSizeReserved > 0) {
+      await Project.updateOne(
+        { _id: project._id },
+        { $inc: { databaseUsed: -batchDocSizeReserved } },
+      ).catch((e) => console.error("Failed to refund database quota:", e));
+    }
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      success: false,
+      data: {},
+      message: "Internal server error occurred during bulk data operation.",
+    });
   }
 };
 

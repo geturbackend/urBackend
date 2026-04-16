@@ -8,6 +8,13 @@ jest.mock('@urbackend/common', () => ({
     sanitize: (v) => v,
     Project: {
         updateOne: (...args) => mockUpdateOne(...args),
+        findOneAndUpdate: jest.fn().mockImplementation((query, update) => {
+            // Simple mock to simulate success if databaseLimit > databaseUsed + increment
+            const inc = update.$inc.databaseUsed;
+            return {
+                lean: () => ({ databaseUsed: inc })
+            };
+        })
     },
     getConnection: jest.fn().mockResolvedValue({}),
     getCompiledModel: jest.fn(() => ({
@@ -69,7 +76,8 @@ describe('data.controller bulk inserts', () => {
         await insertBulkData(req, res);
 
         expect(res.status).toHaveBeenCalledWith(400);
-        expect(res.body.error).toMatch(/array/);
+        expect(res.body.success).toBe(false);
+        expect(res.body.message).toMatch(/array/);
     });
 
     test('returns 400 if payload array is empty', async () => {
@@ -79,7 +87,8 @@ describe('data.controller bulk inserts', () => {
         await insertBulkData(req, res);
 
         expect(res.status).toHaveBeenCalledWith(400);
-        expect(res.body.error).toMatch(/empty/);
+        expect(res.body.success).toBe(false);
+        expect(res.body.message).toMatch(/empty/);
     });
 
     test('returns 201 on full success', async () => {
@@ -97,8 +106,8 @@ describe('data.controller bulk inserts', () => {
 
         expect(res.status).toHaveBeenCalledWith(201);
         expect(res.body.success).toBe(true);
-        expect(res.body.insertedCount).toBe(2);
-        expect(res.body.errors).toEqual([]);
+        expect(res.body.data.insertedCount).toBe(2);
+        expect(res.body.data.errors).toEqual([]);
         expect(mockInsertMany).toHaveBeenCalledTimes(1);
         expect(mockDispatchWebhooks).toHaveBeenCalledTimes(2);
     });
@@ -120,9 +129,9 @@ describe('data.controller bulk inserts', () => {
 
         expect(res.status).toHaveBeenCalledWith(207);
         expect(res.body.success).toBe(false);
-        expect(res.body.insertedCount).toBe(1);
-        expect(res.body.errors.length).toBe(1);
-        expect(res.body.errors[0].index).toBe(1);
+        expect(res.body.data.insertedCount).toBe(1);
+        expect(res.body.data.errors.length).toBe(1);
+        expect(res.body.data.errors[0].index).toBe(1);
         
         expect(mockInsertMany).toHaveBeenCalledWith([ { title: 'Valid' } ], { ordered: false });
         expect(mockDispatchWebhooks).toHaveBeenCalledTimes(1);
@@ -138,7 +147,7 @@ describe('data.controller bulk inserts', () => {
 
         expect(res.status).toHaveBeenCalledWith(400);
         expect(res.body.success).toBe(false);
-        expect(res.body.errors.length).toBe(2);
+        expect(res.body.data.errors.length).toBe(2);
         expect(mockInsertMany).not.toHaveBeenCalled();
     });
 
@@ -151,10 +160,15 @@ describe('data.controller bulk inserts', () => {
 
         validateData.mockReturnValue({ cleanData: { title: 'Valid' } });
 
+        const { Project } = require('@urbackend/common');
+        Project.findOneAndUpdate.mockReturnValueOnce({
+            lean: () => null
+        });
+
         await insertBulkData(req, res);
 
         expect(res.status).toHaveBeenCalledWith(403);
-        expect(res.body.error).toMatch(/Database limit exceeded/);
+        expect(res.body.message).toMatch(/Database limit exceeded/);
         expect(mockInsertMany).not.toHaveBeenCalled();
     });
 
@@ -182,10 +196,10 @@ describe('data.controller bulk inserts', () => {
 
         expect(res.status).toHaveBeenCalledWith(207);
         expect(res.body.success).toBe(false);
-        expect(res.body.insertedCount).toBe(2);
-        expect(res.body.errors.length).toBe(1);
+        expect(res.body.data.insertedCount).toBe(2);
+        expect(res.body.data.errors.length).toBe(1);
         // Ensure index matches original array
-        expect(res.body.errors[0].index).toBe(1);
+        expect(res.body.data.errors[0].index).toBe(1);
         expect(mockUpdateOne).toHaveBeenCalled();
         expect(mockDispatchWebhooks).toHaveBeenCalledTimes(2);
     });
