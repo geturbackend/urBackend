@@ -132,3 +132,49 @@ test('delete returns { deleted: true } and handles token', async () => {
     }),
   );
 });
+
+test('count returns total number of documents in a collection', async () => {
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    headers: new Headers({ 'content-type': 'application/json' }),
+    json: () => Promise.resolve({ success: true, data: { count: 42 } }),
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  const result = await client.db.count('products');
+
+  expect(result).toBe(42);
+  const url = fetchMock.mock.calls[0][0] as string;
+  const searchParams = new URL(url).searchParams;
+  expect(searchParams.get('count')).toBe('true');
+});
+
+test('count with filters builds correct query string', async () => {
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    headers: new Headers({ 'content-type': 'application/json' }),
+    json: () => Promise.resolve({ success: true, data: { count: 7 } }),
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  const result = await client.db.count('products', { filter: { status: 'active' } });
+
+  expect(result).toBe(7);
+  const url = fetchMock.mock.calls[0][0] as string;
+  const searchParams = new URL(url).searchParams;
+  expect(searchParams.get('count')).toBe('true');
+  expect(searchParams.get('status')).toBe('active');
+});
+
+test('count returns 0 when no documents match', async () => {
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    headers: new Headers({ 'content-type': 'application/json' }),
+    json: () => Promise.resolve({ success: true, data: { count: 0 } }),
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  const result = await client.db.count('products', { filter: { status: 'deleted' } });
+
+  expect(result).toBe(0);
+});

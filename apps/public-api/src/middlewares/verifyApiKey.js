@@ -15,7 +15,7 @@ module.exports = async (req, res, next) => {
         // Only allow publishable keys (pk_live_) via query param; secret keys must use the header.
         const apiKey = headerKey || (queryKey?.startsWith('pk_live_') ? queryKey : undefined);
 
-        // Strip the key from req.query immediately after reading so it is not forwarded to
+        // Striping the key from req.query immediately after reading so it is not forwarded to
         // downstream middleware, controllers, or access logs.
         if (req.query && typeof req.query === 'object') {
             delete req.query.key;

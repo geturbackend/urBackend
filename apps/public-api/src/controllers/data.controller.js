@@ -126,6 +126,16 @@ module.exports.getAllData = async (req, res) => {
     );
 
     const baseFilter = req.rlsFilter && typeof req.rlsFilter === 'object' ? req.rlsFilter : {};
+    // Handle count=true query parameter
+if (req.query.count === 'true') {
+  const countEngine = new QueryEngine(Model.find(), req.query);
+const mongoFilter = countEngine._buildMongoQuery(true);
+const mergedFilter = Object.keys(baseFilter).length > 0
+  ? { $and: [mongoFilter, baseFilter] }
+  : mongoFilter;
+  const count = await Model.countDocuments(mergedFilter);
+  return res.status(200).json({ success: true, data: { count }, message: "Count fetched successfully." });
+}
     const features = new QueryEngine(Model.find(), req.query)
       .filter();
 
@@ -135,14 +145,23 @@ module.exports.getAllData = async (req, res) => {
 
     features
       .sort()
-      .populate()
-      .paginate();
+      .populate();
+
+    const total = await features.count();
+
+    features.paginate();
 
     const data = await features.query.lean();
+
     if (isDebug) console.log(`[DEBUG] getall took ${(performance.now() - start).toFixed(2)}ms`);
     res.status(200).json({
       success: true,
-      data: data,
+      data: {
+        items: data,
+        total,
+        page: parseInt(req.query.page, 10) || 1,
+        limit: Math.min(parseInt(req.query.limit, 10) || 50, 100)
+      },
       message: "Data retrieved successfully."
     });
   } catch (err) {

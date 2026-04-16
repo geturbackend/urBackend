@@ -23,6 +23,16 @@ export class DatabaseModule {
   }
 
   /**
+ * Count documents in a collection with optional filters
+ */
+public async count(collection: string, params: Omit<QueryParams, 'count'> = {}): Promise<number> {
+  const queryString = this.buildQueryString({ ...params, count: 'true' });
+  const path = `/api/data/${collection}${queryString}`;
+  const result = await this.client.request<{ count: number }>('GET', path);
+  return result.count;
+}
+
+  /**
    * Fetch a single document by its ID
    */
   public async getOne<T extends DocumentData>(

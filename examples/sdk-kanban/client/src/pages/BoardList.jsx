@@ -20,7 +20,8 @@ export default function BoardList({ onSelectBoard, searchQuery }) {
   const fetchBoards = async () => {
     try {
       const data = await client.db.getAll('boards', { sort: 'createdAt:desc' });
-      setBoards(data);
+      // Handle the new paginated API response format
+      setBoards(data.items || data);
     } catch (err) {
       console.error('Failed to fetch boards', err);
     } finally {
@@ -132,7 +133,7 @@ export default function BoardList({ onSelectBoard, searchQuery }) {
           );
         })}
 
-        {boards.length === 0 && (
+        {(boards.items || boards).length === 0 && (
           <div className="col-span-full py-24 text-center border-[4px] border-dashed border-black">
             <FolderKanban className="w-16 h-16 text-black mx-auto mb-6" />
             <h3 className="text-3xl font-black text-black tracking-tighter">EMPTY WORKSPACE</h3>

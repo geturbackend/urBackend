@@ -1,18 +1,23 @@
 {
   "name": "@urbackend/sdk",
-  "version": "0.2.2",
+  "version": "0.2.7",
   "description": "Official TypeScript SDK for urBackend BaaS",
+  "type": "module",
   "files": [
-    "dist"
+    "dist",
+    "index.js",
+    "index.cjs",
+    "index.d.ts"
   ],
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "main": "./index.cjs",
+  "module": "./index.js",
+  "browser": "./index.js",
+  "types": "./index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "require": "./index.cjs"
     }
   },
   "scripts": {

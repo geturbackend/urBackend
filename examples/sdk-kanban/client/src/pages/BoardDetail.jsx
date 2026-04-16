@@ -31,7 +31,7 @@ export default function BoardDetail({ boardId, searchQuery, onBack }) {
         client.db.getAll('tasks', { filter: { boardId } })
       ]);
       setBoard(boardData);
-      setTasks(taskData);
+      setTasks(taskData.items || taskData);
     } catch (err) {
       console.error('Failed to fetch board data', err);
     } finally {

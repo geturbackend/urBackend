@@ -13,6 +13,7 @@ import { Database as DbIcon, FileText, Shield, X } from "lucide-react";
 
 import DatabaseHeader from "../components/Database/DatabaseHeader";
 import DatabaseFilter from "../components/Database/DatabaseFilter";
+import Pagination from "../components/Database/Pagination";
 
 export default function Database() {
   const { projectId } = useParams();
@@ -35,11 +36,12 @@ export default function Database() {
   const [editingRecord, setEditingRecord] = useState(null);
 
   const [queryParams, setQueryParams] = useState({
-      page: 1,
-      limit: 50,
-      sort: '-createdAt',
+      page: parseInt(searchParams.get('page')) || 1,
+      limit: parseInt(searchParams.get('limit')) || 50,
+      sort: searchParams.get('sort') || '-createdAt',
       filters: []
   });
+  const [totalRecords, setTotalRecords] = useState(0);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [rlsEnabled, setRlsEnabled] = useState(false);
   const [rlsMode, setRlsMode] = useState("public-read");
@@ -96,14 +98,28 @@ export default function Database() {
          if (f.field && f.value !== '') queryStr += `&${f.field}${f.operator === '=' ? '' : f.operator}=${encodeURIComponent(f.value)}`;
       });
       const res = await api.get(`/api/projects/${projectId}/collections/${activeCollection.name}/data${queryStr}`);
-      setData(res.data);
+      // Handle wrapped metadata response
+      if (res.data && res.data.items) {
+        setData(res.data.items);
+        setTotalRecords(res.data.total || 0);
+      } else {
+        setData(res.data || []);
+        setTotalRecords(Array.isArray(res.data) ? res.data.length : 0);
+      }
     } catch { toast.error("Failed to load data"); }
     finally { setLoadingData(false); }
   }, [activeCollection, projectId, queryParams]);
 
   useEffect(() => {
     if (!activeCollection) return;
-    setSearchParams({ collection: activeCollection.name });
+    
+    // Sync URL with current page and limit
+    const newParams = { collection: activeCollection.name };
+    if (queryParams.page > 1) newParams.page = queryParams.page;
+    if (queryParams.limit !== 50) newParams.limit = queryParams.limit;
+    if (queryParams.sort !== '-createdAt') newParams.sort = queryParams.sort;
+    
+    setSearchParams(newParams);
     fetchData();
   }, [activeCollection, fetchData, setSearchParams]);
 
@@ -164,7 +180,7 @@ export default function Database() {
               onOpenSidebar={() => setIsSidebarOpen(true)}
             />
 
-            <div className="db-content" style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+            <div className="db-content" style={{ flex: 1, overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column' }}>
               {showFilterMenu && (
                 <DatabaseFilter 
                   queryParams={queryParams}
@@ -174,22 +190,32 @@ export default function Database() {
                 />
               )}
 
-              {loadingData ? (
-                <div style={{ padding: '2rem', textAlign: 'center' }} className="spinner"></div>
-              ) : data.length === 0 ? (
-                <div className="empty-state" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
-                  <FileText size={48} />
-                  <p style={{ marginTop: '1rem' }}>No records found</p>
-                </div>
-              ) : viewMode === "list" ? (
-                <RecordList data={data} activeCollection={activeCollection} onView={setSelectedRecord} />
-              ) : viewMode === "table" ? (
-                <CollectionTable data={data} activeCollection={activeCollection} onDelete={(id) => { setSelectedId(id); setShowModal(true); }} onView={setSelectedRecord} onEdit={(rec) => { if (activeCollection?.name === 'users') return; setEditingRecord(rec); setIsAddModalOpen(true); }} />
-              ) : (
-                <div style={{ height: '100%', overflow: 'auto', padding: '1.5rem', background: '#050505', color: 'var(--color-primary)', fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                  <pre>{JSON.stringify(data, null, 2)}</pre>
-                </div>
-              )}
+              <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+                {loadingData ? (
+                  <div style={{ padding: '2rem', textAlign: 'center' }} className="spinner"></div>
+                ) : data.length === 0 ? (
+                  <div className="empty-state" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
+                    <FileText size={48} />
+                    <p style={{ marginTop: '1rem' }}>No records found</p>
+                  </div>
+                ) : viewMode === "list" ? (
+                  <RecordList data={data} activeCollection={activeCollection} onView={setSelectedRecord} />
+                ) : viewMode === "table" ? (
+                  <CollectionTable data={data} activeCollection={activeCollection} onDelete={(id) => { setSelectedId(id); setShowModal(true); }} onView={setSelectedRecord} onEdit={(rec) => { if (activeCollection?.name === 'users') return; setEditingRecord(rec); setIsAddModalOpen(true); }} />
+                ) : (
+                  <div style={{ height: '100%', overflow: 'auto', padding: '1.5rem', background: '#050505', color: 'var(--color-primary)', fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                    <pre>{JSON.stringify(data, null, 2)}</pre>
+                  </div>
+                )}
+              </div>
+
+              <Pagination 
+                total={totalRecords}
+                page={queryParams.page}
+                limit={queryParams.limit}
+                onPageChange={(p) => setQueryParams(prev => ({ ...prev, page: p }))}
+                onLimitChange={(l) => setQueryParams(prev => ({ ...prev, limit: l, page: 1 }))}
+              />
             </div>
           </>
         ) : (

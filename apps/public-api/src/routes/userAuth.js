@@ -12,8 +12,7 @@ router.post('/signup', verifyApiKey, checkAuthEnabled, signup);
 router.post('/login', verifyApiKey, checkAuthEnabled, login);
 router.get('/social/:provider/start', verifyApiKey, checkAuthEnabled, startSocialAuth);
 router.get('/social/:provider/callback', handleSocialAuthCallback);
-// P3: Add verifyApiKey to exchange endpoint for project boundary enforcement
-router.post('/social/exchange', verifyApiKey, exchangeSocialRefreshToken);
+router.post('/social/exchange', verifyApiKey, checkAuthEnabled, exchangeSocialRefreshToken);
 
 // GET CURRENT USER
 router.get('/me', verifyApiKey, checkAuthEnabled, me);

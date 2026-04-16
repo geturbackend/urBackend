@@ -152,7 +152,7 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                         );
                     }
                     return (
-                        <div className="cell-content" title={String(value)}>
+                        <div className="cell-content">
                             {String(value)}
                         </div>
                     );
@@ -541,7 +541,10 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
 
                                         return (
                                             <td key={cell.id} style={style} className={isStickyLeft || isStickyRight ? 'sticky-cell' : ''}>
-                                                <div className="cell-wrapper">
+                                                <div 
+                                                   className="cell-wrapper" 
+                                                   title={typeof cell.getValue() === 'object' ? JSON.stringify(cell.getValue(), null, 2) : String(cell.getValue() ?? '')}
+                                                >
                                                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                                 </div>
                                             </td>
