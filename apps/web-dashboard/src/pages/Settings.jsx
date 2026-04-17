@@ -7,7 +7,7 @@ import { API_URL } from '../config';
 import ConfirmationModal from './ConfirmationModal';
 
 export default function Settings() {
-    const { logout } = useAuth();
+    const { logout, user, isLoading } = useAuth();
 
     // Password State
     const [passData, setPassData] = useState({ currentPassword: '', newPassword: '' });
@@ -17,6 +17,7 @@ export default function Settings() {
     const [deletePass, setDeletePass] = useState('');
     const [loadingDelete, setLoadingDelete] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const pageLoading = isLoading;
 
     // Handle Password Change
     const handlePasswordChange = async (e) => {
@@ -58,6 +59,22 @@ export default function Settings() {
         setShowDeleteModal(true);
     };
 
+const SettingsSkeleton = () => (
+    <div style={{ maxWidth: '600px', margin: '0 auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <div className="skeleton" style={{ width: '140px', height: '28px' }} />
+        {[1, 2].map(i => (
+            <div key={i} className="glass-card" style={{ borderRadius: '8px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="skeleton" style={{ width: '160px', height: '20px' }} />
+                <div className="skeleton" style={{ width: '100%', height: '38px', borderRadius: '6px' }} />
+                <div className="skeleton" style={{ width: '100%', height: '38px', borderRadius: '6px' }} />
+                <div className="skeleton" style={{ width: '100px', height: '34px', borderRadius: '6px' }} />
+            </div>
+        ))}
+    </div>
+);
+
+if (pageLoading) return <SettingsSkeleton />;
+
     return (
         <div className="container" style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: '4rem' }}>
             <div className="page-header" style={{ marginBottom: '3rem', borderBottom: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -69,16 +86,16 @@ export default function Settings() {
                 <div style={{
                     padding: '6px 14px',
                     borderRadius: '20px',
-                    backgroundColor: useAuth().user?.isVerified ? 'rgba(62, 207, 142, 0.1)' : 'rgba(255, 193, 7, 0.1)',
-                    border: `1px solid ${useAuth().user?.isVerified ? 'rgba(62, 207, 142, 0.2)' : 'rgba(255, 193, 7, 0.2)'}`,
-                    color: useAuth().user?.isVerified ? '#3ECF8E' : '#FFC107',
+                    backgroundColor: user?.isVerified ? 'rgba(62, 207, 142, 0.1)' : 'rgba(255, 193, 7, 0.1)',
+                    border: `1px solid ${user?.isVerified ? 'rgba(62, 207, 142, 0.2)' : 'rgba(255, 193, 7, 0.2)'}`,
+                    color: user?.isVerified ? '#3ECF8E' : '#FFC107',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
                     fontWeight: 600,
                     fontSize: '0.9rem'
                 }}>
-                    {useAuth().user?.isVerified ? (
+                    {user?.isVerified ? (
                         <>
                             <CheckCircle size={16} /> Verified Account
                         </>

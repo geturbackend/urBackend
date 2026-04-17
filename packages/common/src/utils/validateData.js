@@ -1,5 +1,15 @@
 const mongoose = require('mongoose');
 
+const FORMAT_REGEX = {
+    email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+
+    url: /^(https?:\/\/)([\w-]+(\.[\w-]+)+)(:\d+)?(\/[\w\-.~:/?#[\]@!$&'()*+,;=%]*)?$/,
+
+    color: /^#[0-9A-Fa-f]{6}$/,
+
+    slug: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+};
+
 const normalizeKey = (key) => String(key || '').replace(/\uFEFF/g, '').trim();
 
 const buildIncomingMaps = (incomingData = {}) => {
@@ -19,7 +29,6 @@ const buildIncomingMaps = (incomingData = {}) => {
 };
 
 // Recursive data validator for schema fields
-// Returns error string or null if valid
 function validateField(value, field) {
     if (field.required && (value === undefined || value === null)) {
         return `Field '${field.key}' is required.`;
@@ -28,17 +37,40 @@ function validateField(value, field) {
 
     switch (field.type) {
         case 'String':
-            if (typeof value !== 'string') return `Field '${field.key}' must be a String.`;
+            if (typeof value !== 'string') {
+                return `Field '${field.key}' must be a String.`;
+            }
+
+            if (field.format) {
+                const regex = FORMAT_REGEX[field.format];
+
+                if (regex && !regex.test(value)) {
+                    if (field.format === 'email') {
+                        return `Field '${field.key}' must be a valid email (e.g., user@example.com).`;
+                    }
+                    return `Field '${field.key}' must match format '${field.format}'.`;
+                }
+            }
             break;
+
         case 'Number':
-            if (typeof value !== 'number') return `Field '${field.key}' must be a Number.`;
+            if (typeof value !== 'number') {
+                return `Field '${field.key}' must be a Number.`;
+            }
             break;
+
         case 'Boolean':
-            if (typeof value !== 'boolean') return `Field '${field.key}' must be a Boolean.`;
+            if (typeof value !== 'boolean') {
+                return `Field '${field.key}' must be a Boolean.`;
+            }
             break;
+
         case 'Date':
-            if (isNaN(Date.parse(value))) return `Field '${field.key}' must be a valid Date.`;
+            if (isNaN(Date.parse(value))) {
+                return `Field '${field.key}' must be a valid Date.`;
+            }
             break;
+
         case 'Object':
             if (typeof value !== 'object' || Array.isArray(value)) {
                 return `Field '${field.key}' must be an Object.`;
@@ -50,6 +82,7 @@ function validateField(value, field) {
                 }
             }
             break;
+
         case 'Array':
             if (!Array.isArray(value)) {
                 return `Field '${field.key}' must be an Array.`;
@@ -67,57 +100,70 @@ function validateField(value, field) {
                 }
             }
             break;
+
         case 'Ref':
             if (typeof value !== 'string' || !mongoose.Types.ObjectId.isValid(value)) {
                 return `Field '${field.key}' must be a valid reference ID (ObjectId).`;
             }
             break;
     }
+
     return null;
 }
 
 // Validate incoming data against schema rules
-// Returns { error } or { cleanData }
 function validateData(incomingData, schemaRules) {
-    const cleanData = { ...incomingData }; // Start with all data
+    const cleanData = { ...incomingData };
     const { normalizedValueMap } = buildIncomingMaps(incomingData);
 
     for (const field of schemaRules) {
         const fieldKey = normalizeKey(field.key);
-        const value = normalizedValueMap.has(fieldKey)
+        let value = normalizedValueMap.has(fieldKey)
             ? normalizedValueMap.get(fieldKey)
             : incomingData[field.key];
 
+        // ✅ FIX: trim BEFORE validation and storage
+        if (field.type === 'String' && typeof value === 'string') {
+            value = value.trim();
+        }
+
         const error = validateField(value, field);
         if (error) return { error };
-
 
         if (value !== undefined) {
             cleanData[field.key] = value;
         }
     }
+
     return { cleanData };
 }
 
-// Validate partial update data (non-required fields can be missing)
+// Validate partial update data
 function validateUpdateData(incomingData, schemaRules) {
-    const updateData = { ...incomingData }; // Start with all data
+    const updateData = { ...incomingData };
     const { normalizedValueMap } = buildIncomingMaps(incomingData);
     const normalizedSchemaMap = new Map(
         schemaRules.map((f) => [normalizeKey(f.key), f])
     );
 
-    for (const [normalizedKey, value] of normalizedValueMap.entries()) {
+    for (const [normalizedKey, valueRaw] of normalizedValueMap.entries()) {
         const fieldRule = normalizedSchemaMap.get(normalizedKey);
-        if (!fieldRule) continue; // Allow extra fields
+        if (!fieldRule) continue;
 
-        // For updates, don't enforce 'required' — only validate type
+        let value = valueRaw;
+
+        // ✅ FIX here also
+        if (fieldRule.type === 'String' && typeof value === 'string') {
+            value = value.trim();
+        }
+
         const tempField = { ...fieldRule, required: false };
         const error = validateField(value, tempField);
         if (error) return { error };
 
         updateData[fieldRule.key] = value;
     }
+
     return { updateData };
 }
 

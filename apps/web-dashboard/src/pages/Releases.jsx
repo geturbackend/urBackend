@@ -50,10 +50,21 @@ export default function Releases() {
             </div>
 
             {loading ? (
-                <div style={{ textAlign: 'center', padding: '40px' }}>
-                    <div className="spinner" style={{ margin: '0 auto' }}></div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        {[1, 2, 3].map(i => (
+            <div key={i} className="glass-card" style={{ borderRadius: '12px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div className="skeleton" style={{ width: '80px', height: '24px', borderRadius: '20px' }} />
+                    <div className="skeleton" style={{ width: '120px', height: '14px' }} />
                 </div>
-            ) : releases.length === 0 ? (
+                <div className="skeleton" style={{ width: '60%', height: '28px' }} />
+                <div className="skeleton" style={{ width: '100%', height: '14px' }} />
+                <div className="skeleton" style={{ width: '80%', height: '14px' }} />
+                <div className="skeleton" style={{ width: '90%', height: '14px' }} />
+            </div>
+        ))}
+    </div>
+) : releases.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '80px 20px', background: 'var(--color-bg-secondary)', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
                     <Rocket size={48} color="var(--color-text-muted)" style={{ marginBottom: '20px' }} />
                     <h3>No releases yet</h3>
