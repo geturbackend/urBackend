@@ -2,9 +2,12 @@ const mongoose = require('mongoose');
 
 const FORMAT_REGEX = {
     email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-    url: /^https?:\/\/.+$/,
+
+    url: /^(https?:\/\/)([\w-]+(\.[\w-]+)+)(:\d+)?(\/[\w\-.~:/?#[\]@!$&'()*+,;=%]*)?$/,
+
     color: /^#[0-9A-Fa-f]{6}$/,
-    slug: /^[a-z0-9-]+$/,
+
+    slug: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
 };
 
 const normalizeKey = (key) => String(key || '').replace(/\uFEFF/g, '').trim();
