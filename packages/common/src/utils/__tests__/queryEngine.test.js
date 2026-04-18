@@ -10,6 +10,7 @@ describe('QueryEngine', () => {
             sort: jest.fn().mockReturnThis(),
             skip: jest.fn().mockReturnThis(),
             limit: jest.fn().mockReturnThis(),
+            maxTimeMS: jest.fn().mockReturnThis(),
             populate: jest.fn().mockReturnThis(),
             model: {
                 countDocuments: jest.fn().mockResolvedValue(10)
@@ -98,6 +99,7 @@ describe('QueryEngine', () => {
         expect(filterArg.name.$regex).toBeInstanceOf(RegExp);
         expect(filterArg.name.$regex.source).toBe('John');
         expect(filterArg.name.$regex.flags).toContain('i');
+        expect(mockQuery.maxTimeMS).toHaveBeenCalledWith(QueryEngine.REGEX_MAX_TIME_MS);
     });
 
     test('should throw a query validation error for invalid _regex pattern', () => {
@@ -105,5 +107,12 @@ describe('QueryEngine', () => {
         const engine = new QueryEngine(mockQuery, queryString);
 
         expect(() => engine.filter()).toThrow('Invalid regex pattern');
+    });
+
+    test('should throw a query validation error for oversized _regex pattern', () => {
+        const queryString = { name_regex: 'a'.repeat(QueryEngine.MAX_REGEX_PATTERN_LENGTH + 1) };
+        const engine = new QueryEngine(mockQuery, queryString);
+
+        expect(() => engine.filter()).toThrow('exceeds');
     });
 });

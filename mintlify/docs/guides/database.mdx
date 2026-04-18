@@ -100,7 +100,7 @@ Use query parameters to filter, sort, and paginate results.
 | `sort` | Field to sort by, prefix `-` for descending | `?sort=-createdAt` |
 | `field_suffix` | Filter by field value (see below) | `?age_gt=18` |
 
-### Advanced Filtering
+### Advanced filtering
 
 You can append suffixes to field names in the query string to apply MongoDB comparison operators.
 
@@ -115,6 +115,8 @@ You can append suffixes to field names in the query string to apply MongoDB comp
 | `_in` | `$in` | Match any in a list | `?tags_in=tech,news` |
 | `_exists` | `$exists` | Check if field exists | `?email_exists=true` |
 | `_regex` | `$regex` | Case-insensitive regex | `?name_regex=^John` |
+
+`_regex` patterns are capped at 128 characters; invalid or oversized patterns return `400 Bad Request`.
 
 **Filtering example — published posts, newest first, price between 10 and 50:**
 

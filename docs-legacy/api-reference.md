@@ -42,6 +42,8 @@
 | `field_exists` | `?email_exists=true` | Check if field exists (boolean) |
 | `field_regex` | `?name_regex=^Jo` | Case-insensitive regex match |
 
+`field_regex` patterns are capped at 128 characters; invalid or oversized patterns return `400`.
+
 ## Common Headers
 
 | Header | Required | Purpose |

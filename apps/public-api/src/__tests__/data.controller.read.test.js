@@ -165,7 +165,11 @@ describe('data.controller read RLS filters', () => {
         await getAllData(req, res);
 
         expect(res.status).toHaveBeenCalledWith(400);
-        expect(res.json).toHaveBeenCalledWith({ error: 'Invalid regex pattern for "name_regex".' });
+        expect(res.json).toHaveBeenCalledWith({
+            success: false,
+            data: {},
+            message: 'Invalid regex pattern for "name_regex".',
+        });
     });
 
     test('getSingleDoc calls populate on the query', async () => {

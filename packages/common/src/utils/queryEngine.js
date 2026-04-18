@@ -10,9 +10,12 @@ class QueryEngine {
     constructor(query, queryString) {
         this.query = query;
         this.queryString = queryString;
+        this.hasRegexFilter = false;
     }
 
     static EXCLUDED_FIELDS = ['page', 'sort', 'limit', 'fields', 'populate', 'expand', 'count'];
+    static MAX_REGEX_PATTERN_LENGTH = 128;
+    static REGEX_MAX_TIME_MS = 2000;
 
     /**
      * Builds a MongoDB query object from the query string parameters.
@@ -22,6 +25,7 @@ class QueryEngine {
      */
     _buildMongoQuery(excludeCount = false) {
         const queryObj = { ...this.queryString };
+        this.hasRegexFilter = false;
         
         QueryEngine.EXCLUDED_FIELDS.forEach(el => delete queryObj[el]);
 
@@ -52,14 +56,25 @@ class QueryEngine {
                 mongoQuery[field] = { ...mongoQuery[field], $in: values };
             } else if (key.endsWith('_exists')) {
                 const field = key.replace(/_exists$/, '');
-                const value = queryObj[key] === 'true';
-                mongoQuery[field] = { ...mongoQuery[field], $exists: value };
+                const raw = queryObj[key];
+                if (raw !== 'true' && raw !== 'false') {
+                    throw new QueryEngine.QueryFilterError(`Invalid value for "${field}_exists"; expected "true" or "false".`);
+                }
+                mongoQuery[field] = { ...mongoQuery[field], $exists: raw === 'true' };
             } else if (key.endsWith('_regex')) {
                 const field = key.replace(/_regex$/, '');
                 try {
-                    const value = new RegExp(String(queryObj[key]), 'i');
+                    const pattern = String(queryObj[key]);
+                    if (pattern.length > QueryEngine.MAX_REGEX_PATTERN_LENGTH) {
+                        throw new QueryEngine.QueryFilterError(
+                            `Regex pattern for "${field}_regex" exceeds ${QueryEngine.MAX_REGEX_PATTERN_LENGTH} characters.`,
+                        );
+                    }
+                    const value = new RegExp(pattern, 'i');
                     mongoQuery[field] = { ...mongoQuery[field], $regex: value };
+                    this.hasRegexFilter = true;
                 } catch (e) {
+                    if (e instanceof QueryEngine.QueryFilterError) throw e;
                     throw new QueryEngine.QueryFilterError(`Invalid regex pattern for "${field}_regex".`);
                 }
             } else {
@@ -71,6 +86,9 @@ class QueryEngine {
 
     filter() {
         this.query = this.query.find(this._buildMongoQuery(true));
+        if (this.hasRegexFilter && typeof this.query.maxTimeMS === 'function') {
+            this.query = this.query.maxTimeMS(QueryEngine.REGEX_MAX_TIME_MS);
+        }
         return this;
     }
 
@@ -125,7 +143,11 @@ class QueryEngine {
 
     async count() {
         // Clone the query to avoid affecting the original query's skip/limit
-        return await this.query.model.countDocuments(this.query.getQuery());
+        const countQuery = this.query.model.countDocuments(this.query.getQuery());
+        if (this.hasRegexFilter && countQuery && typeof countQuery.maxTimeMS === 'function') {
+            countQuery.maxTimeMS(QueryEngine.REGEX_MAX_TIME_MS);
+        }
+        return await countQuery;
     }
 }
 
