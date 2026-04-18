@@ -129,7 +129,11 @@ const mongoFilter = countEngine._buildMongoQuery(true);
 const mergedFilter = Object.keys(baseFilter).length > 0
   ? { $and: [mongoFilter, baseFilter] }
   : mongoFilter;
-  const count = await Model.countDocuments(mergedFilter);
+  const countQuery = Model.countDocuments(mergedFilter);
+  if (countEngine.hasRegexFilter && countQuery && typeof countQuery.maxTimeMS === 'function') {
+    countQuery.maxTimeMS(QueryEngine.REGEX_MAX_TIME_MS);
+  }
+  const count = await countQuery;
   return res.status(200).json({ success: true, data: { count }, message: "Count fetched successfully." });
 }
     const features = new QueryEngine(Model.find(), req.query)
@@ -163,7 +167,18 @@ const mergedFilter = Object.keys(baseFilter).length > 0
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    if (err && (err.statusCode === 400 || err.name === 'QueryFilterError')) {
+      return res.status(400).json({
+        success: false,
+        data: {},
+        message: err.message || "Invalid query filter.",
+      });
+    }
+    res.status(500).json({
+      success: false,
+      data: {},
+      message: "Failed to fetch data.",
+    });
   }
 };
 

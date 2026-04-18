@@ -34,7 +34,15 @@
 | `limit` | `?limit=50` | Limit results (default 100) |
 | `page` | `?page=1` | Pagination page number |
 | `field_gt` | `?price_gt=100` | Greater than filter |
+| `field_gte` | `?age_gte=18` | Greater than or equal filter |
 | `field_lt` | `?price_lt=50` | Less than filter |
+| `field_lte` | `?age_lte=65` | Less than or equal filter |
+| `field_ne` | `?status_ne=active` | Not equal to filter |
+| `field_in` | `?tags_in=a,b` | Match any in comma-separated list |
+| `field_exists` | `?email_exists=true` | Check if field exists (boolean) |
+| `field_regex` | `?name_regex=^Jo` | Case-insensitive regex match |
+
+`field_regex` patterns are capped at 128 characters; invalid or oversized patterns return `400`.
 
 ## Common Headers
 

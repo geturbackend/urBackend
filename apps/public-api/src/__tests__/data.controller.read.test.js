@@ -145,6 +145,33 @@ describe('data.controller read RLS filters', () => {
         expect(res.status).not.toHaveBeenCalledWith(500);
     });
 
+    test('getAllData returns 400 when QueryEngine throws query validation error', async () => {
+        mockQueryEngine.mockImplementationOnce(() => {
+            const err = new Error('Invalid regex pattern for "name_regex".');
+            err.statusCode = 400;
+            return {
+                query: {},
+                filter() { throw err; },
+                sort() { return this; },
+                populate() { return this; },
+                paginate() { return this; },
+                count() { return Promise.resolve(0); },
+            };
+        });
+
+        const req = makeReq({ query: { name_regex: '[' } });
+        const res = makeRes();
+
+        await getAllData(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith({
+            success: false,
+            data: {},
+            message: 'Invalid regex pattern for "name_regex".',
+        });
+    });
+
     test('getSingleDoc calls populate on the query', async () => {
         const req = makeReq({ query: { populate: 'author' } });
         const res = makeRes();
