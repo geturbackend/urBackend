@@ -114,11 +114,11 @@ You can append suffixes to field names in the query string to apply MongoDB comp
 | `_lte` | `$lte` | Less than or equal | `?age_lte=65` |
 | `_in` | `$in` | Match any in a list | `?tags_in=tech,news` |
 | `_exists` | `$exists` | Check if field exists | `?email_exists=true` |
-| `_regex` | `$regex` | Case-insensitive regex | `?name_regex=^John` |
+| `_regex` | `$regex` | Case-insensitive regex | `?name_regex=%5EJohn` |
 
 `_regex` patterns are capped at 128 characters; invalid or oversized patterns return `400 Bad Request`.
 
-**Filtering example — published posts, newest first, price between 10 and 50:**
+**Filtering example — published posts, newest first, price strictly greater than 10 and strictly less than 50:**
 
 ```bash
 curl "https://api.ub.bitbros.in/api/data/posts?status=published&price_gt=10&price_lt=50&sort=-createdAt" \
