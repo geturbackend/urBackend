@@ -3,6 +3,32 @@ title: Changelog
 description: What's new in urBackend — new features, improvements, and fixes.
 ---
 
+<Update label="2026-04-20" description="Week of April 14–20" tags={["Feature", "Improvement", "Fix"]}>
+## New features
+
+**Advanced query operators** — Filter your data with new query suffixes: `_ne` (not equal), `_in` (match any in a list), `_exists` (check field presence), and `_regex` (case-insensitive pattern matching). These join the existing `_gt`, `_gte`, `_lt`, and `_lte` operators. Regex patterns are capped at 128 characters for safety. [Learn more](/guides/database)
+
+**Document count method** — Use `client.db.count()` in the SDK to count documents in a collection with optional filters, without fetching all the data. [View SDK docs](/sdk/database)
+
+**Dashboard dark mode** — Toggle between light and dark themes from the sidebar. Your preference is saved automatically.
+
+**Database pagination** — The database view in the dashboard now includes pagination controls and URL-synced search, making it easier to browse large collections.
+
+## Improvements
+
+**Dashboard UI overhaul** — The dashboard has been redesigned with a streamlined "Command Center" layout. Project details, analytics, auth management, storage, and database views have all been refreshed for clarity and speed.
+
+**SDK CommonJS support** — The JavaScript/TypeScript SDK now ships with CommonJS entry points alongside ESM, so it works out of the box in Node.js projects that use `require()`. [View SDK docs](/sdk/overview)
+
+**Improved RLS filter controls** — Row-level security settings in the dashboard are now more responsive, with optimized filter reactivity.
+
+## Bug fixes
+
+- Fixed pagination counting logic that could show incorrect totals
+- Resolved SDK import and build errors that affected some bundler configurations
+- Improved API error responses for invalid query filters — bad filters now return `400 Bad Request` with a clear message instead of a generic server error
+</Update>
+
 <Update label="2026-04-13" description="Week of April 7–13" tags={["Feature", "Improvement", "Fix"]}>
 ## New features
 
