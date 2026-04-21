@@ -213,7 +213,7 @@ describe('storage.controller', () => {
 
             await storageController.deleteFile(req, res);
 
-            expect(mockStorageFrom.list).toHaveBeenCalledWith('project_id_1', { search: 'file.txt' });
+            expect(mockStorageFrom.list).toHaveBeenCalledWith('project_id_1', { search: 'file.txt', limit: 1 });
             expect(mockStorageFrom.remove).toHaveBeenCalledWith(['project_id_1/file.txt']);
             expect(Project.updateOne).toHaveBeenCalledWith(
                 { _id: 'project_id_1' },
@@ -222,8 +222,9 @@ describe('storage.controller', () => {
             expect(res.json).toHaveBeenCalledWith({ message: 'File deleted successfully' });
         });
 
-        test('returns 200 on successful external deletion (skips internal usage list)', async () => {
+        test('returns 200 on successful external deletion and skips internal storageUsed update', async () => {
             isProjectStorageExternal.mockReturnValue(true);
+            mockStorageFrom.list.mockResolvedValue({ data: [{ metadata: { size: 1024 } }], error: null });
             mockStorageFrom.remove.mockResolvedValue({ data: [{ path: 'project_id_1/file.txt' }], error: null });
 
             const req = { project: makeProject(), body: { path: 'project_id_1/file.txt' } };
@@ -231,22 +232,23 @@ describe('storage.controller', () => {
 
             await storageController.deleteFile(req, res);
 
-            expect(mockStorageFrom.list).not.toHaveBeenCalled();
+            expect(mockStorageFrom.list).toHaveBeenCalledWith('project_id_1', { search: 'file.txt', limit: 1 });
             expect(Project.updateOne).not.toHaveBeenCalled();
             expect(res.json).toHaveBeenCalledWith({ message: 'File deleted successfully' });
         });
 
-        test('returns 500 when Supabase list fails', async () => {
+        test('falls back to zero fileSize when Supabase list fails', async () => {
             isProjectStorageExternal.mockReturnValue(false);
             mockStorageFrom.list.mockResolvedValue({ data: null, error: new Error('List failed') });
+            mockStorageFrom.remove.mockResolvedValue({ data: [{ path: 'project_id_1/file.txt' }], error: null });
 
             const req = { project: makeProject(), body: { path: 'project_id_1/file.txt' } };
             const res = makeRes();
 
             await storageController.deleteFile(req, res);
 
-            expect(res.status).toHaveBeenCalledWith(500);
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'File deletion failed' }));
+            expect(Project.updateOne).not.toHaveBeenCalled();
+            expect(res.json).toHaveBeenCalledWith({ message: 'File deleted successfully' });
         });
 
         test('returns 500 when Supabase remove fails', async () => {
