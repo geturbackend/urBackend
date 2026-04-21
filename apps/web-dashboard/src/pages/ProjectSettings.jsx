@@ -670,7 +670,18 @@ function MailTemplatesForm({ projectId }) {
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                             <FormField label="Template Key (tag)" hint={<>Use this in API/SDK as <code>templateName</code>. If blank, it’s auto-generated.</>}> 
-                                <input className="input-field" value={form.key} onChange={(e) => setForm((p) => ({ ...p, key: e.target.value }))} style={{ ...inputStyle, fontFamily: 'monospace' }} />
+                                <input
+                                    className="input-field"
+                                    value={form.key ?? ""}
+                                    onChange={(e) => {
+                                        const nextKey = e.target.value;
+                                        setForm((p) => ({
+                                            ...p,
+                                            key: nextKey.trim() === "" ? undefined : nextKey,
+                                        }));
+                                    }}
+                                    style={{ ...inputStyle, fontFamily: 'monospace' }}
+                                />
                             </FormField>
                             <FormField label="Template Name">
                                 <input className="input-field" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} style={inputStyle} />

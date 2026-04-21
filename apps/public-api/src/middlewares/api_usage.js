@@ -5,7 +5,7 @@ const getDayKey = () => new Date().toISOString().split('T')[0];
 const DEFAULT_DAILY_TTL_SECONDS = 90000; // 25 hours
 
 const incrWithTtlAtomic = async (key, ttlSeconds = DEFAULT_DAILY_TTL_SECONDS) => {
-  if (!redis || redis.status !== 'ready') return;
+  if (!redis || redis.status !== 'ready') return Promise.resolve();
 
   const luaScript = `
     local current = redis.call("INCR", KEYS[1])

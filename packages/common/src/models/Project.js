@@ -58,9 +58,10 @@ const authProviderSchema = new mongoose.Schema(
 );
 
 /**
- * Mail templates are stored at the project level and rendered server-side.
- * Keep select:false to avoid accidentally returning large template payloads
- * in standard project responses.
+ * Legacy/compatibility schema for mail templates stored on the project
+ * document as an embedded fallback/migration path; templates are rendered
+ * server-side. Keep select:false to avoid accidentally returning large
+ * template payloads in standard project responses.
  */
 const mailTemplateSchema = new mongoose.Schema(
   {

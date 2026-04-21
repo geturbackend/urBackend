@@ -10,7 +10,7 @@ const getEndOfMonthTtlSeconds = (now = new Date()) => {
 };
 
 const incrWithTtlAtomic = async (key, ttlSeconds) => {
-  if (!redis || redis.status !== "ready") return;
+  if (!redis || redis.status !== "ready") return Promise.resolve();
   const luaScript = `
     local current = redis.call("INCR", KEYS[1])
     if current == 1 then

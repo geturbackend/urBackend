@@ -1445,7 +1445,7 @@ module.exports.createMailTemplate = async (req, res) => {
 
     if (!project) return res.status(404).json({ success: false, data: {}, message: "Project not found." });
 
-    const key = payload.key !== undefined ? toSlug(payload.key) : toSlug(payload.name);
+    const key = (payload.key !== undefined && payload.key.trim() !== "") ? toSlug(payload.key) : toSlug(payload.name);
 
     const created = await MailTemplate.create({
       projectId: project._id,
@@ -1518,20 +1518,27 @@ module.exports.updateMailTemplate = async (req, res) => {
     if (payload.html !== undefined) update.html = payload.html;
     if (payload.text !== undefined) update.text = payload.text;
 
+    const templateFilter = { _id: templateId, projectId: project._id, isSystem: { $ne: true } };
+    const existing = await MailTemplate.findOne(templateFilter).lean();
+
+    if (!existing) return res.status(404).json({ success: false, data: {}, message: "Template not found." });
+
+    const nextHtml = payload.html !== undefined ? update.html : existing.html;
+    const nextText = payload.text !== undefined ? update.text : existing.text;
+    const hasBody =
+      (typeof nextHtml === "string" && nextHtml.trim().length > 0) ||
+      (typeof nextText === "string" && nextText.trim().length > 0);
+    if (!hasBody) {
+      return res.status(400).json({ success: false, data: {}, message: "Template must contain at least one of html or text." });
+    }
+
     const updated = await MailTemplate.findOneAndUpdate(
-      { _id: templateId, projectId: project._id, isSystem: { $ne: true } },
+      templateFilter,
       { $set: update },
       { new: true },
     ).lean();
 
     if (!updated) return res.status(404).json({ success: false, data: {}, message: "Template not found." });
-
-    const hasBody =
-      (typeof updated.html === "string" && updated.html.trim().length > 0) ||
-      (typeof updated.text === "string" && updated.text.trim().length > 0);
-    if (!hasBody) {
-      return res.status(400).json({ success: false, data: {}, message: "Template must contain at least one of html or text." });
-    }
 
     return res.json({
       success: true,
