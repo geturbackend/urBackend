@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build:sdk": "npm install --prefix ../../../sdks/urbackend-sdk && npm run build --prefix ../../../sdks/urbackend-sdk",
+    "build": "npm run build:sdk && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -16,7 +17,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@urbackend/sdk": "^0.2.5",
+    "@urbackend/sdk": "^0.2.8",
     "axios": "^1.15.0",
     "clsx": "^2.1.1",
     "lucide-react": "^1.8.0",

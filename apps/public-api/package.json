@@ -9,7 +9,8 @@
     "test": "jest --testPathPatterns=src/"
   },
   "jest": {
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "transform": {}
   },
   "dependencies": {
     "@kiroo/sdk": "^0.1.2",

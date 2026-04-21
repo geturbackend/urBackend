@@ -1,9 +1,9 @@
 'use strict';
 
+jest.mock('jsonwebtoken');
+
 const jwt = require('jsonwebtoken');
 const authMiddleware = require('../middlewares/authMiddleware');
-
-jest.mock('jsonwebtoken');
 
 describe('authMiddleware', () => {
     let req, res, next;

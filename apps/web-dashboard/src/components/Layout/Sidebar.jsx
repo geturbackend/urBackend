@@ -4,6 +4,7 @@ import {
     LayoutDashboard, Database, Shield, HardDrive, Settings, BarChart2,
     ArrowLeft, LogOut, X, Rocket, Webhook
 } from 'lucide-react';
+import ThemeToggle from '../ThemeToggle';
 
 function Sidebar({ logo, isOpen, onClose }) {
     const location = useLocation();
@@ -75,6 +76,7 @@ function Sidebar({ logo, isOpen, onClose }) {
             </nav>
 
             <div style={{ padding: '0.5rem', borderTop: '1px solid var(--color-border)' }}>
+                <ThemeToggle />
                 <button onClick={logout} className="nav-item" style={{ width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', justifyContent: 'flex-start' }}>
                     <LogOut size={16} /> <span>Logout</span>
                 </button>

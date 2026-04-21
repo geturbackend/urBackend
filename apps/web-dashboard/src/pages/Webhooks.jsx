@@ -216,7 +216,43 @@ export default function Webhooks() {
     return new Date(date).toLocaleString();
   };
 
-  if (loading) return <div className="container">Loading...</div>;
+  const WebhooksSkeleton = () => (
+    <div className="container" style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div className="skeleton" style={{ width: '32px', height: '32px', borderRadius: '6px' }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div className="skeleton" style={{ width: '100px', height: '18px' }} />
+                    <div className="skeleton" style={{ width: '160px', height: '12px' }} />
+                </div>
+            </div>
+            <div className="skeleton" style={{ width: '120px', height: '32px', borderRadius: '6px' }} />
+        </div>
+        {[1, 2, 3].map(i => (
+            <div key={i} className="glass-card" style={{ borderRadius: '8px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <div className="skeleton" style={{ width: '120px', height: '16px' }} />
+                        <div className="skeleton" style={{ width: '50px', height: '20px', borderRadius: '20px' }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <div className="skeleton" style={{ width: '60px', height: '28px', borderRadius: '4px' }} />
+                        <div className="skeleton" style={{ width: '60px', height: '28px', borderRadius: '4px' }} />
+                        <div className="skeleton" style={{ width: '28px', height: '28px', borderRadius: '4px' }} />
+                    </div>
+                </div>
+                <div className="skeleton" style={{ width: '70%', height: '12px' }} />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <div className="skeleton" style={{ width: '80px', height: '22px', borderRadius: '20px' }} />
+                    <div className="skeleton" style={{ width: '80px', height: '22px', borderRadius: '20px' }} />
+                    <div className="skeleton" style={{ width: '80px', height: '22px', borderRadius: '20px' }} />
+                </div>
+            </div>
+        ))}
+    </div>
+);
+
+if (loading) return <WebhooksSkeleton />;
 
   return (
     <div className="container" style={{ maxWidth: '1100px', margin: '0 auto', paddingBottom: '4rem' }}>

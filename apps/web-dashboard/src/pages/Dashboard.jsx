@@ -220,6 +220,22 @@ export default function Dashboard() {
             )}
           </div>
 
+          {/* 4. Admin Controls */}
+          {user?.isAdmin && (
+            <>
+              <SectionHeader title="Admin" />
+              <div className="glass-card" style={{ padding: '1rem', borderRadius: '12px', marginBottom: '2rem' }}>
+                <button
+                  className="btn btn-secondary"
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', padding: '0.75rem', borderRadius: '6px' }}
+                  onClick={() => navigate('/admin/waitlist')}
+                >
+                  View Waitlist
+                </button>
+              </div>
+            </>
+          )}
+
           {/* 5. Version Badge */}
           <ReleaseBadge />
         </div>

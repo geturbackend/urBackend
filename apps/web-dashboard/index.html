@@ -1,8 +1,12 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/yash-pouranik/urBackend/apps/web-dashboard/public/LOGO_SQ.png" />
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://cdn.jsdelivr.net/gh/yash-pouranik/urBackend/apps/web-dashboard/public/LOGO_SQ.png"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>urBackend | Instant Backend for Developers</title>
     <!-- Google Fonts -->
@@ -12,6 +16,38 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
       rel="stylesheet"
     />
+    <script>
+      (function () {
+        var storedValue = null;
+
+        try {
+          storedValue = localStorage.getItem("urbackend-theme");
+        } catch (e) {
+          /* storage unavailable; fall back to defaults */
+        }
+
+        var normalizedValue = (storedValue || "").toLowerCase();
+        var shouldUseLightMode;
+
+        if (normalizedValue) {
+          shouldUseLightMode =
+            normalizedValue === "light" || normalizedValue === "light-mode";
+        } else {
+          shouldUseLightMode =
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: light)").matches;
+        }
+
+        document.documentElement.classList.toggle(
+          "light-mode",
+          shouldUseLightMode,
+        );
+        document.documentElement.classList.toggle(
+          "light-mode",
+          shouldUseLightMode,
+        );
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

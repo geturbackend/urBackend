@@ -221,4 +221,54 @@ async function sendAuthOtpEmail(email, { otp, type, pname, byokKey, byokFrom }) 
     }
 }
 
-module.exports = { sendOtp, sendReleaseEmail, sendAuthOtpEmail };
+async function sendWaitlistConfirmationEmail(email) {
+    try {
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #ffffff; color: #111111; margin: 0; padding: 0; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
+                    .logo { margin-bottom: 32px; font-weight: 800; font-size: 24px; letter-spacing: -0.03em; color: #111; }
+                    h1 { font-size: 24px; font-weight: 700; line-height: 1.2; margin-bottom: 16px; letter-spacing: -0.02em; }
+                    .content { font-size: 16px; line-height: 1.6; color: #444; margin-bottom: 32px; }
+                    .footer { margin-top: 64px; padding-top: 32px; border-top: 1px solid #eeeeee; font-size: 13px; color: #888888; }
+                    .footer p { margin: 4px 0; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="logo">urBackend</div>
+                    <h1>You're on the list! 🎉</h1>
+                    <div class="content">
+                        Thanks for joining the urBackend Pro waitlist. We will reach out to you directly as soon as we launch, and you'll get 1 month of Pro completely free.
+                    </div>
+                    <div class="footer">
+                        <p>© ${new Date().getFullYear()} urBackend Inc. • Developer platform.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        const { data, error } = await resend.emails.send({
+            from: 'urBackend <urbackend@apps.bitbros.in>',
+            to: email,
+            subject: "You're on the waitlist! 🎉",
+            html: htmlContent,
+            replyTo: 'urbackend@apps.bitbros.in',
+        });
+
+        if (error) {
+            console.error("[Resend Error - Waitlist]", error);
+            throw new Error(error.message || "Failed to send email");
+        }
+        return { data };
+    } catch (error) {
+        console.error("[Email Service Error - Waitlist]", error);
+        throw error;
+    }
+}
+
+module.exports = { sendOtp, sendReleaseEmail, sendAuthOtpEmail, sendWaitlistConfirmationEmail };

@@ -98,12 +98,30 @@ Use query parameters to filter, sort, and paginate results.
 | `page` | Page number (1-indexed) | `?page=2` |
 | `limit` | Results per page | `?limit=20` |
 | `sort` | Field to sort by, prefix `-` for descending | `?sort=-createdAt` |
-| `filter[field][op]` | Filter by field value | `?filter[status][eq]=published` |
+| `field_suffix` | Filter by field value (see below) | `?age_gt=18` |
 
-**Filtering example — published posts, newest first, page 2:**
+### Advanced filtering
+
+You can append suffixes to field names in the query string to apply MongoDB comparison operators.
+
+| Suffix | MongoDB Operator | Description | Example |
+| --- | --- | --- | --- |
+| (none) | `$eq` | Exact match | `?status=active` |
+| `_ne` | `$ne` | Not equal to | `?role_ne=admin` |
+| `_gt` | `$gt` | Greater than | `?price_gt=100` |
+| `_gte` | `$gte` | Greater than or equal | `?age_gte=18` |
+| `_lt` | `$lt` | Less than | `?price_lt=50` |
+| `_lte` | `$lte` | Less than or equal | `?age_lte=65` |
+| `_in` | `$in` | Match any in a list | `?tags_in=tech,news` |
+| `_exists` | `$exists` | Check if field exists | `?email_exists=true` |
+| `_regex` | `$regex` | Case-insensitive regex | `?name_regex=%5EJohn` |
+
+`_regex` patterns are capped at 128 characters; invalid or oversized patterns return `400 Bad Request`.
+
+**Filtering example — published posts, newest first, price strictly greater than 10 and strictly less than 50 (exclusive bounds):**
 
 ```bash
-curl "https://api.ub.bitbros.in/api/data/posts?filter[status][eq]=published&sort=-createdAt&page=2&limit=10" \
+curl "https://api.ub.bitbros.in/api/data/posts?status=published&price_gt=10&price_lt=50&sort=-createdAt" \
   -H "x-api-key: pk_live_YOUR_KEY"
 ```
 

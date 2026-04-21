@@ -121,7 +121,7 @@ export default function Database() {
     
     setSearchParams(newParams);
     fetchData();
-  }, [activeCollection, fetchData, setSearchParams]);
+  }, [activeCollection, fetchData, setSearchParams, queryParams.page, queryParams.limit, queryParams.sort]);
 
   const handleSaveRls = async () => {
     try {

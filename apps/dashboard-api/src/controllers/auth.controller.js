@@ -218,7 +218,8 @@ const sendTokenResponse = async (user, statusCode, res) => {
             _id: user._id,
             email: user.email,
             isVerified: user.isVerified,
-            maxProjects: user.maxProjects
+            maxProjects: user.maxProjects,
+            isAdmin: user.email === process.env.ADMIN_EMAIL
         }
     });
 };
@@ -609,7 +610,9 @@ module.exports.getMe = async (req, res) => {
     try {
         const user = await Developer.findById(req.user._id).select("-password -refreshToken");
         if (!user) return res.status(404).json({ error: "User not found" });
-        res.json({ success: true, user });
+        const userData = typeof user.toObject === 'function' ? user.toObject() : { ...user };
+        userData.isAdmin = userData.email === process.env.ADMIN_EMAIL;
+        res.json({ success: true, user: userData });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Internal Server Error" });

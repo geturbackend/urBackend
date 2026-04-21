@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../utils/api';
 import {
     Database,
     Shield,
@@ -59,6 +60,11 @@ function LandingPage() {
     const [showEndpoints, setShowEndpoints] = useState(false);
     const [activeEndpoints, setActiveEndpoints] = useState([]);
 
+    const [waitlistEmail, setWaitlistEmail] = useState('');
+    const [waitlistStatus, setWaitlistStatus] = useState(null);
+    const [waitlistMessage, setWaitlistMessage] = useState('');
+    const [waitlistCount, setWaitlistCount] = useState(null);
+
     const bigNumberStyle = {
         position: 'absolute',
         top: '-30px',
@@ -91,6 +97,19 @@ function LandingPage() {
         };
 
         window.addEventListener('scroll', handleScroll);
+
+        const fetchWaitlistCount = async () => {
+            try {
+                const res = await api.get('/api/waitlist/count');
+                if (res.data.success) {
+                    setWaitlistCount(res.data.data);
+                }
+            } catch {
+                // Ignore silent
+            }
+        };
+        fetchWaitlistCount();
+
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
@@ -137,6 +156,24 @@ function LandingPage() {
 
     const toggleFaq = (index) => {
         setOpenFaqIndex(openFaqIndex === index ? null : index);
+    };
+
+    const handleWaitlistSubmit = async (e) => {
+        e.preventDefault();
+        if (!waitlistEmail) return;
+        setWaitlistStatus('loading');
+        try {
+            const res = await api.post('/api/waitlist', { email: waitlistEmail });
+            if (res.data.success) {
+                setWaitlistStatus('success');
+                setWaitlistMessage("Added to waitlist! We'll email you when Pro launches.");
+                setWaitlistEmail('');
+                if (waitlistCount !== null) setWaitlistCount(prev => prev + 1);
+            }
+        } catch (err) {
+            setWaitlistStatus('error');
+            setWaitlistMessage(err.response?.data?.message || err.response?.data?.error || "Something went wrong.");
+        }
     };
 
     return (
@@ -616,6 +653,28 @@ function LandingPage() {
                             <Terminal size={18} strokeWidth={2} />
                             <span>Go to Console</span>
                         </Link>
+                    </div>
+
+                    <div className="cta-waitlist" style={{ marginTop: '3rem', paddingTop: '3rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                        <h3 style={{ fontSize: '1.2rem', color: '#fff', marginBottom: '1rem', fontWeight: 600 }}>Get 1 month Pro free at launch. Join the waitlist.</h3>
+                        <form onSubmit={handleWaitlistSubmit} style={{ display: 'flex', gap: '8px', justifyContent: 'center', maxWidth: '400px', margin: '0 auto', flexWrap: 'wrap' }}>
+                            <input 
+                                type="email" 
+                                placeholder="developer@example.com"
+                                value={waitlistEmail}
+                                onChange={(e) => setWaitlistEmail(e.target.value)}
+                                style={{ padding: '12px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)', color: '#fff', outline: 'none', flex: '1 1 200px' }}
+                                required
+                                disabled={waitlistStatus === 'loading'}
+                            />
+                            <button type="submit" disabled={waitlistStatus === 'loading'} style={{ background: '#fff', color: '#000', padding: '12px 24px', borderRadius: '8px', fontWeight: 600, border: 'none', cursor: 'pointer', flex: '0 0 auto' }}>
+                                {waitlistStatus === 'loading' ? 'Joining...' : 'Join Waitlist'}
+                            </button>
+                        </form>
+                        {waitlistMessage && <p style={{ marginTop: '1rem', color: waitlistStatus === 'success' ? '#00f5d4' : '#ff5f56', fontSize: '0.95rem' }}>{waitlistMessage}</p>}
+                        {waitlistCount !== null && (
+                            <p style={{ marginTop: '0.5rem', color: '#888', fontSize: '0.85rem' }}>🔥 {waitlistCount} developers already waiting</p>
+                        )}
                     </div>
                 </div>
             </div>

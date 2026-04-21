@@ -27,6 +27,48 @@
   --color-success: #3ECF8E;
   --color-overlay: rgba(0, 0, 0, 0.8);
 
+  /* Additional variables for consistent theming */
+  --color-surface-hover: rgba(255, 255, 255, 0.05);
+  --color-surface-hover-strong: rgba(255, 255, 255, 0.1);
+  --color-skeleton-from: #1c1c1c;
+  --color-skeleton-to: #2a2a2a;
+  --color-scrollbar-thumb: #333333;
+  --color-scrollbar-thumb-hover: #444444;
+  --color-glass-card-bg: rgba(10, 10, 10, 0.7);
+  --color-glass-card-border: rgba(255, 255, 255, 0.05);
+  --color-select-text: #EDEDED;
+  --color-select-bg: #0A0A0A;
+
+  /* Auth-related variables for dark mode */
+  --color-auth-shell-bg: #000000;
+  --color-auth-ambient-secondary: rgba(62, 207, 142, 0.05);
+  --color-auth-brand-mark-bg: #3ECF8E;
+  --color-auth-brand-mark-text: #ffffff;
+  --color-auth-brand-text: #EDEDED;
+  --color-auth-mode-bg: rgba(255, 255, 255, 0.05);
+  --color-auth-mode-text: #888888;
+  --color-auth-heading: #EDEDED;
+  --color-text-soft: #888888;
+  --color-auth-label: #EDEDED;
+  --color-text-faint: #888888;
+  --color-auth-icon: #888888;
+  --color-auth-input-border: #1E1E1E;
+  --color-auth-input-bg: #0A0A0A;
+  --color-text-placeholder: #888888;
+  --color-auth-input-toggle-text: #888888;
+  --color-auth-input-toggle-hover-text: #EDEDED;
+  --color-auth-link: #3ECF8E;
+  --color-auth-link-hover: #34B27B;
+  --color-auth-divider-text: #888888;
+  --color-divider: #1E1E1E;
+  --color-auth-password-text: #888888;
+  --color-auth-password-passed: #3ECF8E;
+  --color-auth-password-dot: #333333;
+  --color-auth-password-dot-shadow: rgba(62, 207, 142, 0.1);
+  --color-border-subtle: #0F0F0F;
+  --color-auth-footer-text: #888888;
+  --color-auth-footer-note: #888888;
+
   /* Dimensions */
   --sidebar-width: 60px; /* Mini sidebar by default */
   --sidebar-width-expanded: 240px;
@@ -37,6 +79,71 @@
   --glass-bg: rgba(10, 10, 10, 0.7);
   --glass-border: rgba(255, 255, 255, 0.05);
   --glass-backdrop: blur(12px);
+}
+
+.light-mode {
+  --color-primary: #3ECF8E;
+  --color-primary-hover: #2fb67a;
+
+  --color-bg-main: #ffffff;
+  --color-bg-sidebar: #f8f9fa;
+  --color-bg-card: #ffffff;
+  --color-bg-input: #f1f3f5;
+
+  --color-text-main: #111111;
+  --color-text-muted: #666666;
+
+  --color-border: #e5e7eb;
+  --color-border-hover: #d1d5db;
+
+  --color-danger: #dc2626;
+  --color-success: #16a34a;
+
+  --color-overlay: rgba(0, 0, 0, 0.4);
+
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-backdrop: blur(10px);
+
+  --color-surface-hover: rgba(0, 0, 0, 0.05);
+  --color-surface-hover-strong: rgba(0, 0, 0, 0.1);
+  --color-skeleton-from: #f0f0f0;
+  --color-skeleton-to: #e0e0e0;
+  --color-scrollbar-thumb: #cccccc;
+  --color-scrollbar-thumb-hover: #aaaaaa;
+  --color-glass-card-bg: rgba(255, 255, 255, 0.8);
+  --color-glass-card-border: rgba(0, 0, 0, 0.1);
+  --color-select-text: #111111;
+  --color-select-bg: #ffffff;
+
+  --color-auth-shell-bg: #ffffff;
+  --color-auth-ambient-secondary: rgba(62, 207, 142, 0.05);
+  --color-auth-brand-mark-bg: #3ECF8E;
+  --color-auth-brand-mark-text: #ffffff;
+  --color-auth-brand-text: #111111;
+  --color-auth-mode-bg: rgba(0, 0, 0, 0.05);
+  --color-auth-mode-text: #666666;
+  --color-auth-heading: #111111;
+  --color-text-soft: #666666;
+  --color-auth-label: #111111;
+  --color-text-faint: #888888;
+  --color-auth-icon: #666666;
+  --color-auth-input-border: #e5e7eb;
+  --color-auth-input-bg: #ffffff;
+  --color-text-placeholder: #999999;
+  --color-auth-input-toggle-text: #666666;
+  --color-auth-input-toggle-hover-text: #111111;
+  --color-auth-link: #3ECF8E;
+  --color-auth-link-hover: #2fb67a;
+  --color-auth-divider-text: #666666;
+  --color-divider: #e5e7eb;
+  --color-auth-password-text: #666666;
+  --color-auth-password-passed: #16a34a;
+  --color-auth-password-dot: #cccccc;
+  --color-auth-password-dot-shadow: rgba(22, 163, 74, 0.1);
+  --color-border-subtle: #f1f3f5;
+  --color-auth-footer-text: #666666;
+  --color-auth-footer-note: #999999;
 }
 
 * {
@@ -89,9 +196,9 @@ a {
 
 /* --- PREMIUM DESIGN SYSTEM EXTENSIONS --- */
 .glass-card {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-glass-card-bg);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--color-glass-card-border);
 }
 
 .gradient-text {
@@ -190,12 +297,12 @@ a {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: var(--color-scrollbar-thumb);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #444;
+  background: var(--color-scrollbar-thumb-hover);
 }
 
 /* Buttons */
@@ -232,13 +339,13 @@ a {
 }
 
 .btn-secondary {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--color-glass-card-bg);
   border: 1px solid var(--color-border);
   color: var(--color-text-main);
 }
 
 .btn-secondary:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: var(--color-surface-hover-strong);
   border-color: var(--color-text-muted);
 }
 
@@ -265,7 +372,7 @@ a {
 
 .btn-icon:hover {
   color: var(--color-text-main);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface-hover);
 }
 
 /* Form Elements */
@@ -313,7 +420,7 @@ a {
 
 /* Skeleton Loading */
 .skeleton {
-  background: linear-gradient(90deg, #1c1c1c 25%, #2a2a2a 50%, #1c1c1c 75%);
+  background: linear-gradient(90deg, var(--color-skeleton-from) 25%, var(--color-skeleton-to) 50%, var(--color-skeleton-from) 75%);
   background-size: 200% 100%;
   animation: skeleton-loading 1.5s infinite;
   border-radius: 4px;
@@ -417,7 +524,7 @@ a {
 }
 
 .nav-item:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--color-surface-hover);
   color: var(--color-text-main);
 }
 
@@ -562,7 +669,7 @@ a {
 
 .nav-link:hover {
   color: var(--color-text-main);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-glass-card-bg);
 }
 
 .nav-link.active {
@@ -616,12 +723,12 @@ a {
 /* Fix dark-mode select dropdown options */
 select {
   background-color: var(--color-bg-input);
-  color: #ffffff;
+  color: var(--color-select-text);
 }
 
 select option {
-  background-color: #0f0f0f;   
-  color: #ffffff;              
+  background-color: var(--color-select-bg);
+  color: var(--color-select-text);
 }
 
 /* --- AUTH SURFACES --- */
@@ -631,7 +738,7 @@ select option {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #050505;
+  background: var(--color-auth-shell-bg);
   overflow: hidden;
   padding: 1rem;
 }
@@ -657,7 +764,7 @@ select option {
   height: 180px;
   bottom: 4%;
   left: 8%;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-auth-ambient-secondary);
 }
 
 .auth-shell__content {
@@ -690,15 +797,15 @@ select option {
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  background: #3ecf8e;
-  color: #03110a;
+  background: var(--color-auth-brand-mark-bg);
+  color: var(--color-auth-brand-mark-text);
   font-size: 0.82rem;
   font-weight: 800;
   letter-spacing: 0.08em;
 }
 
 .auth-form-card__brand-text {
-  color: #eef8f3;
+  color: var(--color-auth-brand-text);
   font-size: 0.96rem;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -713,8 +820,8 @@ select option {
   margin-bottom: 0.9rem;
   padding: 0.4rem 0.7rem;
   border-radius: 4px;
-  background: rgba(62, 207, 142, 0.12);
-  color: #84ebbb;
+  background: var(--color-auth-mode-bg);
+  color: var(--color-auth-mode-text);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -723,14 +830,14 @@ select option {
 
 .auth-form-card__header h1 {
   margin-bottom: 0.4rem;
-  color: #f4faf7;
+  color: var(--color-auth-heading);
   font-size: clamp(1.8rem, 2vw, 2.15rem);
   line-height: 1.02;
   letter-spacing: -0.04em;
 }
 
 .auth-form-card__header p {
-  color: rgba(223, 231, 226, 0.7);
+  color: var(--color-text-soft);
   font-size: 0.92rem;
   line-height: 1.55;
 }
@@ -748,7 +855,7 @@ select option {
 }
 
 .auth-field label {
-  color: #edf5f1;
+  color: var(--color-auth-label);
   font-size: 0.9rem;
   font-weight: 600;
 }
@@ -761,7 +868,7 @@ select option {
 }
 
 .auth-field__hint {
-  color: rgba(223, 230, 227, 0.56);
+  color: var(--color-text-faint);
   font-size: 0.78rem;
 }
 
@@ -774,7 +881,7 @@ select option {
 .auth-input-wrap > svg {
   position: absolute;
   left: 14px;
-  color: rgba(225, 236, 229, 0.46);
+  color: var(--color-auth-icon);
   pointer-events: none;
 }
 
@@ -782,13 +889,13 @@ select option {
   min-height: 52px;
   padding-left: 2.8rem;
   border-radius: 4px;
-  border: 1px solid #1f1f1f;
-  background: #0b0b0b;
+  border: 1px solid var(--color-auth-input-border);
+  background: var(--color-auth-input-bg);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
 }
 
 .auth-input::placeholder {
-  color: rgba(223, 230, 227, 0.36);
+  color: var(--color-text-placeholder);
 }
 
 .auth-input--password {
@@ -806,25 +913,25 @@ select option {
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: rgba(226, 235, 230, 0.64);
+  color: var(--color-auth-input-toggle-text);
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .auth-input-toggle:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #eef7f2;
+  background: var(--color-surface-hover);
+  color: var(--color-auth-input-toggle-hover-text);
 }
 
 .auth-text-link {
-  color: #80ecba;
+  color: var(--color-auth-link);
   font-size: 0.84rem;
   font-weight: 600;
   text-decoration: none;
 }
 
 .auth-text-link:hover {
-  color: #b3f6d3;
+  color: var(--color-auth-link-hover);
 }
 
 .auth-divider {
@@ -833,7 +940,7 @@ select option {
   align-items: center;
   justify-content: center;
   margin: 0.15rem 0;
-  color: rgba(226, 233, 229, 0.4);
+  color: var(--color-auth-divider-text);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
@@ -846,7 +953,7 @@ select option {
   top: 50%;
   width: calc(50% - 1.2rem);
   height: 1px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-divider);
 }
 
 .auth-divider::before {
@@ -868,24 +975,24 @@ select option {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  color: rgba(225, 232, 228, 0.55);
+  color: var(--color-auth-password-text);
   font-size: 0.84rem;
 }
 
 .auth-password-check.is-passed {
-  color: #9cf0c7;
+  color: var(--color-auth-password-passed);
 }
 
 .auth-password-check__dot {
   width: 8px;
   height: 8px;
   border-radius: 1px;
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--color-auth-password-dot);
 }
 
 .auth-password-check.is-passed .auth-password-check__dot {
-  background: #3ecf8e;
-  box-shadow: 0 0 0 5px rgba(62, 207, 142, 0.12);
+  background: var(--color-success);
+  box-shadow: 0 0 0 5px var(--color-auth-password-dot-shadow);
 }
 
 .auth-submit {
@@ -906,20 +1013,20 @@ select option {
 .auth-form-card__footer {
   margin-top: 1rem;
   padding-top: 0.95rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  color: rgba(226, 233, 229, 0.66);
+  border-top: 1px solid var(--color-border-subtle);
+  color: var(--color-auth-footer-text);
   font-size: 0.86rem;
 }
 
 .auth-form-card__footer a {
   margin-left: 0.4rem;
-  color: #88edbd;
+  color: var(--color-auth-link);
   font-weight: 600;
   text-decoration: none;
 }
 
 .auth-form-card__footer a:hover {
-  color: #b5f7d6;
+  color: var(--color-auth-link-hover);
 }
 
 .auth-shell__footer-note {
@@ -927,7 +1034,7 @@ select option {
   align-items: center;
   gap: 0.55rem;
   margin: 0.8rem auto 0;
-  color: rgba(224, 232, 228, 0.62);
+  color: var(--color-auth-footer-note);
   font-size: 0.8rem;
 }
 

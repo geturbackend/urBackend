@@ -13,6 +13,7 @@ import NotFound from './pages/NotFound';
 import Analytics from './pages/Analytics';
 import Releases from './pages/Releases';
 import AdminCreateRelease from './pages/AdminCreateRelease';
+import AdminWaitlist from './pages/AdminWaitlist';
 
 import Database from './pages/Database';
 import Storage from './pages/Storage';
@@ -126,6 +127,14 @@ function App() {
           <ProtectedRoute>
             <MainLayout>
               <AdminCreateRelease />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/admin/waitlist" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <AdminWaitlist />
             </MainLayout>
           </ProtectedRoute>
         } />

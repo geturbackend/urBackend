@@ -20,6 +20,7 @@ const Log = require("./models/Log");
 const Otp = require("./models/otp");
 const Webhook = require("./models/Webhook");
 const WebhookDelivery = require("./models/WebhookDelivery");
+const Waitlist = require("./models/Waitlist");
 
 // Queues
 const { authEmailQueue, initAuthEmailWorker } = require("./queues/authEmailQueue");
@@ -42,6 +43,7 @@ const {
   sendOtp,
   sendReleaseEmail,
   sendAuthOtpEmail,
+  sendWaitlistConfirmationEmail,
 } = require("./utils/emailService");
 const {
   loginSchema,
@@ -95,6 +97,7 @@ module.exports = {
   Otp,
   Webhook,
   WebhookDelivery,
+  Waitlist,
   authEmailQueue,
   emailQueue,
   webhookQueue,
@@ -104,6 +107,7 @@ module.exports = {
   sendOtp,
   sendReleaseEmail,
   sendAuthOtpEmail,
+  sendWaitlistConfirmationEmail,
   loginSchema,
   signupSchema,
   changePasswordSchema,
