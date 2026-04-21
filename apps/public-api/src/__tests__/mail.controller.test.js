@@ -26,12 +26,17 @@ jest.mock('@urbackend/common', () => {
     return {
         sendMailSchema,
         Project: { findById: jest.fn() },
+        MailTemplate: {
+            findOne: jest.fn(() => ({
+                lean: jest.fn(async () => null),
+            })),
+        },
         decrypt: jest.fn(),
         redis: redisMock,
     };
 });
 
-const { Resend } = require('resend');
+const { Resend, __sendMock } = require('resend');
 const { Project, decrypt, redis } = require('@urbackend/common');
 const mailController = require('../controllers/mail.controller');
 
@@ -112,6 +117,47 @@ describe('mail.controller', () => {
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
             success: false,
             message: 'Monthly mail limit exceeded.',
+        }));
+    });
+
+    test('renders and sends a mail template with variables', async () => {
+        const req = makeReq();
+        req.body = {
+            to: 'user@example.com',
+            templateName: 'welcome',
+            variables: { name: 'Yash' },
+        };
+        const res = makeRes();
+
+        mockProjectConfig({
+            _id: 'proj_1',
+            resendApiKey: null,
+            mailTemplates: [
+                {
+                    _id: 'tpl_1',
+                    name: 'welcome',
+                    subject: 'Hello {{name}}',
+                    text: 'Welcome, {{name}}!',
+                    html: '<p>Welcome, {{name}}!</p>',
+                },
+            ],
+        });
+        decrypt.mockReturnValue(null);
+        redis.eval.mockResolvedValue(1);
+
+        await mailController.sendMail(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+            success: true,
+            data: expect.objectContaining({
+                templateUsed: expect.objectContaining({ name: 'welcome', id: 'tpl_1', scope: 'project' }),
+            }),
+        }));
+        expect(__sendMock).toHaveBeenCalledWith(expect.objectContaining({
+            subject: 'Hello Yash',
+            text: 'Welcome, Yash!',
+            html: '<p>Welcome, Yash!</p>',
         }));
     });
 });

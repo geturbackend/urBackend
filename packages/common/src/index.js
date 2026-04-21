@@ -15,6 +15,7 @@ const {
 // Models
 const Developer = require("./models/Developer");
 const Project = require("./models/Project");
+const MailTemplate = require("./models/MailTemplate");
 const Release = require("./models/Release");
 const Log = require("./models/Log");
 const Otp = require("./models/otp");
@@ -92,6 +93,7 @@ module.exports = {
   redis,
   Developer,
   Project,
+  MailTemplate,
   Release,
   Log,
   Otp,

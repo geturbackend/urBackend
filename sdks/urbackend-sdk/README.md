@@ -25,10 +25,10 @@ await client.db.getAll('posts', { sort: 'createdAt:desc', limit: 10 });
 const { url } = await client.storage.upload(file);
 
 // Mail (Requires Secret Key)
-await client.mail.send({ 
-  to: 'user@example.com', 
-  subject: 'Welcome!', 
-  text: 'Glad to have you.' 
+await client.mail.send({
+  to: 'user@example.com',
+  templateName: 'welcome', // or 'welcome-2', 'otp', 'password-reset', 'invite'
+  variables: { name: 'Yash', projectName: 'Acme', appUrl: 'https://acme.com' },
 });
 ```
 

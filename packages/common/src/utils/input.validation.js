@@ -473,18 +473,42 @@ module.exports.updateWebhookSchema = z.object({
 module.exports.sendMailSchema = z
   .object({
     to: z.string().email("Invalid recipient email format"),
+
+    // Direct-send fields (backward compatible)
     subject: z
       .string()
       .min(1, "Subject is required")
-      .max(200, "Subject is too long"),
+      .max(200, "Subject is too long")
+      .optional(),
     html: z.string().optional(),
     text: z.string().optional(),
+
+    // Template-send fields (new)
+    templateId: z.string().min(1).optional(),
+    templateName: z.string().min(1).optional(),
+    variables: z.record(z.string(), z.any()).optional(),
   })
   .refine(
-    (data) =>
-      (typeof data.html === "string" && data.html.trim().length > 0) ||
-      (typeof data.text === "string" && data.text.trim().length > 0),
-    {
-      message: "Provide at least one of html or text content.",
+    (data) => {
+      const usingTemplate =
+        (typeof data.templateId === "string" && data.templateId.trim()) ||
+        (typeof data.templateName === "string" && data.templateName.trim());
+
+      if (usingTemplate) return true; // template can provide subject/content
+
+      const hasSubject = typeof data.subject === "string" && data.subject.trim().length > 0;
+      const hasBody =
+        (typeof data.html === "string" && data.html.trim().length > 0) ||
+        (typeof data.text === "string" && data.text.trim().length > 0);
+
+      return hasSubject && hasBody;
     },
+    {
+      message:
+        "Provide either (subject + html/text) or a templateId/templateName.",
+    },
+  )
+  .refine(
+    (data) => !(data.templateId && data.templateName),
+    { message: "Provide only one of templateId or templateName." },
   );

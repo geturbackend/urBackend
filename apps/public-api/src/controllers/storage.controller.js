@@ -1,4 +1,4 @@
-const { getStorage } = require("@urbackend/common");
+const { getStorage, redis } = require("@urbackend/common");
 const { randomUUID } = require("crypto");
 const {Project} = require("@urbackend/common");
 const { isProjectStorageExternal } = require("@urbackend/common");
@@ -68,6 +68,24 @@ module.exports.uploadFile = async (req, res) => {
             .from(bucket)
             .getPublicUrl(filePath);
 
+        // Usage counter (Redis): storage bytes uploaded per project per month
+        if (redis && redis.status === "ready") {
+            const padMonth = (m) => String(m).padStart(2, "0");
+            const now = new Date();
+            const monthKey = `${now.getUTCFullYear()}-${padMonth(now.getUTCMonth() + 1)}`;
+            const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0));
+            const ttlSeconds = Math.max(1, Math.ceil((nextMonthStart.getTime() - now.getTime()) / 1000));
+            const key = `project:usage:storage:uploadedBytes:${project._id}:${monthKey}`;
+            const luaScript = `
+              local current = redis.call("INCRBY", KEYS[1], ARGV[1])
+              if current == tonumber(ARGV[1]) then
+                redis.call("EXPIRE", KEYS[1], ARGV[2])
+              end
+              return current
+            `;
+            redis.eval(luaScript, 1, key, file.size, ttlSeconds).catch(() => {});
+        }
+
         return res.status(201).json({
             message: "File uploaded successfully",
             url: publicUrlData.publicUrl,
@@ -131,6 +149,24 @@ module.exports.deleteFile = async (req, res) => {
                 { _id: project._id },
                 { $inc: { storageUsed: -fileSize } }
             );
+        }
+
+        // Usage counter (Redis): storage bytes deleted per project per month
+        if (redis && redis.status === "ready" && fileSize > 0) {
+            const padMonth = (m) => String(m).padStart(2, "0");
+            const now = new Date();
+            const monthKey = `${now.getUTCFullYear()}-${padMonth(now.getUTCMonth() + 1)}`;
+            const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0));
+            const ttlSeconds = Math.max(1, Math.ceil((nextMonthStart.getTime() - now.getTime()) / 1000));
+            const key = `project:usage:storage:deletedBytes:${project._id}:${monthKey}`;
+            const luaScript = `
+              local current = redis.call("INCRBY", KEYS[1], ARGV[1])
+              if current == tonumber(ARGV[1]) then
+                redis.call("EXPIRE", KEYS[1], ARGV[2])
+              end
+              return current
+            `;
+            redis.eval(luaScript, 1, key, fileSize, ttlSeconds).catch(() => {});
         }
 
         return res.json({ message: "File deleted successfully" });

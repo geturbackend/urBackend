@@ -29,7 +29,13 @@ const {
     updateAllowedDomains,
     toggleAuth,
     updateAuthProviders,
-    updateCollectionRls
+    updateCollectionRls,
+    listMailTemplates,
+    listGlobalMailTemplates,
+    getMailTemplate,
+    createMailTemplate,
+    updateMailTemplate,
+    deleteMailTemplate
 } = require("../controllers/project.controller")
 
 const { createAdminUser, resetPassword, getUserDetails, updateAdminUser, listUserSessions, revokeUserSession } = require('../controllers/userAuth.controller');
@@ -78,6 +84,14 @@ router.delete('/:projectId', authMiddleware, verifyEmail, deleteProject);
 
 // PATCH REQ FOR UPDATE PROJECT
 router.patch('/:projectId', authMiddleware, updateProject);
+
+// MAIL TEMPLATES (Phase 2)
+router.get('/:projectId/mail/templates', authMiddleware, listMailTemplates);
+router.get('/:projectId/mail/templates/global', authMiddleware, listGlobalMailTemplates);
+router.get('/:projectId/mail/templates/:templateId', authMiddleware, getMailTemplate);
+router.post('/:projectId/mail/templates', authMiddleware, verifyEmail, createMailTemplate);
+router.patch('/:projectId/mail/templates/:templateId', authMiddleware, verifyEmail, updateMailTemplate);
+router.delete('/:projectId/mail/templates/:templateId', authMiddleware, verifyEmail, deleteMailTemplate);
 
 // PATCH REQ FOR ALLOWED DOMAINS
 router.patch('/:projectId/allowed-domains', authMiddleware, verifyEmail, updateAllowedDomains);

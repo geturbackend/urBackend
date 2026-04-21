@@ -1,6 +1,6 @@
 const { Resend } = require("resend");
 const { z } = require("zod");
-const { Project, decrypt, redis, sendMailSchema } = require("@urbackend/common");
+const { Project, MailTemplate, decrypt, redis, sendMailSchema } = require("@urbackend/common");
 const {
   getMonthKey,
   getEndOfMonthTtlSeconds,
@@ -14,7 +14,7 @@ const getMailCountKey = (projectId, monthKey) =>
 
 const loadProjectMailConfig = async (projectId) => {
   return Project.findById(projectId)
-    .select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag resendFromEmail")
+    .select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag resendFromEmail +mailTemplates")
     .lean();
 };
 
@@ -50,6 +50,54 @@ const reserveMonthlyMailSlot = async (projectId, limit) => {
   return { count, key };
 };
 
+const escapeHtml = (value) => {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+};
+
+const getVarByPath = (vars, path) => {
+  if (!vars || typeof vars !== "object") return "";
+  const parts = String(path || "")
+    .split(".")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  let cur = vars;
+  for (const p of parts) {
+    if (cur && typeof cur === "object" && p in cur) {
+      cur = cur[p];
+    } else {
+      return "";
+    }
+  }
+  return cur ?? "";
+};
+
+const renderTemplateString = (template, vars, { mode }) => {
+  if (typeof template !== "string" || !template) return template;
+
+  // mode: 'html' | 'text'
+  const isHtml = mode === "html";
+
+  // Support raw HTML insertion with triple braces: {{{name}}}
+  let out = template.replace(/\{\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}\}/g, (_, key) => {
+    const v = getVarByPath(vars, key);
+    return String(v ?? "");
+  });
+
+  // Default replacement: {{name}} (HTML-escaped when mode==='html')
+  out = out.replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (_, key) => {
+    const v = getVarByPath(vars, key);
+    const s = String(v ?? "");
+    return isHtml ? escapeHtml(s) : s;
+  });
+
+  return out;
+};
+
 module.exports.sendMail = async (req, res) => {
   let consumedQuotaKey = null;
   try {
@@ -61,7 +109,15 @@ module.exports.sendMail = async (req, res) => {
       });
     }
 
-    const { to, subject, html, text } = sendMailSchema.parse(req.body || {});
+    const {
+      to,
+      subject,
+      html,
+      text,
+      templateId,
+      templateName,
+      variables,
+    } = sendMailSchema.parse(req.body || {});
     const projectId = req.project?._id;
 
     if (!projectId) {
@@ -71,6 +127,102 @@ module.exports.sendMail = async (req, res) => {
     const project = await loadProjectMailConfig(projectId);
     if (!project) {
       return res.status(404).json({ success: false, data: {}, message: "Project not found." });
+    }
+
+    const vars = variables && typeof variables === "object" ? variables : {};
+
+    let resolvedSubject = typeof subject === "string" ? subject : "";
+    let resolvedHtml = typeof html === "string" ? html : "";
+    let resolvedText = typeof text === "string" ? text : "";
+    let templateUsed = null;
+
+    const usingTemplate =
+      (typeof templateId === "string" && templateId.trim().length > 0) ||
+      (typeof templateName === "string" && templateName.trim().length > 0);
+
+    if (usingTemplate) {
+      let t = null;
+
+      if (templateId) {
+        t = await MailTemplate.findOne({
+          _id: templateId,
+          $or: [{ projectId }, { projectId: null }],
+        }).lean();
+      }
+
+      if (!t && templateName) {
+        const q = String(templateName || "").trim().toLowerCase();
+
+        // Project override first
+        t = await MailTemplate.findOne({
+          projectId,
+          $or: [{ keyLower: q }, { nameLower: q }],
+        }).lean();
+
+        if (!t) {
+          t = await MailTemplate.findOne({
+            projectId: null,
+            isSystem: true,
+            $or: [{ keyLower: q }, { nameLower: q }],
+          }).lean();
+        }
+      }
+
+      // Legacy fallback (older projects stored templates inside Project document)
+      if (!t) {
+        const legacyTemplates = Array.isArray(project.mailTemplates) ? project.mailTemplates : [];
+        const legacy = templateId
+          ? legacyTemplates.find((x) => String(x._id) === String(templateId))
+          : legacyTemplates.find(
+              (x) => String(x.name || "").toLowerCase() === String(templateName || "").trim().toLowerCase(),
+            );
+
+        if (legacy) {
+          t = {
+            _id: legacy._id,
+            projectId,
+            key: "",
+            name: legacy.name,
+            subject: legacy.subject,
+            html: legacy.html,
+            text: legacy.text,
+          };
+        }
+      }
+
+      if (!t) {
+        return res.status(404).json({ success: false, data: {}, message: "Mail template not found." });
+      }
+
+      templateUsed = {
+        id: t._id,
+        scope: t.projectId ? "project" : "global",
+        key: t.key || "",
+        name: t.name,
+      };
+
+      if (!resolvedSubject.trim()) resolvedSubject = String(t.subject || "");
+      if (!resolvedHtml.trim()) resolvedHtml = String(t.html || "");
+      if (!resolvedText.trim()) resolvedText = String(t.text || "");
+    }
+
+    if (!resolvedSubject || !resolvedSubject.trim()) {
+      return res.status(400).json({ success: false, data: {}, message: "Subject is required." });
+    }
+
+    const hasBody =
+      (typeof resolvedHtml === "string" && resolvedHtml.trim().length > 0) ||
+      (typeof resolvedText === "string" && resolvedText.trim().length > 0);
+    if (!hasBody) {
+      return res.status(400).json({ success: false, data: {}, message: "Provide at least one of html or text content." });
+    }
+
+    resolvedSubject = renderTemplateString(resolvedSubject, vars, { mode: "text" });
+    if (typeof resolvedHtml === "string" && resolvedHtml.trim()) {
+      resolvedHtml = renderTemplateString(resolvedHtml, vars, { mode: "html" });
+    }
+    if (typeof resolvedText === "string" && resolvedText.trim()) {
+      resolvedText = renderTemplateString(resolvedText, vars, { mode: "text" });
     }
 
     const encryptedByokKey =
@@ -104,10 +256,10 @@ module.exports.sendMail = async (req, res) => {
     const payload = {
       from: fromAddress,
       to,
-      subject,
+      subject: resolvedSubject,
     };
-    if (typeof html === "string" && html.trim()) payload.html = html;
-    if (typeof text === "string" && text.trim()) payload.text = text;
+    if (typeof resolvedHtml === "string" && resolvedHtml.trim()) payload.html = resolvedHtml;
+    if (typeof resolvedText === "string" && resolvedText.trim()) payload.text = resolvedText;
 
     const { data, error } = await resend.emails.send(payload);
     if (error) {
@@ -121,6 +273,7 @@ module.exports.sendMail = async (req, res) => {
         provider: usingByok ? "byok" : "default",
         monthlyUsage: count,
         monthlyLimit: limit,
+        ...(templateUsed ? { templateUsed } : {}),
       },
       message: "Mail sent successfully.",
     });

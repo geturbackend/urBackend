@@ -11,8 +11,8 @@ beforeEach(() => {
 test('send() sends POST request to mail endpoint', async () => {
   const payload = {
     to: 'user@example.com',
-    subject: 'Hello',
-    text: 'Test mail'
+    templateName: 'welcome',
+    variables: { name: 'Test', projectName: 'Acme', appUrl: 'https://acme.com' },
   };
   
   const mockResponse = {

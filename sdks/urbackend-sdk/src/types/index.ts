@@ -128,7 +128,10 @@ export interface CollectionSchema {
 
 export interface SendMailPayload {
   to: string | string[];
-  subject: string;
+  variables?: Record<string, unknown>;
+  templateId?: string;
+  templateName?: string;
+  subject?: string;
   text?: string;
   html?: string;
 }

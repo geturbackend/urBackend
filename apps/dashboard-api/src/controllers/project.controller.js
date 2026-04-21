@@ -1224,6 +1224,367 @@ module.exports.updateProject = async (req, res) => {
   }
 };
 
+// -------------------- MAIL TEMPLATES (Phase 2 feature) --------------------
+
+const { MailTemplate } = require("@urbackend/common");
+
+const toSlug = (value) => {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9_-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+};
+
+
+module.exports.listMailTemplates = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    // Load as document so we can migrate legacy embedded templates if present
+    const project = await Project.findOne({ _id: projectId, owner: req.user._id }).select("+mailTemplates");
+
+    if (!project) return res.status(404).json({ success: false, data: {}, message: "Project not found." });
+
+    const legacy = Array.isArray(project.mailTemplates) ? project.mailTemplates : [];
+
+    if (legacy.length > 0) {
+      const existing = await MailTemplate.find({ projectId: project._id })
+        .select("keyLower nameLower")
+        .lean();
+
+      const usedKeys = new Set((existing || []).map((t) => t.keyLower).filter(Boolean));
+      const usedNames = new Set((existing || []).map((t) => t.nameLower).filter(Boolean));
+
+      for (const lt of legacy) {
+        const baseName = String(lt.name || "").trim() || "template";
+
+        let name = baseName;
+        let nameLower = name.toLowerCase();
+        let n = 1;
+        while (usedNames.has(nameLower)) {
+          n += 1;
+          name = `${baseName} ${n}`;
+          nameLower = name.toLowerCase();
+        }
+        usedNames.add(nameLower);
+
+        const baseKey = toSlug(baseName) || "";
+        let key = baseKey;
+        let keyLower = key.toLowerCase();
+        let k = 1;
+        while (keyLower && usedKeys.has(keyLower)) {
+          k += 1;
+          key = `${baseKey}-${k}`;
+          keyLower = key.toLowerCase();
+        }
+        if (keyLower) usedKeys.add(keyLower);
+
+        await MailTemplate.create({
+          projectId: project._id,
+          isSystem: false,
+          key,
+          name,
+          subject: String(lt.subject || ""),
+          html: String(lt.html || ""),
+          text: String(lt.text || ""),
+          updatedAt: lt.updatedAt ? new Date(lt.updatedAt) : new Date(),
+        });
+      }
+
+      // Clear legacy embedded templates to avoid bloating Project documents
+      project.mailTemplates = [];
+      await project.save();
+      await deleteProjectById(project._id.toString()).catch(() => {});
+    }
+
+    const templates = await MailTemplate.find({ projectId: project._id, isSystem: { $ne: true } })
+      .sort({ updatedAt: -1 })
+      .select("_id key name subject updatedAt")
+      .lean();
+
+    return res.json({
+      success: true,
+      data: {
+        templates: templates.map((t) => ({
+          id: t._id,
+          key: t.key || "",
+          name: t.name,
+          subject: t.subject,
+          updatedAt: t.updatedAt,
+        })),
+      },
+      message: "Mail templates fetched.",
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, data: {}, message: err.message });
+  }
+};
+
+module.exports.listGlobalMailTemplates = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    // Keep auth consistent: only show to project owners
+    const project = await Project.findOne({ _id: projectId, owner: req.user._id })
+      .select("_id")
+      .lean();
+
+    if (!project) return res.status(404).json({ success: false, data: {}, message: "Project not found." });
+
+    const templates = await MailTemplate.find({ projectId: null, isSystem: true })
+      .sort({ keyLower: 1 })
+      .select("_id key name subject updatedAt")
+      .lean();
+
+    return res.json({
+      success: true,
+      data: {
+        templates: templates.map((t) => ({
+          id: t._id,
+          key: t.key || "",
+          name: t.name,
+          subject: t.subject,
+          updatedAt: t.updatedAt,
+          scope: "global",
+        })),
+      },
+      message: "Global mail templates fetched.",
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, data: {}, message: err.message });
+  }
+};
+
+module.exports.getMailTemplate = async (req, res) => {
+  try {
+    const { projectId, templateId } = req.params;
+
+    const project = await Project.findOne({ _id: projectId, owner: req.user._id })
+      .select("+mailTemplates")
+      .lean();
+
+    if (!project) return res.status(404).json({ success: false, data: {}, message: "Project not found." });
+
+    let template = await MailTemplate.findOne({
+      _id: templateId,
+      $or: [{ projectId: project._id }, { projectId: null }],
+    })
+      .select("_id key name subject html text updatedAt projectId isSystem")
+      .lean();
+
+    // Legacy fallback (should be rare after listMailTemplates migration)
+    if (!template) {
+      const legacy = Array.isArray(project.mailTemplates) ? project.mailTemplates : [];
+      const lt = legacy.find((x) => String(x._id) === String(templateId));
+      if (lt) {
+        template = {
+          _id: lt._id,
+          key: "",
+          name: lt.name,
+          subject: lt.subject,
+          html: lt.html,
+          text: lt.text,
+          updatedAt: lt.updatedAt,
+          projectId: project._id,
+          isSystem: false,
+        };
+      }
+    }
+
+    if (!template) return res.status(404).json({ success: false, data: {}, message: "Template not found." });
+
+    return res.json({
+      success: true,
+      data: {
+        template: {
+          id: template._id,
+          key: template.key || "",
+          name: template.name,
+          subject: template.subject,
+          html: template.html,
+          text: template.text,
+          updatedAt: template.updatedAt,
+          scope: template.projectId ? "project" : "global",
+          isSystem: !!template.isSystem,
+        },
+      },
+      message: "Mail template fetched.",
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, data: {}, message: err.message });
+  }
+};
+
+module.exports.createMailTemplate = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    const schema = z
+      .object({
+        key: z.string().max(100).optional(),
+        name: z.string().min(1).max(100),
+        subject: z.string().min(1).max(200),
+        html: z.string().optional(),
+        text: z.string().optional(),
+      })
+      .refine(
+        (d) =>
+          (typeof d.html === "string" && d.html.trim().length > 0) ||
+          (typeof d.text === "string" && d.text.trim().length > 0),
+        { message: "Provide at least one of html or text." },
+      );
+
+    const payload = schema.parse(req.body || {});
+
+    const project = await Project.findOne({ _id: projectId, owner: req.user._id })
+      .select("_id")
+      .lean();
+
+    if (!project) return res.status(404).json({ success: false, data: {}, message: "Project not found." });
+
+    const key = payload.key !== undefined ? toSlug(payload.key) : toSlug(payload.name);
+
+    const created = await MailTemplate.create({
+      projectId: project._id,
+      isSystem: false,
+      key,
+      name: payload.name.trim(),
+      subject: payload.subject.trim(),
+      html: typeof payload.html === "string" ? payload.html : "",
+      text: typeof payload.text === "string" ? payload.text : "",
+    });
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        template: {
+          id: created._id,
+          key: created.key || "",
+          name: created.name,
+          subject: created.subject,
+          updatedAt: created.updatedAt,
+        },
+      },
+      message: "Mail template created.",
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ success: false, data: {}, message: err.issues?.[0]?.message || "Invalid payload." });
+    }
+
+    if (err && err.code === 11000) {
+      return res.status(409).json({ success: false, data: {}, message: "Template name/key already exists." });
+    }
+
+    return res.status(500).json({ success: false, data: {}, message: err.message });
+  }
+};
+
+module.exports.updateMailTemplate = async (req, res) => {
+  try {
+    const { projectId, templateId } = req.params;
+
+    const schema = z
+      .object({
+        key: z.string().max(100).optional(),
+        name: z.string().min(1).max(100).optional(),
+        subject: z.string().min(1).max(200).optional(),
+        html: z.string().optional(),
+        text: z.string().optional(),
+      })
+      .refine((d) => Object.keys(d).length > 0, { message: "At least one field must be provided." });
+
+    const payload = schema.parse(req.body || {});
+
+    const project = await Project.findOne({ _id: projectId, owner: req.user._id })
+      .select("_id")
+      .lean();
+
+    if (!project) return res.status(404).json({ success: false, data: {}, message: "Project not found." });
+
+    const update = {};
+    if (payload.key !== undefined) {
+      update.key = toSlug(payload.key);
+      update.keyLower = String(update.key || "").toLowerCase();
+    }
+    if (payload.name !== undefined) {
+      update.name = payload.name.trim();
+      update.nameLower = String(update.name || "").toLowerCase();
+    }
+    if (payload.subject !== undefined) update.subject = payload.subject.trim();
+    if (payload.html !== undefined) update.html = payload.html;
+    if (payload.text !== undefined) update.text = payload.text;
+
+    const updated = await MailTemplate.findOneAndUpdate(
+      { _id: templateId, projectId: project._id, isSystem: { $ne: true } },
+      { $set: update },
+      { new: true },
+    ).lean();
+
+    if (!updated) return res.status(404).json({ success: false, data: {}, message: "Template not found." });
+
+    const hasBody =
+      (typeof updated.html === "string" && updated.html.trim().length > 0) ||
+      (typeof updated.text === "string" && updated.text.trim().length > 0);
+    if (!hasBody) {
+      return res.status(400).json({ success: false, data: {}, message: "Template must contain at least one of html or text." });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        template: {
+          id: updated._id,
+          key: updated.key || "",
+          name: updated.name,
+          subject: updated.subject,
+          updatedAt: updated.updatedAt,
+        },
+      },
+      message: "Mail template updated.",
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ success: false, data: {}, message: err.issues?.[0]?.message || "Invalid payload." });
+    }
+
+    if (err && err.code === 11000) {
+      return res.status(409).json({ success: false, data: {}, message: "Template name/key already exists." });
+    }
+
+    return res.status(500).json({ success: false, data: {}, message: err.message });
+  }
+};
+
+module.exports.deleteMailTemplate = async (req, res) => {
+  try {
+    const { projectId, templateId } = req.params;
+
+    const project = await Project.findOne({ _id: projectId, owner: req.user._id })
+      .select("_id")
+      .lean();
+
+    if (!project) return res.status(404).json({ success: false, data: {}, message: "Project not found." });
+
+    const deleted = await MailTemplate.findOneAndDelete({
+      _id: templateId,
+      projectId: project._id,
+      isSystem: { $ne: true },
+    }).lean();
+
+    if (!deleted) return res.status(404).json({ success: false, data: {}, message: "Template not found." });
+
+    return res.json({ success: true, data: {}, message: "Mail template deleted." });
+  } catch (err) {
+    return res.status(500).json({ success: false, data: {}, message: err.message });
+  }
+};
+
+// -------------------------------------------------------------------------
+
 module.exports.updateAllowedDomains = async (req, res) => {
   try {
     const { domains } = req.body;

@@ -28,6 +28,10 @@
 
 </div>
 
+<p align="center">
+  <small><b>License:</b> AGPL-3.0 for the core repo · <code>@urbackend/sdk</code> is MIT (see <code>sdks/urbackend-sdk/LICENSE</code>).</small>
+</p>
+
 ---
 
 urBackend is an **Open-Source BaaS** built to eliminate the complexity of backend management. It provides everything you need to power your next big idea—accessible via a unified REST API.

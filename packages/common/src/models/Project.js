@@ -57,6 +57,22 @@ const authProviderSchema = new mongoose.Schema(
   { _id: false },
 );
 
+/**
+ * Mail templates are stored at the project level and rendered server-side.
+ * Keep select:false to avoid accidentally returning large template payloads
+ * in standard project responses.
+ */
+const mailTemplateSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    subject: { type: String, default: "" },
+    html: { type: String, default: "" },
+    text: { type: String, default: "" },
+    updatedAt: { type: Date, default: Date.now },
+  },
+  { _id: true },
+);
+
 const projectSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -90,6 +106,13 @@ const projectSchema = new mongoose.Schema(
     },
     resendApiKey: { type: resourceConfigSchema, default: null },
     resendFromEmail: { type: String, default: "" },
+
+    mailTemplates: {
+      type: [mailTemplateSchema],
+      default: [],
+      select: false,
+    },
+
     collections: [collectionSchema],
 
     allowedDomains: {
