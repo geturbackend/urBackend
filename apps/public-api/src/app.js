@@ -25,9 +25,11 @@ const {initWebhookWorker} = require('@urbackend/common');
 const {initAuthEmailWorker} = require('@urbackend/common');
 
 // Initialize webhook worker
+let webhookWorkerRef = null;
+let authEmailWorkerRef = null;
 if (process.env.NODE_ENV !== 'test') {
-    initWebhookWorker();
-    initAuthEmailWorker();
+    webhookWorkerRef = initWebhookWorker();
+    authEmailWorkerRef = initAuthEmailWorker();
 }
 
 app.use(express.json());
@@ -134,12 +136,10 @@ if (process.env.NODE_ENV !== 'test') {
                 await mongoose.connection.close(false);
                 console.log('✅ MongoDB connection closed.');
 
-                const { redis, initWebhookWorker, initAuthEmailWorker } = require('@urbackend/common');
-                const webhookWorker = initWebhookWorker();
-                const authEmailWorker = initAuthEmailWorker();
-                
-                if (webhookWorker) await webhookWorker.close();
-                if (authEmailWorker) await authEmailWorker.close();
+                const { redis } = require('@urbackend/common');
+
+                if (webhookWorkerRef) await webhookWorkerRef.close();
+                if (authEmailWorkerRef) await authEmailWorkerRef.close();
                 console.log('✅ BullMQ Workers closed.');
 
                 if (redis && typeof redis.quit === 'function') await redis.quit();

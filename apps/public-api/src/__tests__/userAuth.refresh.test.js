@@ -207,13 +207,10 @@ describe('public userAuth refresh flow', () => {
         expect(res.status).toHaveBeenCalledWith(200);
         expect(res.json).toHaveBeenCalledWith(
             expect.objectContaining({
-                success: true,
-                message: "Login successful",
-                data: expect.objectContaining({
-                    token: 'signed_access_token',
-                    accessToken: 'signed_access_token',
-                    refreshToken: expect.any(String),
-                })
+                token: 'signed_access_token',
+                accessToken: 'signed_access_token',
+                expiresIn: expect.any(String),
+                refreshToken: expect.any(String),
             })
         );
     });

@@ -1,5 +1,5 @@
 module.exports = (req, res, next) => {
-    const collectionName = String(req.params?.collectionName || '').trim();
+    const collectionName = String(req.params?.collectionName || '').trim().toLowerCase();
 
     if (collectionName === 'users') {
         return res.status(403).json({
