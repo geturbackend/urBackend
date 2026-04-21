@@ -58,8 +58,12 @@ const serverClient = urBackend({ apiKey: process.env.URBACKEND_SECRET_KEY });
 
 await serverClient.mail.send({
   to: 'user@example.com',
-  subject: 'Order Confirmed',
-  text: 'Your chair is on the way!'
+  templateName: 'welcome',
+  variables: {
+    name: 'Alice',
+    projectName: 'Acme',
+    appUrl: 'https://acme.com'
+  }
 });
 ```
 

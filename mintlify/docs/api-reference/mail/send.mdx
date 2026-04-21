@@ -1,0 +1,137 @@
+---
+title: "Send mail"
+description: "Send transactional email with direct content or a named template."
+---
+
+## POST `/api/mail/send`
+
+Sends transactional email from your project.
+
+<Warning>
+  This endpoint requires a **Secret Key** (`sk_live_...`). Do not call it from browser/client code.
+</Warning>
+
+### Required headers
+
+| Header | Value |
+| :--- | :--- |
+| `x-api-key` | Your `sk_live_...` secret key |
+| `Content-Type` | `application/json` |
+
+### Request body
+
+<ParamField body="to" type="string" required>
+  Recipient email address.
+</ParamField>
+
+<ParamField body="subject" type="string">
+  Required in direct mode.
+</ParamField>
+
+<ParamField body="html" type="string">
+  Optional HTML body. In direct mode, provide at least one of `html` or `text`.
+</ParamField>
+
+<ParamField body="text" type="string">
+  Optional text body. In direct mode, provide at least one of `html` or `text`.
+</ParamField>
+
+<ParamField body="templateId" type="string">
+  Template ObjectId (24 hex chars). Use either `templateId` or `templateName`.
+</ParamField>
+
+<ParamField body="templateName" type="string">
+  Template key or name. Use either `templateId` or `templateName`.
+</ParamField>
+
+<ParamField body="variables" type="object">
+  Optional template variables.
+</ParamField>
+
+### Validation rules
+
+- Template mode: `templateId` or `templateName`
+- Direct mode: `subject` + (`html` or `text`)
+- Do not pass both `templateId` and `templateName`.
+- If rendered subject/body becomes empty after variable interpolation, request is rejected with `400`.
+
+### Template resolution order
+
+When using `templateName`, urBackend resolves in this order:
+
+1. Project template override
+2. Global/system template
+3. Legacy embedded template fallback (older projects only)
+
+### Placeholder syntax
+
+- Escaped: `{{name}}`
+- Raw: `{{{htmlSnippet}}}` (use carefully)
+- Nested: `{{user.name}}`
+
+For URL values, prefer escaped placeholders like `{{appUrl}}`. URL-like variables are sanitized to safe `http/https` values.
+
+### Code examples
+
+<CodeGroup>
+
+```javascript fetch (template mode)
+const res = await fetch('https://api.ub.bitbros.in/api/mail/send', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'sk_live_YOUR_SECRET_KEY'
+  },
+  body: JSON.stringify({
+    to: 'user@example.com',
+    templateName: 'welcome',
+    variables: {
+      name: 'Ava',
+      projectName: 'Acme',
+      appUrl: 'https://acme.com'
+    }
+  })
+});
+```
+
+```javascript fetch (direct mode)
+const res = await fetch('https://api.ub.bitbros.in/api/mail/send', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'sk_live_YOUR_SECRET_KEY'
+  },
+  body: JSON.stringify({
+    to: 'user@example.com',
+    subject: 'Welcome to Acme',
+    html: '<h1>Hello</h1><p>Your account is ready.</p>'
+  })
+});
+```
+
+</CodeGroup>
+
+### Success response
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "mail_123",
+    "provider": "default",
+    "monthlyUsage": 1,
+    "monthlyLimit": 100
+  },
+  "message": "Mail sent successfully."
+}
+```
+
+### Errors
+
+| Status | Cause |
+| :--- | :--- |
+| `400 Bad Request` | Invalid payload, invalid template ID, or empty rendered subject/body |
+| `401 Unauthorized` | Missing project context |
+| `403 Forbidden` | Non-secret key used |
+| `404 Not Found` | Template or project not found |
+| `429 Too Many Requests` | Monthly mail limit exceeded |

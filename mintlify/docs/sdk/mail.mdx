@@ -23,9 +23,37 @@ send(payload: SendMailPayload): Promise<SendMailResponse>
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `to` | `string \| string[]` | Yes | Recipient email address(es). |
-| `subject` | `string` | Yes | Email subject line. |
-| `text` | `string` | No | Plain text body. |
-| `html` | `string` | No | HTML body. |
+| `subject` | `string` | Template mode: No, Direct mode: Yes | Email subject line. |
+| `text` | `string` | Direct mode: one of `text` or `html` is required | Plain text body. |
+| `html` | `string` | Direct mode: one of `text` or `html` is required | HTML body. |
+| `templateId` | `string` | Template mode: one of `templateId` or `templateName` is required | Mail template ObjectId. |
+| `templateName` | `string` | Template mode: one of `templateId` or `templateName` is required | Template key/name lookup. |
+| `variables` | `Record<string, unknown>` | No | Variables used in template rendering. |
+
+### Payload modes
+
+Use one of these modes:
+
+- Template mode: `templateId` or `templateName` (+ optional `variables`)
+- Direct mode: `subject` + at least one of `text` or `html`
+
+Do not send both `templateId` and `templateName` in the same request.
+
+### Template resolution order
+
+When you use `templateName`, urBackend resolves templates in this order:
+
+1. Project template (override)
+2. Global/system template
+3. Legacy embedded project template fallback (older projects only)
+
+### Placeholder syntax
+
+- Escaped placeholder: `{{name}}`
+- Raw placeholder: `{{{htmlSnippet}}}` (use carefully)
+- Nested variables: `{{user.name}}`
+
+For URL fields, prefer escaped placeholders like `{{appUrl}}`. URL-like variables are sanitized to safe `http/https` URLs before rendering.
 
 **Returns (`SendMailResponse`)**
 
@@ -39,6 +67,22 @@ send(payload: SendMailPayload): Promise<SendMailResponse>
 **Example**
 
 ```typescript
+// Template mode
+const response = await client.mail.send({
+  to: 'customer@example.com',
+  templateName: 'welcome',
+  variables: {
+    name: 'Ava',
+    projectName: 'Acme',
+    appUrl: 'https://acme.com'
+  }
+});
+
+console.log(response.id);
+```
+
+```typescript
+// Direct mode
 const response = await client.mail.send({
   to: 'customer@example.com',
   subject: 'Welcome to urBackend',

@@ -115,6 +115,12 @@
               "api-reference/storage/upload",
               "api-reference/storage/delete"
             ]
+          },
+          {
+            "group": "Mail",
+            "pages": [
+              "api-reference/mail/send"
+            ]
           }
         ]
       }
