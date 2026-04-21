@@ -967,7 +967,7 @@ module.exports.signup = async (req, res) => {
                     return res.status(cooldownErr.statusCode || 429).json({ error: cooldownErr.message });
                 }
 
-                const otp = Math.floor(100000 + Math.random() * 900000).toString();
+                const otp = crypto.randomInt(100000, 1000000).toString();
                 await redis.set(`project:${project._id}:otp:verification:${email}`, otp, 'EX', 300);
                 await setPublicOtpCooldown(project._id, email, 'verification');
 
@@ -992,7 +992,7 @@ module.exports.signup = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otp = crypto.randomInt(100000, 1000000).toString();
 
         const newUserPayload = buildAuthUserPayload(
             usersColConfig,
@@ -1024,12 +1024,15 @@ module.exports.signup = async (req, res) => {
         });
 
         res.status(201).json({
-            message: "User registered successfully. Please verify your email.",
-            token: issuedTokens.accessToken,
-            accessToken: issuedTokens.accessToken,
-            expiresIn: issuedTokens.expiresIn,
-            ...(shouldExposeRefreshToken(req) ? { refreshToken: issuedTokens.refreshToken } : {}),
-            userId: result._id
+            success: true,
+            data: {
+                token: issuedTokens.accessToken,
+                accessToken: issuedTokens.accessToken,
+                expiresIn: issuedTokens.expiresIn,
+                ...(shouldExposeRefreshToken(req) ? { refreshToken: issuedTokens.refreshToken } : {}),
+                userId: result._id
+            },
+            message: "User registered successfully. Please verify your email."
         });
 
     } catch (err) {
@@ -1037,7 +1040,7 @@ module.exports.signup = async (req, res) => {
             return res.status(400).json({ error: err.issues?.[0]?.message || err.errors?.[0]?.message || "Validation failed" });
         }
         res.status(500).json({ error: err.message });
-        console.log(err)
+        console.error(err)
     }
 }
 
@@ -1073,10 +1076,14 @@ module.exports.login = async (req, res) => {
         });
 
         res.json({
-            token: issuedTokens.accessToken,
-            accessToken: issuedTokens.accessToken,
-            expiresIn: issuedTokens.expiresIn,
-            ...(shouldExposeRefreshToken(req) ? { refreshToken: issuedTokens.refreshToken } : {})
+            success: true,
+            data: {
+                token: issuedTokens.accessToken,
+                accessToken: issuedTokens.accessToken,
+                expiresIn: issuedTokens.expiresIn,
+                ...(shouldExposeRefreshToken(req) ? { refreshToken: issuedTokens.refreshToken } : {})
+            },
+            message: "Login successful"
         });
 
     } catch (err) {
@@ -1258,7 +1265,7 @@ module.exports.verifyEmail = async (req, res) => {
             return res.status(500).json({ error: "No verification field found in users schema" });
         }
         const result = await Model.updateOne(
-            { email },
+            { email: normalizedEmail },
             { $set: { [verificationField]: true } }
         );
 
@@ -1298,17 +1305,17 @@ module.exports.resendVerificationOtp = async (req, res) => {
 
         // Check cooldown
         try {
-            await checkPublicOtpCooldown(project._id, email, 'verification');
+            await checkPublicOtpCooldown(project._id, normalizedEmail, 'verification');
         } catch (cooldownErr) {
             return res.status(cooldownErr.statusCode || 429).json({ error: cooldownErr.message });
         }
 
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        await redis.set(`project:${project._id}:otp:verification:${email}`, otp, 'EX', 300);
-        await setPublicOtpCooldown(project._id, email, 'verification');
+        const otp = crypto.randomInt(100000, 1000000).toString();
+        await redis.set(`project:${project._id}:otp:verification:${normalizedEmail}`, otp, 'EX', 300);
+        await setPublicOtpCooldown(project._id, normalizedEmail, 'verification');
 
         await authEmailQueue.add('send-verification-email', {
-            email,
+            email: normalizedEmail,
             otp,
             type: 'verification',
             pname: project.name,
@@ -1341,7 +1348,7 @@ module.exports.requestPasswordReset = async (req, res) => {
             return res.json({ message: "If that email exists, a reset code has been sent." });
         }
 
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otp = crypto.randomInt(100000, 1000000).toString();
         await redis.set(`project:${project._id}:otp:reset:${email}`, otp, 'EX', 300);
 
         await authEmailQueue.add('send-reset-email', { email, otp, type: 'password_reset', pname: project.name, projectId: String(project._id) });

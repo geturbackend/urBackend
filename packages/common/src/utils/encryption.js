@@ -3,9 +3,8 @@ const crypto = require("crypto");
 const algorithm = "aes-256-gcm";
 const ivLength = 16;
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
-
 function encrypt(plainText) {
+    const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
     if (!ENCRYPTION_KEY) throw new Error("ENCRYPTION_KEY missing in .env");
 
     const iv = crypto.randomBytes(ivLength);
@@ -25,6 +24,7 @@ function encrypt(plainText) {
 }
 
 function decrypt(encryptedData) {
+    const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
     try {
         const iv = Buffer.from(encryptedData.iv, "hex");
         const tag = Buffer.from(encryptedData.tag, "hex");

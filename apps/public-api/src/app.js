@@ -25,9 +25,11 @@ const {initWebhookWorker} = require('@urbackend/common');
 const {initAuthEmailWorker} = require('@urbackend/common');
 
 // Initialize webhook worker
+let webhookWorkerRef = null;
+let authEmailWorkerRef = null;
 if (process.env.NODE_ENV !== 'test') {
-    initWebhookWorker();
-    initAuthEmailWorker();
+    webhookWorkerRef = initWebhookWorker();
+    authEmailWorkerRef = initAuthEmailWorker();
 }
 
 app.use(express.json());
@@ -109,7 +111,7 @@ app.use((err, req, res, next) => {
 
 app.use((req, res) => {
     const id = res.get("X-Kiroo-Replay-ID");
-    res.json({error: "Not Found", replayId: id})   
+    res.status(404).json({error: "Not Found", replayId: id})   
 })
 // INITIALIZATION
 if (process.env.NODE_ENV !== 'test') {
@@ -133,9 +135,19 @@ if (process.env.NODE_ENV !== 'test') {
             try {
                 await mongoose.connection.close(false);
                 console.log('✅ MongoDB connection closed.');
+
+                const { redis } = require('@urbackend/common');
+
+                if (webhookWorkerRef) await webhookWorkerRef.close();
+                if (authEmailWorkerRef) await authEmailWorkerRef.close();
+                console.log('✅ BullMQ Workers closed.');
+
+                if (redis && typeof redis.quit === 'function') await redis.quit();
+                console.log('✅ Redis connection closed.');
+
                 process.exit(0);
             } catch (err) {
-                console.error('❌ Error closing MongoDB connection:', err);
+                console.error('❌ Error shutting down properly:', err);
                 process.exit(1);
             }
         });

@@ -46,6 +46,7 @@ module.exports = async (req, res, next) => {
                     allowedDomains
                     isAuthEnabled
                     siteUrl
+                    authProviders
                 `)
                 .populate('owner', 'isVerified')
                 .lean();

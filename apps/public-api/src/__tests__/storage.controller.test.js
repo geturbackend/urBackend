@@ -219,7 +219,7 @@ describe('storage.controller', () => {
                 { _id: 'project_id_1' },
                 { $inc: { storageUsed: -1024 } }
             );
-            expect(res.json).toHaveBeenCalledWith({ message: 'File deleted successfully' });
+            expect(res.json).toHaveBeenCalledWith({ success: true, data: {}, message: 'File deleted successfully' });
         });
 
         test('returns 200 on successful external deletion (skips internal usage list)', async () => {
@@ -233,7 +233,7 @@ describe('storage.controller', () => {
 
             expect(mockStorageFrom.list).not.toHaveBeenCalled();
             expect(Project.updateOne).not.toHaveBeenCalled();
-            expect(res.json).toHaveBeenCalledWith({ message: 'File deleted successfully' });
+            expect(res.json).toHaveBeenCalledWith({ success: true, data: {}, message: 'File deleted successfully' });
         });
 
         test('returns 500 when Supabase list fails', async () => {
@@ -285,7 +285,7 @@ describe('storage.controller', () => {
                 
             mockStorageFrom.remove.mockResolvedValue({ data: [{ path: 'project_id_1/file1.txt' }], error: null });
 
-            const req = { project: makeProject() };
+            const req = { project: makeProject(), keyRole: 'secret', body: { confirm: 'DELETE_ALL_FILES' } };
             const res = makeRes();
 
             await storageController.deleteAllFiles(req, res);
@@ -311,7 +311,7 @@ describe('storage.controller', () => {
 
             mockStorageFrom.remove.mockResolvedValue({ data: [{}], error: null });
 
-            const req = { project: makeProject() };
+            const req = { project: makeProject(), keyRole: 'secret', body: { confirm: 'DELETE_ALL_FILES' } };
             const res = makeRes();
 
             await storageController.deleteAllFiles(req, res);
@@ -325,7 +325,7 @@ describe('storage.controller', () => {
             mockStorageFrom.list.mockResolvedValue({ data: [{ name: 'file1.txt' }], error: null });
             mockStorageFrom.remove.mockResolvedValue({ data: null, error: new Error('Remove failed') });
 
-            const req = { project: makeProject() };
+            const req = { project: makeProject(), keyRole: 'secret', body: { confirm: 'DELETE_ALL_FILES' } };
             const res = makeRes();
 
             await storageController.deleteAllFiles(req, res);
@@ -338,7 +338,7 @@ describe('storage.controller', () => {
             isProjectStorageExternal.mockReturnValue(false);
             mockStorageFrom.list.mockResolvedValue({ data: null, error: new Error('Pagination error') });
 
-            const req = { project: makeProject() };
+            const req = { project: makeProject(), keyRole: 'secret', body: { confirm: 'DELETE_ALL_FILES' } };
             const res = makeRes();
 
             await storageController.deleteAllFiles(req, res);

@@ -133,7 +133,7 @@ module.exports.deleteFile = async (req, res) => {
             );
         }
 
-        return res.json({ message: "File deleted successfully" });
+        return res.json({ success: true, data: {}, message: "File deleted successfully" });
     } catch (err) {
         return res.status(500).json({
             error: "File deletion failed",
@@ -150,6 +150,14 @@ module.exports.deleteAllFiles = async (req, res) => {
         const project = req.project; // assuming middleware attaches project
         if (!project) {
             return res.status(404).json({ error: "Project not found" });
+        }
+
+        if (req.keyRole !== "secret") {
+            return res.status(403).json({ error: "Access denied. Action requires a Secret Key." });
+        }
+
+        if (req.body?.confirm !== "DELETE_ALL_FILES") {
+            return res.status(400).json({ error: "Destructive action requires { confirm: 'DELETE_ALL_FILES' } in the JSON body." });
         }
 
         const supabase = await getStorage(project);

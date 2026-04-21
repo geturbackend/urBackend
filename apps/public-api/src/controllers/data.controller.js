@@ -84,7 +84,11 @@ module.exports.insertData = async (req, res) => {
     });
 
     if (isDebug) console.log(`[DEBUG] insert data took ${(performance.now() - start).toFixed(2)}ms`);
-    res.status(201).json(result);
+    res.status(201).json({
+      success: true,
+      data: result,
+      message: "Data inserted successfully."
+    });
   } catch (err) {
     console.error(err);
 
@@ -154,8 +158,7 @@ const mergedFilter = Object.keys(baseFilter).length > 0
     const data = await features.query.lean();
 
     if (isDebug) console.log(`[DEBUG] getall took ${(performance.now() - start).toFixed(2)}ms`);
-    
-    res.json({
+    res.status(200).json({
       success: true,
       data: {
         items: data,
@@ -163,7 +166,7 @@ const mergedFilter = Object.keys(baseFilter).length > 0
         page: parseInt(req.query.page, 10) || 1,
         limit: Math.min(parseInt(req.query.limit, 10) || 50, 100)
       },
-      message: "Data fetched successfully"
+      message: "Data retrieved successfully."
     });
   } catch (err) {
     console.error(err);
@@ -292,8 +295,6 @@ module.exports.aggregateData = async (req, res) => {
       message: "Aggregation executed successfully.",
     });
   } catch (err) {
-    console.error(err);
-
     if (err instanceof z.ZodError) {
       return res.status(400).json({
         success: false,
@@ -302,6 +303,7 @@ module.exports.aggregateData = async (req, res) => {
       });
     }
 
+    console.error(err);
     return res.status(500).json({
       success: false,
       data: {},

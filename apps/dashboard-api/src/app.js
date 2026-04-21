@@ -137,7 +137,7 @@ app.use((err, req, res, next) => {
 
 app.use((req, res) => {
     const id = res.get("X-Kiroo-Replay-ID");
-    res.json({error: "Not Found", replayId: id})   
+    res.status(404).json({error: "Not Found", replayId: id})   
 })
 if (process.env.NODE_ENV !== 'test') {
 
@@ -160,9 +160,14 @@ if (process.env.NODE_ENV !== 'test') {
             try {
                 await mongoose.connection.close(false);
                 console.log('✅ MongoDB connection closed.');
+
+                const { redis } = require('@urbackend/common');
+                if (redis && typeof redis.quit === 'function') await redis.quit();
+                console.log('✅ Redis connection closed.');
+                
                 process.exit(0);
             } catch (err) {
-                console.error('❌ Error closing MongoDB connection:', err);
+                console.error('❌ Error shutting down properly:', err);
                 process.exit(1);
             }
         });

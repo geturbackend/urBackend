@@ -78,8 +78,12 @@ async function enqueueWebhookDelivery({
  * Initialize the webhook worker
  * Call this once during app startup
  */
+let worker = null;
+
 function initWebhookWorker() {
-  const worker = new Worker(
+  if (worker) return worker;
+
+  worker = new Worker(
     "webhook-delivery-queue",
     async (job) => {
       const { deliveryId, webhookId, attemptNumber } = job.data;
