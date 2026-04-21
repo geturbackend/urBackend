@@ -475,16 +475,32 @@ module.exports.sendMailSchema = z
     to: z.string().email("Invalid recipient email format"),
 
     // Direct-send fields (backward compatible)
-    subject: z
-      .string()
-      .min(1, "Subject is required")
-      .max(200, "Subject is too long")
-      .optional(),
+    subject: z.preprocess(
+      (value) => {
+        if (typeof value !== "string") return value;
+        return value.trim() === "" ? undefined : value;
+      },
+      z
+        .string()
+        .min(1, "Subject is required")
+        .max(200, "Subject is too long")
+        .optional(),
+    ),
     html: z.string().optional(),
     text: z.string().optional(),
 
     // Template-send fields (new)
-    templateId: z.string().min(1).optional(),
+    templateId: z.preprocess(
+      (value) => {
+        if (typeof value !== "string") return value;
+        return value.trim() === "" ? undefined : value;
+      },
+      z
+        .string()
+        .trim()
+        .regex(/^[a-fA-F0-9]{24}$/, "Invalid template id")
+        .optional(),
+    ),
     templateName: z.string().min(1).optional(),
     variables: z.record(z.string(), z.any()).optional(),
   })

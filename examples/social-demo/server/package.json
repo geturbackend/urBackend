@@ -1,6 +1,7 @@
 {
   "name": "social-demo-server",
   "version": "0.8.0",
+  "license": "MIT",
   "description": "Proxy Server for Social Demo",
   "main": "index.js",
   "type": "module",

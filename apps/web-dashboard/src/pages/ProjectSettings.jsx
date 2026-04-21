@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../utils/api";
 import { useAuth } from "../context/AuthContext";
@@ -421,13 +421,19 @@ function MailTemplatesForm({ projectId }) {
         setSaving(true);
         try {
             if (editingId) {
-                await api.patch(`/api/projects/${projectId}/mail/templates/${editingId}`, {
-                    key: form.key,
+                const payload = {
                     name: form.name,
                     subject: form.subject,
                     html: form.html,
                     text: form.text,
-                });
+                };
+                const nextKey = String(form.key ?? "").trim();
+                const prevKey = String(activeTemplate?.key ?? "").trim();
+                if (nextKey && nextKey !== prevKey) {
+                    payload.key = nextKey;
+                }
+
+                await api.patch(`/api/projects/${projectId}/mail/templates/${editingId}`, payload);
                 toast.success("Template updated");
             } else {
                 await api.post(`/api/projects/${projectId}/mail/templates`, {
@@ -471,71 +477,76 @@ function MailTemplatesForm({ projectId }) {
         }
     };
 
-    const escapeHtml = (value) => {
-        return String(value ?? "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#39;");
-    };
+    const { variablesError, preview } = useMemo(() => {
+        const escapeHtml = (value) => {
+            return String(value ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        };
 
-    const getVarByPath = (vars, path) => {
-        if (!vars || typeof vars !== "object") return "";
-        const parts = String(path || "")
-            .split(".")
-            .map((p) => p.trim())
-            .filter(Boolean);
+        const getVarByPath = (vars, path) => {
+            if (!vars || typeof vars !== "object") return "";
+            const parts = String(path || "")
+                .split(".")
+                .map((p) => p.trim())
+                .filter(Boolean);
 
-        let cur = vars;
-        for (const p of parts) {
-            if (cur && typeof cur === "object" && p in cur) {
-                cur = cur[p];
-            } else {
-                return "";
+            let cur = vars;
+            for (const p of parts) {
+                if (cur && typeof cur === "object" && p in cur) {
+                    cur = cur[p];
+                } else {
+                    return "";
+                }
             }
-        }
-        return cur ?? "";
-    };
+            return cur ?? "";
+        };
 
-    const renderTemplateString = (template, vars, { mode }) => {
-        if (typeof template !== "string" || !template) return template;
-        const isHtml = mode === "html";
+        const renderTemplateString = (template, vars, { mode }) => {
+            if (typeof template !== "string" || !template) return template;
+            const isHtml = mode === "html";
 
-        let out = template.replace(/\{\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}\}/g, (_, key) => {
-            const v = getVarByPath(vars, key);
-            return String(v ?? "");
-        });
+            let out = template.replace(/\{\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}\}/g, (_, key) => {
+                const v = getVarByPath(vars, key);
+                return String(v ?? "");
+            });
 
-        out = out.replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (_, key) => {
-            const v = getVarByPath(vars, key);
-            const s = String(v ?? "");
-            return isHtml ? escapeHtml(s) : s;
-        });
+            out = out.replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (_, key) => {
+                const v = getVarByPath(vars, key);
+                const s = String(v ?? "");
+                return isHtml ? escapeHtml(s) : s;
+            });
 
-        return out;
-    };
+            return out;
+        };
 
-    let vars = {};
-    let variablesError = null;
-    try {
-        vars = variablesText && variablesText.trim() ? JSON.parse(variablesText) : {};
-        if (vars === null || typeof vars !== "object" || Array.isArray(vars)) {
-            variablesError = "Variables must be a JSON object";
+        let vars = {};
+        let nextVariablesError = null;
+
+        try {
+            vars = variablesText && variablesText.trim() ? JSON.parse(variablesText) : {};
+            if (vars === null || typeof vars !== "object" || Array.isArray(vars)) {
+                nextVariablesError = "Variables must be a JSON object";
+                vars = {};
+            }
+        } catch {
+            nextVariablesError = "Invalid JSON";
             vars = {};
         }
-    } catch {
-        variablesError = "Invalid JSON";
-        vars = {};
-    }
 
-    const preview = activeTemplate
-        ? {
-            subject: renderTemplateString(activeTemplate.subject || "", vars, { mode: "text" }),
-            html: renderTemplateString(activeTemplate.html || "", vars, { mode: "html" }),
-            text: renderTemplateString(activeTemplate.text || "", vars, { mode: "text" }),
-        }
-        : { subject: "", html: "", text: "" };
+        const nextPreview = activeTemplate
+            ? {
+                subject: renderTemplateString(activeTemplate.subject || "", vars, { mode: "text" }),
+                html: renderTemplateString(activeTemplate.html || "", vars, { mode: "html" }),
+                text: renderTemplateString(activeTemplate.text || "", vars, { mode: "text" }),
+            }
+            : { subject: "", html: "", text: "" };
+
+        return { variablesError: nextVariablesError, preview: nextPreview };
+    }, [variablesText, activeTemplate]);
 
     return (
         <>

@@ -2,6 +2,7 @@
   "name": "dashboard-api",
   "version": "0.8.0",
   "private": true,
+  "license": "AGPL-3.0-only",
   "main": "src/app.js",
   "scripts": {
     "dev": "node src/app.js",

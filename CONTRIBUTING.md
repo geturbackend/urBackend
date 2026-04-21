@@ -86,6 +86,13 @@ If you only want to work on a specific application:
 3.  Link any related issues (e.g., "Fixes #123").
 4.  Wait for review and address any feedback.
 
+## 📄 Contributor License Policy
+
+- No CLA or DCO sign-off is currently required for this repository.
+- By submitting a contribution, you agree that your changes are licensed under the license declared by the package you modify:
+  - Core monorepo apps/packages: `AGPL-3.0-only`
+  - `examples/*` and `@urbackend/sdk` package: `MIT`
+
 ## 🐛 Reporting Bugs & Feature Requests
 
 -   **Bugs**: If you find a bug, please create an issue describing the problem, steps to reproduce, and expected behavior.

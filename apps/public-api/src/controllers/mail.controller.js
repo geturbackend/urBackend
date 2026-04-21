@@ -59,6 +59,37 @@ const escapeHtml = (value) => {
     .replace(/'/g, "&#39;");
 };
 
+const toSafeUrl = (value) => {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.toString();
+    }
+  } catch {}
+  return "";
+};
+
+const sanitizeTemplateVariables = (input, parentKey = "") => {
+  if (Array.isArray(input)) {
+    return input.map((item) => sanitizeTemplateVariables(item, parentKey));
+  }
+  if (input && typeof input === "object") {
+    const out = {};
+    for (const [key, value] of Object.entries(input)) {
+      out[key] = sanitizeTemplateVariables(value, key);
+    }
+    return out;
+  }
+
+  if (typeof input === "string" && /(url|uri)$/i.test(parentKey)) {
+    return toSafeUrl(input);
+  }
+
+  return input;
+};
+
 const getVarByPath = (vars, path) => {
   if (!vars || typeof vars !== "object") return "";
   const parts = String(path || "")
@@ -129,7 +160,10 @@ module.exports.sendMail = async (req, res) => {
       return res.status(404).json({ success: false, data: {}, message: "Project not found." });
     }
 
-    const vars = variables && typeof variables === "object" ? variables : {};
+    const vars =
+      variables && typeof variables === "object"
+        ? sanitizeTemplateVariables(variables)
+        : {};
 
     let resolvedSubject = typeof subject === "string" ? subject : "";
     let resolvedHtml = typeof html === "string" ? html : "";
@@ -223,6 +257,17 @@ module.exports.sendMail = async (req, res) => {
     }
     if (typeof resolvedText === "string" && resolvedText.trim()) {
       resolvedText = renderTemplateString(resolvedText, vars, { mode: "text" });
+    }
+
+    if (!resolvedSubject || !resolvedSubject.trim()) {
+      return res.status(400).json({ success: false, data: {}, message: "Subject is required." });
+    }
+
+    const hasRenderedBody =
+      (typeof resolvedHtml === "string" && resolvedHtml.trim().length > 0) ||
+      (typeof resolvedText === "string" && resolvedText.trim().length > 0);
+    if (!hasRenderedBody) {
+      return res.status(400).json({ success: false, data: {}, message: "Provide at least one of html or text content." });
     }
 
     const encryptedByokKey =

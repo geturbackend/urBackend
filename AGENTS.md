@@ -106,6 +106,13 @@ Check:
 - dashboard create collection UI
 - dashboard-api collection creation/index creation flow
 
+### If you change global mail templates
+Check:
+- `mailtemplates` collection data (global templates are DB-only, not code-seeded)
+- import source file `tools/db-import/global-mail-templates.json`
+- dashboard mail templates UI/preview in `apps/web-dashboard/src/pages/ProjectSettings.jsx`
+- template resolution path in `apps/public-api/src/controllers/mail.controller.js`
+
 ## Commands
 
 Run all dev servers:

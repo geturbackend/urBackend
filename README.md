@@ -29,7 +29,9 @@
 </div>
 
 <p align="center">
-  <small><b>License:</b> AGPL-3.0 for the core repo · <code>@urbackend/sdk</code> is MIT (see <code>sdks/urbackend-sdk/LICENSE</code>).</small>
+  <small><b>License:</b> Core apps/packages are AGPL-3.0-only · examples and <code>@urbackend/sdk</code> are MIT.</small>
+  <br />
+  <small>Contributions currently do not require CLA/DCO; submitted changes are licensed under the package license they modify (details in <code>CONTRIBUTING.md</code>).</small>
 </p>
 
 ---

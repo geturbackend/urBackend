@@ -1258,6 +1258,8 @@ module.exports.listMailTemplates = async (req, res) => {
       const usedKeys = new Set((existing || []).map((t) => t.keyLower).filter(Boolean));
       const usedNames = new Set((existing || []).map((t) => t.nameLower).filter(Boolean));
 
+      const migrationOps = [];
+
       for (const lt of legacy) {
         const baseName = String(lt.name || "").trim() || "template";
 
@@ -1282,22 +1284,55 @@ module.exports.listMailTemplates = async (req, res) => {
         }
         if (keyLower) usedKeys.add(keyLower);
 
-        await MailTemplate.create({
-          projectId: project._id,
-          isSystem: false,
-          key,
-          name,
-          subject: String(lt.subject || ""),
-          html: String(lt.html || ""),
-          text: String(lt.text || ""),
-          updatedAt: lt.updatedAt ? new Date(lt.updatedAt) : new Date(),
+        migrationOps.push({
+          updateOne: {
+            filter: keyLower
+              ? { projectId: project._id, keyLower }
+              : { projectId: project._id, nameLower },
+            update: {
+              $setOnInsert: {
+                projectId: project._id,
+                isSystem: false,
+                key,
+                keyLower,
+                name,
+                nameLower,
+                subject: String(lt.subject || ""),
+                html: String(lt.html || ""),
+                text: String(lt.text || ""),
+                createdAt: lt.createdAt ? new Date(lt.createdAt) : new Date(),
+                updatedAt: lt.updatedAt ? new Date(lt.updatedAt) : new Date(),
+              },
+            },
+            upsert: true,
+          },
         });
       }
 
-      // Clear legacy embedded templates to avoid bloating Project documents
-      project.mailTemplates = [];
-      await project.save();
-      await deleteProjectById(project._id.toString()).catch(() => {});
+      if (migrationOps.length > 0) {
+        let migrationSafeToFinalize = false;
+        try {
+          await MailTemplate.bulkWrite(migrationOps, { ordered: false });
+          migrationSafeToFinalize = true;
+        } catch (err) {
+          const writeErrors = Array.isArray(err?.writeErrors) ? err.writeErrors : [];
+          const duplicateOnly =
+            err?.code === 11000 ||
+            (writeErrors.length > 0 && writeErrors.every((w) => w?.code === 11000));
+          if (duplicateOnly) {
+            migrationSafeToFinalize = true;
+          } else {
+            throw err;
+          }
+        }
+
+        if (migrationSafeToFinalize) {
+          // Clear legacy embedded templates only after migration writes are complete.
+          project.mailTemplates = [];
+          await project.save();
+          await deleteProjectById(project._id.toString()).catch(() => {});
+        }
+      }
     }
 
     const templates = await MailTemplate.find({ projectId: project._id, isSystem: { $ne: true } })
@@ -1319,7 +1354,7 @@ module.exports.listMailTemplates = async (req, res) => {
       message: "Mail templates fetched.",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, data: {}, message: err.message });
+    return res.status(500).json({ success: false, data: {}, message: "Failed to fetch mail templates." });
   }
 };
 
@@ -1361,6 +1396,9 @@ module.exports.listGlobalMailTemplates = async (req, res) => {
 module.exports.getMailTemplate = async (req, res) => {
   try {
     const { projectId, templateId } = req.params;
+    if (!mongoose.isValidObjectId(templateId)) {
+      return res.status(400).json({ success: false, data: {}, message: "Invalid template id" });
+    }
 
     const project = await Project.findOne({ _id: projectId, owner: req.user._id })
       .select("+mailTemplates")
@@ -1414,7 +1452,7 @@ module.exports.getMailTemplate = async (req, res) => {
       message: "Mail template fetched.",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, data: {}, message: err.message });
+    return res.status(500).json({ success: false, data: {}, message: "Failed to fetch template." });
   }
 };
 
@@ -1425,10 +1463,10 @@ module.exports.createMailTemplate = async (req, res) => {
     const schema = z
       .object({
         key: z.string().max(100).optional(),
-        name: z.string().min(1).max(100),
-        subject: z.string().min(1).max(200),
-        html: z.string().optional(),
-        text: z.string().optional(),
+        name: z.string().trim().min(1).max(100),
+        subject: z.string().trim().min(1).max(200),
+        html: z.string().trim().optional(),
+        text: z.string().trim().optional(),
       })
       .refine(
         (d) =>
@@ -1479,21 +1517,24 @@ module.exports.createMailTemplate = async (req, res) => {
       return res.status(409).json({ success: false, data: {}, message: "Template name/key already exists." });
     }
 
-    return res.status(500).json({ success: false, data: {}, message: err.message });
+    return res.status(500).json({ success: false, data: {}, message: "Failed to create template." });
   }
 };
 
 module.exports.updateMailTemplate = async (req, res) => {
   try {
     const { projectId, templateId } = req.params;
+    if (!mongoose.isValidObjectId(templateId)) {
+      return res.status(400).json({ success: false, data: {}, message: "Invalid template id" });
+    }
 
     const schema = z
       .object({
         key: z.string().max(100).optional(),
-        name: z.string().min(1).max(100).optional(),
-        subject: z.string().min(1).max(200).optional(),
-        html: z.string().optional(),
-        text: z.string().optional(),
+        name: z.string().trim().min(1).max(100).optional(),
+        subject: z.string().trim().min(1).max(200).optional(),
+        html: z.string().trim().optional(),
+        text: z.string().trim().optional(),
       })
       .refine((d) => Object.keys(d).length > 0, { message: "At least one field must be provided." });
 
@@ -1562,13 +1603,16 @@ module.exports.updateMailTemplate = async (req, res) => {
       return res.status(409).json({ success: false, data: {}, message: "Template name/key already exists." });
     }
 
-    return res.status(500).json({ success: false, data: {}, message: err.message });
+    return res.status(500).json({ success: false, data: {}, message: "Failed to update template." });
   }
 };
 
 module.exports.deleteMailTemplate = async (req, res) => {
   try {
     const { projectId, templateId } = req.params;
+    if (!mongoose.isValidObjectId(templateId)) {
+      return res.status(400).json({ success: false, data: {}, message: "Invalid template id" });
+    }
 
     const project = await Project.findOne({ _id: projectId, owner: req.user._id })
       .select("_id")
@@ -1586,7 +1630,7 @@ module.exports.deleteMailTemplate = async (req, res) => {
 
     return res.json({ success: true, data: {}, message: "Mail template deleted." });
   } catch (err) {
-    return res.status(500).json({ success: false, data: {}, message: err.message });
+    return res.status(500).json({ success: false, data: {}, message: "Failed to delete template." });
   }
 };
 
@@ -1688,6 +1732,7 @@ module.exports.deleteProject = async (req, res) => {
       }
     }
 
+    await MailTemplate.deleteMany({ projectId: project._id });
     await Project.deleteOne({ _id: projectId });
     storageRegistry.delete(projectId.toString());
 

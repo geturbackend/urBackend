@@ -126,6 +126,11 @@ export interface CollectionSchema {
   model: SchemaField[];
 }
 
+/**
+ * Mail payload contract:
+ * - Template mode: provide `templateId` or `templateName` (with optional `variables`).
+ * - Direct mode: provide `subject` and at least one of `text` or `html`.
+ */
 export interface SendMailPayload {
   to: string | string[];
   variables?: Record<string, unknown>;

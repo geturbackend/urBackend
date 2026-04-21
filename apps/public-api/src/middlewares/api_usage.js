@@ -1,22 +1,6 @@
 const rateLimit = require('express-rate-limit');
 const { Log, redis } = require('@urbackend/common');
-
-const getDayKey = () => new Date().toISOString().split('T')[0];
-const DEFAULT_DAILY_TTL_SECONDS = 90000; // 25 hours
-
-const incrWithTtlAtomic = async (key, ttlSeconds = DEFAULT_DAILY_TTL_SECONDS) => {
-  if (!redis || redis.status !== 'ready') return Promise.resolve();
-
-  const luaScript = `
-    local current = redis.call("INCR", KEYS[1])
-    if current == 1 then
-      redis.call("EXPIRE", KEYS[1], ARGV[1])
-    end
-    return current
-  `;
-
-  return redis.eval(luaScript, 1, key, ttlSeconds);
-};
+const { getDayKey, DEFAULT_DAILY_TTL_SECONDS, incrWithTtlAtomic } = require('../utils/usageCounter');
 
 
 // Rate Limiter 
@@ -55,7 +39,7 @@ const logger = (req, res, next) => {
                     // Usage counter (Redis): daily API requests per project
                     const day = getDayKey();
                     const reqCountKey = `project:usage:req:count:${req.project._id}:${day}`;
-                    incrWithTtlAtomic(reqCountKey).catch(() => {});
+                    incrWithTtlAtomic(redis, reqCountKey, DEFAULT_DAILY_TTL_SECONDS).catch(() => {});
 
                     console.log(`📝 Logged: ${req.method} ${req.originalUrl} (${res.statusCode})`);
                 } catch (e) {
