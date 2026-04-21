@@ -27,9 +27,7 @@ jest.mock('@urbackend/common', () => {
         sendMailSchema,
         Project: { findById: jest.fn() },
         MailTemplate: {
-            findOne: jest.fn(() => ({
-                lean: jest.fn(async () => null),
-            })),
+            findOne: jest.fn(),
         },
         decrypt: jest.fn(),
         redis: redisMock,
@@ -37,7 +35,7 @@ jest.mock('@urbackend/common', () => {
 });
 
 const { Resend, __sendMock } = require('resend');
-const { Project, decrypt, redis } = require('@urbackend/common');
+const { Project, MailTemplate, decrypt, redis } = require('@urbackend/common');
 const mailController = require('../controllers/mail.controller');
 
 const makeReq = () => ({
@@ -61,11 +59,20 @@ const mockProjectConfig = (payload) => {
     });
 };
 
+const mockMailTemplateFindOne = (value) => {
+    MailTemplate.findOne.mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValue(value),
+    });
+};
+
 describe('mail.controller', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         process.env.RESEND_API_KEY = 'default-key';
         process.env.EMAIL_FROM = 'mail@urbackend.app';
+        MailTemplate.findOne.mockReturnValue({
+            lean: jest.fn().mockResolvedValue(null),
+        });
     });
 
     test('sends mail using BYOK key when configured', async () => {
@@ -117,6 +124,72 @@ describe('mail.controller', () => {
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
             success: false,
             message: 'Monthly mail limit exceeded.',
+        }));
+    });
+
+    test('uses project-scoped MailTemplate lookup when available', async () => {
+        const req = makeReq();
+        req.body = {
+            to: 'user@example.com',
+            templateName: 'welcome',
+            variables: { name: 'Yash' },
+        };
+        const res = makeRes();
+
+        mockProjectConfig({ _id: 'proj_1', resendApiKey: null, mailTemplates: [] });
+        mockMailTemplateFindOne({
+            _id: 'tpl_project',
+            projectId: 'proj_1',
+            key: 'welcome',
+            name: 'welcome',
+            subject: 'Hello {{name}}',
+            text: 'Welcome, {{name}}!',
+            html: '',
+        });
+        decrypt.mockReturnValue(null);
+        redis.eval.mockResolvedValue(1);
+
+        await mailController.sendMail(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+            data: expect.objectContaining({
+                templateUsed: expect.objectContaining({ id: 'tpl_project', scope: 'project' }),
+            }),
+        }));
+    });
+
+    test('falls back to global MailTemplate when project template missing', async () => {
+        const req = makeReq();
+        req.body = {
+            to: 'user@example.com',
+            templateName: 'welcome',
+            variables: { name: 'Yash' },
+        };
+        const res = makeRes();
+
+        mockProjectConfig({ _id: 'proj_1', resendApiKey: null, mailTemplates: [] });
+        mockMailTemplateFindOne(null);
+        mockMailTemplateFindOne({
+            _id: 'tpl_global',
+            projectId: null,
+            isSystem: true,
+            key: 'welcome',
+            name: 'welcome',
+            subject: 'Hello {{name}}',
+            text: 'Hello, {{name}}!',
+            html: '',
+        });
+        decrypt.mockReturnValue(null);
+        redis.eval.mockResolvedValue(1);
+
+        await mailController.sendMail(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+            data: expect.objectContaining({
+                templateUsed: expect.objectContaining({ id: 'tpl_global', scope: 'global' }),
+            }),
         }));
     });
 

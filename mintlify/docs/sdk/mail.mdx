@@ -22,7 +22,7 @@ send(payload: SendMailPayload): Promise<SendMailResponse>
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `to` | `string \| string[]` | Yes | Recipient email address(es). |
+| `to` | `string` | Yes | Recipient email address. |
 | `subject` | `string` | Template mode: No, Direct mode: Yes | Email subject line. |
 | `text` | `string` | Direct mode: one of `text` or `html` is required | Plain text body. |
 | `html` | `string` | Direct mode: one of `text` or `html` is required | HTML body. |

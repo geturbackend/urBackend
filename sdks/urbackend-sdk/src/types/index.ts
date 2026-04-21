@@ -132,7 +132,7 @@ export interface CollectionSchema {
  * - Direct mode: provide `subject` and at least one of `text` or `html`.
  */
 export interface SendMailPayload {
-  to: string | string[];
+  to: string;
   variables?: Record<string, unknown>;
   templateId?: string;
   templateName?: string;
