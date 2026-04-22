@@ -175,14 +175,6 @@ module.exports.sendMail = async (req, res) => {
       (typeof templateName === "string" && templateName.trim().length > 0);
 
     if (usingTemplate) {
-      if (!req.planLimits || req.planLimits.mailTemplatesEnabled !== true) {
-        return res.status(403).json({ 
-          success: false, 
-          data: {}, 
-          message: "Pre-designed Email Templates are a Pro feature. Please upgrade to use this functionality." 
-        });
-      }
-
       let t = null;
 
       if (templateId) {
@@ -233,7 +225,18 @@ module.exports.sendMail = async (req, res) => {
       }
 
       if (!t) {
-        return res.status(404).json({ success: false, data: {}, message: "Mail template not found." });
+        return res.status(400).json({ success: false, data: {}, message: "Template not found." });
+      }
+
+      // Enforce Pro feature limit only for custom (project-owned) templates.
+      if (t.projectId) {
+        if (!req.planLimits || req.planLimits.mailTemplatesEnabled !== true) {
+          return res.status(403).json({ 
+            success: false, 
+            data: {}, 
+            message: "Custom Email Templates are a Pro feature. Please upgrade to use this functionality." 
+          });
+        }
       }
 
       templateUsed = {
