@@ -33,6 +33,7 @@ jest.mock('@urbackend/common', () => {
         },
         decrypt: jest.fn(),
         redis: redisMock,
+        getPlanLimits: jest.fn(() => ({ mailPerMonth: 100 })),
     };
 });
 
