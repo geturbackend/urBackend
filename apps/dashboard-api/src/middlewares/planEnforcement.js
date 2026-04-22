@@ -80,6 +80,11 @@ exports.checkCollectionLimit = async (req, res, next) => {
         const projectId = req.body.projectId;
         if (!projectId) return next(new AppError(400, 'projectId is required'));
 
+        // Prevent NoSQL Injection (CodeQL Alert: Database query built from user-controlled sources)
+        if (typeof projectId !== 'string' || !/^[a-fA-F0-9]{24}$/.test(projectId)) {
+            return next(new AppError(400, 'Invalid projectId format'));
+        }
+
         const project = await Project.findById(projectId);
         if (!project) return next(new AppError(404, 'Project not found'));
 
