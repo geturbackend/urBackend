@@ -25,7 +25,7 @@ const developerSchema = new mongoose.Schema({
     },
     plan: {
         type: String,
-        enum: ['free', 'pro', 'team', 'enterprise'],
+        enum: ['free', 'pro'],
         default: 'free'
     },
     planActivatedAt: {
