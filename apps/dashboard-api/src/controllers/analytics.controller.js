@@ -1,4 +1,4 @@
-const { Project, Log, Developer } = require("@urbackend/common");
+const { Project, Log, Developer, resolveEffectivePlan, getPlanLimits } = require("@urbackend/common");
 const mongoose = require("mongoose");
 
 /**
@@ -44,12 +44,21 @@ module.exports.getGlobalStats = async (req, res) => {
     const projectIds = await Project.find({ owner: user_id }).distinct("_id");
     const totalRequests = await Log.countDocuments({ projectId: { $in: projectIds } });
 
+    const effectivePlan = resolveEffectivePlan(dev);
+    const limits = getPlanLimits({
+      plan: effectivePlan,
+      legacyLimits: {
+        maxProjects: dev?.maxProjects,
+        maxCollections: dev?.maxCollections
+      }
+    });
+
     res.json({
       ...globalStats,
       totalRequests,
       limits: {
-        maxProjects: dev?.maxProjects || 1,
-        maxCollections: dev?.maxCollections || 20
+        maxProjects: limits.maxProjects,
+        maxCollections: limits.maxCollections
       }
     });
   } catch (err) {

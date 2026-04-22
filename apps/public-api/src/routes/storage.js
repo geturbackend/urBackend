@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const verifyApiKey = require('../middlewares/verifyApiKey');
 const requireSecretKey = require('../middlewares/requireSecretKey');
-const projectRateLimiter = require('../middlewares/projectRateLimiter');
+const { checkUsageLimits } = require('../middlewares/usageGate');
 const { uploadFile, deleteFile, deleteAllFiles } = require("../controllers/storage.controller")
 
 const storage = multer.memoryStorage();
@@ -13,12 +13,12 @@ const upload = multer({
 });
 
 // POST REQ UPLOAD FILE
-router.post('/upload', verifyApiKey, projectRateLimiter, requireSecretKey, upload.single('file'), uploadFile);
+router.post('/upload', verifyApiKey, checkUsageLimits, requireSecretKey, upload.single('file'), uploadFile);
 
 // DELETE REQ SINGLE FILE
-router.delete('/file', verifyApiKey, projectRateLimiter, requireSecretKey, deleteFile);
+router.delete('/file', verifyApiKey, checkUsageLimits, requireSecretKey, deleteFile);
 
 // DELETE REQ ALL FILES
-router.delete('/all', verifyApiKey, projectRateLimiter, requireSecretKey, deleteAllFiles);
+router.delete('/all', verifyApiKey, checkUsageLimits, requireSecretKey, deleteAllFiles);
 
 module.exports = router;

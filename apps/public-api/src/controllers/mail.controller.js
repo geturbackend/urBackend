@@ -175,6 +175,15 @@ module.exports.sendMail = async (req, res) => {
       (typeof templateName === "string" && templateName.trim().length > 0);
 
     if (usingTemplate) {
+      const limits = req.planLimits || {};
+      if (limits.mailTemplatesEnabled === false) {
+        return res.status(403).json({ 
+          success: false, 
+          data: {}, 
+          message: "Pre-designed Email Templates are a Pro feature. Please upgrade to use this functionality." 
+        });
+      }
+
       let t = null;
 
       if (templateId) {
@@ -285,7 +294,7 @@ module.exports.sendMail = async (req, res) => {
       return res.status(500).json({ success: false, data: {}, message: "Resend API key is not configured." });
     }
 
-    const limit = getMonthlyMailLimit(req.project);
+    const limit = getMonthlyMailLimit(req.project, req.planLimits);
     const { count, key } = await reserveMonthlyMailSlot(projectId, limit);
     consumedQuotaKey = key;
 

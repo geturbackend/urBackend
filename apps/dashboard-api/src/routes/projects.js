@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
+const { attachDeveloper, checkProjectLimit, checkCollectionLimit, checkByokGate } = require('../middlewares/planEnforcement');
 const {verifyEmail} = require('@urbackend/common')
 const multer = require('multer');
 const storage = multer.memoryStorage();
@@ -44,7 +45,7 @@ const upload = multer({ storage: storage, limits: { fileSize: 10 * 1024 * 1024 }
 
 
 // POST REQ FOR CREATE PROJECT
-router.post('/', authMiddleware, verifyEmail, createProject);
+router.post('/', authMiddleware, attachDeveloper, verifyEmail, checkProjectLimit, createProject);
 
 // GET REQ FOR ALL PROJECTS
 router.get('/', authMiddleware, getAllProject);
@@ -56,7 +57,7 @@ router.get('/:projectId', authMiddleware, getSingleProject);
 router.patch('/:projectId/regenerate-key', authMiddleware, regenerateApiKey);
 
 // POST REQ FOR CREATE COLLECTION
-router.post('/collection', authMiddleware, verifyEmail, createCollection);
+router.post('/collection', authMiddleware, attachDeveloper, verifyEmail, checkCollectionLimit, createCollection);
 
 // DELETE REQ FOR COLLECTION
 router.delete('/:projectId/collections/:collectionName', authMiddleware, verifyEmail, deleteCollection);
@@ -97,7 +98,7 @@ router.delete('/:projectId/mail/templates/:templateId', authMiddleware, verifyEm
 router.patch('/:projectId/allowed-domains', authMiddleware, verifyEmail, updateAllowedDomains);
 
 // PATCH REQ FOR BYOD CONFIG
-router.patch('/:projectId/byod-config', authMiddleware, updateExternalConfig);
+router.patch('/:projectId/byod-config', authMiddleware, attachDeveloper, checkByokGate, updateExternalConfig);
 
 // DELETE REQ FOR BYOD DB CONFIG
 router.delete('/:projectId/byod-config/db', authMiddleware, deleteExternalDbConfig);

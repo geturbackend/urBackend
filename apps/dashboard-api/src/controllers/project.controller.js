@@ -190,24 +190,7 @@ module.exports.createProject = async (req, res) => {
     // POST FOR - PROJECT CREATION
     const { name, description, siteUrl } = createProjectSchema.parse(req.body);
 
-    // --- PROJECT LIMIT CHECK ---
-    const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
-
-    // GET MAX PROJECTS
-    const dev = await Developer.findById(req.user._id);
-    const MAX_PROJECTS = dev?.maxProjects || 1;
-
-    const isUserAdmin = dev.email === ADMIN_EMAIL;
-    const projectCount = await Project.countDocuments({ owner: req.user._id });
-
-    if (!isUserAdmin && projectCount >= MAX_PROJECTS) {
-      return res.status(403).json({
-        error: `Project limit reached. Your current plan allows up to ${MAX_PROJECTS} projects.`,
-        limit: MAX_PROJECTS,
-        current: projectCount,
-      });
-    }
-    // ---------------------------
+    // Project limit is now handled by checkProjectLimit middleware
 
     const rawPublishableKey = generateApiKey("pk_live_");
     const hashedPublishableKey = hashApiKey(rawPublishableKey);

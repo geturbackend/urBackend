@@ -2,9 +2,9 @@ const express = require("express");
 const router = express.Router();
 const verifyApiKey = require("../middlewares/verifyApiKey");
 const requireSecretKey = require("../middlewares/requireSecretKey");
-const projectRateLimiter = require("../middlewares/projectRateLimiter");
+const { checkUsageLimits } = require("../middlewares/usageGate");
 const { sendMail } = require("../controllers/mail.controller");
 
-router.post("/send", verifyApiKey, projectRateLimiter, requireSecretKey, sendMail);
+router.post("/send", verifyApiKey, checkUsageLimits, requireSecretKey, sendMail);
 
 module.exports = router;

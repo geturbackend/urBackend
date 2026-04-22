@@ -38,16 +38,27 @@ module.exports.uploadFile = async (req, res) => {
 
         // ATOMIC QUOTA RESERVATION
         if (!external) {
-            const result = await Project.updateOne(
-                { 
-                    _id: project._id, 
-                    $expr: { $lte: [{ $add: ["$storageUsed", file.size] }, "$storageLimit"] }
-                },
-                { $inc: { storageUsed: file.size } }
-            );
+            const limits = req.planLimits || {};
+            const effectiveLimit = limits.storageBytes || project.storageLimit || 20 * 1024 * 1024;
+            
+            // If plan allows unlimited internal storage (though Pro expects BYOS)
+            if (effectiveLimit === -1) {
+                await Project.updateOne(
+                    { _id: project._id },
+                    { $inc: { storageUsed: file.size } }
+                );
+            } else {
+                const result = await Project.updateOne(
+                    { 
+                        _id: project._id, 
+                        $expr: { $lte: [{ $add: ["$storageUsed", file.size] }, effectiveLimit] }
+                    },
+                    { $inc: { storageUsed: file.size } }
+                );
 
-            if (result.matchedCount === 0) {
-                return res.status(403).json({ error: "Internal storage limit exceeded." });
+                if (result.matchedCount === 0) {
+                    return res.status(403).json({ error: "Storage limit exceeded. Please upgrade your plan or delete some files." });
+                }
             }
         }
 

@@ -140,6 +140,14 @@ const projectSchema = new mongoose.Schema(
         config: { type: resourceConfigSchema, default: null },
       },
     },
+
+    // CUSTOM OVERRIDES (Enterprise/Exceptions)
+    customLimits: {
+      reqPerDay: { type: Number, default: null },
+      storageBytes: { type: Number, default: null },
+      mailPerMonth: { type: Number, default: null },
+      maxCollections: { type: Number, default: null }
+    },
   },
   { timestamps: true },
 );

@@ -106,11 +106,48 @@ async function deleteProjectById(id) {
     }
 }
 
+async function setDeveloperPlanCache(id, data) {
+    if (redis.status !== "ready") return;
+    try {
+        await redis.set(
+            `developer:plan:${id}`,
+            JSON.stringify(data),
+            'EX',
+            60 * 5 // 5 minutes TTL as per plan.plan.md
+        );
+    } catch (err) {
+        console.log(err);
+    }
+}
+
+async function getDeveloperPlanCache(id) {
+    if (redis.status !== "ready") return null;
+    try {
+        const data = await redis.get(`developer:plan:${id}`);
+        return data ? JSON.parse(data) : null;
+    } catch (err) {
+        console.log(err);
+        return null;
+    }
+}
+
+async function deleteDeveloperPlanCache(id) {
+    if (redis.status !== "ready") return;
+    try {
+        await redis.del(`developer:plan:${id}`);
+    } catch (err) {
+        console.log(err);
+    }
+}
+
 module.exports = {
     setProjectByApiKeyCache,
     getProjectByApiKeyCache,
     deleteProjectByApiKeyCache,
     setProjectById,
     getProjectById,
-    deleteProjectById
+    deleteProjectById,
+    setDeveloperPlanCache,
+    getDeveloperPlanCache,
+    deleteDeveloperPlanCache
 };

@@ -23,6 +23,23 @@ const developerSchema = new mongoose.Schema({
         type: Number,
         default: 20
     },
+    plan: {
+        type: String,
+        enum: ['free', 'pro', 'team', 'enterprise'],
+        default: 'free'
+    },
+    planActivatedAt: {
+        type: Date,
+        default: null
+    },
+    planExpiresAt: {
+        type: Date,
+        default: null
+    },
+    trialUsed: {
+        type: Boolean,
+        default: false
+    },
     refreshToken: {
         type: String,
         default: null,

@@ -87,6 +87,8 @@ const { getStorage } = require("./utils/storage.manager");
 const validateEnv = require("./utils/validateEnv");
 const { validateData, validateUpdateData } = require("./utils/validateData");
 const sessionManager = require("./utils/session.manager");
+const planLimits = require("./utils/planLimits");
+const AppError = require("./utils/AppError");
 
 module.exports = {
   connectDB,
@@ -161,4 +163,6 @@ module.exports = {
   userSignupSchema,
   initAuthEmailWorker,
   ...sessionManager,
+  ...planLimits,
+  AppError,
 };

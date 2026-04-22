@@ -1,4 +1,4 @@
-const MONTHLY_FREE_MAIL_LIMIT = 100;
+const { getPlanLimits } = require('@urbackend/common');
 
 const padMonth = (month) => String(month).padStart(2, "0");
 
@@ -15,9 +15,21 @@ const getEndOfMonthTtlSeconds = (now = new Date()) => {
   return Math.max(1, Math.ceil((nextMonthStart.getTime() - now.getTime()) / 1000));
 };
 
-const getMonthlyMailLimit = () => {
-  // v0.9.0 default: free tier limit for all projects.
-  return MONTHLY_FREE_MAIL_LIMIT;
+const getMonthlyMailLimit = (project, planLimitsContext = null) => {
+  // Primary path: planLimitsContext provided by usageGate middleware (plan-aware)
+  if (planLimitsContext && planLimitsContext.mailPerMonth !== undefined) {
+    return planLimitsContext.mailPerMonth;
+  }
+
+  // Fallback: project.owner is a raw ObjectId here, not a Developer doc,
+  // so we cannot call resolveEffectivePlan safely. Apply free-tier + any
+  // project-level customLimits as a safe default.
+  const limits = getPlanLimits({
+    plan: 'free',
+    customLimits: project?.customLimits || null
+  });
+  
+  return limits.mailPerMonth;
 };
 
 module.exports = {

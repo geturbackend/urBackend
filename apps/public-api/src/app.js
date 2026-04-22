@@ -100,6 +100,16 @@ app.use((err, req, res, next) => {
         });
     }
 
+    // Operational errors (AppError) preserve their HTTP status — this is critical 
+    // for quota/rate-limit 429s and plan-gate 403s to reach the client correctly.
+    if (err.isOperational && err.statusCode) {
+        return res.status(err.statusCode).json({
+            success: false,
+            data: {},
+            message: err.message
+        });
+    }
+
     console.error("🔥 Unhandled Error:", err.stack);
     res.status(500).json({
         error: "Something went wrong!",
