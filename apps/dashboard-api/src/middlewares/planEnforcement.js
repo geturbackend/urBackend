@@ -105,8 +105,18 @@ exports.checkByokGate = async (req, res, next) => {
         // Admin always has access to all features
         if (req.user?.isAdmin) return next();
 
+        let customLimits = null;
+        const projectId = req.params.projectId || req.body.projectId || req.query.projectId;
+        
+        if (projectId && /^[a-fA-F0-9]{24}$/.test(projectId)) {
+            const project = await Project.findById(projectId).select('customLimits').lean();
+            if (project) {
+                customLimits = project.customLimits;
+            }
+        }
+
         const effectivePlan = resolveEffectivePlan(req.developer);
-        const limits = getPlanLimits({ plan: effectivePlan });
+        const limits = getPlanLimits({ plan: effectivePlan, customLimits });
 
         if (!limits.byokEnabled) {
             return next(new AppError(403, 'External configuration (BYOK) is a Pro feature. Please upgrade to connect your own resources.'));
@@ -126,8 +136,18 @@ exports.checkByomGate = async (req, res, next) => {
         // Admin always has access to all features
         if (req.user?.isAdmin) return next();
 
+        let customLimits = null;
+        const projectId = req.params.projectId || req.body.projectId || req.query.projectId;
+        
+        if (projectId && /^[a-fA-F0-9]{24}$/.test(projectId)) {
+            const project = await Project.findById(projectId).select('customLimits').lean();
+            if (project) {
+                customLimits = project.customLimits;
+            }
+        }
+
         const effectivePlan = resolveEffectivePlan(req.developer);
-        const limits = getPlanLimits({ plan: effectivePlan });
+        const limits = getPlanLimits({ plan: effectivePlan, customLimits });
 
         if (!limits.byomEnabled) {
             return next(new AppError(403, 'External configuration (BYOM) is a Pro feature. Please upgrade to connect your own resources.'));
