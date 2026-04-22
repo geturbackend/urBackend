@@ -175,8 +175,7 @@ module.exports.sendMail = async (req, res) => {
       (typeof templateName === "string" && templateName.trim().length > 0);
 
     if (usingTemplate) {
-      const limits = req.planLimits || {};
-      if (limits.mailTemplatesEnabled === false) {
+      if (!req.planLimits || req.planLimits.mailTemplatesEnabled !== true) {
         return res.status(403).json({ 
           success: false, 
           data: {}, 

@@ -2,7 +2,6 @@
 const { connectDB } = require("./config/db");
 const redis = require("./config/redis");
 
-// redis cache
 const {
   setProjectByApiKeyCache,
   getProjectByApiKeyCache,
@@ -10,6 +9,8 @@ const {
   setProjectById,
   getProjectById,
   deleteProjectById,
+  getDeveloperPlanCache,
+  setDeveloperPlanCache,
 } = require("./redis/redisCaching");
 
 // Models
@@ -158,6 +159,8 @@ module.exports = {
   setProjectById,
   getProjectById,
   deleteProjectById,
+  getDeveloperPlanCache,
+  setDeveloperPlanCache,
   validateData,
   validateUpdateData,
   userSignupSchema,

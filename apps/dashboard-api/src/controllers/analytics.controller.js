@@ -30,7 +30,7 @@ module.exports.getGlobalStats = async (req, res) => {
           }
         }
       ]),
-      Developer.findById(user_id).select("maxProjects maxCollections")
+      Developer.findById(user_id).select("maxProjects maxCollections plan planExpiresAt")
     ]);
 
     const globalStats = stats[0] || {

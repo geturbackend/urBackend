@@ -45,6 +45,7 @@ const makeReq = () => ({
     keyRole: 'secret',
     project: { _id: 'proj_1' },
     body: { to: 'user@example.com', subject: 'Hello', text: 'This is a message.' },
+    planLimits: { mailTemplatesEnabled: true },
 });
 
 const makeRes = () => {
