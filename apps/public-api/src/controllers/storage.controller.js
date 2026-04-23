@@ -1,9 +1,59 @@
 const { getStorage, getPresignedUploadUrl, verifyUploadedFile, Project, isProjectStorageExternal, getBucket, redis } = require("@urbackend/common");
 const { randomUUID } = require("crypto");
+const path = require("path");
 const { getMonthKey, getEndOfMonthTtlSeconds, incrWithTtlAtomic } = require("../utils/usageCounter");
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const SAFETY_MAX_BYTES = 100 * 1024 * 1024; // 100MB safety ceiling for internal storage
+
+const getEffectiveStorageLimit = (project, req) => {
+    const limits = req.planLimits || {};
+    if (typeof limits.storageBytes === 'number') {
+        return limits.storageBytes;
+    }
+    if (typeof project.storageLimit === 'number') {
+        return project.storageLimit;
+    }
+    return 20 * 1024 * 1024;
+};
+
+const parsePositiveSize = (size) => {
+    const numericSize = Number(size);
+    if (!Number.isFinite(numericSize) || numericSize <= 0) {
+        return null;
+    }
+    return numericSize;
+};
+
+const normalizeProjectPath = (projectId, inputPath) => {
+    if (typeof inputPath !== 'string') {
+        return null;
+    }
+
+    let decodedPath = inputPath;
+    try {
+        decodedPath = decodeURIComponent(inputPath);
+    } catch {
+        return null;
+    }
+
+    const normalizedPath = path.posix.normalize(decodedPath).replace(/^\/+/, '');
+    const segments = normalizedPath.split('/').filter(Boolean);
+
+    if (segments.length < 2) {
+        return null;
+    }
+
+    if (segments[0] !== String(projectId)) {
+        return null;
+    }
+
+    if (segments.some((segment) => segment === '.' || segment === '..')) {
+        return null;
+    }
+
+    return normalizedPath;
+};
 
 
 
@@ -36,16 +86,7 @@ module.exports.uploadFile = async (req, res) => {
 
         // ATOMIC QUOTA RESERVATION
         if (!external) {
-            const limits = req.planLimits || {};
-            // Use explicit type checks instead of || to distinguish between undefined and 0
-            let effectiveLimit;
-            if (typeof limits.storageBytes === 'number') {
-                effectiveLimit = limits.storageBytes;
-            } else if (typeof project.storageLimit === 'number') {
-                effectiveLimit = project.storageLimit;
-            } else {
-                effectiveLimit = 20 * 1024 * 1024;
-            }
+            const effectiveLimit = getEffectiveStorageLimit(project, req);
 
             // For internal storage: honor -1 as unlimited but clamp to safety ceiling
             if (effectiveLimit === -1) {
@@ -135,8 +176,9 @@ module.exports.deleteFile = async (req, res) => {
         const project = req.project;
         const external = isProjectStorageExternal(project);
         const bucket = getBucket(project);
+        const normalizedPath = normalizeProjectPath(project._id, path);
 
-        if (!path.startsWith(`${project._id}/`) || path.split('/').includes('..')) {
+        if (!normalizedPath) {
             return res.status(403).json({ error: "Access denied." });
         }
 
@@ -145,8 +187,8 @@ module.exports.deleteFile = async (req, res) => {
         // Fetch metadata before delete so deleted-byte metrics work for both internal and external providers.
         let fileSize = 0;
         try {
-            const rootPrefix = path.split("/")[0];
-            const nestedPath = path.split("/").slice(1).join("/");
+            const rootPrefix = normalizedPath.split("/")[0];
+            const nestedPath = normalizedPath.split("/").slice(1).join("/");
             const { data, error } = await supabase.storage
                 .from(bucket)
                 .list(rootPrefix, {
@@ -164,7 +206,7 @@ module.exports.deleteFile = async (req, res) => {
 
         const { error: deleteError } = await supabase.storage
             .from(bucket)
-            .remove([path]);
+            .remove([normalizedPath]);
 
         if (deleteError) throw deleteError;
 
@@ -255,26 +297,29 @@ module.exports.deleteAllFiles = async (req, res) => {
 module.exports.requestUpload = async (req, res) => {
     try {
         const { filename, contentType, size } = req.body;
+        const numericSize = parsePositiveSize(size);
 
-        if (!filename || !contentType || !size)
+        if (!filename || !contentType || numericSize === null)
             return res.status(400).json({ error: "filename, contentType, and size are required." });
 
-        if (size > MAX_FILE_SIZE)
+        if (numericSize > MAX_FILE_SIZE)
             return res.status(413).json({ error: "File size exceeds limit." });
 
         const project = req.project;
         const external = isProjectStorageExternal(project);
+        const effectiveLimit = getEffectiveStorageLimit(project, req);
 
         // just peek at quota — don't charge yet, upload hasn't happened
         if (!external) {
-            if (project.storageUsed + size > project.storageLimit)
+            const quotaLimit = effectiveLimit === -1 ? SAFETY_MAX_BYTES : effectiveLimit;
+            if (project.storageUsed + numericSize > quotaLimit)
                 return res.status(403).json({ error: "Internal storage limit exceeded." });
         }
 
         const safeName = filename.replace(/\s+/g, "_");
         const filePath = `${project._id}/${randomUUID()}_${safeName}`;
 
-        const { signedUrl, token } = await getPresignedUploadUrl(project, filePath, contentType);
+        const { signedUrl, token } = await getPresignedUploadUrl(project, filePath, contentType, numericSize);
 
         return res.status(200).json({ signedUrl, token, filePath });
     } catch (err) {
@@ -289,28 +334,38 @@ module.exports.requestUpload = async (req, res) => {
 module.exports.confirmUpload = async (req, res) => {
     try {
         const { filePath, size } = req.body;
+        const declaredSize = parsePositiveSize(size);
 
-        if (!filePath || !size)
+        if (!filePath || declaredSize === null)
             return res.status(400).json({ error: "filePath and size are required." });
 
         const project = req.project;
         const external = isProjectStorageExternal(project);
+        const normalizedPath = normalizeProjectPath(project._id, filePath);
 
         // make sure client isn't confirming someone else's file
-        if (!filePath.startsWith(`${project._id}/`) || filePath.includes(".."))
+        if (!normalizedPath)
             return res.status(403).json({ error: "Access denied." });
 
         // verify file actually exists on cloud before touching quota
-        await verifyUploadedFile(project, filePath, size);
+        const actualSize = await verifyUploadedFile(project, normalizedPath, declaredSize);
+
+        if (!Number.isFinite(actualSize) || actualSize <= 0) {
+            return res.status(500).json({ error: "Upload confirmation failed", details: process.env.NODE_ENV === "development" ? "Uploaded file size could not be determined" : undefined });
+        }
+
+        if (actualSize !== declaredSize) {
+            return res.status(400).json({ error: "Declared file size does not match uploaded file size." });
+        }
 
         // now it's safe to charge quota
         if (!external) {
             const result = await Project.updateOne(
                 {
                     _id: project._id,
-                    $expr: { $lte: [{ $add: ["$storageUsed", size] }, "$storageLimit"] }
+                    $expr: { $lte: [{ $add: ["$storageUsed", actualSize] }, "$storageLimit"] }
                 },
-                { $inc: { storageUsed: size } }
+                { $inc: { storageUsed: actualSize } }
             );
             if (result.matchedCount === 0)
                 return res.status(403).json({ error: "Internal storage limit exceeded." });
@@ -318,12 +373,12 @@ module.exports.confirmUpload = async (req, res) => {
 
         const supabase = await getStorage(project);
         const bucket = getBucket(project);
-        const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
+        const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(normalizedPath);
 
         return res.status(200).json({
             message: "Upload confirmed",
             url: publicUrlData.publicUrl,
-            path: filePath,
+            path: normalizedPath,
             provider: external ? "external" : "internal"
         });
     } catch (err) {

@@ -169,8 +169,5 @@ module.exports = {
   ...planLimits,
   AppError,
   getPresignedUploadUrl,
-  getPresignedUploadUrl,
   verifyUploadedFile,
-  ...planLimits,
-  AppError,
 };

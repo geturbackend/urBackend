@@ -86,7 +86,7 @@ export class StorageModule {
     let fileSize = 0;
     let fileData: Blob | BufferSource;
 
-    if (typeof window !== "undefined" && file instanceof File) {
+    if (typeof File !== "undefined" && file instanceof File) {
         // browser File object
         resolvedName = filename || file.name;
         contentType = file.type || contentType;

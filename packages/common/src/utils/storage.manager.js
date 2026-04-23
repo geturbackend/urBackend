@@ -10,6 +10,7 @@ const {
 } = require("@aws-sdk/client-s3");
 
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+const { getBucket } = require("./project.helpers");
 
 const defaultSupabase = createClient(
     process.env.SUPABASE_URL || "https://dummy.supabase.co",
@@ -159,12 +160,12 @@ async function getStorage(project) {
     return client;
 }
 
-async function getPresignedUploadUrl(project, filePath, contentType) {
+async function getPresignedUploadUrl(project, filePath, contentType, size) {
     const isExternal = !!project.resources?.storage?.isExternal;
 
     if (!isExternal) {
         // internal — use the default supabase instance
-        const bucket = "dev-files";
+        const bucket = getBucket(project);
         const { data, error } = await defaultSupabase.storage
             .from(bucket)
             .createSignedUploadUrl(filePath);
@@ -179,8 +180,9 @@ async function getPresignedUploadUrl(project, filePath, contentType) {
 
     if (provider === "supabase") {
         const supabase = await getStorage(project);
+        const bucket = getBucket(project);
         const { data, error } = await supabase.storage
-            .from("files")
+            .from(bucket)
             .createSignedUploadUrl(filePath);
         if (error) throw error;
         return { signedUrl: data.signedUrl, token: data.token };
@@ -200,8 +202,12 @@ async function getPresignedUploadUrl(project, filePath, contentType) {
         Bucket: config.bucket,
         Key: filePath,
         ContentType: contentType,
+        ContentLength: size,
     });
-    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    const signedUrl = await getSignedUrl(s3Client, command, {
+        expiresIn: 600,
+        signableHeaders: new Set(["content-length"]),
+    });
     return { signedUrl };
 }
 
@@ -212,12 +218,15 @@ async function verifyUploadedFile(project, filePath, expectedSize) {
         // internal supabase
         const folder = filePath.split("/")[0];
         const fileName = filePath.split("/").slice(1).join("/");
+        const bucket = getBucket(project);
         const { data, error } = await defaultSupabase.storage
-            .from("dev-files")
+            .from(bucket)
             .list(folder, { search: fileName });
         if (error) throw error;
-        if (!data || data.length === 0) throw new Error("File not found after upload");
-        return data[0].metadata?.size || expectedSize;
+        const match = (data || []).find((item) => item.name === fileName);
+        const actualSize = match?.metadata?.size;
+        if (!Number.isFinite(actualSize)) throw new Error("File not found after upload");
+        return actualSize;
     }
 
     const decrypted = decrypt(project.resources.storage.config);
@@ -228,12 +237,15 @@ async function verifyUploadedFile(project, filePath, expectedSize) {
         const supabase = await getStorage(project);
         const folder = filePath.split("/")[0];
         const fileName = filePath.split("/").slice(1).join("/");
+        const bucket = getBucket(project);
         const { data, error } = await supabase.storage
-            .from("files")
+            .from(bucket)
             .list(folder, { search: fileName });
         if (error) throw error;
-        if (!data || data.length === 0) throw new Error("File not found after upload");
-        return data[0].metadata?.size || expectedSize;
+        const match = (data || []).find((item) => item.name === fileName);
+        const actualSize = match?.metadata?.size;
+        if (!Number.isFinite(actualSize)) throw new Error("File not found after upload");
+        return actualSize;
     }
 
     // S3 / R2 — just ask "does this object exist and what's its size?"
@@ -248,7 +260,10 @@ async function verifyUploadedFile(project, filePath, expectedSize) {
     });
     const command = new HeadObjectCommand({ Bucket: config.bucket, Key: filePath });
     const head = await s3Client.send(command);
-    return head.ContentLength || expectedSize;
+    if (!Number.isFinite(head.ContentLength)) {
+        throw new Error("Uploaded file size could not be determined");
+    }
+    return head.ContentLength;
 }
 
 module.exports = { getStorage, getPresignedUploadUrl, verifyUploadedFile };
