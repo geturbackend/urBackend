@@ -5,8 +5,12 @@ const {
     S3Client,
     PutObjectCommand,
     DeleteObjectsCommand,
-    ListObjectsV2Command
+    ListObjectsV2Command,
+    HeadObjectCommand
 } = require("@aws-sdk/client-s3");
+
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+const { getBucket } = require("./project.helpers");
 
 const defaultSupabase = createClient(
     process.env.SUPABASE_URL || "https://dummy.supabase.co",
@@ -156,4 +160,110 @@ async function getStorage(project) {
     return client;
 }
 
-module.exports = { getStorage };
+async function getPresignedUploadUrl(project, filePath, contentType, size) {
+    const isExternal = !!project.resources?.storage?.isExternal;
+
+    if (!isExternal) {
+        // internal — use the default supabase instance
+        const bucket = getBucket(project);
+        const { data, error } = await defaultSupabase.storage
+            .from(bucket)
+            .createSignedUploadUrl(filePath);
+        if (error) throw error;
+        return { signedUrl: data.signedUrl, token: data.token };
+    }
+
+    // external — need to decode which provider they configured
+    const decrypted = decrypt(project.resources.storage.config);
+    const config = JSON.parse(decrypted);
+    const provider = config.storageProvider || "supabase";
+
+    if (provider === "supabase") {
+        const supabase = await getStorage(project);
+        const bucket = getBucket(project);
+        const { data, error } = await supabase.storage
+            .from(bucket)
+            .createSignedUploadUrl(filePath);
+        if (error) throw error;
+        return { signedUrl: data.signedUrl, token: data.token };
+    }
+
+    // S3 or Cloudflare R2
+    const s3Client = new S3Client({
+        region: config.region || "auto",
+        endpoint: config.endpoint,
+        forcePathStyle: true,
+        credentials: {
+            accessKeyId: config.accessKeyId,
+            secretAccessKey: config.secretAccessKey,
+        },
+    });
+    const command = new PutObjectCommand({
+        Bucket: config.bucket,
+        Key: filePath,
+        ContentType: contentType,
+        ContentLength: size,
+    });
+    const signedUrl = await getSignedUrl(s3Client, command, {
+        expiresIn: 600,
+        signableHeaders: new Set(["content-length"]),
+    });
+    return { signedUrl };
+}
+
+async function verifyUploadedFile(project, filePath) {
+    const isExternal = !!project.resources?.storage?.isExternal;
+
+    if (!isExternal) {
+        // internal supabase
+        const folder = filePath.split("/")[0];
+        const fileName = filePath.split("/").slice(1).join("/");
+        const bucket = getBucket(project);
+        const { data, error } = await defaultSupabase.storage
+            .from(bucket)
+            .list(folder, { search: fileName });
+        if (error) throw error;
+        const match = (data || []).find((item) => item.name === fileName);
+        const actualSize = match?.metadata?.size;
+        if (!Number.isFinite(actualSize)) throw new Error("File not found after upload");
+        return actualSize;
+    }
+
+    const decrypted = decrypt(project.resources.storage.config);
+    const config = JSON.parse(decrypted);
+    const provider = config.storageProvider || "supabase";
+
+    if (provider === "supabase") {
+        const supabase = await getStorage(project);
+        const folder = filePath.split("/")[0];
+        const fileName = filePath.split("/").slice(1).join("/");
+        const bucket = getBucket(project);
+        const { data, error } = await supabase.storage
+            .from(bucket)
+            .list(folder, { search: fileName });
+        if (error) throw error;
+        const match = (data || []).find((item) => item.name === fileName);
+        const actualSize = match?.metadata?.size;
+        if (!Number.isFinite(actualSize)) throw new Error("File not found after upload");
+        return actualSize;
+    }
+
+    // S3 / R2 — just ask "does this object exist and what's its size?"
+    const s3Client = new S3Client({
+        region: config.region || "auto",
+        endpoint: config.endpoint,
+        forcePathStyle: true,
+        credentials: {
+            accessKeyId: config.accessKeyId,
+            secretAccessKey: config.secretAccessKey,
+        },
+    });
+    const command = new HeadObjectCommand({ Bucket: config.bucket, Key: filePath });
+    const head = await s3Client.send(command);
+    if (!Number.isFinite(head.ContentLength)) {
+        throw new Error("Uploaded file size could not be determined");
+    }
+    return head.ContentLength;
+}
+
+module.exports = { getStorage, getPresignedUploadUrl, verifyUploadedFile };

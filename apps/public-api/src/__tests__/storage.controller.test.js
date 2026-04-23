@@ -28,6 +28,9 @@ jest.mock('@urbackend/common', () => {
             updateOne: jest.fn(),
         },
         isProjectStorageExternal: jest.fn(),
+        getBucket: jest.fn(() => 'dev-files'),
+        getPresignedUploadUrl: jest.fn(),
+        verifyUploadedFile: jest.fn(),
         __mockStorageFrom: mockStorageFrom, // expose for assertions
     };
 });
@@ -36,7 +39,7 @@ jest.mock('@urbackend/common', () => {
 // Import module under test after mocks
 // ---------------------------------------------------------------------------
 
-const { getStorage, Project, isProjectStorageExternal, __mockStorageFrom: mockStorageFrom } = require('@urbackend/common');
+const { getStorage, Project, isProjectStorageExternal, getBucket, getPresignedUploadUrl, verifyUploadedFile, __mockStorageFrom: mockStorageFrom } = require('@urbackend/common');
 const storageController = require('../controllers/storage.controller');
 
 // ---------------------------------------------------------------------------
@@ -347,6 +350,224 @@ describe('storage.controller', () => {
 
             expect(res.status).toHaveBeenCalledWith(500);
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Failed to delete files' }));
+        });
+    });
+
+    describe('requestUpload and confirmUpload', () => {
+        test('returns 400 when requestUpload receives a non-numeric size', async () => {
+            const req = { project: makeProject(), body: { filename: 'file.txt', contentType: 'text/plain', size: 'abc' } };
+            const res = makeRes();
+
+            await storageController.requestUpload(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({ error: 'filename, contentType, and size are required.' });
+        });
+
+        test('returns signed URL for requestUpload on valid input', async () => {
+            isProjectStorageExternal.mockReturnValue(false);
+            getPresignedUploadUrl.mockResolvedValue({ signedUrl: 'https://signed.example/upload', token: 'token-1' });
+
+            const req = { project: makeProject(), body: { filename: 'my..file.txt', contentType: 'text/plain', size: 1024 } };
+            const res = makeRes();
+
+            await storageController.requestUpload(req, res);
+
+            expect(getPresignedUploadUrl).toHaveBeenCalledWith(req.project, 'project_id_1/mocked-uuid_my..file.txt', 'text/plain', 1024);
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({ signedUrl: 'https://signed.example/upload', token: 'token-1', filePath: 'project_id_1/mocked-uuid_my..file.txt' });
+        });
+
+        test('confirmUpload charges the verified size and rejects mismatches', async () => {
+            isProjectStorageExternal.mockReturnValue(false);
+            verifyUploadedFile.mockResolvedValue(2048);
+            Project.updateOne.mockResolvedValue({ matchedCount: 1 });
+            mockStorageFrom.getPublicUrl.mockReturnValue({ data: { publicUrl: 'https://mock.supabase.co/project_id_1/file.txt' } });
+
+            const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2048 } };
+            const res = makeRes();
+
+            await storageController.confirmUpload(req, res);
+
+            expect(verifyUploadedFile).toHaveBeenCalledWith(req.project, 'project_id_1/file.txt');
+            expect(Project.updateOne).toHaveBeenCalledWith(
+                {
+                    _id: 'project_id_1',
+                    $or: [
+                        { storageLimit: -1 },
+                        { $expr: { $lte: [{ $add: ['$storageUsed', 2048] }, '$storageLimit'] } }
+                    ]
+                },
+                { $inc: { storageUsed: 2048 } }
+            );
+            expect(mockStorageFrom.getPublicUrl).toHaveBeenCalledWith('project_id_1/file.txt');
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ path: 'project_id_1/file.txt', provider: 'internal' }));
+        });
+
+        test('confirmUpload succeeds for unlimited storage plans', async () => {
+            isProjectStorageExternal.mockReturnValue(false);
+            verifyUploadedFile.mockResolvedValue(2048);
+            Project.updateOne.mockResolvedValue({ matchedCount: 1 });
+            mockStorageFrom.getPublicUrl.mockReturnValue({ data: { publicUrl: 'https://mock.supabase.co/project_id_1/file.txt' } });
+
+            const req = { project: makeProject({ storageLimit: -1 }), body: { filePath: 'project_id_1/file.txt', size: 2048 } };
+            const res = makeRes();
+
+            await storageController.confirmUpload(req, res);
+
+            expect(Project.updateOne).toHaveBeenCalledWith(
+                {
+                    _id: 'project_id_1',
+                    $or: [
+                        { storageLimit: -1 },
+                        { $expr: { $lte: [{ $add: ['$storageUsed', 2048] }, '$storageLimit'] } }
+                    ]
+                },
+                { $inc: { storageUsed: 2048 } }
+            );
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                message: 'Upload confirmed',
+                path: 'project_id_1/file.txt',
+                provider: 'internal',
+                url: 'https://mock.supabase.co/project_id_1/file.txt'
+            }));
+        });
+
+        test('confirmUpload rejects a declared size that differs from the verified size', async () => {
+            isProjectStorageExternal.mockReturnValue(false);
+            verifyUploadedFile.mockResolvedValue(2048);
+            mockStorageFrom.getPublicUrl.mockReturnValue({ data: { publicUrl: 'https://mock.supabase.co/project_id_1/file.txt' } });
+
+            const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 1024 } };
+            const res = makeRes();
+
+            await storageController.confirmUpload(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({ error: 'Declared file size does not match uploaded file size.' });
+            expect(mockStorageFrom.remove).toHaveBeenCalledWith(['project_id_1/file.txt']);
+        });
+
+        test('confirmUpload accepts small declared size drift within tolerance', async () => {
+            isProjectStorageExternal.mockReturnValue(false);
+            verifyUploadedFile.mockResolvedValue(2048);
+            Project.updateOne.mockResolvedValue({ matchedCount: 1 });
+            mockStorageFrom.getPublicUrl.mockReturnValue({ data: { publicUrl: 'https://mock.supabase.co/project_id_1/file.txt' } });
+
+            const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2100 } };
+            const res = makeRes();
+
+            await storageController.confirmUpload(req, res);
+
+            expect(Project.updateOne).toHaveBeenCalledWith(
+                {
+                    _id: 'project_id_1',
+                    $or: [
+                        { storageLimit: -1 },
+                        { $expr: { $lte: [{ $add: ['$storageUsed', 2048] }, '$storageLimit'] } }
+                    ]
+                },
+                { $inc: { storageUsed: 2048 } }
+            );
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ path: 'project_id_1/file.txt', provider: 'internal' }));
+        });
+
+        test('confirmUpload removes uploaded object when quota reservation fails', async () => {
+            isProjectStorageExternal.mockReturnValue(false);
+            verifyUploadedFile.mockResolvedValue(2048);
+            Project.updateOne.mockResolvedValue({ matchedCount: 0 });
+            mockStorageFrom.remove.mockResolvedValue({ data: null, error: null });
+
+            const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2048 } };
+            const res = makeRes();
+
+            await storageController.confirmUpload(req, res);
+
+            expect(mockStorageFrom.remove).toHaveBeenCalledWith(['project_id_1/file.txt']);
+            expect(res.status).toHaveBeenCalledWith(403);
+            expect(res.json).toHaveBeenCalledWith({ error: 'Internal storage limit exceeded.' });
+        });
+
+        test('confirmUpload removes uploaded object when verification fails', async () => {
+            isProjectStorageExternal.mockReturnValue(false);
+            verifyUploadedFile.mockResolvedValue(0);
+            mockStorageFrom.remove.mockResolvedValue({ data: null, error: null });
+
+            const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2048 } };
+            const res = makeRes();
+
+            await storageController.confirmUpload(req, res);
+
+            expect(mockStorageFrom.remove).toHaveBeenCalledWith(['project_id_1/file.txt']);
+            expect(res.status).toHaveBeenCalledWith(500);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Upload confirmation failed' }));
+        });
+
+        test('confirmUpload returns a retryable conflict when the uploaded object is not yet visible', async () => {
+            isProjectStorageExternal.mockReturnValue(false);
+            verifyUploadedFile.mockRejectedValue(new Error('File not found after upload'));
+            mockStorageFrom.remove.mockResolvedValue({ data: null, error: null });
+
+            const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2048 } };
+            const res = makeRes();
+
+            await storageController.confirmUpload(req, res);
+
+            expect(mockStorageFrom.remove).toHaveBeenCalledWith(['project_id_1/file.txt']);
+            expect(res.status).toHaveBeenCalledWith(409);
+            expect(res.json).toHaveBeenCalledWith({
+                error: 'UPLOAD_NOT_READY',
+                message: 'Uploaded file is not visible yet. Please retry confirmation.'
+            });
+        });
+
+        test('confirmUpload still returns 500 for generic verification errors', async () => {
+            isProjectStorageExternal.mockReturnValue(false);
+            verifyUploadedFile.mockRejectedValue(new Error('Unexpected verification failure'));
+
+            const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2048 } };
+            const res = makeRes();
+
+            await storageController.confirmUpload(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(500);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Upload confirmation failed' }));
+        });
+
+        test('confirmUpload swallows cleanup failures during compensating delete', async () => {
+            isProjectStorageExternal.mockReturnValue(false);
+            verifyUploadedFile.mockResolvedValue(2048);
+            Project.updateOne.mockResolvedValue({ matchedCount: 0 });
+            mockStorageFrom.remove.mockRejectedValue(new Error('Delete failed'));
+
+            const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2048 } };
+            const res = makeRes();
+
+            await storageController.confirmUpload(req, res);
+
+            expect(mockStorageFrom.remove).toHaveBeenCalledWith(['project_id_1/file.txt']);
+            expect(res.status).toHaveBeenCalledWith(403);
+        });
+
+        test('confirmUpload returns a warning when public URL is unavailable', async () => {
+            isProjectStorageExternal.mockReturnValue(true);
+            verifyUploadedFile.mockResolvedValue(2048);
+            mockStorageFrom.getPublicUrl.mockReturnValue({ data: { publicUrl: null, error: 'Cloudflare R2 requires a Public URL Host.' } });
+
+            const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2048 } };
+            const res = makeRes();
+
+            await storageController.confirmUpload(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                url: null,
+                warning: 'Cloudflare R2 requires a Public URL Host.',
+                provider: 'external'
+            }));
         });
     });
 });
