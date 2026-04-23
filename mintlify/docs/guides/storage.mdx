@@ -13,46 +13,126 @@ urBackend handles file and image uploads for you. Upload a file and receive a pu
 
 ## Upload a file
 
-Send a `POST` request with a `multipart/form-data` body containing the file.
+Uploads use a presigned URL three-step flow so the binary is sent directly to storage.
 
-**Endpoint:** `POST /api/storage/upload`
+### Step 1 — Request an upload URL
 
-```javascript
-const formData = new FormData();
-formData.append('file', fileInput.files[0]);
+**Endpoint:** `POST /api/storage/upload-request`
 
-const res = await fetch('https://api.ub.bitbros.in/api/storage/upload', {
-  method: 'POST',
-  headers: {
-    'x-api-key': 'YOUR_KEY'
-  },
-  body: formData
-});
+**Request body:**
 
-const { url, path, provider } = await res.json();
-// Save `path` if you need to delete the file later
+```json
+{
+  "filename": "avatar.png",
+  "contentType": "image/png",
+  "size": 123456
+}
 ```
-
-<Note>
-  Do **not** set the `Content-Type` header manually. When you pass a `FormData` object, the browser sets the correct `multipart/form-data` boundary automatically. Setting it yourself will break the upload.
-</Note>
 
 **Response:**
 
 ```json
 {
-  "message": "File uploaded successfully",
-  "url": "https://xyz.supabase.co/storage/v1/object/public/dev-files/PROJECT_ID/file.png",
-  "path": "PROJECT_ID/file.png",
-  "provider": "internal"
+  "signedUrl": "https://storage.example.com/...",
+  "token": "optional-provider-token",
+  "filePath": "PROJECT_ID/avatar.png"
 }
 ```
 
 | Field | Description |
 | --- | --- |
-| `url` | Publicly accessible CDN URL for the file |
-| `path` | Storage path — save this to delete the file later |
-| `provider` | The underlying storage provider used |
+| `signedUrl` | Presigned URL to upload the binary directly to storage |
+| `token` | Provider-specific token (only returned for some external providers) |
+| `filePath` | Storage path — save this to confirm or delete the file later |
+
+<Note>
+  This endpoint enforces the 10 MB max file size and checks quota headroom without charging it.
+</Note>
+
+### Step 2 — Upload the binary to storage
+
+Send a `PUT` request to `signedUrl` with the raw file contents and the correct `Content-Type` header.
+
+```javascript
+await fetch(signedUrl, {
+  method: 'PUT',
+  headers: {
+    'Content-Type': file.type
+  },
+  body: file
+});
+```
+
+### Step 3 — Confirm the upload
+
+**Endpoint:** `POST /api/storage/upload-confirm`
+
+**Request body:**
+
+```json
+{
+  "filePath": "PROJECT_ID/avatar.png",
+  "size": 123456
+}
+```
+
+**Response:**
+
+```json
+{
+  "url": "https://xyz.supabase.co/storage/v1/object/public/dev-files/PROJECT_ID/avatar.png",
+  "provider": "internal"
+}
+```
+
+If the storage provider does not expose a public URL (for example, some external S3/R2 setups), the response includes a warning instead of `url`.
+
+<Note>
+  The confirm step verifies the object exists, checks the size matches, and then charges quota atomically.
+</Note>
+
+### Full browser example
+
+```javascript
+const file = fileInput.files[0];
+
+const requestRes = await fetch('https://api.ub.bitbros.in/api/storage/upload-request', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'YOUR_KEY'
+  },
+  body: JSON.stringify({
+    filename: file.name,
+    contentType: file.type,
+    size: file.size
+  })
+});
+
+const { signedUrl, filePath } = await requestRes.json();
+
+await fetch(signedUrl, {
+  method: 'PUT',
+  headers: { 'Content-Type': file.type },
+  body: file
+});
+
+const confirmRes = await fetch('https://api.ub.bitbros.in/api/storage/upload-confirm', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'YOUR_KEY'
+  },
+  body: JSON.stringify({ filePath, size: file.size })
+});
+
+const { url, provider } = await confirmRes.json();
+console.log(url, provider);
+```
+
+<Note>
+  SDK users (`urbackend-sdk`) do not need to change anything — `client.storage.upload()` uses this flow internally.
+</Note>
 
 ## Delete a file
 
@@ -86,7 +166,7 @@ If the path is invalid or the file has already been removed, the API returns `40
 
 <AccordionGroup>
   <Accordion title="400 Bad Request">
-    The `file` field is missing from the multipart form body. Make sure you are appending the file to a `FormData` object with the key `file` before sending.
+    Ensure `filename`, `contentType`, and `size` are provided for the upload request, and that `filePath` and `size` are sent to the confirm endpoint.
   </Accordion>
 
   <Accordion title="401 Unauthorized">
@@ -95,5 +175,9 @@ If the path is invalid or the file has already been removed, the API returns `40
 
   <Accordion title="413 Payload Too Large">
     The file exceeds the 10 MB per-file limit. Compress or resize the file before uploading.
+  </Accordion>
+
+  <Accordion title="CORS errors on PUT to signedUrl">
+    If you use an external S3/R2 bucket, configure its CORS policy to allow `PUT` requests from your client origin. The presigned URL flow requires this bucket-level setting.
   </Accordion>
 </AccordionGroup>
