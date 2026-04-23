@@ -348,7 +348,7 @@ module.exports.confirmUpload = async (req, res) => {
             return res.status(403).json({ error: "Access denied." });
 
         // verify file actually exists on cloud before touching quota
-        const actualSize = await verifyUploadedFile(project, normalizedPath, declaredSize);
+        const actualSize = await verifyUploadedFile(project, normalizedPath);
 
         if (!Number.isFinite(actualSize) || actualSize <= 0) {
             return res.status(500).json({ error: "Upload confirmation failed", details: process.env.NODE_ENV === "development" ? "Uploaded file size could not be determined" : undefined });
@@ -371,16 +371,26 @@ module.exports.confirmUpload = async (req, res) => {
                 return res.status(403).json({ error: "Internal storage limit exceeded." });
         }
 
+        updateMonthlyUsageCounter(project._id, "storage:uploadedBytes", actualSize);
+
         const supabase = await getStorage(project);
         const bucket = getBucket(project);
         const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(normalizedPath);
 
-        return res.status(200).json({
+        const response = {
             message: "Upload confirmed",
-            url: publicUrlData.publicUrl,
             path: normalizedPath,
             provider: external ? "external" : "internal"
-        });
+        };
+
+        if (publicUrlData?.publicUrl) {
+            response.url = publicUrlData.publicUrl;
+        } else {
+            response.url = null;
+            response.warning = publicUrlData?.error || "Upload confirmed, but a public URL is unavailable.";
+        }
+
+        return res.status(200).json(response);
     } catch (err) {
         return res.status(500).json({
             error: "Upload confirmation failed",

@@ -211,7 +211,7 @@ async function getPresignedUploadUrl(project, filePath, contentType, size) {
     return { signedUrl };
 }
 
-async function verifyUploadedFile(project, filePath, expectedSize) {
+async function verifyUploadedFile(project, filePath) {
     const isExternal = !!project.resources?.storage?.isExternal;
 
     if (!isExternal) {

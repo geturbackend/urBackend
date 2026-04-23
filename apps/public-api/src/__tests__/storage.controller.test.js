@@ -389,7 +389,7 @@ describe('storage.controller', () => {
 
             await storageController.confirmUpload(req, res);
 
-            expect(verifyUploadedFile).toHaveBeenCalledWith(req.project, 'project_id_1/file.txt', 2048);
+            expect(verifyUploadedFile).toHaveBeenCalledWith(req.project, 'project_id_1/file.txt');
             expect(Project.updateOne).toHaveBeenCalledWith(
                 {
                     _id: 'project_id_1',
@@ -397,6 +397,7 @@ describe('storage.controller', () => {
                 },
                 { $inc: { storageUsed: 2048 } }
             );
+            expect(mockStorageFrom.getPublicUrl).toHaveBeenCalledWith('project_id_1/file.txt');
             expect(res.status).toHaveBeenCalledWith(200);
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ path: 'project_id_1/file.txt', provider: 'internal' }));
         });
@@ -413,6 +414,24 @@ describe('storage.controller', () => {
 
             expect(res.status).toHaveBeenCalledWith(400);
             expect(res.json).toHaveBeenCalledWith({ error: 'Declared file size does not match uploaded file size.' });
+        });
+
+        test('confirmUpload returns a warning when public URL is unavailable', async () => {
+            isProjectStorageExternal.mockReturnValue(true);
+            verifyUploadedFile.mockResolvedValue(2048);
+            mockStorageFrom.getPublicUrl.mockReturnValue({ data: { publicUrl: null, error: 'Cloudflare R2 requires a Public URL Host.' } });
+
+            const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2048 } };
+            const res = makeRes();
+
+            await storageController.confirmUpload(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                url: null,
+                warning: 'Cloudflare R2 requires a Public URL Host.',
+                provider: 'external'
+            }));
         });
     });
 });
