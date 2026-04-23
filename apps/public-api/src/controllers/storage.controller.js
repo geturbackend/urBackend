@@ -1,14 +1,11 @@
-const { getStorage, redis } = require("@urbackend/common");
+const { getStorage, getPresignedUploadUrl, verifyUploadedFile, Project, isProjectStorageExternal, getBucket, redis } = require("@urbackend/common");
 const { randomUUID } = require("crypto");
-const {Project} = require("@urbackend/common");
-const { isProjectStorageExternal } = require("@urbackend/common");
 const { getMonthKey, getEndOfMonthTtlSeconds, incrWithTtlAtomic } = require("../utils/usageCounter");
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const SAFETY_MAX_BYTES = 100 * 1024 * 1024; // 100MB safety ceiling for internal storage
 
-const getBucket = (project) =>
-    isProjectStorageExternal(project) ? "files" : "dev-files";
+
 
 const updateMonthlyUsageCounter = (projectId, metricName, value) => {
     if (!value || value <= 0) return;
@@ -249,6 +246,90 @@ module.exports.deleteAllFiles = async (req, res) => {
                 process.env.NODE_ENV === "development"
                     ? err.message
                     : undefined
+        });
+    }
+};
+
+
+// REQUEST UPLOAD - generates presigned URL for direct browser upload
+module.exports.requestUpload = async (req, res) => {
+    try {
+        const { filename, contentType, size } = req.body;
+
+        if (!filename || !contentType || !size)
+            return res.status(400).json({ error: "filename, contentType, and size are required." });
+
+        if (size > MAX_FILE_SIZE)
+            return res.status(413).json({ error: "File size exceeds limit." });
+
+        const project = req.project;
+        const external = isProjectStorageExternal(project);
+
+        // just peek at quota — don't charge yet, upload hasn't happened
+        if (!external) {
+            if (project.storageUsed + size > project.storageLimit)
+                return res.status(403).json({ error: "Internal storage limit exceeded." });
+        }
+
+        const safeName = filename.replace(/\s+/g, "_");
+        const filePath = `${project._id}/${randomUUID()}_${safeName}`;
+
+        const { signedUrl, token } = await getPresignedUploadUrl(project, filePath, contentType);
+
+        return res.status(200).json({ signedUrl, token, filePath });
+    } catch (err) {
+        return res.status(500).json({
+            error: "Could not generate upload URL",
+            details: process.env.NODE_ENV === "development" ? err.message : undefined
+        });
+    }
+};
+
+// CONFIRM UPLOAD - verifies file landed on cloud, then charges quota
+module.exports.confirmUpload = async (req, res) => {
+    try {
+        const { filePath, size } = req.body;
+
+        if (!filePath || !size)
+            return res.status(400).json({ error: "filePath and size are required." });
+
+        const project = req.project;
+        const external = isProjectStorageExternal(project);
+
+        // make sure client isn't confirming someone else's file
+        if (!filePath.startsWith(`${project._id}/`) || filePath.includes(".."))
+            return res.status(403).json({ error: "Access denied." });
+
+        // verify file actually exists on cloud before touching quota
+        await verifyUploadedFile(project, filePath, size);
+
+        // now it's safe to charge quota
+        if (!external) {
+            const result = await Project.updateOne(
+                {
+                    _id: project._id,
+                    $expr: { $lte: [{ $add: ["$storageUsed", size] }, "$storageLimit"] }
+                },
+                { $inc: { storageUsed: size } }
+            );
+            if (result.matchedCount === 0)
+                return res.status(403).json({ error: "Internal storage limit exceeded." });
+        }
+
+        const supabase = await getStorage(project);
+        const bucket = getBucket(project);
+        const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
+
+        return res.status(200).json({
+            message: "Upload confirmed",
+            url: publicUrlData.publicUrl,
+            path: filePath,
+            provider: external ? "external" : "internal"
+        });
+    } catch (err) {
+        return res.status(500).json({
+            error: "Upload confirmation failed",
+            details: process.env.NODE_ENV === "development" ? err.message : undefined
         });
     }
 };

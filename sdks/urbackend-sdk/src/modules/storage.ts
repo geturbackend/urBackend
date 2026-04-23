@@ -80,27 +80,55 @@ export class StorageModule {
    * }
    */
   public async upload(file: unknown, filename?: string): Promise<UploadResponse> {
-    const formData = new FormData();
+    // figure out name, contentType and size depending on environment
+    let resolvedName = filename || "file";
+    let contentType = "application/octet-stream";
+    let fileSize = 0;
+    let fileData: Blob | BufferSource;
 
-    if (
-      typeof window === 'undefined' &&
-      typeof Buffer !== 'undefined' &&
-      Buffer.isBuffer(file)
-    ) {
-      // In Node.js environment, convert Buffer to Blob for standard FormData
-      const blob = new Blob([file as unknown as BlobPart]);
-      formData.append('file', blob, filename || 'file');
+    if (typeof window !== "undefined" && file instanceof File) {
+        // browser File object
+        resolvedName = filename || file.name;
+        contentType = file.type || contentType;
+        fileSize = file.size;
+        fileData = file;
+    } else if (file instanceof Blob) {
+        contentType = file.type || contentType;
+        fileSize = file.size;
+        fileData = file;
+    } else if (typeof Buffer !== "undefined" && Buffer.isBuffer(file)) {
+        // Node.js Buffer
+        fileSize = (file as Buffer).length;
+        fileData = file as unknown as BufferSource;
     } else {
-      // Browser File/Blob or Node.js Blob/File
-      formData.append('file', file as unknown as Blob, filename);
+        throw new Error("Unsupported file type. Pass a File, Blob, or Buffer.");
     }
 
-    return this.client.request<UploadResponse>('POST', '/api/storage/upload', {
-      body: formData,
-      isMultipart: true,
-    });
-  }
+    // step 1 — ask server for a signed URL
+    const { signedUrl, filePath } = await this.client.request<{ signedUrl: string; filePath: string }>(
+        "POST",
+        "/api/storage/upload-request",
+        { body: { filename: resolvedName, contentType, size: fileSize } }
+    );
 
+    // step 2 — upload directly to cloud, server not involved
+    const putResponse = await fetch(signedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": contentType },
+        body: fileData as BodyInit,
+    });
+
+    if (!putResponse.ok) {
+        throw new Error(`Direct upload to cloud failed: ${putResponse.status} ${putResponse.statusText}`);
+    }
+
+    // step 3 — tell server we're done so it can verify + update quota
+    return this.client.request<UploadResponse>(
+        "POST",
+        "/api/storage/upload-confirm",
+        { body: { filePath, size: fileSize } }
+    );
+}
   /**
    * Deletes a file from storage by its path
    * 

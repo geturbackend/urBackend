@@ -5,8 +5,11 @@ const {
     S3Client,
     PutObjectCommand,
     DeleteObjectsCommand,
-    ListObjectsV2Command
+    ListObjectsV2Command,
+    HeadObjectCommand
 } = require("@aws-sdk/client-s3");
+
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 const defaultSupabase = createClient(
     process.env.SUPABASE_URL || "https://dummy.supabase.co",
@@ -156,4 +159,96 @@ async function getStorage(project) {
     return client;
 }
 
-module.exports = { getStorage };
+async function getPresignedUploadUrl(project, filePath, contentType) {
+    const isExternal = !!project.resources?.storage?.isExternal;
+
+    if (!isExternal) {
+        // internal — use the default supabase instance
+        const bucket = "dev-files";
+        const { data, error } = await defaultSupabase.storage
+            .from(bucket)
+            .createSignedUploadUrl(filePath);
+        if (error) throw error;
+        return { signedUrl: data.signedUrl, token: data.token };
+    }
+
+    // external — need to decode which provider they configured
+    const decrypted = decrypt(project.resources.storage.config);
+    const config = JSON.parse(decrypted);
+    const provider = config.storageProvider || "supabase";
+
+    if (provider === "supabase") {
+        const supabase = await getStorage(project);
+        const { data, error } = await supabase.storage
+            .from("files")
+            .createSignedUploadUrl(filePath);
+        if (error) throw error;
+        return { signedUrl: data.signedUrl, token: data.token };
+    }
+
+    // S3 or Cloudflare R2
+    const s3Client = new S3Client({
+        region: config.region || "auto",
+        endpoint: config.endpoint,
+        forcePathStyle: true,
+        credentials: {
+            accessKeyId: config.accessKeyId,
+            secretAccessKey: config.secretAccessKey,
+        },
+    });
+    const command = new PutObjectCommand({
+        Bucket: config.bucket,
+        Key: filePath,
+        ContentType: contentType,
+    });
+    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    return { signedUrl };
+}
+
+async function verifyUploadedFile(project, filePath, expectedSize) {
+    const isExternal = !!project.resources?.storage?.isExternal;
+
+    if (!isExternal) {
+        // internal supabase
+        const folder = filePath.split("/")[0];
+        const fileName = filePath.split("/").slice(1).join("/");
+        const { data, error } = await defaultSupabase.storage
+            .from("dev-files")
+            .list(folder, { search: fileName });
+        if (error) throw error;
+        if (!data || data.length === 0) throw new Error("File not found after upload");
+        return data[0].metadata?.size || expectedSize;
+    }
+
+    const decrypted = decrypt(project.resources.storage.config);
+    const config = JSON.parse(decrypted);
+    const provider = config.storageProvider || "supabase";
+
+    if (provider === "supabase") {
+        const supabase = await getStorage(project);
+        const folder = filePath.split("/")[0];
+        const fileName = filePath.split("/").slice(1).join("/");
+        const { data, error } = await supabase.storage
+            .from("files")
+            .list(folder, { search: fileName });
+        if (error) throw error;
+        if (!data || data.length === 0) throw new Error("File not found after upload");
+        return data[0].metadata?.size || expectedSize;
+    }
+
+    // S3 / R2 — just ask "does this object exist and what's its size?"
+    const s3Client = new S3Client({
+        region: config.region || "auto",
+        endpoint: config.endpoint,
+        forcePathStyle: true,
+        credentials: {
+            accessKeyId: config.accessKeyId,
+            secretAccessKey: config.secretAccessKey,
+        },
+    });
+    const command = new HeadObjectCommand({ Bucket: config.bucket, Key: filePath });
+    const head = await s3Client.send(command);
+    return head.ContentLength || expectedSize;
+}
+
+module.exports = { getStorage, getPresignedUploadUrl, verifyUploadedFile };
