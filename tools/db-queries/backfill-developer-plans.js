@@ -1,7 +1,6 @@
 const dotenv = require('dotenv');
 const path = require('path');
 
-// Load environment variables from repo root .env
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 const { Developer, connectDB } = require('../../packages/common');

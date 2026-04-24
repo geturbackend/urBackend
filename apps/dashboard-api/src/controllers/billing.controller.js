@@ -101,9 +101,9 @@ module.exports.handleWebhook = async (req, res, next) => {
 
         // Extract developer_id from subscription notes
         const developerId = payload.notes?.developer_id;
-        if (!developerId) {
-            console.warn('Razorpay webhook: no developer_id in notes');
-            return res.json({ success: true, message: 'No developer_id in notes. Skipped.' });
+        if (!developerId || typeof developerId !== 'string') {
+            console.warn('Razorpay webhook: no valid developer_id in notes');
+            return res.json({ success: true, message: 'No valid developer_id in notes. Skipped.' });
         }
 
         const developer = await Developer.findById(developerId);
