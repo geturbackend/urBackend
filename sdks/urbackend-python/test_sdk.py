@@ -25,11 +25,11 @@ from urbackend import UrBackendClient, AuthError, NotFoundError, ValidationError
 # ────────────────────────────────────────────────────────────────
 #  CONFIG — Replace these with your actual values
 # ────────────────────────────────────────────────────────────────
-API_KEY    = "pk_live_BJMxC8RXuUmHyUEBvyAkU5fs_EnNVQgmc-3x_CPwd2g"        # ← your publishable key
-BASE_URL   = "https://api.ub.bitbros.in"    # ← or http://localhost:1235
-EMAIL      = "navyasree_ulava@srmap.edu.in"
-PASSWORD   = "Navya@12345"
-COLLECTION = "posts"                         # ← a collection in your project
+API_KEY    = "YOUR_PUBLISHABLE_KEY"        # ← your publishable key
+BASE_URL   = "YOUR_BASE_URL"    # ← or http://localhost:1235
+EMAIL      = "YOUR_EMAIL"
+PASSWORD   = "YOUR_PASSWORD"
+COLLECTION = "YOUR_COLLECTION"                         # ← a collection in your project
 
 
 def separator(title: str) -> None:
@@ -189,6 +189,170 @@ def main():
     except Exception as e:
         print(f"   Raised: {type(e).__name__}: {e}")
 
+    # ══════════════════════════════════════════════════════════════
+    #  ENHANCED TESTS — Negative, Query, Token, Error, Edge Cases
+    # ══════════════════════════════════════════════════════════════
+
+    # ── 17. NEGATIVE: INSERT WITHOUT LOGIN ──────────────────────
+    separator("17. Negative: Insert Without Login (fresh client)")
+    no_auth_client = UrBackendClient(api_key=API_KEY, base_url=BASE_URL)
+    try:
+        no_auth_client.db.insert(
+            COLLECTION,
+            {"title": "Should Fail", "content": "No auth token"},
+            # deliberately NOT passing token
+        )
+        print("❌ Insert succeeded without auth — expected 401/403!")
+    except AuthError as e:
+        print(f"✅ Correctly blocked (AuthError): {e.message}")
+        print(f"   Status code: {e.status_code}")
+    except Exception as e:
+        print(f"⚠️  Blocked with {type(e).__name__}: {e}")
+        print("   (May be expected if RLS is not enabled — insert went through without owner)")
+    no_auth_client.close()
+
+    # ── 18. NEGATIVE: PROTECTED ENDPOINT WITHOUT TOKEN ──────────
+    separator("18. Negative: /me Without Token")
+    no_auth_client2 = UrBackendClient(api_key=API_KEY, base_url=BASE_URL)
+    try:
+        no_auth_client2.auth.me()
+        print("❌ /me succeeded without token — expected AuthError!")
+    except AuthError as e:
+        print(f"✅ Correctly raised AuthError: {e.message}")
+        print(f"   Status code: {e.status_code}")
+    no_auth_client2.close()
+
+    # ── 19. NEGATIVE: WRITE TO INVALID COLLECTION ───────────────
+    separator("19. Negative: Insert Into Non-Existent Collection")
+    try:
+        client.db.insert(
+            "this_collection_does_not_exist_xyz",
+            {"title": "Ghost"},
+            token=client.auth.get_token(),
+        )
+        print("❌ Insert to non-existent collection succeeded — unexpected!")
+    except NotFoundError as e:
+        print(f"✅ Correctly raised NotFoundError: {e.message}")
+    except ValidationError as e:
+        print(f"✅ Correctly raised ValidationError: {e.message}")
+    except Exception as e:
+        print(f"⚠️  Raised {type(e).__name__}: {e}")
+        print("   (Still handled — the SDK didn't crash)")
+
+    # ── 20. QUERY: LIMIT, SORT, FILTER ──────────────────────────
+    separator("20. Query Params: limit, sort, filter")
+
+    # 20a. Limit
+    try:
+        limited = client.db.get_all(COLLECTION, limit=1)
+        print(f"✅ limit=1 returned {len(limited)} doc(s)")
+        assert len(limited) <= 1, "Limit not respected!"
+    except Exception as e:
+        print(f"❌ limit query failed: {e}")
+
+    # 20b. Sort
+    try:
+        sorted_asc = client.db.get_all(COLLECTION, limit=2, sort="createdAt:asc")
+        sorted_desc = client.db.get_all(COLLECTION, limit=2, sort="createdAt:desc")
+        print(f"✅ sort=asc returned {len(sorted_asc)} docs, sort=desc returned {len(sorted_desc)} docs")
+        if len(sorted_asc) >= 2 and len(sorted_desc) >= 2:
+            if sorted_asc[0].get("_id") != sorted_desc[0].get("_id"):
+                print("   ✅ Sort order differs — sorting is working")
+            else:
+                print("   ℹ️  Same first doc (may only have 1 document)")
+    except Exception as e:
+        print(f"❌ sort query failed: {e}")
+
+    # 20c. Filter
+    try:
+        filtered = client.db.get_all(COLLECTION, filter={"title": "SDK Test Post"}, limit=5)
+        print(f"✅ filter={{title: 'SDK Test Post'}} returned {len(filtered)} docs")
+    except Exception as e:
+        print(f"❌ filter query failed: {e}")
+
+    # ── 21. TOKEN: MANUAL OVERRIDE ──────────────────────────────
+    separator("21. Token Override: Insert with Explicit Token")
+    saved_token = client.auth.get_token()
+    try:
+        # Insert using an explicitly passed token (not relying on auto-storage)
+        override_doc = client.db.insert(
+            COLLECTION,
+            {"title": "Token Override Test", "content": "Inserted with explicit token"},
+            token=saved_token,  # explicitly passed
+        )
+        override_id = override_doc.get("_id")
+        print(f"✅ Insert with explicit token succeeded: _id={override_id}")
+
+        # Verify we can read it back
+        fetched = client.db.get_one(COLLECTION, override_id)
+        print(f"   Verified: title={fetched.get('title')}")
+
+        # Clean up
+        client.db.delete(COLLECTION, override_id, token=saved_token)
+        print(f"   Cleaned up: deleted {override_id}")
+    except Exception as e:
+        print(f"❌ Token override test failed: {e}")
+
+    # ── 22. ERROR CONSISTENCY ───────────────────────────────────
+    separator("22. Error Consistency Check")
+
+    # 22a. Invalid login → should be AuthError (400 from backend)
+    try:
+        UrBackendClient(api_key=API_KEY, base_url=BASE_URL).auth.login(
+            "fake@fake.com", "wrong"
+        )
+        print("❌ Invalid login didn't raise!")
+    except AuthError as e:
+        print(f"✅ Invalid login → AuthError (status={e.status_code}): {e.message}")
+    except ValidationError as e:
+        print(f"⚠️  Invalid login → ValidationError (status={e.status_code}): {e.message}")
+        print("   Note: Backend returns 400 for bad login, which maps to ValidationError.")
+        print("   This is acceptable — callers should catch UrBackendError base class.")
+    except Exception as e:
+        print(f"⚠️  Invalid login → {type(e).__name__}: {e}")
+
+    # 22b. Missing token → should always be AuthError (local check)
+    try:
+        UrBackendClient(api_key=API_KEY, base_url=BASE_URL).auth.me()
+        print("❌ Missing token didn't raise!")
+    except AuthError as e:
+        print(f"✅ Missing token → AuthError (status={e.status_code}): {e.message}")
+    except Exception as e:
+        print(f"❌ Missing token → wrong type {type(e).__name__}: {e}")
+
+    # ── 23. EDGE CASES: EMPTY INSERT & BAD QUERY ────────────────
+    separator("23. Edge Cases: Empty Insert & Bad Query")
+
+    # 23a. Empty insert data
+    try:
+        client.db.insert(COLLECTION, {}, token=client.auth.get_token())
+        print("⚠️  Empty insert succeeded (collection may have no required fields)")
+    except ValidationError as e:
+        print(f"✅ Empty insert → ValidationError: {e.message}")
+    except Exception as e:
+        print(f"⚠️  Empty insert → {type(e).__name__}: {e}")
+
+    # 23b. get_all with no filters (should return all docs gracefully)
+    try:
+        all_no_filter = client.db.get_all(COLLECTION)
+        print(f"✅ get_all with no params returned {len(all_no_filter)} docs (type={type(all_no_filter).__name__})")
+        assert isinstance(all_no_filter, list), "Expected list!"
+    except Exception as e:
+        print(f"❌ get_all no-filter failed: {e}")
+
+    # 23c. get_one with garbage ID
+    try:
+        client.db.get_one(COLLECTION, "not_a_valid_id")
+        print("❌ get_one with bad ID didn't raise!")
+    except (NotFoundError, ValidationError) as e:
+        print(f"✅ get_one bad ID → {type(e).__name__}: {e.message}")
+    except Exception as e:
+        print(f"⚠️  get_one bad ID → {type(e).__name__}: {e}")
+
+    # ══════════════════════════════════════════════════════════════
+    #  END OF ENHANCED TESTS
+    # ══════════════════════════════════════════════════════════════
+
     # ── 16. LOGOUT ──────────────────────────────────────────────
     separator("16. Logout")
     result = client.auth.logout()
@@ -197,7 +361,7 @@ def main():
 
     # ── DONE ────────────────────────────────────────────────────
     separator("ALL TESTS COMPLETE")
-    print("🎉 Python SDK verification finished.\n")
+    print("Python SDK verification finished.\n")
     client.close()
 
 
