@@ -5,9 +5,9 @@ import json
 import pytest
 import responses as rsps_lib
 
-from src.auth import AuthModule
-from src.exceptions import AuthError
-from src.http import UrBackendHTTP
+from urbackend.auth import AuthModule
+from urbackend.exceptions import AuthError
+from urbackend.http import UrBackendHTTP
 
 BASE = "https://api.ub.bitbros.in"
 

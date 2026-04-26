@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.exceptions import (
+from urbackend.exceptions import (
     AuthError,
     NotFoundError,
     RateLimitError,

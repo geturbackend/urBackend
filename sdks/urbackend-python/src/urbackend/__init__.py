@@ -3,7 +3,7 @@ urbackend — Official Python SDK for urBackend.
 
 Quick start::
 
-    from src import UrBackendClient
+    from urbackend import UrBackendClient
 
     client = UrBackendClient(api_key="pk_live_YOUR_KEY")
 
@@ -46,11 +46,11 @@ from .exceptions import (
 
 __version__ = "0.1.0"
 __all__ = [
-    "UrBackendClient",
-    "UrBackendError",
     "AuthError",
     "NotFoundError",
     "RateLimitError",
     "StorageError",
+    "UrBackendClient",
+    "UrBackendError",
     "ValidationError",
 ]

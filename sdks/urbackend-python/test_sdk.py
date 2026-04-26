@@ -1,5 +1,5 @@
 """
-urBackend Python SDK — Live Integration Test Script.
+urBackend Python SDK - Live Integration Test Script.
 
 This script verifies the SDK works against a real urBackend instance.
 
@@ -22,13 +22,13 @@ load_dotenv()
 # Ensure we import the local SDK, not any installed version
 sys.path.insert(0, os.path.dirname(__file__))
 
-from src import UrBackendClient, AuthError, NotFoundError, ValidationError
+from urbackend import UrBackendClient, AuthError, NotFoundError, ValidationError
 
 # ────────────────────────────────────────────────────────────────
-#  CONFIG — Replace these with your actual values
+#  CONFIG - Replace these with your actual values
 # ────────────────────────────────────────────────────────────────
 API_KEY    = os.environ.get("URBACKEND_API_KEY")
-BASE   = os.environ.get("URBACKEND_BASE", "https://api.ub.bitbros.in")
+BASE_URL   = os.environ.get("URBACKEND_BASE_URL", "https://api.ub.bitbros.in")
 EMAIL      = os.environ.get("URBACKEND_TEST_EMAIL")
 PASSWORD   = os.environ.get("URBACKEND_TEST_PASSWORD")
 COLLECTION = os.environ.get("URBACKEND_TEST_COLLECTION", "posts")
@@ -52,10 +52,10 @@ def main():
     # ── 1. CONNECT ──────────────────────────────────────────────
     separator("1. Connect")
     client = UrBackendClient(api_key=API_KEY)
-    print(f"Client created with default base URL")
+    print("Client created with default base URL")
     print(f"   api_key starts with: {API_KEY[:12]}...")
 
-    # ── 2. SIGN UP (idempotent — may already exist) ─────────────
+    # ── 2. SIGN UP (idempotent - may already exist) ─────────────
     separator("2. Sign Up")
     try:
         result = client.auth.sign_up(EMAIL, PASSWORD, username="sdk_tester")
@@ -81,13 +81,13 @@ def main():
     if stored_token:
         print(f"Token auto-stored after login: {stored_token[:40]}...")
     else:
-        print("Token NOT stored — this is a bug!")
+        print("Token NOT stored - this is a bug!")
         sys.exit(1)
 
     # ── 5. GET CURRENT USER (ME) ────────────────────────────────
     separator("5. Get Current User (/me)")
     try:
-        me = client.auth.me()  # no token arg needed — auto-uses stored token
+        me = client.auth.me()  # no token arg needed - auto-uses stored token
         print(f"Current user: {me.get('email', 'N/A')}")
         print(f"_id: {me.get('_id', 'N/A')}")
     except AuthError as e:
@@ -145,7 +145,7 @@ def main():
         try:
             patched = client.db.patch(
                 COLLECTION, doc_id,
-                {"title": "SDK Test Post — PATCHED"},
+                {"title": "SDK Test Post - PATCHED"},
                 token=client.auth.get_token(),
             )
             print(f"Patched: title={patched.get('title')}")
@@ -184,7 +184,7 @@ def main():
 
     # ── 14. EDGE CASE: MISSING TOKEN ────────────────────────────
     separator("14. Edge Case: Missing Token (me without login)")
-    fresh_client = UrBackendClient(api_key=API_KEY, base=BASE)
+    fresh_client = UrBackendClient(api_key=API_KEY, base=BASE_URL)
     try:
         fresh_client.auth.me()
         print("Should have raised AuthError!")
@@ -200,37 +200,35 @@ def main():
         print(f"   Raised: {type(e).__name__}: {e}")
 
     # ══════════════════════════════════════════════════════════════
-    #  ENHANCED TESTS — Negative, Query, Token, Error, Edge Cases
+    #  ENHANCED TESTS - Negative, Query, Token, Error, Edge Cases
     # ══════════════════════════════════════════════════════════════
 
     # ── 16. NEGATIVE: INSERT WITHOUT LOGIN ──────────────────────
     separator("16. Negative: Insert Without Login (fresh client)")
-    no_auth_client = UrBackendClient(api_key=API_KEY, base=BASE)
     try:
-        no_auth_client.db.insert(
-            COLLECTION,
-            {"title": "Should Fail", "content": "No auth token"},
-            # deliberately NOT passing token
-        )
-        print("Insert succeeded without auth — expected 401/403!")
+        with UrBackendClient(api_key=API_KEY, base=BASE_URL) as no_auth_client:
+            no_auth_client.db.insert(
+                COLLECTION,
+                {"title": "Should Fail", "content": "No auth token"},
+                # deliberately NOT passing token
+            )
+        print("Insert succeeded without auth - expected 401/403!")
     except AuthError as e:
         print(f"Correctly blocked (AuthError): {e.message}")
         print(f"   Status code: {e.status_code}")
     except Exception as e:
         print(f"Blocked with {type(e).__name__}: {e}")
-        print("   (May be expected if RLS is not enabled — insert went through without owner)")
-    no_auth_client.close()
+        print("   (May be expected if RLS is not enabled - insert went through without owner)")
 
     # ── 17. NEGATIVE: PROTECTED ENDPOINT WITHOUT TOKEN ──────────
     separator("17. Negative: /me Without Token")
-    no_auth_client2 = UrBackendClient(api_key=API_KEY, base=BASE)
-    try:
-        no_auth_client2.auth.me()
-        print("/me succeeded without token — expected AuthError!")
-    except AuthError as e:
-        print(f"Correctly raised AuthError: {e.message}")
-        print(f"   Status code: {e.status_code}")
-    no_auth_client2.close()
+    with UrBackendClient(api_key=API_KEY, base=BASE_URL) as no_auth_client2:
+        try:
+            no_auth_client2.auth.me()
+            print("/me succeeded without token - expected AuthError!")
+        except AuthError as e:
+            print(f"Correctly raised AuthError: {e.message}")
+            print(f"   Status code: {e.status_code}")
 
     # ── 18. NEGATIVE: WRITE TO INVALID COLLECTION ───────────────
     separator("18. Negative: Insert Into Non-Existent Collection")
@@ -240,14 +238,14 @@ def main():
             {"title": "Ghost"},
             token=client.auth.get_token(),
         )
-        print("Insert to non-existent collection succeeded — unexpected!")
+        print("Insert to non-existent collection succeeded - unexpected!")
     except NotFoundError as e:
         print(f"Correctly raised NotFoundError: {e.message}")
     except ValidationError as e:
         print(f"Correctly raised ValidationError: {e.message}")
     except Exception as e:
         print(f"Raised {type(e).__name__}: {e}")
-        print("   (Still handled — the SDK didn't crash)")
+        print("   (Still handled - the SDK didn't crash)")
 
     # ── 19. QUERY: LIMIT, SORT, FILTER ──────────────────────────
     separator("19. Query Params: limit, sort, filter")
@@ -267,7 +265,7 @@ def main():
         print(f"sort=asc returned {len(sorted_asc)} docs, sort=desc returned {len(sorted_desc)} docs")
         if len(sorted_asc) >= 2 and len(sorted_desc) >= 2:
             if sorted_asc[0].get("_id") != sorted_desc[0].get("_id"):
-                print("Sort order differs — sorting is working")
+                print("Sort order differs - sorting is working")
             else:
                 print("Same first doc (may only have 1 document)")
     except Exception as e:
@@ -306,29 +304,29 @@ def main():
     # ── 21. ERROR CONSISTENCY ───────────────────────────────────
     separator("21. Error Consistency Check")
 
-    # 21a. Invalid login → should be AuthError (400 from backend)
+    # 21a. Invalid login -> should be AuthError (400 from backend)
     try:
-        UrBackendClient(api_key=API_KEY, base=BASE).auth.login(
-            "fake@fake.com", "wrong"
-        )
+        with UrBackendClient(api_key=API_KEY, base=BASE_URL) as c:
+            c.auth.login("fake@fake.com", "wrong")
         print("Invalid login didn't raise!")
     except AuthError as e:
-        print(f"Invalid login → AuthError (status={e.status_code}): {e.message}")
+        print(f"Invalid login -> AuthError (status={e.status_code}): {e.message}")
     except ValidationError as e:
-        print(f"Invalid login → ValidationError (status={e.status_code}): {e.message}")
+        print(f"Invalid login -> ValidationError (status={e.status_code}): {e.message}")
         print("   Note: Backend returns 400 for bad login, which maps to ValidationError.")
-        print("   This is acceptable — callers should catch UrBackendError base class.")
+        print("   This is acceptable - callers should catch UrBackendError base class.")
     except Exception as e:
-        print(f"Invalid login → {type(e).__name__}: {e}")
+        print(f"Invalid login -> {type(e).__name__}: {e}")
 
-    # 21b. Missing token → should always be AuthError (local check)
+    # 21b. Missing token -> should always be AuthError (local check)
     try:
-        UrBackendClient(api_key=API_KEY, base=BASE).auth.me()
+        with UrBackendClient(api_key=API_KEY, base=BASE_URL) as c:
+            c.auth.me()
         print("Missing token didn't raise!")
     except AuthError as e:
-        print(f"Missing token → AuthError (status={e.status_code}): {e.message}")
+        print(f"Missing token -> AuthError (status={e.status_code}): {e.message}")
     except Exception as e:
-        print(f"Missing token → wrong type {type(e).__name__}: {e}")
+        print(f"Missing token -> wrong type {type(e).__name__}: {e}")
 
     # ── 22. EDGE CASES: EMPTY INSERT & BAD QUERY ────────────────
     separator("22. Edge Cases: Empty Insert & Bad Query")
@@ -338,9 +336,9 @@ def main():
         client.db.insert(COLLECTION, {}, token=client.auth.get_token())
         print("Empty insert succeeded (collection may have no required fields)")
     except ValidationError as e:
-        print(f"Empty insert → ValidationError: {e.message}")
+        print(f"Empty insert -> ValidationError: {e.message}")
     except Exception as e:
-        print(f"Empty insert → {type(e).__name__}: {e}")
+        print(f"Empty insert -> {type(e).__name__}: {e}")
 
     # 22b. get_all with no filters (should return all docs gracefully)
     try:
@@ -355,9 +353,9 @@ def main():
         client.db.get_one(COLLECTION, "not_a_valid_id")
         print("get_one with bad ID didn't raise!")
     except (NotFoundError, ValidationError) as e:
-        print(f"get_one bad ID → {type(e).__name__}: {e.message}")
+        print(f"get_one bad ID -> {type(e).__name__}: {e.message}")
     except Exception as e:
-        print(f"get_one bad ID → {type(e).__name__}: {e}")
+        print(f"get_one bad ID -> {type(e).__name__}: {e}")
 
     # ══════════════════════════════════════════════════════════════
     #  END OF ENHANCED TESTS

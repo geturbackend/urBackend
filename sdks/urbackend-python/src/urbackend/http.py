@@ -54,6 +54,9 @@ def _parse_api_error(response: requests.Response) -> UrBackendError:
 
     status = response.status_code
 
+    if "/api/storage" in endpoint:
+        return StorageError(message, status, endpoint)
+
     if status in (401, 403):
         return AuthError(message, status, endpoint)
     if status == 404:
@@ -77,8 +80,6 @@ def _parse_api_error(response: requests.Response) -> UrBackendError:
         return RateLimitError(message, endpoint, retry_after)
     if status == 400:
         return ValidationError(message, endpoint)
-    if "/api/storage" in endpoint:
-        return StorageError(message, status, endpoint)
 
     return UrBackendError(message, status, endpoint)
 

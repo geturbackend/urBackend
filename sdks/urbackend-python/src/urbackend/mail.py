@@ -87,6 +87,9 @@ class MailModule:
             >>> print(result.get("id"))
         """
         payload: Dict[str, Any] = {"to": to}
+        
+        if not (template_name or template_id or subject or text or html):
+            raise ValueError("Either a template (template_name/template_id) or raw content (subject/text/html) must be provided.")
 
         if template_name is not None:
             payload["templateName"] = template_name

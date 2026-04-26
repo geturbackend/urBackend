@@ -49,7 +49,7 @@ class UrBackendClient:
 
     Example — Django / Flask server::
 
-        from src import UrBackendClient
+        from urbackend import UrBackendClient
 
         client = UrBackendClient(api_key="pk_live_YOUR_KEY")
 
@@ -194,6 +194,7 @@ class UrBackendClient:
             >>> client.connect("pk_live_new")  # now uses new key
         """
         self._validate_api_key(api_key)
+        base = base or _DEFAULT_BASE
 
         # Replace the shared HTTP session
         self._http.close()

@@ -15,7 +15,7 @@ from .http import UrBackendHTTP
 
 
 def _build_params(
-    filter: Optional[Dict[str, Any]] = None,
+    filter_: Optional[Dict[str, Any]] = None,
     sort: Optional[str] = None,
     limit: Optional[int] = None,
     page: Optional[int] = None,
@@ -31,12 +31,12 @@ def _build_params(
     Filter keys and extra arguments must not conflict with reserved params.
     """
     params: Dict[str, Any] = {}
-    reserved = {"sort", "limit", "page", "skip", "populate", "expand", "count"}
+    reserved_keys = {"sort", "limit", "page", "skip", "populate", "expand", "count"}
 
-    if filter:
-        for k, v in filter.items():
-            if k in reserved:
-                raise ValueError(f"Filter key '{k}' conflicts with a reserved query parameter.")
+    if filter_:
+        for k, v in filter_.items():
+            if k in reserved_keys:
+                raise ValueError(f"Filter key '{k}' conflicts with reserved query parameter.")
             params[k] = v
 
     if sort is not None:
@@ -55,7 +55,7 @@ def _build_params(
         params["count"] = "true"
 
     for k, v in extra.items():
-        if k in reserved:
+        if k in reserved_keys:
             raise ValueError(f"Extra argument '{k}' conflicts with a reserved query parameter.")
         params[k] = v
 
@@ -79,38 +79,40 @@ class CollectionRef:
 
     def find(
         self,
-        query: Optional[Dict[str, Any]] = None,
-        *,
+        filter_: Optional[Dict[str, Any]] = None,
         sort: Optional[str] = None,
         limit: Optional[int] = None,
         page: Optional[int] = None,
+        skip: Optional[int] = None,
+        expand: Optional[Union[str, List[str]]] = None,
         populate: Optional[Union[str, List[str]]] = None,
         token: Optional[str] = None,
+        **kwargs: Any,
     ) -> List[Dict[str, Any]]:
-        """Alias for :meth:`DatabaseModule.get_all` on this collection.
-
+        """Find multiple documents in this collection.
+        
         Args:
-            query: Field-level filter dict, e.g. ``{"status": "active"}``.
-            sort: Sort expression, e.g. ``"createdAt:desc"``.
-            limit: Maximum number of documents to return.
-            page: Page number (1-based).
-            populate: Reference field(s) to populate.
-            token: Bearer token for RLS-protected reads.
+            filter: MongoDB query dict (e.g. ``{"status": "published"}``).
+            sort: Sort string (e.g. ``"createdAt:desc"``).
+            limit: Maximum documents to return.
+            page: Page number for pagination.
+            skip: Number of documents to skip.
+            expand: Field(s) to populate/expand.
+            populate: Alias for ``expand``.
+            token: Optional bearer token overriding the session token.
 
         Returns:
             List of matching documents.
-
-        Example:
-            >>> posts = client.db.collection("posts").find(
-            ...     {"status": "published"}, sort="createdAt:desc", limit=10
-            ... )
         """
+        filter_ = filter_ or kwargs.pop("filter", None)
         return self._db.get_all(
-            self._name,
-            filter=query,
+            collection=self._name,
+            filter_=filter_,
             sort=sort,
             limit=limit,
             page=page,
+            skip=skip,
+            expand=expand,
             populate=populate,
             token=token,
         )
@@ -178,7 +180,7 @@ class DatabaseModule:
         self,
         collection: str,
         *,
-        filter: Optional[Dict[str, Any]] = None,
+        filter_: Optional[Dict[str, Any]] = None,
         sort: Optional[str] = None,
         limit: Optional[int] = None,
         page: Optional[int] = None,
@@ -186,6 +188,7 @@ class DatabaseModule:
         populate: Optional[Union[str, List[str]]] = None,
         expand: Optional[Union[str, List[str]]] = None,
         token: Optional[str] = None,
+        **kwargs: Any,
     ) -> List[Dict[str, Any]]:
         """Fetch all documents from a collection with optional query params.
 
@@ -219,8 +222,13 @@ class DatabaseModule:
             ...     limit=20,
             ... )
         """
+        # Accept 'populate' as an alias for 'expand'
+        if populate is not None and expand is None:
+            expand = populate
+
+        filter_ = filter_ or kwargs.pop("filter", None)
         params = _build_params(
-            filter=filter,
+            filter_=filter_,
             sort=sort,
             limit=limit,
             page=page,
@@ -244,25 +252,22 @@ class DatabaseModule:
     def count(
         self,
         collection: str,
-        *,
-        filter: Optional[Dict[str, Any]] = None,
+        filter_: Optional[Dict[str, Any]] = None,
         token: Optional[str] = None,
+        **kwargs: Any,
     ) -> int:
-        """Count documents in a collection with optional filters.
+        """Count the number of documents matching a filter.
 
         Args:
-            collection: Collection name.
-            filter: Same filter syntax as :meth:`get_all`.
-            token: Bearer token for RLS-protected collections.
+            collection: Name of the collection.
+            filter: MongoDB query dict (e.g. ``{"status": "published"}``).
+            token: Optional bearer token overriding the session token.
 
         Returns:
-            Total number of matching documents.
-
-        Example:
-            >>> total = client.db.count("orders", filter={"status": "pending"})
-            >>> pages = -(-total // 25)  # ceiling division
+            The document count as an integer.
         """
-        params = _build_params(filter=filter, count=True)
+        filter_ = filter_ or kwargs.pop("filter", None)
+        params = _build_params(filter_=filter_, count=True)
         path = f"/api/data/{collection}"
         try:
             result = self._http.request("GET", path, params=params, token=token)

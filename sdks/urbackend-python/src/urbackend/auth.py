@@ -7,11 +7,10 @@ Mirrors ``AuthModule`` from the TypeScript SDK.
 from __future__ import annotations
 
 from typing import Any, Dict, Optional
-
-from .exceptions import AuthError
-from .http import UrBackendHTTP
 import warnings
-from .exceptions import UrBackendError
+
+from .exceptions import AuthError, UrBackendError
+from .http import UrBackendHTTP
 
 class AuthModule:
     """Handles all ``/api/userAuth/*`` operations.

@@ -3,14 +3,14 @@
 import pytest
 import responses as rsps_lib
 
-from src.exceptions import (
+from urbackend.exceptions import (
     AuthError,
     NotFoundError,
     RateLimitError,
     UrBackendError,
     ValidationError,
 )
-from src.http import UrBackendHTTP
+from urbackend.http import UrBackendHTTP
 
 BASE = "https://api.ub.bitbros.in"
 

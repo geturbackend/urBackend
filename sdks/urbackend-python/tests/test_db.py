@@ -4,9 +4,9 @@ import json
 import pytest
 import responses as rsps_lib
 
-from src.db import CollectionRef, DatabaseModule
-from src.exceptions import AuthError, NotFoundError
-from src.http import UrBackendHTTP
+from urbackend.db import CollectionRef, DatabaseModule
+from urbackend.exceptions import AuthError, NotFoundError
+from urbackend.http import UrBackendHTTP
 
 BASE = "https://api.ub.bitbros.in"
 

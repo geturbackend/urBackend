@@ -21,7 +21,7 @@ Requires Python ≥ 3.8 and [`requests`](https://pypi.org/project/requests/).
 ## Quick Start
 
 ```python
-from src import UrBackendClient
+from urbackend import UrBackendClient
 
 client = UrBackendClient(api_key="pk_live_YOUR_KEY")
 ```
@@ -179,7 +179,7 @@ client.auth.resend_verification_otp("alice@example.com")
 ## Error Handling
 
 ```python
-from src import (
+from urbackend import (
     UrBackendClient,
     AuthError,
     NotFoundError,
@@ -288,13 +288,13 @@ RLS is supported: pass the user's `accessToken` as `token=` to write operations.
 ```python
 # settings.py (Django)
 import os
-from src import UrBackendClient
+from urbackend import UrBackendClient
 
 urbackend = UrBackendClient(api_key=os.environ["URBACKEND_API_KEY"])
 
 # views.py
-from myapp.settings import src
-from src import NotFoundError
+from myapp.settings import urbackend
+from urbackend import NotFoundError
 
 def product_detail(request, product_id):
     try:
