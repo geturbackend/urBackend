@@ -1,6 +1,6 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const { Developer, ProRequest, AppError, sendProRequestConfirmationEmail } = require('@urbackend/common');
+const { Developer, ProRequest, AppError, sendProRequestConfirmationEmail, sanitizeNonEmptyString, sanitizeObjectId } = require('@urbackend/common');
 
 const getRazorpayInstance = () => {
     const keyId = process.env.RAZORPAY_KEY_ID;
@@ -71,21 +71,23 @@ module.exports.createCheckout = async (req, res, next) => {
  */
 module.exports.createProRequest = async (req, res, next) => {
     try {
-        const { email, bio } = req.body;
-        if (!email || !bio) {
+        const cleanEmail = sanitizeNonEmptyString(req.body.email);
+        const bio = sanitizeNonEmptyString(req.body.bio);
+
+        if (!cleanEmail || !bio) {
             return next(new AppError(400, 'Email and 1-line bio are required.'));
         }
 
         // Check if already requested
-        const existing = await ProRequest.findOne({ email });
+        const existing = await ProRequest.findOne({ email: cleanEmail });
         if (existing) {
             return next(new AppError(400, 'You have already submitted a request. We will be in touch soon!'));
         }
 
-        const request = await ProRequest.create({ email, bio });
+        const request = await ProRequest.create({ email: cleanEmail, bio });
 
         // Send confirmation email
-        sendProRequestConfirmationEmail(email).catch(err => console.error("Failed to send Pro request email:", err));
+        sendProRequestConfirmationEmail(cleanEmail).catch(err => console.error("Failed to send Pro request email:", err));
 
         res.json({
             success: true,
@@ -127,10 +129,10 @@ module.exports.approveProRequest = async (req, res, next) => {
     try {
         if (!req.user?.isAdmin) return next(new AppError(403, 'Forbidden'));
 
-        const { requestId } = req.body;
-        if (!requestId) return next(new AppError(400, 'Request ID is required.'));
+        const cleanRequestId = sanitizeObjectId(req.body.requestId);
+        if (!cleanRequestId) return next(new AppError(400, 'Invalid Request ID format.'));
 
-        const request = await ProRequest.findById(requestId);
+        const request = await ProRequest.findById(cleanRequestId);
         if (!request) return next(new AppError(404, 'Pro request not found.'));
 
         if (request.status === 'approved') {

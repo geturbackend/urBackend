@@ -1,15 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
-<<<<<<< HEAD
-const { attachDeveloper, checkProjectLimit, checkCollectionLimit, checkByokGate, checkByodGate } = require('../middlewares/planEnforcement');
-const {verifyEmail} = require('@urbackend/common')
+const planEnforcement = require('../middlewares/planEnforcement');
+const { attachDeveloper, checkProjectLimit, checkCollectionLimit, checkByokGate, checkByodGate } = planEnforcement;
+const { verifyEmail, checkAuthEnabled, loadProjectForAdmin } = require('@urbackend/common');
 const multer = require('multer');
 const storage = multer.memoryStorage();
-=======
-const { attachDeveloper, checkProjectLimit, checkCollectionLimit, checkByokGate } = require('../middlewares/planEnforcement');
-const { verifyEmail, checkAuthEnabled, loadProjectForAdmin } = require('@urbackend/common');
->>>>>>> 0825b180cfed2fe9a8aa3a578e887c52b363b0ae
 
 const {
     createProject,
@@ -104,7 +100,7 @@ router.delete('/:projectId/mail/templates/:templateId', authMiddleware, verifyEm
 router.patch('/:projectId/allowed-domains', authMiddleware, verifyEmail, updateAllowedDomains);
 
 // PATCH REQ FOR BYOD CONFIG
-router.patch('/:projectId/byod-config', authMiddleware, attachDeveloper, checkByodGate, updateExternalConfig);
+router.patch('/:projectId/byod-config', authMiddleware, attachDeveloper, planEnforcement.checkByodGate, updateExternalConfig);
 
 // DELETE REQ FOR BYOD DB CONFIG
 router.delete('/:projectId/byod-config/db', authMiddleware, deleteExternalDbConfig);
