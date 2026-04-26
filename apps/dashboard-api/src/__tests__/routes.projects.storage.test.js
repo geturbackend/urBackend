@@ -12,6 +12,9 @@ jest.mock('../middlewares/planEnforcement', () => ({
   checkProjectLimit: jest.fn((_req, _res, next) => next()),
   checkCollectionLimit: jest.fn((_req, _res, next) => next()),
   checkByokGate: jest.fn((_req, _res, next) => next()),
+  checkByodGate: jest.fn((_req, _res, next) => next()),
+  checkWebhookGate: jest.fn((_req, _res, next) => next()),
+  checkMailTemplatesGate: jest.fn((_req, _res, next) => next()),
 }));
 
 jest.mock('@urbackend/common', () => ({

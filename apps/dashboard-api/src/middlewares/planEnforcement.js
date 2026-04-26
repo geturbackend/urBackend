@@ -1,7 +1,9 @@
-const { Developer, Project, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId } = require('@urbackend/common');
+console.log('DEBUG: planEnforcement.js loading...');
 const mongoose = require('mongoose');
 
-const attachDeveloper = async (req, res, next) => {
+console.log('DEBUG: planEnforcement.js exporting attachDeveloper');
+exports.attachDeveloper = async function(req, res, next) {
+    const { Developer, AppError } = require('@urbackend/common');
     try {
         if (!req.user || !req.user._id) {
             return next(new AppError(401, 'Unauthorized: Developer context missing'));
@@ -13,9 +15,11 @@ const attachDeveloper = async (req, res, next) => {
     } catch (err) {
         next(err);
     }
-};
+}
 
-const checkProjectLimit = async (req, res, next) => {
+console.log('DEBUG: planEnforcement.js exporting checkProjectLimit');
+exports.checkProjectLimit = async function(req, res, next) {
+    const { resolveEffectivePlan, getPlanLimits } = require('@urbackend/common');
     try {
         if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
         const effectivePlan = resolveEffectivePlan(req.developer);
@@ -26,9 +30,11 @@ const checkProjectLimit = async (req, res, next) => {
     } catch (err) {
         next(err);
     }
-};
+}
 
-const checkCollectionLimit = async (req, res, next) => {
+console.log('DEBUG: planEnforcement.js exporting checkCollectionLimit');
+exports.checkCollectionLimit = async function(req, res, next) {
+    const { Project, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId } = require('@urbackend/common');
     try {
         if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
         
@@ -46,9 +52,11 @@ const checkCollectionLimit = async (req, res, next) => {
     } catch (err) {
         next(err);
     }
-};
+}
 
-const checkByodGate = async (req, res, next) => {
+console.log('DEBUG: planEnforcement.js exporting checkByodGate');
+exports.checkByodGate = async function(req, res, next) {
+    const { Project, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId } = require('@urbackend/common');
     try {
         if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
         const { dbUri, storageUrl, storageKey } = req.body;
@@ -72,9 +80,11 @@ const checkByodGate = async (req, res, next) => {
     } catch (err) {
         next(err);
     }
-};
+}
 
-const checkByokGate = async (req, res, next) => {
+console.log('DEBUG: planEnforcement.js exporting checkByokGate');
+exports.checkByokGate = async function(req, res, next) {
+    const { Project, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId } = require('@urbackend/common');
     try {
         if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
         const { resendApiKey, github, google } = req.body;
@@ -97,9 +107,11 @@ const checkByokGate = async (req, res, next) => {
     } catch (err) {
         next(err);
     }
-};
+}
 
-const checkWebhookGate = async (req, res, next) => {
+console.log('DEBUG: planEnforcement.js exporting checkWebhookGate');
+exports.checkWebhookGate = async function(req, res, next) {
+    const { Project, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId } = require('@urbackend/common');
     try {
         if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
 
@@ -123,9 +135,11 @@ const checkWebhookGate = async (req, res, next) => {
     } catch (err) {
         next(err);
     }
-};
+}
 
-const checkMailTemplatesGate = async (req, res, next) => {
+console.log('DEBUG: planEnforcement.js exporting checkMailTemplatesGate');
+exports.checkMailTemplatesGate = async function(req, res, next) {
+    const { Project, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId } = require('@urbackend/common');
     try {
         if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
 
@@ -149,14 +163,4 @@ const checkMailTemplatesGate = async (req, res, next) => {
     } catch (err) {
         next(err);
     }
-};
-
-module.exports = {
-    attachDeveloper,
-    checkProjectLimit,
-    checkCollectionLimit,
-    checkByodGate,
-    checkByokGate,
-    checkWebhookGate,
-    checkMailTemplatesGate
-};
+}

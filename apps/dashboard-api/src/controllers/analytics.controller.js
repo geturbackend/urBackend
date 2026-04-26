@@ -1,4 +1,4 @@
-const { Project, Log, Developer, resolveEffectivePlan, getPlanLimits } = require("@urbackend/common");
+const { Project, Log, Developer, Webhook, getConnection, resolveEffectivePlan, getPlanLimits } = require("@urbackend/common");
 const mongoose = require("mongoose");
 
 /**
@@ -39,8 +39,26 @@ module.exports.getGlobalStats = async (req, res) => {
       totalCollections: 0
     };
 
-    const projectIds = await Project.find({ owner: user_id }).distinct("_id");
+    const projects = await Project.find({ owner: user_id }).select("_id").lean();
+    const projectIds = projects.map(p => p._id);
+    
+    // Calculate total requests
     const totalRequests = await Log.countDocuments({ projectId: { $in: projectIds } });
+
+    // Calculate total webhooks
+    const totalWebhooks = await Webhook.countDocuments({ projectId: { $in: projectIds } });
+
+    // Calculate total users across all project databases
+    let totalUsers = 0;
+    for (const project of projects) {
+      try {
+        const conn = await getConnection(project._id.toString());
+        const userCount = await conn.collection('users').countDocuments();
+        totalUsers += userCount;
+      } catch (err) {
+        console.error(`Failed to count users for project ${project._id}:`, err.message);
+      }
+    }
 
     const effectivePlan = resolveEffectivePlan(dev);
     const limits = getPlanLimits({
@@ -63,6 +81,8 @@ module.exports.getGlobalStats = async (req, res) => {
           totalStorageUsed: globalStats.totalStorageUsed,
           totalDatabaseUsed: globalStats.totalDatabaseUsed,
           totalRequests,
+          totalWebhooks,
+          totalUsers
         }
       },
       message: ""

@@ -7,10 +7,11 @@ import { X, Zap, Check, Loader2 } from 'lucide-react';
 
 const FREE_FEATURES = [
     '1 Project',
-    '10 Collections per project',
-    '5,000 API requests / day',
-    '20MB File Storage',
-    '50 Emails / month',
+    '5 Collections per project',
+    '2,000 API requests / day',
+    '10MB File Storage',
+    '200 Auth Users',
+    '25 Emails / month',
     'Global email templates',
     'Community support',
 ];
@@ -18,13 +19,16 @@ const FREE_FEATURES = [
 const PRO_FEATURES = [
     '10 Projects',
     'Unlimited collections',
-    '50,000 API requests / day',
+    'Unlimited API requests',
+    'Unlimited Auth Users',
+    'Unlimited Webhooks',
+    'External Database (BYOM)',
     'Bring your own Storage (S3/R2)',
     '1,000 Emails / month',
     'Custom HTML email templates',
     'BYOK — own API keys',
     'Analytics Pro',
-    'AI integrations (OpenAI, Groq) Coming in May',
+    'AI integrations (OpenAI, Groq)',
     'Priority support',
 ];
 

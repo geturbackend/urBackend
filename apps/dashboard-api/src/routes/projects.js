@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
 const planEnforcement = require('../middlewares/planEnforcement');
-const { attachDeveloper, checkProjectLimit, checkCollectionLimit, checkByokGate, checkByodGate } = planEnforcement;
 const { verifyEmail, checkAuthEnabled, loadProjectForAdmin } = require('@urbackend/common');
 const multer = require('multer');
 const storage = multer.memoryStorage();
@@ -45,19 +44,12 @@ const { createAdminUser, resetPassword, getUserDetails, updateAdminUser, listUse
 
 
 // POST REQ FOR CREATE PROJECT
-router.post('/', authMiddleware, attachDeveloper, verifyEmail, checkProjectLimit, createProject);
-
-// GET REQ FOR ALL PROJECTS
+router.post('/', authMiddleware, verifyEmail, planEnforcement.checkProjectLimit, createProject);
 router.get('/', authMiddleware, getAllProject);
-
-// GET REQ FOR SINGLE PROJECT
 router.get('/:projectId', authMiddleware, getSingleProject);
+router.post('/:projectId/api-key', authMiddleware, verifyEmail, regenerateApiKey);
 
-// PATCH REQ FOR REGENERATE KEY
-router.patch('/:projectId/regenerate-key', authMiddleware, regenerateApiKey);
-
-// POST REQ FOR CREATE COLLECTION
-router.post('/collection', authMiddleware, attachDeveloper, verifyEmail, checkCollectionLimit, createCollection);
+router.post('/:projectId/collections', authMiddleware, verifyEmail, planEnforcement.attachDeveloper, planEnforcement.checkCollectionLimit, createCollection);
 
 // DELETE REQ FOR COLLECTION
 router.delete('/:projectId/collections/:collectionName', authMiddleware, verifyEmail, deleteCollection);
@@ -86,23 +78,20 @@ router.post('/:projectId/storage/upload-confirm', authMiddleware, verifyEmail, l
 router.delete('/:projectId', authMiddleware, verifyEmail, deleteProject);
 
 // PATCH REQ FOR UPDATE PROJECT
-router.patch('/:projectId', authMiddleware, attachDeveloper, checkByokGate, updateProject);
+router.patch('/:projectId', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkByokGate, updateProject);
 
 // MAIL TEMPLATES (Phase 2)
 router.get('/:projectId/mail/templates', authMiddleware, listMailTemplates);
 router.get('/:projectId/mail/templates/global', authMiddleware, listGlobalMailTemplates);
 router.get('/:projectId/mail/templates/:templateId', authMiddleware, getMailTemplate);
-router.post('/:projectId/mail/templates', authMiddleware, verifyEmail, attachDeveloper, checkMailTemplatesGate, createMailTemplate);
-router.patch('/:projectId/mail/templates/:templateId', authMiddleware, verifyEmail, attachDeveloper, checkMailTemplatesGate, updateMailTemplate);
+router.post('/:projectId/mail/templates', authMiddleware, verifyEmail, planEnforcement.attachDeveloper, planEnforcement.checkMailTemplatesGate, createMailTemplate);
+router.patch('/:projectId/mail/templates/:templateId', authMiddleware, verifyEmail, planEnforcement.attachDeveloper, planEnforcement.checkMailTemplatesGate, updateMailTemplate);
 router.delete('/:projectId/mail/templates/:templateId', authMiddleware, verifyEmail, deleteMailTemplate);
 
 // PATCH REQ FOR ALLOWED DOMAINS
 router.patch('/:projectId/allowed-domains', authMiddleware, verifyEmail, updateAllowedDomains);
 
 // PATCH REQ FOR BYOD CONFIG
-router.patch('/:projectId/byod-config', authMiddleware, attachDeveloper, planEnforcement.checkByodGate, updateExternalConfig);
-
-// DELETE REQ FOR BYOD DB CONFIG
 router.delete('/:projectId/byod-config/db', authMiddleware, deleteExternalDbConfig);
 
 // DELETE REQ FOR BYOD STORAGE CONFIG
@@ -121,7 +110,10 @@ router.get('/:projectId/analytics', authMiddleware, analytics);
 router.patch('/:projectId/auth/toggle', authMiddleware, verifyEmail, toggleAuth);
 
 // PATCH REQ FOR SOCIAL AUTH PROVIDERS
-router.patch('/:projectId/auth/providers', authMiddleware, attachDeveloper, verifyEmail, checkByokGate, updateAuthProviders);
+router.patch('/:projectId/auth/providers', authMiddleware, planEnforcement.attachDeveloper, verifyEmail, planEnforcement.checkByokGate, updateAuthProviders);
+
+// PATCH REQ FOR BYOD CONFIG
+router.patch('/:projectId/byod-config', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkByodGate, updateExternalConfig);
 
 // PATCH REQ FOR COLLECTION RLS SETTINGS
 router.patch('/:projectId/collections/:collectionName/rls', authMiddleware, verifyEmail, updateCollectionRls);

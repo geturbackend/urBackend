@@ -48,8 +48,23 @@ const UsageQuota = () => {
         <UsageProgressBar
           label="Collections"
           used={usage?.totalCollections ?? 0}
-          limit={limits?.maxCollections ?? 10}
+          limit={limits?.maxCollections ?? 5}
           unit="Col"
+          unlimited={limits?.maxCollections === -1}
+        />
+        <UsageProgressBar
+          label="Auth Users"
+          used={usage?.totalUsers ?? 0}
+          limit={limits?.authUsersLimit ?? 200}
+          unit="Users"
+          unlimited={limits?.authUsersLimit === -1}
+        />
+        <UsageProgressBar
+          label="Webhooks"
+          used={usage?.totalWebhooks ?? 0}
+          limit={limits?.webhooksLimit ?? 0}
+          unit="Hooks"
+          unlimited={limits?.webhooksLimit === -1}
         />
         <UsageProgressBar
           label="Database"
@@ -62,15 +77,17 @@ const UsageQuota = () => {
         <UsageProgressBar
           label="File Storage"
           used={usage?.totalStorageUsed ?? 0}
-          limit={limits?.storageBytes ?? 20971520}
+          limit={limits?.storageBytes ?? 10485760}
           formatValue={formatBytes}
           unit=""
+          unlimited={limits?.storageBytes === -1}
         />
         <UsageProgressBar
           label="Requests"
           used={usage?.totalRequests ?? 0}
-          limit={limits?.reqPerDay ?? 5000}
+          limit={limits?.reqPerDay ?? 2000}
           unit="req"
+          unlimited={limits?.reqPerDay === -1}
         />
       </div>
 

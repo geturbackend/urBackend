@@ -605,10 +605,11 @@ function LandingPage() {
                             <div style={{ fontSize: '3rem', fontWeight: 800, color: '#fff', marginBottom: '1rem' }}>$0<span style={{ fontSize: '1rem', color: '#666', fontWeight: 400 }}>/mo</span></div>
                             <p style={{ color: '#888', marginBottom: '2rem', fontSize: '0.95rem' }}>Perfect for side projects, MVPs, and learning.</p>
                             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2rem 0', display: 'grid', gap: '12px' }}>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> 1 Project & 10 Collections</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> 50MB DB & 20MB Storage(For Testing)</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> 1 Project & 5 Collections</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> 2,000 API requests / day</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> 200 Auth Users</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> 50MB DB & 10MB Storage</li>
                                 <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> Community Support</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> BYO Infrastructure</li>
                             </ul>
                             <Link to="/signup" className="btn btn-primary" style={{ width: '100%', textAlign: 'center', padding: '12px', fontWeight: 600 }}>Get Started Now</Link>
                         </div>
@@ -623,11 +624,11 @@ function LandingPage() {
                             <p style={{ color: '#00f5d4', marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Get a month free to test out app before launch!</p>
                             <p style={{ color: '#888', marginBottom: '2rem', fontSize: '0.95rem' }}>For growing teams and production-grade apps.</p>
                             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2rem 0', display: 'grid', gap: '12px' }}>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> Up to 10 Projects</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> Unlimited Collections</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> Priority Support</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> 10x API Rate Limits</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> Advanced Analytics</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> Unlimited Projects & Collections</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> Unlimited API Requests & Users</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> Unlimited Webhooks & BYOK</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> BYO Database & Storage</li>
+                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> Priority Support & AI Integration</li>
                             </ul>
                             <Link to="/request-pro" className="btn btn-primary" style={{ width: '100%', textAlign: 'center', padding: '12px', fontWeight: 600, background: 'linear-gradient(135deg, #00f5d4 0%, #00c9a7 100%)', color: '#000', textDecoration: 'none', borderRadius: '8px', display: 'block' }}>Get 1 month Pro for free</Link>
                         </div>
