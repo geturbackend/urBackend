@@ -79,7 +79,7 @@ const UsageQuota = () => {
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px'
           }}
         >
-          <Zap size={10} /> Upgrade to Pro
+          <Zap size={10} /> Get 1 month Pro for free (Beta)
         </button>
       )}
     </div>

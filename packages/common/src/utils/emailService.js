@@ -221,7 +221,7 @@ async function sendAuthOtpEmail(email, { otp, type, pname, byokKey, byokFrom }) 
     }
 }
 
-async function sendWaitlistConfirmationEmail(email) {
+async function sendProRequestConfirmationEmail(email) {
     try {
         const htmlContent = `
             <!DOCTYPE html>
@@ -240,9 +240,10 @@ async function sendWaitlistConfirmationEmail(email) {
             <body>
                 <div class="container">
                     <div class="logo">urBackend</div>
-                    <h1>You're on the list! 🎉</h1>
+                    <h1>Pro Access Requested! ⚡</h1>
                     <div class="content">
-                        Thanks for joining the urBackend Pro waitlist. We will reach out to you directly as soon as we launch, and you'll get 1 month of Pro completely free.
+                        Thanks for your interest in urBackend Pro. We've received your request and our team will review it shortly. 
+                        Once approved, you'll receive an email and your account will be upgraded automatically.
                     </div>
                     <div class="footer">
                         <p>© ${new Date().getFullYear()} urBackend Inc. • Developer platform.</p>
@@ -255,20 +256,20 @@ async function sendWaitlistConfirmationEmail(email) {
         const { data, error } = await resend.emails.send({
             from: 'urBackend <urbackend@apps.bitbros.in>',
             to: email,
-            subject: "You're on the waitlist! 🎉",
+            subject: "Pro Access Requested - urBackend ⚡",
             html: htmlContent,
             replyTo: 'urbackend@apps.bitbros.in',
         });
 
         if (error) {
-            console.error("[Resend Error - Waitlist]", error);
+            console.error("[Resend Error - Pro Request]", error);
             throw new Error(error.message || "Failed to send email");
         }
         return { data };
     } catch (error) {
-        console.error("[Email Service Error - Waitlist]", error);
+        console.error("[Email Service Error - Pro Request]", error);
         throw error;
     }
 }
 
-module.exports = { sendOtp, sendReleaseEmail, sendAuthOtpEmail, sendWaitlistConfirmationEmail };
+module.exports = { sendOtp, sendReleaseEmail, sendAuthOtpEmail, sendProRequestConfirmationEmail };

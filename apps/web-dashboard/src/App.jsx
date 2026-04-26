@@ -13,7 +13,7 @@ import NotFound from './pages/NotFound';
 import Analytics from './pages/Analytics';
 import Releases from './pages/Releases';
 import AdminCreateRelease from './pages/AdminCreateRelease';
-import AdminWaitlist from './pages/AdminWaitlist';
+
 
 import Database from './pages/Database';
 import Storage from './pages/Storage';
@@ -25,6 +25,8 @@ import ForgotPassword from './pages/ForgotPassword';
 import Settings from './pages/Settings';
 import ProjectSettings from './pages/ProjectSettings';
 import Webhooks from './pages/Webhooks';
+import RequestPro from './pages/RequestPro';
+import AdminProRequests from './pages/AdminProRequests';
 
 import { LayoutProvider } from './context/LayoutContext';
 import { PlanProvider, usePlan } from './context/PlanContext';
@@ -56,6 +58,7 @@ function AppContent() {
         <Route path="/verify-otp" element={<OtpVerification />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/request-pro" element={<RequestPro />} />
 
 
         {/* --- Protected Routes --- */}
@@ -138,10 +141,10 @@ function AppContent() {
           </ProtectedRoute>
         } />
 
-        <Route path="/admin/waitlist" element={
+        <Route path="/admin/pro-requests" element={
           <ProtectedRoute>
             <MainLayout>
-              <AdminWaitlist />
+              <AdminProRequests />
             </MainLayout>
           </ProtectedRoute>
         } />

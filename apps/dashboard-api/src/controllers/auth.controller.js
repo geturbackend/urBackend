@@ -185,8 +185,9 @@ const findOrCreateGithubDeveloper = async (profile) => {
 };
 
 const issueDashboardSession = async (user, res) => {
+    const isAdmin = user.email === process.env.ADMIN_EMAIL;
     const accessToken = jwt.sign(
-        { _id: user._id, isVerified: user.isVerified, maxProjects: user.maxProjects },
+        { _id: user._id, isVerified: user.isVerified, maxProjects: user.maxProjects, isAdmin },
         process.env.JWT_SECRET,
         { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
     );

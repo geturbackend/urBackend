@@ -30,8 +30,8 @@ exports.attachDeveloper = async (req, res, next) => {
  */
 exports.checkProjectLimit = async (req, res, next) => {
     try {
-        // isAdmin is embedded in the JWT at login time — no extra DB hit needed
-        if (req.user?.isAdmin) return next();
+        // Admin bypass: check JWT flag OR direct email fallback (to handle stale tokens)
+        if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
 
         const effectivePlan = resolveEffectivePlan(req.developer);
         const limits = getPlanLimits({
@@ -60,8 +60,8 @@ exports.checkProjectLimit = async (req, res, next) => {
  */
 exports.checkCollectionLimit = async (req, res, next) => {
     try {
-        // isAdmin is embedded in the JWT at login time — no extra DB hit needed
-        if (req.user?.isAdmin) return next();
+        // Admin bypass: check JWT flag OR direct email fallback (to handle stale tokens)
+        if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
 
         // For collection creation, the projectId is usually in req.body
         const projectId = req.body.projectId;
@@ -103,7 +103,7 @@ exports.checkCollectionLimit = async (req, res, next) => {
 exports.checkByokGate = async (req, res, next) => {
     try {
         // Admin always has access to all features
-        if (req.user?.isAdmin) return next();
+        if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
 
         let customLimits = null;
         const rawProjectId = req.params.projectId || req.body.projectId || req.query.projectId;
@@ -135,7 +135,7 @@ exports.checkByokGate = async (req, res, next) => {
 exports.checkByomGate = async (req, res, next) => {
     try {
         // Admin always has access to all features
-        if (req.user?.isAdmin) return next();
+        if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
 
         let customLimits = null;
         const rawProjectId = req.params.projectId || req.body.projectId || req.query.projectId;

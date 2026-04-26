@@ -102,7 +102,6 @@ const projectRoute = require('./routes/projects');
 const releaseRoute = require('./routes/releases');
 const webhookRoute = require('./routes/webhooks');
 const analyticsRoute = require('./routes/analytics');
-const waitlistRoute = require('./routes/waitlist');
 const billingRoute = require('./routes/billing');
 
 app.use('/api/auth', authRoute); 
@@ -110,7 +109,6 @@ app.use('/api/projects', dashboardLimiter, projectRoute);
 app.use('/api/projects', dashboardLimiter, webhookRoute);
 app.use('/api/releases', releaseRoute);
 app.use('/api/analytics', dashboardLimiter, analyticsRoute);
-app.use('/api/waitlist', waitlistRoute);
 app.use('/api/billing', billingRoute);
 
 
@@ -130,6 +128,7 @@ app.use((err, req, res, next) => {
     // CSRF Error Handling
     if (err.code === 'EBADCSRFTOKEN') {
         return res.status(403).json({
+            success: false,
             error: "Invalid CSRF token",
             message: "The form has expired or the CSRF token is invalid. Please refresh the page and try again."
         });
@@ -137,15 +136,24 @@ app.use((err, req, res, next) => {
 
     if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
         return res.status(400).json({
+            success: false,
             error: "Invalid JSON format",
             message: "Check your request body syntax. Stray characters outside the JSON object are not allowed."
         });
     }
 
-    console.error("🔥 Unhandled Error:", err.stack);
-    res.status(500).json({
-        error: "Something went wrong!",
-        message: err.message
+    const statusCode = err.statusCode || 500;
+    const message = err.message || "Something went wrong!";
+
+    // Only log actual server errors (500), not expected operational errors (4xx)
+    if (statusCode >= 500) {
+        console.error("🔥 Server Error:", err.stack);
+    }
+
+    res.status(statusCode).json({
+        success: false,
+        error: statusCode >= 500 ? "Internal Server Error" : message,
+        message: message
     });
 });
 

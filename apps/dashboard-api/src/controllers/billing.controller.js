@@ -1,6 +1,6 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const { Developer, AppError } = require('@urbackend/common');
+const { Developer, ProRequest, AppError, sendProRequestConfirmationEmail } = require('@urbackend/common');
 
 const getRazorpayInstance = () => {
     const keyId = process.env.RAZORPAY_KEY_ID;
@@ -19,6 +19,11 @@ const getRazorpayInstance = () => {
  * Returns a `subscriptionUrl` that the frontend redirects to.
  */
 module.exports.createCheckout = async (req, res, next) => {
+    // -------------------------------------------------------------------------------------------------
+    // BETA TOGGLE: Payments disabled. Returns 403 immediately to route users to the manual request flow.
+    // -------------------------------------------------------------------------------------------------
+    return next(new AppError(403, 'Automatic payments are disabled during Public Beta. Please use the Request Pro form.'));
+
     try {
         const planId = process.env.RAZORPAY_PLAN_ID;
         if (!planId) {
@@ -57,6 +62,103 @@ module.exports.createCheckout = async (req, res, next) => {
         if (err instanceof AppError) return next(err);
         console.error('Razorpay checkout error:', err);
         return next(new AppError(502, 'Failed to create checkout session. Please try again.'));
+    }
+};
+
+/**
+ * Creates a manual Pro request.
+ * POST /api/billing/request-pro
+ */
+module.exports.createProRequest = async (req, res, next) => {
+    try {
+        const { email, bio } = req.body;
+        if (!email || !bio) {
+            return next(new AppError(400, 'Email and 1-line bio are required.'));
+        }
+
+        // Check if already requested
+        const existing = await ProRequest.findOne({ email });
+        if (existing) {
+            return next(new AppError(400, 'You have already submitted a request. We will be in touch soon!'));
+        }
+
+        const request = await ProRequest.create({ email, bio });
+
+        // Send confirmation email
+        sendProRequestConfirmationEmail(email).catch(err => console.error("Failed to send Pro request email:", err));
+
+        res.json({
+            success: true,
+            data: request,
+            message: 'Your Pro request has been submitted successfully.'
+        });
+    } catch (err) {
+        if (err instanceof AppError) return next(err);
+        console.error('Pro request error:', err);
+        return next(new AppError(502, 'Failed to submit Pro request. Please try again.'));
+    }
+};
+
+/**
+ * Admin: Get all Pro requests.
+ * GET /api/billing/admin/pro-requests
+ */
+module.exports.getProRequests = async (req, res, next) => {
+    try {
+        if (!req.user?.isAdmin) return next(new AppError(403, 'Forbidden'));
+        
+        const requests = await ProRequest.find().sort({ createdAt: -1 });
+        res.json({
+            success: true,
+            data: requests,
+            message: ''
+        });
+    } catch (err) {
+        console.error('Get Pro requests error:', err);
+        return next(new AppError(500, 'Failed to fetch Pro requests.'));
+    }
+};
+
+/**
+ * Admin: Approve a Pro request.
+ * POST /api/billing/admin/approve-pro
+ */
+module.exports.approveProRequest = async (req, res, next) => {
+    try {
+        if (!req.user?.isAdmin) return next(new AppError(403, 'Forbidden'));
+
+        const { requestId } = req.body;
+        if (!requestId) return next(new AppError(400, 'Request ID is required.'));
+
+        const request = await ProRequest.findById(requestId);
+        if (!request) return next(new AppError(404, 'Pro request not found.'));
+
+        if (request.status === 'approved') {
+            return next(new AppError(400, 'Request is already approved.'));
+        }
+
+        const developer = await Developer.findOne({ email: request.email });
+        if (!developer) return next(new AppError(404, 'Developer with this email not found.'));
+
+        const now = new Date();
+        developer.plan = 'pro';
+        developer.planActivatedAt = now;
+        // Setting to null or far future for "indefinite" beta pro
+        developer.planExpiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year for now
+        
+        await developer.save();
+
+        request.status = 'approved';
+        await request.save();
+
+        res.json({
+            success: true,
+            data: { developer, request },
+            message: `Successfully upgraded ${developer.email} to Pro.`
+        });
+    } catch (err) {
+        console.error('Approve Pro request error:', err);
+        return next(new AppError(500, 'Failed to approve Pro request.'));
     }
 };
 
