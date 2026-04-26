@@ -192,10 +192,10 @@ Required methods:
 - `GET`
 - `HEAD`
 
-Required headers should include at least:
+Required `AllowedHeaders` (not `ExposeHeaders`) should include at least:
 
-- `content-type`
-- `content-length`
+- `content-type` — required for presigned `PUT` requests
+- `content-length` — typically safelisted, but some providers still require it to be allow-listed
 
 Without these CORS rules, browser uploads can fail even when `POST /api/storage/upload-request` and `POST /api/storage/upload-confirm` are correct.
 
