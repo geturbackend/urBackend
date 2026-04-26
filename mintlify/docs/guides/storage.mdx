@@ -181,7 +181,7 @@ console.log(url, provider, path, warning);
   SDK users (`urbackend-sdk`) do not need to change anything — `client.storage.upload()` uses this flow internally.
 </Note>
 
-## Required Bucket CORS (S3/R2)
+## Required bucket CORS (S3/R2)
 
 If you use AWS S3 or Cloudflare R2 with presigned browser uploads, configure bucket CORS so browser uploads to `signedUrl` can pass preflight.
 
