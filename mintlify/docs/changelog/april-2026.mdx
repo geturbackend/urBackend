@@ -3,6 +3,41 @@ title: Changelog
 description: What's new in urBackend — new features, improvements, and fixes.
 ---
 
+<Update label="2026-04-27" description="Week of April 21–27" tags={["Feature", "Improvement", "Fix"]}>
+## New features
+
+**Free and Pro plans** — urBackend now ships with a multi-tier plan system. The Free plan covers everyday use, while Pro unlocks higher limits and advanced capabilities. Bring-your-own MongoDB (BYOM) is available on every plan; bring-your-own storage (BYOS) and bring-your-own mail key (BYOK) are now Pro features. [See limits and quotas](/limits-and-quotas)
+
+**Razorpay billing with UPI support** — Subscriptions are now powered by Razorpay, with UPI and Indian card support alongside international cards. The upgrade flow opens in a Razorpay Checkout overlay and redirects you back automatically once payment is complete.
+
+**In-product upgrade flow** — A new upgrade modal and paywall surface plan-gated features in context. When you hit a Free-plan limit, you'll see exactly what's blocked and how to upgrade. You can also submit a manual Pro request from the dashboard if you'd prefer to talk to us first.
+
+**Real-time usage tracking on the dashboard** — Project pages now show live usage against your plan's quotas (database, storage, mail, and API calls), so you know where you stand before you hit a limit.
+
+**Mail templates** — Send transactional email using named templates instead of inline HTML. urBackend ships a set of system templates that everyone can use; Pro projects can create and override their own custom templates and preview them from the dashboard. [See mail templates](/sdk/mail) · [API reference](/api-reference/mail/send)
+
+**Presigned upload flow for storage** — File uploads now use a three-step presigned URL flow that streams the binary directly to your storage backend. The dashboard uploader has been migrated to the new flow, and the same flow is available through the public API and SDK. [See the storage guide](/guides/storage) · [API reference](/api-reference/storage/upload)
+
+**Official Python SDK** — A new `urbackend` package for Python is available, covering auth, database, storage, and mail. Install it from PyPI and use the same project credentials as the JavaScript SDK.
+
+## Improvements
+
+**Strip internal metadata from API responses** — Public read endpoints accept a new `?meta=false` query flag to omit internal metadata fields from the response, making payloads smaller and easier to consume on the client.
+
+**Hardened presigned upload confirmation** — The confirm step now tolerates retries and small size drift between the upload and the recorded object, so transient network issues don't fail an otherwise successful upload.
+
+**System mail templates available on Free** — Built-in system templates (verification, password reset, magic link, etc.) work on every plan. Custom mail templates remain a Pro feature.
+
+## Bug fixes
+
+- Fixed Razorpay webhook signature verification by capturing the raw request body before parsing
+- Excluded the Razorpay webhook endpoint from CSRF protection so callbacks always succeed
+- Removed an invalid `callback_url` field from Razorpay subscription creation that caused some checkouts to fail
+- Resolved several mail template issues around idempotency, validation, and per-project usage counters
+- Fixed the monthly mail quota not always reflecting the latest delivery state
+- Patched NoSQL injection vectors in the billing and limit-enforcement paths
+</Update>
+
 <Update label="2026-04-20" description="Week of April 14–20" tags={["Feature", "Improvement", "Fix"]}>
 ## New features
 
