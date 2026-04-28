@@ -1,0 +1,34 @@
+# Bulk Insert Data
+
+## Endpoint
+POST /api/data/:collectionName/bulk
+
+## Description
+Use this endpoint to insert multiple records in a single request.  
+It’s useful when you want to reduce multiple API calls and improve performance.
+
+## Request Body
+An array of objects that follow your collection schema.
+
+## Example
+
+```json
+[
+  { "name": "John" },
+  { "name": "Jane" }
+]
+## Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "insertedCount": 2
+  },
+  "message": "Bulk insert successful"
+}
+```
+
+## Notes
+- Maximum number of records per request is limited
+- Duplicate key errors return status 409
