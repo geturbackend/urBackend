@@ -436,7 +436,7 @@ function CreateCollection() {
 
         setLoading(true);
         try {
-            await api.post(`/api/projects/collection`, {
+            await api.post(`/api/projects/${projectId}/collections`, {
                 projectId,
                 collectionName: normalizedName,
                 schema: cleanFieldsForApi(fields)

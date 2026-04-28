@@ -46,7 +46,7 @@ function ProjectDetails() {
     const handleRegenerateKey = async (keyType) => {
         if (!window.confirm(`Roll your ${keyType} key? Old key will expire.`)) return;
         try {
-            const res = await api.patch(`/api/projects/${projectId}/regenerate-key`, { keyType });
+            const res = await api.post(`/api/projects/${projectId}/api-key`, { keyType });
             setNewKey({ key: res.data.apiKey, type: keyType });
             toast.success("New Key Generated!");
         } catch {
