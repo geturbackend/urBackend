@@ -21,11 +21,16 @@ const getValidHttpUrl = (raw) => {
 const extractReleaseLinkFromContent = (content) => {
     if (!content || typeof content !== 'string') return null;
 
+    // Find all markdown links safely, avoiding ReDoS (Polynomial regular expression)
+    const mdLinkRegex = /\[([^\[\]]+)\]\((https?:\/\/[^\s)]+)\)/gi;
+    const mdLinks = [...content.matchAll(mdLinkRegex)];
+
     // 1) Prefer markdown links whose label mentions changelog.
-    const changelogMdLink = content.match(/\[[^\]]*changelog[^\]]*\]\((https?:\/\/[^\s)]+)\)/i);
-    if (changelogMdLink?.[1]) {
-        const valid = getValidHttpUrl(changelogMdLink[1]);
-        if (valid) return valid;
+    for (const match of mdLinks) {
+        if (match[1].toLowerCase().includes('changelog')) {
+            const valid = getValidHttpUrl(match[2]);
+            if (valid) return valid;
+        }
     }
 
     // 2) Prefer explicit line style: Full changelog: https://...
@@ -36,9 +41,8 @@ const extractReleaseLinkFromContent = (content) => {
     }
 
     // 3) Any markdown link.
-    const anyMdLink = content.match(/\[[^\]]+\]\((https?:\/\/[^\s)]+)\)/i);
-    if (anyMdLink?.[1]) {
-        const valid = getValidHttpUrl(anyMdLink[1]);
+    for (const match of mdLinks) {
+        const valid = getValidHttpUrl(match[2]);
         if (valid) return valid;
     }
 
