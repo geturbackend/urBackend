@@ -27,6 +27,7 @@ import ProjectSettings from './pages/ProjectSettings';
 import Webhooks from './pages/Webhooks';
 import RequestPro from './pages/RequestPro';
 import AdminProRequests from './pages/AdminProRequests';
+import Onboarding from './pages/Onboarding';
 
 import { LayoutProvider } from './context/LayoutContext';
 import { PlanProvider, usePlan } from './context/PlanContext';
@@ -60,6 +61,11 @@ function AppContent() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/request-pro" element={<RequestPro />} />
+        <Route path="/onboarding" element={
+          <ProtectedRoute>
+            <Onboarding />
+          </ProtectedRoute>
+        } />
 
 
         {/* --- Protected Routes --- */}
