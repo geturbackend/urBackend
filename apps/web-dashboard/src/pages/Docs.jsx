@@ -2,11 +2,17 @@ import { useState, useEffect } from 'react';
 import { Copy, Terminal, Database, Shield, HardDrive, Check, Server, Menu, ChevronDown, AlertCircle, Zap, AlertTriangle, Key, FileJson, BookOpen, Lock } from 'lucide-react';
 import { API_URL, PUBLIC_API_URL } from '../config';
 import TryItPanel from "../components/TryItPanel.jsx";
+import { useOnboarding } from '../context/OnboardingContext';
 import Footer from '../components/Layout/Footer';
 
 export default function Docs() {
     const [activeTab, setActiveTab] = useState('intro');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const { completeStep } = useOnboarding();
+
+    useEffect(() => {
+        completeStep('make_api_call');
+    }, [completeStep]);
 
     useEffect(() => {
         window.scrollTo(0, 0);

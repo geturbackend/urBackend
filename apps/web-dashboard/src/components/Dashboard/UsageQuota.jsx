@@ -51,6 +51,7 @@ const UsageQuota = () => {
           limit={limits?.maxCollections ?? 5}
           unit="Col"
           unlimited={limits?.maxCollections === -1}
+          tooltip={limits?.maxCollections === -1 ? "Unlimited collections included in your plan" : ""}
         />
         <UsageProgressBar
           label="Auth Users"
@@ -58,6 +59,7 @@ const UsageQuota = () => {
           limit={limits?.authUsersLimit ?? 200}
           unit="Users"
           unlimited={limits?.authUsersLimit === -1}
+          tooltip={limits?.authUsersLimit === -1 ? "Unlimited authentication users included in your plan" : ""}
         />
         <UsageProgressBar
           label="Webhooks"
@@ -65,6 +67,7 @@ const UsageQuota = () => {
           limit={limits?.webhooksLimit ?? 0}
           unit="Hooks"
           unlimited={limits?.webhooksLimit === -1}
+          tooltip={limits?.webhooksLimit === -1 ? "Unlimited webhooks included in your plan" : ""}
         />
         <UsageProgressBar
           label="Database"
@@ -73,6 +76,7 @@ const UsageQuota = () => {
           formatValue={formatBytes}
           unit=""
           unlimited={limits?.mongoBytes === -1 || limits?.byomEnabled}
+          tooltip={limits?.byomEnabled ? "Bring Your Own MongoDB (BYOM) enabled: Connect an external database for unlimited storage." : (limits?.mongoBytes === -1 ? "Unlimited managed database storage" : "")}
         />
         <UsageProgressBar
           label="File Storage"
@@ -81,6 +85,7 @@ const UsageQuota = () => {
           formatValue={formatBytes}
           unit=""
           unlimited={limits?.storageBytes === -1}
+          tooltip={limits?.storageBytes === -1 ? "Bring Your Own Storage (BYOS) enabled: Connect an external storage provider for unlimited storage." : ""}
         />
         <UsageProgressBar
           label="Requests"
@@ -88,6 +93,7 @@ const UsageQuota = () => {
           limit={limits?.reqPerDay ?? 2000}
           unit="req"
           unlimited={limits?.reqPerDay === -1}
+          tooltip={limits?.reqPerDay === -1 ? "Unlimited API requests included in your plan" : ""}
         />
       </div>
 

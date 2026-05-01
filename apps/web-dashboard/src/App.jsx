@@ -30,6 +30,7 @@ import AdminProRequests from './pages/AdminProRequests';
 
 import { LayoutProvider } from './context/LayoutContext';
 import { PlanProvider, usePlan } from './context/PlanContext';
+import { OnboardingProvider } from './context/OnboardingContext';
 import UpgradeModal from './components/UpgradeModal';
 import BillingSuccess from './pages/BillingSuccess';
 
@@ -165,7 +166,9 @@ function AppContent() {
 function App() {
   return (
     <PlanProvider>
-      <AppContent />
+      <OnboardingProvider>
+        <AppContent />
+      </OnboardingProvider>
     </PlanProvider>
   );
 }

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { useOnboarding } from '../context/OnboardingContext';
 import toast from 'react-hot-toast';
 import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
 
@@ -357,6 +358,7 @@ function CreateCollection() {
     const navigate = useNavigate();
     const location = useLocation();
     const { user } = useAuth();
+    const { completeStep } = useOnboarding();
 
     const queryParams = new URLSearchParams(location.search);
     const initialName = queryParams.get('name')?.trim().toLowerCase() || '';
@@ -443,6 +445,7 @@ function CreateCollection() {
             });
 
             toast.success("Collection Created!");
+            completeStep('create_collection');
             navigate(`/project/${projectId}/database`);
         } catch (err) {
             const errMsg = err.response?.data?.error;

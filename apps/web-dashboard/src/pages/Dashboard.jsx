@@ -16,7 +16,7 @@ import EmptyState from '../components/Dashboard/EmptyState';
 import SkeletonLoader from '../components/Dashboard/SkeletonLoader';
 import RecentActivityItem from '../components/Dashboard/RecentActivityItem';
 import UsageQuota from '../components/Dashboard/UsageQuota';
-import OnboardingChecklist from '../components/Dashboard/OnboardingChecklist';
+import OnboardingChecklist from '../components/Onboarding/OnboardingChecklist';
 import DocLinks from '../components/Dashboard/DocLinks';
 
 export default function Dashboard() {
@@ -190,10 +190,7 @@ export default function Dashboard() {
           <UsageQuota />
 
           {/* 2. Onboarding (Helpful Context) */}
-          <OnboardingChecklist 
-            projectsCount={projects.length} 
-            activityCount={activity.length} 
-          />
+          <OnboardingChecklist />
 
           {/* 3. Recent Activity (Historical Context) */}
           <SectionHeader title="Recent Activity" />

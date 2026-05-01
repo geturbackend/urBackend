@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { useOnboarding } from '../context/OnboardingContext';
 import toast from 'react-hot-toast';
 import {
     Database, Key, Copy, RefreshCw, AlertTriangle,
@@ -18,11 +19,16 @@ function ProjectDetails() {
     const { projectId } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { completeStep } = useOnboarding();
 
     const [project, setProject] = useState(null);
     const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
     const [newKey, setNewKey] = useState(null);
+
+    useEffect(() => {
+        completeStep('get_api_key');
+    }, [completeStep]);
 
     useEffect(() => {
         const fetchData = async () => {

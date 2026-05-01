@@ -1,6 +1,6 @@
 import React from 'react';
 
-const UsageProgressBar = ({ label, used, limit, unit = 'MB', formatValue: customFormat, unlimited = false }) => {
+const UsageProgressBar = ({ label, used, limit, unit = 'MB', formatValue: customFormat, unlimited = false, tooltip = '' }) => {
   const isUnlimited = unlimited || limit === -1;
   const percentage = isUnlimited ? 0 : Math.min(Math.round((used / limit) * 100), 100);
   
@@ -18,7 +18,7 @@ const UsageProgressBar = ({ label, used, limit, unit = 'MB', formatValue: custom
   };
 
   return (
-    <div style={{ marginBottom: '1rem' }}>
+    <div style={{ marginBottom: '1rem', cursor: tooltip ? 'help' : 'default' }} title={tooltip}>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '4px' }}>
         <span style={{ color: 'var(--color-text-muted)', fontWeight: 500 }}>{label}</span>
         <span style={{ color: 'var(--color-text-main)', fontWeight: 600 }}>{isUnlimited ? '∞' : `${percentage}%`}</span>

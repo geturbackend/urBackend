@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { useOnboarding } from '../context/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Copy, CheckCircle, AlertTriangle, Plus } from 'lucide-react';
@@ -13,6 +14,7 @@ function CreateProject() {
     const [newProject, setNewProject] = useState(null);
 
     const { user } = useAuth();
+    const { completeStep } = useOnboarding();
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -54,6 +56,8 @@ function CreateProject() {
             );
             setNewProject(res.data);
             toast.success("Project Created!");
+            completeStep('create_project');
+            completeStep('get_api_key');
         } catch (err) {
             const errorMsg = err.response?.data?.error || err.response?.data?.message || "Failed to create project";
             toast.error(typeof errorMsg === 'object' ? "Validation Error" : errorMsg);
