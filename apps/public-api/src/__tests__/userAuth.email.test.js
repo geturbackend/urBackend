@@ -1,0 +1,379 @@
+
+
+
+
+
+
+
+
+
+'use strict';
+
+const crypto = require('crypto');
+
+// Mock dependencies
+jest.mock('jsonwebtoken', () => ({
+    sign: jest.fn(() => 'signed_access_token'),
+    verify: jest.fn(),
+}));
+
+jest.mock('bcryptjs', () => ({
+    compare: jest.fn(),
+    genSalt: jest.fn(() => 'salt'),
+    hash: jest.fn(() => 'hashed_pw'),
+}));
+
+jest.mock('mongoose', () => ({
+    Types: {
+        ObjectId: jest.fn((id) => id),
+    },
+}));
+
+jest.mock('@urbackend/common', () => {
+    const z = require('zod');
+    const mockModel = {
+        findOne: jest.fn().mockReturnThis(),
+        create: jest.fn(),
+        updateOne: jest.fn(),
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockReturnThis(),
+    };
+
+    const projectFindByIdChain = {
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn(),
+    };
+
+    return {
+        Project: {
+            findById: jest.fn(() => projectFindByIdChain),
+            __chain: projectFindByIdChain,
+        },
+        redis: {
+            set: jest.fn().mockResolvedValue('OK'),
+            get: jest.fn(),
+            del: jest.fn().mockResolvedValue(1),
+            incr: jest.fn().mockResolvedValue(1),
+            expire: jest.fn().mockResolvedValue(1),
+            ttl: jest.fn().mockResolvedValue(-1),
+        },
+        authEmailQueue: { add: jest.fn().mockResolvedValue(undefined) },
+        loginSchema: z.object({
+            email: z.string().email(),
+            password: z.string().min(1),
+        }),
+        userSignupSchema: z.object({
+            email: z.string().email(),
+            password: z.string().min(6),
+        }).passthrough(),
+        resetPasswordSchema: z.object({
+            email: z.string().email(),
+            otp: z.string(),
+            newPassword: z.string().min(6),
+        }),
+        onlyEmailSchema: z.object({ email: z.string().email() }),
+        verifyOtpSchema: z.object({ email: z.string().email(), otp: z.string() }),
+        changePasswordSchema: z.object({
+            currentPassword: z.string().min(1),
+            newPassword: z.string().min(6),
+        }),
+        sanitize: jest.fn((data) => data),
+        getConnection: jest.fn().mockResolvedValue({}),
+        getCompiledModel: jest.fn(() => mockModel),
+        __mockModel: mockModel,
+        // Mock refreshToken logic
+        getRefreshSession: jest.fn(),
+        persistRefreshSession: jest.fn().mockResolvedValue(undefined),
+        revokeSessionChain: jest.fn().mockResolvedValue(undefined),
+    };
+});
+
+jest.mock('../utils/refreshToken', () => ({
+    issueAuthTokens: jest.fn().mockResolvedValue({
+        accessToken: 'signed_access_token',
+        refreshToken: 'refresh_token_123',
+        expiresIn: '15m'
+    }),
+    shouldExposeRefreshToken: jest.fn(() => true),
+}));
+
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { redis, authEmailQueue, __mockModel: mockModel } = require('@urbackend/common');
+const { issueAuthTokens } = require('../utils/refreshToken');
+const controller = require('../controllers/userAuth.controller');
+
+const makeProject = (overrides = {}) => ({
+    _id: 'project_1',
+    name: 'Demo',
+    jwtSecret: 'jwt_secret',
+    isAuthEnabled: true,
+    resources: { db: { isExternal: false } },
+    collections: [{ 
+        name: 'users', 
+        model: [
+            { key: 'email', type: 'String', required: true }, 
+            { key: 'password', type: 'String', required: true },
+            { key: 'isVerified', type: 'Boolean' }
+        ] 
+    }],
+    ...overrides
+});
+
+const makeReq = ({ body = {}, headers = {}, project = makeProject() } = {}) => ({
+    body,
+    project,
+    headers,
+    header: jest.fn((key) => headers[key] || headers[key?.toLowerCase()] || null),
+});
+
+const makeRes = () => {
+    const res = {
+        status: jest.fn(),
+        json: jest.fn(),
+    };
+    res.status.mockReturnValue(res);
+    res.json.mockReturnValue(res);
+    return res;
+};
+
+describe('Email Authentication Flow', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    describe('signup', () => {
+        test('successfully creates user and queues verification email', async () => {
+            const req = makeReq({
+                body: { email: 'new@user.com', password: 'password123' }
+            });
+            const res = makeRes();
+
+            mockModel.findOne.mockResolvedValueOnce(null); // User does not exist
+            mockModel.create.mockResolvedValueOnce({ _id: 'user_123' });
+
+            await controller.signup(req, res);
+
+            expect(mockModel.findOne).toHaveBeenCalled();
+            expect(mockModel.create).toHaveBeenCalledWith(expect.objectContaining({
+                email: 'new@user.com',
+                password: 'hashed_pw',
+                isVerified: false
+            }));
+            
+            expect(redis.set).toHaveBeenCalledWith(
+                expect.stringContaining('otp:verification:new@user.com'),
+                expect.any(String),
+                'EX',
+                300
+            );
+
+            expect(authEmailQueue.add).toHaveBeenCalledWith('send-verification-email', expect.objectContaining({
+                email: 'new@user.com',
+                type: 'verification'
+            }));
+
+            expect(issueAuthTokens).toHaveBeenCalled();
+            expect(res.status).toHaveBeenCalledWith(201);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                token: 'signed_access_token',
+                userId: 'user_123'
+            }));
+        });
+
+        test('returns 400 if user already exists', async () => {
+            const req = makeReq({
+                body: { email: 'existing@user.com', password: 'password123' }
+            });
+            const res = makeRes();
+
+            mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123', email: 'existing@user.com', isVerified: true });
+
+            await controller.signup(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                error: expect.stringContaining('already exists')
+            }));
+        });
+        
+        test('resends verification if user exists but unverified', async () => {
+            const req = makeReq({
+                body: { email: 'unverified@user.com', password: 'password123' }
+            });
+            const res = makeRes();
+
+            mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123', email: 'unverified@user.com', isVerified: false });
+            redis.get.mockResolvedValueOnce(null); // No cooldown
+
+            await controller.signup(req, res);
+
+            expect(mockModel.create).not.toHaveBeenCalled();
+            expect(authEmailQueue.add).toHaveBeenCalled();
+            expect(res.status).toHaveBeenCalledWith(200);
+        });
+    });
+
+    describe('verifyEmail', () => {
+        test('verifies email with valid OTP', async () => {
+            const req = makeReq({
+                body: { email: 'test@user.com', otp: '123456' }
+            });
+            const res = makeRes();
+
+            redis.get.mockResolvedValueOnce('123456');
+            mockModel.updateOne.mockResolvedValueOnce({ matchedCount: 1 });
+
+            await controller.verifyEmail(req, res);
+
+            expect(redis.get).toHaveBeenCalledWith(expect.stringContaining('test@user.com'));
+            expect(mockModel.updateOne).toHaveBeenCalledWith(
+                { email: 'test@user.com' },
+                { $set: { isVerified: true } }
+            );
+            expect(redis.del).toHaveBeenCalled();
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: expect.any(String) }));
+        });
+
+        test('returns 400 for invalid OTP', async () => {
+            const req = makeReq({
+                body: { email: 'test@user.com', otp: 'wrong' }
+            });
+            const res = makeRes();
+
+            redis.get.mockResolvedValueOnce('123456');
+
+            await controller.verifyEmail(req, res);
+
+            expect(mockModel.updateOne).not.toHaveBeenCalled();
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+    });
+
+    describe('login', () => {
+        test('successfully logs in with valid credentials', async () => {
+            const req = makeReq({
+                body: { email: 'test@user.com', password: 'password123' }
+            });
+            const res = makeRes();
+
+            mockModel.findOne.mockReturnValueOnce({
+                select: jest.fn().mockResolvedValueOnce({
+                    _id: 'user_123',
+                    password: 'hashed_pw',
+                    email: 'test@user.com'
+                })
+            });
+            bcrypt.compare.mockResolvedValueOnce(true);
+
+            await controller.login(req, res);
+
+            expect(bcrypt.compare).toHaveBeenCalledWith('password123', 'hashed_pw');
+            expect(issueAuthTokens).toHaveBeenCalled();
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                token: 'signed_access_token'
+            }));
+        });
+
+        test('returns 400 for incorrect password', async () => {
+            const req = makeReq({
+                body: { email: 'test@user.com', password: 'wrongpassword' }
+            });
+            const res = makeRes();
+
+            mockModel.findOne.mockReturnValueOnce({
+                select: jest.fn().mockResolvedValueOnce({
+                    _id: 'user_123',
+                    password: 'hashed_pw'
+                })
+            });
+            bcrypt.compare.mockResolvedValueOnce(false);
+
+            await controller.login(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+    });
+
+    describe('requestPasswordReset', () => {
+        test('generates OTP and queues email', async () => {
+            const req = makeReq({
+                body: { email: 'reset@user.com' }
+            });
+            const res = makeRes();
+
+            mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123' });
+
+            await controller.requestPasswordReset(req, res);
+
+            expect(redis.set).toHaveBeenCalledWith(expect.stringContaining('otp:reset:reset@user.com'), expect.any(String), 'EX', 300);
+            expect(authEmailQueue.add).toHaveBeenCalledWith('send-reset-email', expect.objectContaining({
+                email: 'reset@user.com'
+            }));
+            expect(res.json).toHaveBeenCalled();
+        });
+    });
+
+    describe('resetPasswordUser', () => {
+        test('resets password with valid OTP', async () => {
+            const req = makeReq({
+                body: { email: 'reset@user.com', otp: '123456', newPassword: 'newpassword123' }
+            });
+            const res = makeRes();
+
+            redis.get.mockResolvedValueOnce('123456');
+            mockModel.updateOne.mockResolvedValueOnce({ matchedCount: 1 });
+
+            await controller.resetPasswordUser(req, res);
+
+            expect(bcrypt.hash).toHaveBeenCalledWith('newpassword123', 'salt');
+            expect(mockModel.updateOne).toHaveBeenCalledWith(
+                { email: 'reset@user.com' },
+                { $set: { password: 'hashed_pw' } }
+            );
+            expect(redis.del).toHaveBeenCalled();
+            expect(res.json).toHaveBeenCalled();
+        });
+    });
+
+    describe('changePasswordUser', () => {
+        test('changes password if current password is correct', async () => {
+            const req = makeReq({
+                body: { currentPassword: 'oldpassword', newPassword: 'newpassword123' },
+                headers: { 'Authorization': 'Bearer valid_token' }
+            });
+            const res = makeRes();
+
+            jwt.verify.mockReturnValueOnce({ userId: 'user_123' });
+            mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123', password: 'old_hashed_pw' });
+            bcrypt.compare.mockResolvedValueOnce(true);
+
+            await controller.changePasswordUser(req, res);
+
+            expect(bcrypt.compare).toHaveBeenCalledWith('oldpassword', 'old_hashed_pw');
+            expect(bcrypt.hash).toHaveBeenCalledWith('newpassword123', 'salt');
+            expect(mockModel.updateOne).toHaveBeenCalledWith(
+                { _id: expect.anything() },
+                { $set: { password: 'hashed_pw' } }
+            );
+            expect(res.json).toHaveBeenCalled();
+        });
+
+        test('returns 400 if current password is wrong', async () => {
+            const req = makeReq({
+                body: { currentPassword: 'wrongpassword', newPassword: 'newpassword123' },
+                headers: { 'Authorization': 'Bearer valid_token' }
+            });
+            const res = makeRes();
+
+            jwt.verify.mockReturnValueOnce({ userId: 'user_123' });
+            mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123', password: 'old_hashed_pw' });
+            bcrypt.compare.mockResolvedValueOnce(false);
+
+            await controller.changePasswordUser(req, res);
+
+            expect(mockModel.updateOne).not.toHaveBeenCalled();
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+    });
+});
