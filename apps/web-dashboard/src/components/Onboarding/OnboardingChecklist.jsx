@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { FiCheck, FiChevronRight, FiChevronDown, FiChevronUp, FiX, FiRocket } from 'react-icons/fi';
+import { Check, ChevronRight, ChevronDown, ChevronUp, X, Rocket } from 'lucide-react';
 
 const OnboardingChecklist = () => {
     const { steps, progress, isVisible, dismissOnboarding } = useOnboarding();
@@ -24,7 +24,7 @@ const OnboardingChecklist = () => {
                 >
                     <div className="flex items-center gap-2">
                         <div className="p-1.5 rounded-lg bg-primary/20 text-primary">
-                            <FiRocket size={18} />
+                            <Rocket size={18} />
                         </div>
                         <span className="font-semibold text-sm">Getting Started</span>
                     </div>
@@ -37,7 +37,7 @@ const OnboardingChecklist = () => {
                                 setIsExpanded(!isExpanded);
                             }}
                         >
-                            {isExpanded ? <FiChevronDown /> : <FiChevronUp />}
+                            {isExpanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
                         </button>
                         <button 
                             className="p-1 hover:bg-white/10 rounded-md transition-colors text-white/30 hover:text-white"
@@ -46,7 +46,7 @@ const OnboardingChecklist = () => {
                                 dismissOnboarding();
                             }}
                         >
-                            <FiX size={16} />
+                            <X size={16} />
                         </button>
                     </div>
                 </div>
@@ -79,7 +79,7 @@ const OnboardingChecklist = () => {
                                             ? 'bg-success border-success text-white' 
                                             : isNext ? 'border-primary text-primary' : 'border-white/20'
                                         }`}>
-                                            {isCompleted ? <FiCheck size={12} strokeWidth={3} /> : <span className="text-[10px] font-bold">{index + 1}</span>}
+                                            {isCompleted ? <Check size={12} strokeWidth={3} /> : <span className="text-[10px] font-bold">{index + 1}</span>}
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h4 className={`text-sm font-medium transition-colors ${isCompleted ? 'line-through text-white/40' : 'text-white'}`}>
@@ -96,7 +96,7 @@ const OnboardingChecklist = () => {
                                                 onClick={() => navigate(step.path)}
                                                 className="self-center p-1.5 rounded-lg bg-primary/10 text-primary opacity-0 group-hover:opacity-100 transition-all hover:bg-primary hover:text-white"
                                             >
-                                                <FiChevronRight size={14} />
+                                                <ChevronRight size={14} />
                                             </button>
                                         )}
                                     </div>
