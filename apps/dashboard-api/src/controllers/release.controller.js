@@ -21,11 +21,18 @@ const getValidHttpUrl = (raw) => {
 const extractReleaseLinkFromContent = (content) => {
     if (!content || typeof content !== 'string') return null;
 
-    // Find all markdown links safely, avoiding ReDoS (Polynomial regular expression)
-    const mdLinkRegex = /\[([^\[\]]+)\]\((https?:\/\/[^\s)]+)\)/gi;
-    const mdLinks = [...content.matchAll(mdLinkRegex)];
+    // 0) Safety: limit input length to prevent excessive regex processing
+    const MAX_CONTENT_LENGTH = 50000;
+    const safeContent = content.length > MAX_CONTENT_LENGTH 
+        ? content.substring(0, MAX_CONTENT_LENGTH) 
+        : content;
 
-    // 1) Prefer markdown links whose label mentions changelog.
+    // 1) Find all markdown links safely
+    // Bounded quantifiers {1,1000} and newline exclusion prevent Polynomial ReDoS
+    const mdLinkRegex = /\[([^\[\]\n\r]{1,1000})\]\((https?:\/\/[^\s\)\n\r]{1,1000})\)/gi;
+    const mdLinks = [...safeContent.matchAll(mdLinkRegex)];
+
+    // 1a) Prefer markdown links whose label mentions changelog.
     for (const match of mdLinks) {
         if (match[1].toLowerCase().includes('changelog')) {
             const valid = getValidHttpUrl(match[2]);
@@ -34,7 +41,8 @@ const extractReleaseLinkFromContent = (content) => {
     }
 
     // 2) Prefer explicit line style: Full changelog: https://...
-    const explicitLine = content.match(/full\s*changelog\s*:\s*(https?:\/\/[^\s<)]+)/i);
+    // Bounded quantifier prevents excessive matching
+    const explicitLine = safeContent.match(/full\s*changelog\s*:\s*(https?:\/\/[^\s<)\n\r]{1,1000})/i);
     if (explicitLine?.[1]) {
         const valid = getValidHttpUrl(explicitLine[1]);
         if (valid) return valid;
@@ -47,7 +55,7 @@ const extractReleaseLinkFromContent = (content) => {
     }
 
     // 4) Any raw URL.
-    const anyRawUrl = content.match(/https?:\/\/[^\s<)]+/i);
+    const anyRawUrl = safeContent.match(/https?:\/\/[^\s<)\n\r]{1,1000}/i);
     if (anyRawUrl?.[0]) {
         const valid = getValidHttpUrl(anyRawUrl[0]);
         if (valid) return valid;
