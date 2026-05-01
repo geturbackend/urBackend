@@ -1,19 +1,24 @@
 import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '../context/OnboardingContext';
-// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Rocket, Database, Key, BookOpen, CheckCircle2, 
-    ArrowRight, ChevronLeft, ChevronRight, Sparkles 
+    ArrowRight, ChevronLeft, ChevronRight, Sparkles, X 
 } from 'lucide-react';
 import { useState } from 'react';
+
+void motion;
 
 const Onboarding = () => {
     const { steps, progress } = useOnboarding();
     const navigate = useNavigate();
-    const [currentStepIndex, setCurrentStepIndex] = useState(0);
+
+    const firstIncompleteIndex = steps.findIndex(step => !progress[step.key]);
+    const [currentStepIndex, setCurrentStepIndex] = useState(() => (firstIncompleteIndex === -1 ? 0 : firstIncompleteIndex));
 
     const currentStep = steps[currentStepIndex];
+
+    if (!currentStep) return null;
 
     const nextStep = () => {
         if (currentStepIndex < steps.length - 1) {
@@ -140,7 +145,7 @@ const Onboarding = () => {
                                             onClick={nextStep}
                                             className="text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest px-4 py-2"
                                         >
-                                            Skip for now
+                                            Next
                                         </button>
                                     </div>
 
@@ -181,11 +186,5 @@ const Onboarding = () => {
         </div>
     );
 };
-
-const X = ({ size }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 6L6 18M6 6l12 12" />
-    </svg>
-);
 
 export default Onboarding;

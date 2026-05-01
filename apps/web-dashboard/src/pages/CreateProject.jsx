@@ -14,7 +14,7 @@ function CreateProject() {
     const [newProject, setNewProject] = useState(null);
 
     const { user } = useAuth();
-    const { completeStep } = useOnboarding();
+    const { completeStep, setActiveProjectId } = useOnboarding();
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -55,6 +55,7 @@ function CreateProject() {
                 { name, description }
             );
             setNewProject(res.data);
+            setActiveProjectId(res.data?._id);
             toast.success("Project Created!");
             completeStep('create_project');
             completeStep('get_api_key');

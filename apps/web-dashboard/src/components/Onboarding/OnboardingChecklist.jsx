@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { Check, ChevronRight, ChevronDown, ChevronUp, X, Rocket, Sparkles, ExternalLink } from 'lucide-react';
-// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
+
+void motion;
 
 const OnboardingChecklist = () => {
     const { steps, progress, isVisible, dismissOnboarding } = useOnboarding();
@@ -12,9 +13,14 @@ const OnboardingChecklist = () => {
 
     if (!isVisible) return null;
 
-    const completedCount = steps.filter(s => progress[s.key]).length;
-    const progressPercentage = (completedCount / steps.length) * 100;
-    const isAllCompleted = completedCount === steps.length;
+    const totalSteps = steps?.length || 0;
+    const completedCount = steps?.filter(s => progress[s.key]).length || 0;
+    const nextIncompleteIndex = steps?.findIndex(s => !progress[s.key]) ?? -1;
+
+    const rawProgressPercentage = totalSteps > 0 ? (completedCount / totalSteps) * 100 : 0;
+    const progressPercentage = Math.max(0, Math.min(100, rawProgressPercentage));
+
+    const isAllCompleted = totalSteps > 0 && completedCount === totalSteps;
 
     return (
         <motion.div 
@@ -89,7 +95,7 @@ const OnboardingChecklist = () => {
                         <div className="p-4 space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar">
                             {steps.map((step, index) => {
                                 const isCompleted = progress[step.key];
-                                const isNext = index === steps.findIndex(s => !progress[s.key]);
+                                const isNext = index === nextIncompleteIndex;
 
                                 return (
                                     <motion.div 
@@ -148,7 +154,10 @@ const OnboardingChecklist = () => {
                                     <p className="text-base font-black text-white mb-1">You're a Pro now!</p>
                                     <p className="text-[10px] text-white/30 mb-4 uppercase tracking-[0.3em] font-bold">Setup Complete</p>
                                     <button 
-                                        onClick={dismissOnboarding}
+                                        onClick={() => {
+                                            dismissOnboarding();
+                                            navigate('/dashboard');
+                                        }}
                                         className="w-full py-3 rounded-xl bg-primary text-black text-xs font-black hover:bg-white transition-all uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-95"
                                     >
                                         Go to Dashboard

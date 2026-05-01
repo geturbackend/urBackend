@@ -19,7 +19,7 @@ function ProjectDetails() {
     const { projectId } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { completeStep } = useOnboarding();
+    const { completeStep, setActiveProjectId } = useOnboarding();
 
     const [project, setProject] = useState(null);
     const [analytics, setAnalytics] = useState(null);
@@ -28,7 +28,8 @@ function ProjectDetails() {
 
     useEffect(() => {
         completeStep('get_api_key');
-    }, [completeStep]);
+        setActiveProjectId(projectId);
+    }, [completeStep, setActiveProjectId, projectId]);
 
     useEffect(() => {
         const fetchData = async () => {
