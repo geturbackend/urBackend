@@ -34,6 +34,7 @@ const { verifyUploadedFile } = require("@urbackend/common");
 const { getPublicIp } = require("@urbackend/common");
 const { clearCompiledModel } = require("@urbackend/common");
 const { createUniqueIndexes } = require("@urbackend/common");
+const ApiAnalytics = require('@urbackend/common').ApiAnalytics; // ADDED for analytics
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const SAFETY_MAX_BYTES = 100 * 1024 * 1024;
@@ -1959,9 +1960,12 @@ module.exports.deleteProject = async (req, res) => {
   }
 };
 
+// MODIFIED analytics function to include API performance metrics
 module.exports.analytics = async (req, res) => {
   try {
     const { projectId } = req.params;
+    const { range = 'last24h' } = req.query; // new query parameter
+
     const project = await Project.findOne({
       _id: projectId,
       owner: req.user._id,
@@ -1970,6 +1974,8 @@ module.exports.analytics = async (req, res) => {
       return res
         .status(404)
         .json({ error: "Project not found or access denied." });
+
+    // --- Existing analytics (storage, database, logs, chartData) ---
     const totalRequests = await Log.countDocuments({ projectId });
     const logs = await Log.find({ projectId })
       .sort({ timestamp: -1 })
@@ -1994,14 +2000,63 @@ module.exports.analytics = async (req, res) => {
       { $sort: { _id: 1 } },
     ]);
 
+    // --- NEW: API performance metrics from ApiAnalytics ---
+    let startDate = new Date();
+    switch (range) {
+      case 'last1h':
+        startDate.setHours(startDate.getHours() - 1);
+        break;
+      case 'last24h':
+        startDate.setDate(startDate.getDate() - 1);
+        break;
+      case 'last7d':
+        startDate.setDate(startDate.getDate() - 7);
+        break;
+      case 'last30d':
+        startDate.setDate(startDate.getDate() - 30);
+        break;
+      default:
+        startDate = new Date(0); // all time
+    }
+
+    const match = {
+      projectId: new mongoose.Types.ObjectId(projectId),
+      timestamp: { $gte: startDate },
+    };
+
+    // Average response time
+    const latencyAgg = await ApiAnalytics.aggregate([
+      { $match: match },
+      { $group: { _id: null, avg: { $avg: '$responseTimeMs' } } },
+    ]);
+    const avgResponseTimeMs = latencyAgg[0]?.avg ?? null;
+
+    // Error rate (status >= 400)
+    const errorAgg = await ApiAnalytics.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          errors: { $sum: { $cond: [{ $gte: ['$statusCode', 400] }, 1, 0] } },
+        },
+      },
+    ]);
+    const errorRate = errorAgg[0] ? (errorAgg[0].errors / errorAgg[0].total) * 100 : 0;
+
+    // --- Response (merge existing + new metrics) ---
     res.json({
       storage: { used: project.storageUsed, limit: project.storageLimit },
       database: { used: project.databaseUsed, limit: project.databaseLimit },
       totalRequests,
       logs,
       chartData,
+      avgResponseTimeMs,   // new
+      errorRate,           // new
+      range,               // optional – echo the requested range
     });
   } catch (err) {
+    console.error('Analytics error:', err);
     res.status(500).json({ error: err.message });
   }
 };
