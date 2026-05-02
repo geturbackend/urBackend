@@ -1959,7 +1959,7 @@ module.exports.deleteProject = async (req, res) => {
 };
 
 // MODIFIED analytics function to include API performance metrics
-module.exports.analytics = async (req, res) => {
+module.exports.analytics = async (req, res, next) => {
   try {
     const { projectId } = req.params;
     const { range = 'last24h' } = req.query;
@@ -2029,7 +2029,7 @@ module.exports.analytics = async (req, res) => {
     const errorRate = errorAgg[0] ? (errorAgg[0].errors / errorAgg[0].total) * 100 : 0;
 
     // ✅ Correct response format
-    res.json({
+    return res.json({
       success: true,
       data: {
         storage: { used: project.storageUsed, limit: project.storageLimit },
@@ -2041,15 +2041,11 @@ module.exports.analytics = async (req, res) => {
         errorRate,
         range,
       },
-      message: "Analytics fetched successfully",
+      message: 'Analytics fetched successfully.',
     });
   } catch (err) {
     console.error('Analytics error:', err);
-    res.status(500).json({
-      success: false,
-      data: {},
-      message: err.message || "Failed to fetch analytics",
-    });
+    return next(new AppError(500, 'Failed to fetch analytics.'));
   }
 };
 // FUNCTION - TOGGLE AUTH
