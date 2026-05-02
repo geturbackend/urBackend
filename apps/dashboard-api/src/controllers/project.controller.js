@@ -33,9 +33,7 @@ const { getPresignedUploadUrl } = require("@urbackend/common");
 const { verifyUploadedFile } = require("@urbackend/common");
 const { getPublicIp } = require("@urbackend/common");
 const { clearCompiledModel } = require("@urbackend/common");
-const { createUniqueIndexes } = require("@urbackend/common");
- // ADDED for analytics
-const ApiAnalytics = require('@urbackend/common').ApiAnalytics;
+const { createUniqueIndexes, ApiAnalytics } = require("@urbackend/common");
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const SAFETY_MAX_BYTES = 100 * 1024 * 1024;
 const CONFIRM_UPLOAD_SIZE_TOLERANCE_BYTES = 64;

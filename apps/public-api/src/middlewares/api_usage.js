@@ -1,7 +1,7 @@
 const rateLimit = require('express-rate-limit');
-const { Log, redis } = require('@urbackend/common');
+const { Log, redis, ApiAnalytics } = require('@urbackend/common');
 const { getDayKey, DEFAULT_DAILY_TTL_SECONDS, incrWithTtlAtomic } = require('../utils/usageCounter');
-const ApiAnalytics = require('@urbackend/common').ApiAnalytics;
+
 
 // Rate Limiter 
 const limiter = rateLimit({
