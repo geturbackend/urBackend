@@ -34,8 +34,8 @@ const { verifyUploadedFile } = require("@urbackend/common");
 const { getPublicIp } = require("@urbackend/common");
 const { clearCompiledModel } = require("@urbackend/common");
 const { createUniqueIndexes } = require("@urbackend/common");
-const ApiAnalytics = require('@urbackend/common').ApiAnalytics; // ADDED for analytics
-
+ // ADDED for analytics
+const ApiAnalytics = require('@urbackend/common').ApiAnalytics;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const SAFETY_MAX_BYTES = 100 * 1024 * 1024;
 const CONFIRM_UPLOAD_SIZE_TOLERANCE_BYTES = 64;
@@ -1964,18 +1964,21 @@ module.exports.deleteProject = async (req, res) => {
 module.exports.analytics = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { range = 'last24h' } = req.query; // new query parameter
+    const { range = 'last24h' } = req.query;
 
     const project = await Project.findOne({
       _id: projectId,
       owner: req.user._id,
     });
-    if (!project)
-      return res
-        .status(404)
-        .json({ error: "Project not found or access denied." });
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        data: {},
+        message: "Project not found or access denied.",
+      });
+    }
 
-    // --- Existing analytics (storage, database, logs, chartData) ---
+    // --- Existing analytics ---
     const totalRequests = await Log.countDocuments({ projectId });
     const logs = await Log.find({ projectId })
       .sort({ timestamp: -1 })
@@ -2044,20 +2047,28 @@ module.exports.analytics = async (req, res) => {
     ]);
     const errorRate = errorAgg[0] ? (errorAgg[0].errors / errorAgg[0].total) * 100 : 0;
 
-    // --- Response (merge existing + new metrics) ---
+    // --- Response with correct format ---
     res.json({
-      storage: { used: project.storageUsed, limit: project.storageLimit },
-      database: { used: project.databaseUsed, limit: project.databaseLimit },
-      totalRequests,
-      logs,
-      chartData,
-      avgResponseTimeMs,   // new
-      errorRate,           // new
-      range,               // optional – echo the requested range
+      success: true,
+      data: {
+        storage: { used: project.storageUsed, limit: project.storageLimit },
+        database: { used: project.databaseUsed, limit: project.databaseLimit },
+        totalRequests,
+        logs,
+        chartData,
+        avgResponseTimeMs,
+        errorRate,
+        range,
+      },
+      message: "Analytics fetched successfully",
     });
   } catch (err) {
     console.error('Analytics error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      success: false,
+      data: {},
+      message: err.message || "Failed to fetch analytics",
+    });
   }
 };
 
