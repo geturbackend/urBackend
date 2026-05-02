@@ -142,30 +142,37 @@ function CreateProject() {
 
     // --- FORM VIEW ---
     return (
-        <div className="container" style={{ maxWidth: '600px', paddingTop: '3rem' }}>
+        <div className="container" style={{ maxWidth: '640px', paddingTop: '3rem', paddingBottom: '3rem' }}>
             <button
                 onClick={() => navigate('/dashboard')}
                 className="btn btn-ghost"
-                style={{ marginBottom: '1.5rem', paddingLeft: 0, color: 'var(--color-text-muted)' }}
+                style={{ marginBottom: '2rem', paddingLeft: 0, color: 'var(--color-text-muted)' }}
             >
                 <ArrowLeft size={18} style={{ marginRight: '5px' }} /> Back to Dashboard
             </button>
 
-            <div className="card" style={{ padding: '2.5rem' }}>
-                <div style={{ marginBottom: '2rem' }}>
-                    <h2 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ padding: '8px', background: 'rgba(62, 207, 142, 0.1)', borderRadius: '8px', display: 'flex' }}>
-                            <Plus size={24} color="var(--color-primary)" />
-                        </div>
-                        Create New Project
-                    </h2>
-                    <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', marginLeft: '50px' }}>
-                        Initialize a new backend project with database and storage.
-                    </p>
+            <div className="card" style={{ padding: '2.5rem', border: '1px solid var(--color-border)', background: 'var(--color-bg-card)' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '1.75rem' }}>
+                    <div style={{ padding: '10px', background: 'rgba(62, 207, 142, 0.1)', borderRadius: '10px', display: 'flex' }}>
+                        <Plus size={24} color="var(--color-primary)" />
+                    </div>
+                    <div>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>
+                            Create New Project
+                        </h2>
+                        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', marginTop: '0.4rem', marginBottom: 0 }}>
+                            Initialize a new backend project with database, auth, and storage ready to go.
+                        </p>
+                    </div>
                 </div>
 
-                <form onSubmit={handleSubmit}>
-                    <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <div style={{ padding: '1rem 0', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)', marginBottom: '1.75rem' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.25rem' }}>Project Details</div>
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>Add a clear name so it’s easy to find in the dashboard.</div>
+                </div>
+
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
                         <label className="form-label" style={{ fontSize: '0.95rem' }}>Project Name</label>
                         <input
                             type="text"
@@ -176,9 +183,12 @@ function CreateProject() {
                             autoFocus
                             style={{ padding: '12px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', color: '#fff' }}
                         />
+                        <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                            This appears on your dashboard and in API settings.
+                        </div>
                     </div>
 
-                    <div className="form-group" style={{ marginBottom: '2rem' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
                         <label className="form-label" style={{ fontSize: '0.95rem' }}>Description <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(Optional)</span></label>
                         <textarea
                             value={description}
@@ -189,7 +199,7 @@ function CreateProject() {
                         />
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
                         <button
                             type="submit"
                             className="btn btn-primary"
