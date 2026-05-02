@@ -2050,11 +2050,10 @@ const errorRate = analyticsAgg[0] ? (analyticsAgg[0].errors / analyticsAgg[0].to
       },
       message: 'Analytics fetched successfully.',
     });
-  } catch (err) {
+ } catch (err) {
     console.error('Analytics error:', err);
     return next(new AppError(500, 'Failed to fetch analytics.'));
-  }
-};
+}};
 // FUNCTION - TOGGLE AUTH
 module.exports.toggleAuth = async (req, res) => {
   try {
