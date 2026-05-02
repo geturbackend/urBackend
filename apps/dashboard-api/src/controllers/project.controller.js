@@ -1996,37 +1996,44 @@ module.exports.analytics = async (req, res, next) => {
     ]);
 
     // New performance metrics
-    let startDate = new Date();
-    switch (range) {
-      case 'last1h': startDate.setHours(startDate.getHours() - 1); break;
-      case 'last24h': startDate.setDate(startDate.getDate() - 1); break;
-      case 'last7d': startDate.setDate(startDate.getDate() - 7); break;
-      case 'last30d': startDate.setDate(startDate.getDate() - 30); break;
-      default: startDate = new Date(0);
-    }
+    // ✅ Whitelist allowed ranges (including explicit 'allTime')
+const VALID_RANGES = new Set(['last1h', 'last24h', 'last7d', 'last30d', 'allTime']);
+if (!VALID_RANGES.has(range)) {
+  return res.status(400).json({
+    success: false,
+    data: {},
+    message: `Invalid range. Allowed values: ${[...VALID_RANGES].join(', ')}.`,
+  });
+}
+
+let startDate = new Date();
+switch (range) {
+  case 'last1h': startDate.setHours(startDate.getHours() - 1); break;
+  case 'last24h': startDate.setDate(startDate.getDate() - 1); break;
+  case 'last7d': startDate.setDate(startDate.getDate() - 7); break;
+  case 'last30d': startDate.setDate(startDate.getDate() - 30); break;
+  case 'allTime': startDate = new Date(0); break;
+}
 
     const match = {
       projectId: new mongoose.Types.ObjectId(projectId),
       timestamp: { $gte: startDate },
     };
 
-    const latencyAgg = await ApiAnalytics.aggregate([
-      { $match: match },
-      { $group: { _id: null, avg: { $avg: '$responseTimeMs' } } },
-    ]);
-    const avgResponseTimeMs = latencyAgg[0]?.avg ?? null;
-
-    const errorAgg = await ApiAnalytics.aggregate([
-      { $match: match },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: 1 },
-          errors: { $sum: { $cond: [{ $gte: ['$statusCode', 400] }, 1, 0] } },
-        },
-      },
-    ]);
-    const errorRate = errorAgg[0] ? (errorAgg[0].errors / errorAgg[0].total) * 100 : 0;
+   // Single aggregation for both latency and error metrics
+const analyticsAgg = await ApiAnalytics.aggregate([
+  { $match: match },
+  {
+    $group: {
+      _id: null,
+      avg: { $avg: '$responseTimeMs' },
+      total: { $sum: 1 },
+      errors: { $sum: { $cond: [{ $gte: ['$statusCode', 400] }, 1, 0] } },
+    },
+  },
+]);
+const avgResponseTimeMs = analyticsAgg[0]?.avg ?? null;
+const errorRate = analyticsAgg[0] ? (analyticsAgg[0].errors / analyticsAgg[0].total) * 100 : 0;
 
     // ✅ Correct response format
     return res.json({
