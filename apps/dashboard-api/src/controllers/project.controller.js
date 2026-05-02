@@ -1966,10 +1966,7 @@ module.exports.analytics = async (req, res) => {
     const { projectId } = req.params;
     const { range = 'last24h' } = req.query;
 
-    const project = await Project.findOne({
-      _id: projectId,
-      owner: req.user._id,
-    });
+    const project = await Project.findOne({ _id: projectId, owner: req.user._id });
     if (!project) {
       return res.status(404).json({
         success: false,
@@ -1978,15 +1975,12 @@ module.exports.analytics = async (req, res) => {
       });
     }
 
-    // --- Existing analytics ---
+    // Existing analytics
     const totalRequests = await Log.countDocuments({ projectId });
-    const logs = await Log.find({ projectId })
-      .sort({ timestamp: -1 })
-      .limit(50);
+    const logs = await Log.find({ projectId }).sort({ timestamp: -1 }).limit(50);
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
     const chartData = await Log.aggregate([
       {
         $match: {
@@ -2003,23 +1997,14 @@ module.exports.analytics = async (req, res) => {
       { $sort: { _id: 1 } },
     ]);
 
-    // --- NEW: API performance metrics from ApiAnalytics ---
+    // New performance metrics
     let startDate = new Date();
     switch (range) {
-      case 'last1h':
-        startDate.setHours(startDate.getHours() - 1);
-        break;
-      case 'last24h':
-        startDate.setDate(startDate.getDate() - 1);
-        break;
-      case 'last7d':
-        startDate.setDate(startDate.getDate() - 7);
-        break;
-      case 'last30d':
-        startDate.setDate(startDate.getDate() - 30);
-        break;
-      default:
-        startDate = new Date(0); // all time
+      case 'last1h': startDate.setHours(startDate.getHours() - 1); break;
+      case 'last24h': startDate.setDate(startDate.getDate() - 1); break;
+      case 'last7d': startDate.setDate(startDate.getDate() - 7); break;
+      case 'last30d': startDate.setDate(startDate.getDate() - 30); break;
+      default: startDate = new Date(0);
     }
 
     const match = {
@@ -2027,14 +2012,12 @@ module.exports.analytics = async (req, res) => {
       timestamp: { $gte: startDate },
     };
 
-    // Average response time
     const latencyAgg = await ApiAnalytics.aggregate([
       { $match: match },
       { $group: { _id: null, avg: { $avg: '$responseTimeMs' } } },
     ]);
     const avgResponseTimeMs = latencyAgg[0]?.avg ?? null;
 
-    // Error rate (status >= 400)
     const errorAgg = await ApiAnalytics.aggregate([
       { $match: match },
       {
@@ -2047,7 +2030,7 @@ module.exports.analytics = async (req, res) => {
     ]);
     const errorRate = errorAgg[0] ? (errorAgg[0].errors / errorAgg[0].total) * 100 : 0;
 
-    // --- Response with correct format ---
+    // ✅ Correct response format
     res.json({
       success: true,
       data: {
@@ -2071,7 +2054,6 @@ module.exports.analytics = async (req, res) => {
     });
   }
 };
-
 // FUNCTION - TOGGLE AUTH
 module.exports.toggleAuth = async (req, res) => {
   try {
