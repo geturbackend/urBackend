@@ -967,7 +967,7 @@ module.exports.signup = async (req, res) => {
                     return res.status(cooldownErr.statusCode || 429).json({ error: cooldownErr.message });
                 }
 
-                const otp = Math.floor(100000 + Math.random() * 900000).toString();
+                const otp = crypto.randomInt(100000, 1000000).toString();
                 await redis.set(`project:${project._id}:otp:verification:${email}`, otp, 'EX', 300);
                 await setPublicOtpCooldown(project._id, email, 'verification');
 
@@ -992,7 +992,7 @@ module.exports.signup = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otp = crypto.randomInt(100000, 1000000).toString();
 
         const newUserPayload = buildAuthUserPayload(
             usersColConfig,
@@ -1303,7 +1303,7 @@ module.exports.resendVerificationOtp = async (req, res) => {
             return res.status(cooldownErr.statusCode || 429).json({ error: cooldownErr.message });
         }
 
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otp = crypto.randomInt(100000, 1000000).toString();
         await redis.set(`project:${project._id}:otp:verification:${email}`, otp, 'EX', 300);
         await setPublicOtpCooldown(project._id, email, 'verification');
 
@@ -1341,7 +1341,7 @@ module.exports.requestPasswordReset = async (req, res) => {
             return res.json({ message: "If that email exists, a reset code has been sent." });
         }
 
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otp = crypto.randomInt(100000, 1000000).toString();
         await redis.set(`project:${project._id}:otp:reset:${email}`, otp, 'EX', 300);
 
         await authEmailQueue.add('send-reset-email', { email, otp, type: 'password_reset', pname: project.name, projectId: String(project._id) });
