@@ -165,6 +165,20 @@ describe('OTP generation uses CSPRNG', () => {
         expect(storedOtp).toMatch(/^\d{6}$/);
     });
 
+    test('signup unverified-resend branch uses crypto.randomInt', async () => {
+        const req = makeReq({ body: { email: 'Unverified@User.com', password: 'password123' } });
+        const res = makeRes();
+        const { __mockModel: model, redis } = require('@urbackend/common');
+        model.findOne.mockResolvedValueOnce({ _id: 'u1', isVerified: false });
+        redis.get.mockResolvedValueOnce(null);
+
+        await controller.signup(req, res);
+
+        expect(randomIntSpy).toHaveBeenCalledWith(100000, 1000000);
+        const otpCall = redis.set.mock.calls.find(c => c[0].includes('otp:verification'));
+        expect(otpCall[0]).toContain('unverified@user.com');
+    });
+
     test('resendVerificationOtp uses crypto.randomInt', async () => {
         const req = makeReq({ body: { email: 'unverified@user.com' } });
         const res = makeRes();
