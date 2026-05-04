@@ -486,7 +486,131 @@ const payload = await response.json();`}</pre>
                         />
                     </div>
                 );
+            case 'cursor-pagination':
+                return (
+                    <div className="fade-in">
+                        <h2 className="page-title">Cursor-Based Pagination</h2>
+                        <p style={{ color: 'var(--color-text-muted)', marginBottom: '2rem' }}>
+                            For large collections, use cursor-based pagination for efficient deep paging with O(1) performance. Unlike offset-based pagination which becomes slow with large skip values, cursors maintain performance regardless of dataset size.
+                        </p>
 
+                        <div className="card" style={{ marginBottom: '2rem', backgroundColor: '#1a1a1a', borderLeft: '3px solid var(--color-primary)' }}>
+                            <p style={{ fontSize: '0.9rem', color: '#aaa' }}>
+                                <strong>When to Use:</strong> Use cursor pagination when you need to paginate through large datasets, sort by indexed fields, or provide stable pagination results across concurrent requests.
+                            </p>
+                        </div>
+
+                        <h3 style={{ fontSize: '1.1rem', marginTop: '2rem' }}>How Cursor Pagination Works</h3>
+                        <ul style={{ color: '#aaa', marginBottom: '1.5rem', paddingLeft: '1.5rem' }}>
+                            <li>Each page returns a <code>nextCursor</code> token</li>
+                            <li>Pass the <code>nextCursor</code> as the <code>?cursor</code> query parameter to fetch the next page</li>
+                            <li>Results are always sorted consistently by a field (default: <code>-createdAt</code>)</li>
+                            <li>No limit offset jumping – always efficient</li>
+                        </ul>
+
+                        <h3 style={{ fontSize: '1.1rem', marginTop: '2rem' }}>1. Fetch First Page</h3>
+                        <CodeBlock
+                            method="GET"
+                            url="/api/data/posts?limit=25&sort=createdAt:-1"
+                            comment="Fetch first page without cursor"
+                        />
+
+                        <h3 style={{ fontSize: '1.1rem', marginTop: '2rem' }}>2. Response Structure</h3>
+                        <div className="card" style={{ padding: '1.5rem', backgroundColor: '#111', margin: '1rem 0' }}>
+                            <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '0.85rem', color: '#e5e5e5', lineHeight: 1.6 }}>
+{`{
+  "success": true,
+  "data": {
+    "items": [...documents...],
+    "total": 500,
+    "cursor": null,
+    "nextCursor": "eyJzb3J0VmFsdWUiOiIyMDI0LTA0LTA1IiwiX2lkIjoiNjVmYzJhMDAwMDAwMDAwMDAwMDAwMDAwIn0=",
+    "limit": 25
+  },
+  "message": "Data fetched successfully"
+}`}
+                            </pre>
+                        </div>
+
+                        <h3 style={{ fontSize: '1.1rem', marginTop: '2rem' }}>3. Fetch Next Page Using Cursor</h3>
+                        <CodeBlock
+                            method="GET"
+                            url="/api/data/posts?limit=25&sort=createdAt:-1&cursor=eyJzb3J0VmFsdWUiOiIyMDI0LTA0LTA1IiwiX2lkIjoiNjVmYzJhMDAwMDAwMDAwMDAwMDAwMDAwIn0="
+                            comment="Fetch next page using cursor"
+                        />
+
+                        <h3 style={{ fontSize: '1.1rem', marginTop: '2rem' }}>4. Complete Example</h3>
+                        <div className="card" style={{ padding: '1.5rem', backgroundColor: '#111', margin: '1rem 0' }}>
+                            <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '0.85rem', color: '#e5e5e5', lineHeight: 1.6 }}>
+{`// Pagination loop
+let cursor = null;
+let allItems = [];
+
+do {
+  const url = new URL('${PUBLIC_API_URL}/api/data/posts');
+  url.searchParams.append('limit', '50');
+  url.searchParams.append('sort', 'createdAt:-1');
+  if (cursor) {
+    url.searchParams.append('cursor', cursor);
+  }
+
+  const response = await fetch(url.toString(), {
+    headers: { 'x-api-key': 'YOUR_API_KEY' }
+  });
+
+  const data = await response.json();
+  allItems = allItems.concat(data.data.items);
+
+  cursor = data.data.nextCursor;
+} while (cursor); // Continue until no nextCursor
+
+console.log(\`Total fetched: \${allItems.length}\`);`}
+                            </pre>
+                        </div>
+
+                        <h3 style={{ fontSize: '1.1rem', marginTop: '2rem' }}>Parameters</h3>
+                        <ParamTable params={[
+                            { name: 'cursor', type: 'string', required: false, desc: 'Base64-encoded cursor from previous response. Omit for first page.' },
+                            { name: 'limit', type: 'number', required: false, desc: 'Documents per page (default: 50, max: 100).' },
+                            { name: 'sort', type: 'string', required: false, desc: 'Sort field and direction (e.g., "createdAt:-1" for newest first).' },
+                        ]} />
+
+                        <h3 style={{ fontSize: '1.1rem', marginTop: '2rem' }}>Comparison: Offset vs Cursor Pagination</h3>
+                        <div style={{ margin: '1rem 0', overflowX: 'auto' }}>
+                            <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '1px solid #333', textAlign: 'left' }}>
+                                        <th style={{ padding: '8px', color: '#888' }}>Aspect</th>
+                                        <th style={{ padding: '8px', color: '#888' }}>Offset Pagination</th>
+                                        <th style={{ padding: '8px', color: '#888' }}>Cursor Pagination</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style={{ borderBottom: '1px solid #222' }}>
+                                        <td style={{ padding: '8px', fontWeight: 'bold', color: 'var(--color-primary)' }}>Performance</td>
+                                        <td style={{ padding: '8px', color: '#aaa' }}>O(N) – slow for deep pages</td>
+                                        <td style={{ padding: '8px', color: '#aaa' }}>O(1) – constant time</td>
+                                    </tr>
+                                    <tr style={{ borderBottom: '1px solid #222' }}>
+                                        <td style={{ padding: '8px', fontWeight: 'bold', color: 'var(--color-primary)' }}>Stability</td>
+                                        <td style={{ padding: '8px', color: '#aaa' }}>Data shifts if items added/removed</td>
+                                        <td style={{ padding: '8px', color: '#aaa' }}>Stable across concurrent changes</td>
+                                    </tr>
+                                    <tr style={{ borderBottom: '1px solid #222' }}>
+                                        <td style={{ padding: '8px', fontWeight: 'bold', color: 'var(--color-primary)' }}>URL</td>
+                                        <td style={{ padding: '8px', color: '#aaa' }}>?page=5&limit=50</td>
+                                        <td style={{ padding: '8px', color: '#aaa' }}>?cursor=TOKEN&limit=50</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ padding: '8px', fontWeight: 'bold', color: 'var(--color-primary)' }}>Use Case</td>
+                                        <td style={{ padding: '8px', color: '#aaa' }}>Small collections</td>
+                                        <td style={{ padding: '8px', color: '#aaa' }}>Large collections, APIs</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                );
             case 'storage':
                 return (
                     <div className="fade-in">
@@ -663,6 +787,7 @@ console.log("File URL:", result.url);
                         {[
                             { id: 'schemas', label: 'Schemas & Types', icon: FileJson },
                             { id: 'data', label: 'Database Operations', icon: Database },
+                            { id: 'cursor-pagination', label: 'Cursor Pagination', icon: Zap },
                             { id: 'auth', label: 'Authentication', icon: Shield },
                             { id: 'storage', label: 'Cloud Storage', icon: HardDrive },
                         ].map(item => (
