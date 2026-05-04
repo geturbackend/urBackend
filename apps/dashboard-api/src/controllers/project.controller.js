@@ -1958,7 +1958,7 @@ module.exports.deleteProject = async (req, res) => {
   }
 };
 
-// MODIFIED analytics function to include API performance metrics
+// ENRICHED analytics function for the premium dashboard
 module.exports.analytics = async (req, res, next) => {
   try {
     const { projectId } = req.params;
@@ -1973,87 +1973,156 @@ module.exports.analytics = async (req, res, next) => {
       });
     }
 
-    // Existing analytics
-    const totalRequests = await Log.countDocuments({ projectId });
-    const logs = await Log.find({ projectId }).sort({ timestamp: -1 }).limit(50);
+    const VALID_RANGES = new Set(['last1h', 'last24h', 'last7d', 'last30d', 'allTime']);
+    if (!VALID_RANGES.has(range)) {
+      return res.status(400).json({
+        success: false,
+        data: {},
+        message: `Invalid range. Allowed values: ${[...VALID_RANGES].join(', ')}.`,
+      });
+    }
 
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const chartData = await Log.aggregate([
-      {
-        $match: {
-          projectId: new mongoose.Types.ObjectId(projectId),
-          timestamp: { $gte: sevenDaysAgo },
-        },
-      },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$timestamp" } },
-          count: { $sum: 1 },
-        },
-      },
-      { $sort: { _id: 1 } },
-    ]);
+    let startDate = new Date();
+    let format = "%Y-%m-%d";
+    let groupStep = "day";
 
-    // New performance metrics
-    // ✅ Whitelist allowed ranges (including explicit 'allTime')
-const VALID_RANGES = new Set(['last1h', 'last24h', 'last7d', 'last30d', 'allTime']);
-if (!VALID_RANGES.has(range)) {
-  return res.status(400).json({
-    success: false,
-    data: {},
-    message: `Invalid range. Allowed values: ${[...VALID_RANGES].join(', ')}.`,
-  });
-}
-
-let startDate = new Date();
-switch (range) {
-  case 'last1h': startDate.setHours(startDate.getHours() - 1); break;
-  case 'last24h': startDate.setDate(startDate.getDate() - 1); break;
-  case 'last7d': startDate.setDate(startDate.getDate() - 7); break;
-  case 'last30d': startDate.setDate(startDate.getDate() - 30); break;
-  case 'allTime': startDate = new Date(0); break;
-}
+    switch (range) {
+      case 'last1h': 
+        startDate.setHours(startDate.getHours() - 1); 
+        format = "%H:%M";
+        groupStep = "minute"; // We'll group by minute for 1h
+        break;
+      case 'last24h': 
+        startDate.setDate(startDate.getDate() - 1); 
+        format = "%H:00";
+        groupStep = "hour";
+        break;
+      case 'last7d': 
+        startDate.setDate(startDate.getDate() - 7); 
+        break;
+      case 'last30d': 
+        startDate.setDate(startDate.getDate() - 30); 
+        break;
+      case 'allTime': 
+        startDate = new Date(0); 
+        break;
+    }
 
     const match = {
       projectId: new mongoose.Types.ObjectId(projectId),
       timestamp: { $gte: startDate },
     };
 
-   // Single aggregation for both latency and error metrics
-const analyticsAgg = await ApiAnalytics.aggregate([
-  { $match: match },
-  {
-    $group: {
-      _id: null,
-      avg: { $avg: '$responseTimeMs' },
-      total: { $sum: 1 },
-      errors: { $sum: { $cond: [{ $gte: ['$statusCode', 400] }, 1, 0] } },
-    },
-  },
-]);
-const avgResponseTimeMs = analyticsAgg[0]?.avg ?? null;
-const errorRate = analyticsAgg[0] ? (analyticsAgg[0].errors / analyticsAgg[0].total) * 100 : 0;
+    // 1. Aggregation for Time Series (Requests & Latency)
+    const timeSeriesData = await ApiAnalytics.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: { $dateToString: { format: format, date: "$timestamp" } },
+          success: { $sum: { $cond: [{ $lt: ["$statusCode", 400] }, 1, 0] } },
+          errors: { $sum: { $cond: [{ $gte: ["$statusCode", 400] }, 1, 0] } },
+          avgLatency: { $avg: "$responseTimeMs" }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
 
-    // ✅ Correct response format
+    // 2. Aggregation for Breakdowns (Status, Method, Top Endpoints)
+    const [breakdownStats, topEndpoints] = await Promise.all([
+      ApiAnalytics.aggregate([
+        { $match: match },
+        {
+          $facet: {
+            statusCodes: [
+              { $group: { _id: { $concat: [{ $substr: ["$statusCode", 0, 1] }, "xx"] }, count: { $sum: 1 } } }
+            ],
+            methods: [
+              { $group: { _id: "$method", count: { $sum: 1 } } }
+            ],
+            global: [
+              {
+                $group: {
+                  _id: null,
+                  avgResponseTimeMs: { $avg: "$responseTimeMs" },
+                  totalRequests: { $sum: 1 },
+                  errors: { $sum: { $cond: [{ $gte: ["$statusCode", 400] }, 1, 0] } }
+                }
+              }
+            ]
+          }
+        }
+      ]),
+      ApiAnalytics.aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: { endpoint: "$endpoint", method: "$method" },
+            count: { $sum: 1 },
+            avgLatency: { $avg: "$responseTimeMs" },
+            errors: { $sum: { $cond: [{ $gte: ["$statusCode", 400] }, 1, 0] } }
+          }
+        },
+        { $sort: { count: -1 } },
+        { $limit: 10 }
+      ])
+    ]);
+
+    const stats = breakdownStats[0].global[0] || { avgResponseTimeMs: 0, totalRequests: 0, errors: 0 };
+    const errorRate = stats.totalRequests > 0 ? (stats.errors / stats.totalRequests) * 100 : 0;
+
+    // 3. Approximate p95
+    let p95 = 0;
+    if (stats.totalRequests > 0) {
+      const p95Results = await ApiAnalytics.find(match)
+        .sort({ responseTimeMs: 1 })
+        .skip(Math.max(0, Math.floor(stats.totalRequests * 0.95) - 1))
+        .limit(1)
+        .select('responseTimeMs')
+        .lean();
+      p95 = p95Results[0]?.responseTimeMs || 0;
+    }
+
+    // 4. Logs (last 50)
+    const logs = await Log.find({ projectId }).sort({ timestamp: -1 }).limit(50).lean();
+
+    // Cumulative stats for the project
+    const allTimeRequests = await Log.countDocuments({ projectId });
+
     return res.json({
       success: true,
       data: {
         storage: { used: project.storageUsed, limit: project.storageLimit },
         database: { used: project.databaseUsed, limit: project.databaseLimit },
-        totalRequests,
+        totalRequests: allTimeRequests,
+        rangeStats: {
+          totalRequests: stats.totalRequests,
+          avgResponseTimeMs: stats.avgResponseTimeMs,
+          p95ResponseTimeMs: p95,
+          errorRate: errorRate
+        },
+        timeSeries: timeSeriesData,
+        topEndpoints: topEndpoints.map(e => ({
+          path: e._id.endpoint,
+          method: e._id.method,
+          count: e.count,
+          avgLatency: e.avgLatency,
+          errorRate: (e.errors / e.count) * 100
+        })),
+        distributions: {
+          statusCodes: breakdownStats[0].statusCodes,
+          methods: breakdownStats[0].methods
+        },
         logs,
-        chartData,
-        avgResponseTimeMs,
-        errorRate,
-        range,
+        range
       },
       message: 'Analytics fetched successfully.',
     });
- } catch (err) {
+  } catch (err) {
     console.error('Analytics error:', err);
     return next(new AppError(500, 'Failed to fetch analytics.'));
-}};
+  }
+};
+
 // FUNCTION - TOGGLE AUTH
 module.exports.toggleAuth = async (req, res) => {
   try {

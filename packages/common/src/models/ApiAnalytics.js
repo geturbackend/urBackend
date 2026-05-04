@@ -12,7 +12,6 @@ const apiAnalyticsSchema = new mongoose.Schema(
   { timestamps: false }
 );
 
-// TTL index – configurable via environment variable (default: 365 days)
 const ttlDays = parseInt(process.env.ANALYTICS_TTL_DAYS || '365', 10);
 if (!isNaN(ttlDays) && ttlDays > 0) {
   apiAnalyticsSchema.index({ timestamp: 1 }, { expireAfterSeconds: ttlDays * 24 * 60 * 60 });

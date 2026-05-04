@@ -1,21 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../utils/api';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Activity, HardDrive, Database, RefreshCw, Globe, Zap, Gauge, AlertCircle } from 'lucide-react';
+import { 
+    AreaChart, Area, LineChart, Line, BarChart, Bar, 
+    XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, 
+    PieChart, Pie, Cell, Legend
+} from 'recharts';
+import { 
+    Activity, HardDrive, Database, RefreshCw, Globe, 
+    Zap, Gauge, AlertCircle, BarChart3, Clock, 
+    ChevronRight, ArrowUpRight, TrendingUp, Filter
+} from 'lucide-react';
 import SectionHeader from '../components/Dashboard/SectionHeader';
 
-const getStatusColor = (status) => {
-    if (status >= 500) return '#ef4444';
-    if (status >= 400) return '#f59e0b';
-    if (status >= 300) return '#3b82f6';
-    return '#22c55e';
-};
-
-const formatBytes = (bytes) => {
-    if (!bytes) return '0 MB';
-    if (bytes >= 1024 * 1024 * 1024) return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
-    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+const STATUS_COLORS = {
+    '2xx': '#22c55e',
+    '3xx': '#3b82f6',
+    '4xx': '#f59e0b',
+    '5xx': '#ef4444',
 };
 
 const METHOD_COLORS = {
@@ -26,6 +28,27 @@ const METHOD_COLORS = {
     DELETE: '#ef4444',
 };
 
+const formatBytes = (bytes) => {
+    if (!bytes || bytes === 0) return '0 MB';
+    if (bytes >= 1024 * 1024 * 1024) return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+};
+
+const getStatusColor = (status) => {
+    if (status >= 500) return '#ef4444';
+    if (status >= 400) return '#f59e0b';
+    if (status >= 300) return '#3b82f6';
+    return '#22c55e';
+};
+
+const RANGE_OPTIONS = [
+    { label: '1h', value: 'last1h' },
+    { label: '24h', value: 'last24h' },
+    { label: '7d', value: 'last7d' },
+    { label: '30d', value: 'last30d' },
+    { label: 'All', value: 'allTime' },
+];
+
 export default function Analytics() {
     const { projectId } = useParams();
     const [data, setData] = useState(null);
@@ -33,17 +56,15 @@ export default function Analytics() {
     const [refreshing, setRefreshing] = useState(false);
     const [range, setRange] = useState('last24h');
 
-    const fetchData = useCallback(async (selectedRange = 'last24h') => {
+    const fetchData = useCallback(async (selectedRange) => {
         try {
             setRefreshing(true);
             const res = await api.get(`/api/projects/${projectId}/analytics?range=${selectedRange}`);
             if (res.data.success) {
                 setData(res.data.data);
-            } else {
-                console.error(res.data.message);
             }
         } catch (err) {
-            console.error(err);
+            console.error('Failed to fetch analytics:', err);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -51,292 +72,288 @@ export default function Analytics() {
     }, [projectId]);
 
     useEffect(() => {
-  let isMounted = true;
-  const load = async () => {
-    try {
-      setRefreshing(true);
-      const res = await api.get(`/api/projects/${projectId}/analytics?range=last24h`);
-      if (res.data.success && isMounted) {
-        setData(res.data.data);
-      } else if (isMounted) {
-        console.error(res.data.message);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      if (isMounted) {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    }
-  };
-  load();
-  return () => { isMounted = false; };
-}, [projectId]);
-    const handleRangeChange = (e) => {
-        const newRange = e.target.value;
-        setRange(newRange);
-        fetchData(newRange);
-    };
+        queueMicrotask(() => fetchData(range));
+    }, [range, fetchData]);
 
+    // Skeleton loader component
     if (loading) return (
-        <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <div className="skeleton" style={{ width: '140px', height: '18px' }} />
-                <div className="skeleton" style={{ width: '120px', height: '28px', borderRadius: '4px' }} />
+        <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
+                <div className="skeleton" style={{ width: '200px', height: '40px' }} />
+                <div className="skeleton" style={{ width: '300px', height: '40px', borderRadius: '20px' }} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
-                {[1, 2, 3].map(i => (
-                    <div key={i} className="glass-card" style={{ padding: '1rem', borderRadius: '8px' }}>
-                        <div className="skeleton" style={{ width: '50%', height: '12px', marginBottom: '8px' }} />
-                        <div className="skeleton" style={{ width: '70%', height: '28px' }} />
-                        <div className="skeleton" style={{ width: '100%', height: '4px', marginTop: '10px' }} />
-                    </div>
-                ))}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2rem' }}>
+                {[1, 2, 3, 4].map(i => <div key={i} className="glass-card skeleton" style={{ height: '120px' }} />)}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-                {[1, 2].map(i => (
-                    <div key={i} className="glass-card" style={{ padding: '1rem', borderRadius: '8px' }}>
-                        <div className="skeleton" style={{ width: '50%', height: '12px', marginBottom: '8px' }} />
-                        <div className="skeleton" style={{ width: '70%', height: '28px' }} />
-                    </div>
-                ))}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div className="glass-card" style={{ height: '340px', borderRadius: '8px' }} />
-                <div className="glass-card" style={{ height: '340px', borderRadius: '8px' }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
+                <div className="glass-card skeleton" style={{ height: '400px' }} />
+                <div className="glass-card skeleton" style={{ height: '400px' }} />
             </div>
         </div>
     );
 
-    const storageLimit = data?.storage?.limit > 0 ? data.storage.limit : 1;
-const storagePercent = Math.min(((data?.storage?.used || 0) / storageLimit) * 100, 100);
-
-const dbLimit = data?.database?.limit > 0 ? data.database.limit : 1;
-const dbPercent = Math.min(((data?.database?.used || 0) / dbLimit) * 100, 100);
-
+    const rangeStats = data?.rangeStats || {};
+    
     return (
-        <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '3rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '12px' }}>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'rgba(62, 207, 142, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(62, 207, 142, 0.15)' }}>
-                        <Activity size={16} color="var(--color-primary)" />
+        <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '4rem', padding: '0 1rem' }}>
+            
+            {/* Header & Range Selector */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem', flexWrap: 'wrap', gap: '20px' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <div style={{ 
+                        width: '40px', height: '40px', borderRadius: '10px', 
+                        background: 'rgba(62, 207, 142, 0.1)', display: 'flex', 
+                        alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(62, 207, 142, 0.1)' 
+                    }}>
+                        <TrendingUp size={20} color="var(--color-primary)" />
                     </div>
                     <div>
-                        <h1 style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.02em' }}>Analytics</h1>
-                        <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>Real-time usage metrics and request logs</p>
+                        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>Analytics</h1>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: 0 }}>Performance and usage insights for your project</p>
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <select
-                        value={range}
-                        onChange={handleRangeChange}
-                        className="input-field"
-                        style={{ width: '140px', height: '30px', fontSize: '0.75rem', padding: '0 8px', margin: 0 }}
-                    >
-                        <option value="last1h">Last hour</option>
-                        <option value="last24h">Last 24 hours</option>
-                        <option value="last7d">Last 7 days</option>
-                        <option value="last30d">Last 30 days</option>
-                        <option value="allTime">All time</option>
-                    </select>
-                    <button
-                        onClick={() => fetchData(range)}
-                        className="btn btn-secondary"
+
+                <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '4px', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
+                    {RANGE_OPTIONS.map(opt => (
+                        <button
+                            key={opt.value}
+                            onClick={() => setRange(opt.value)}
+                            style={{
+                                padding: '6px 16px',
+                                fontSize: '0.75rem',
+                                fontWeight: range === opt.value ? 600 : 500,
+                                borderRadius: '7px',
+                                border: 'none',
+                                background: range === opt.value ? 'var(--color-primary)' : 'transparent',
+                                color: range === opt.value ? '#000' : 'var(--color-text-muted)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
+                    <div style={{ width: '1px', height: '16px', background: 'var(--color-border)', margin: '0 8px' }} />
+                    <button 
+                        onClick={() => fetchData(range)} 
                         disabled={refreshing}
-                        style={{ height: '30px', fontSize: '0.75rem', padding: '0 12px', gap: '5px' }}
+                        style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', display: 'flex', padding: '0 8px' }}
                     >
-                        <RefreshCw size={12} className={refreshing ? 'spin' : ''} />
-                        {refreshing ? 'Updating...' : 'Refresh'}
+                        <RefreshCw size={14} className={refreshing ? 'spin' : ''} />
                     </button>
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
-                <div className="glass-card" style={{ padding: '1rem', borderRadius: '8px', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', top: '-8px', right: '-8px', opacity: 0.04 }}>
-                        <Zap size={80} />
+            {/* KPI Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
+                <KPICard 
+                    title="Total Requests" 
+                    value={rangeStats.totalRequests?.toLocaleString()} 
+                    subtext={`Total API hits in ${RANGE_OPTIONS.find(r => r.value === range).label}`}
+                    icon={<Globe size={18} />}
+                    color="var(--color-primary)"
+                />
+                <KPICard 
+                    title="Avg Latency" 
+                    value={`${rangeStats.avgResponseTimeMs?.toFixed(1)}ms`} 
+                    subtext={`p95: ${rangeStats.p95ResponseTimeMs?.toFixed(1)}ms`}
+                    icon={<Clock size={18} />}
+                    color="#3b82f6"
+                />
+                <KPICard 
+                    title="Error Rate" 
+                    value={`${rangeStats.errorRate?.toFixed(2)}%`} 
+                    subtext={`${((rangeStats.errorRate / 100) * rangeStats.totalRequests).toFixed(0)} failed requests`}
+                    icon={<AlertCircle size={18} />}
+                    color={rangeStats.errorRate > 5 ? '#ef4444' : '#f59e0b'}
+                />
+                <KPICard 
+                    title="Storage Used" 
+                    value={formatBytes(data?.storage?.used)} 
+                    subtext={`of ${formatBytes(data?.storage?.limit)} limit`}
+                    icon={<HardDrive size={18} />}
+                    color="#a78bfa"
+                    progress={(data?.storage?.used / data?.storage?.limit) * 100}
+                />
+            </div>
+
+            {/* Charts Section */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+                <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Activity size={16} color="var(--color-primary)" /> Requests Over Time
+                        </h3>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)', marginBottom: '6px', fontSize: '0.7rem', fontWeight: 500 }}>
-                        <Globe size={12} /> Total Requests
+                    <div style={{ height: '280px' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={data?.timeSeries}>
+                                <defs>
+                                    <linearGradient id="colorSuccess" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3}/>
+                                        <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0}/>
+                                    </linearGradient>
+                                    <linearGradient id="colorError" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                                <XAxis dataKey="_id" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} dy={10} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} />
+                                <Tooltip content={<CustomTooltip />} />
+                                <Area type="monotone" dataKey="success" stackId="1" stroke="var(--color-primary)" fill="url(#colorSuccess)" strokeWidth={2} />
+                                <Area type="monotone" dataKey="errors" stackId="1" stroke="#ef4444" fill="url(#colorError)" strokeWidth={2} />
+                            </AreaChart>
+                        </ResponsiveContainer>
                     </div>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 700, letterSpacing: '-1px', lineHeight: 1 }}>
-                        {(data?.totalRequests || 0).toLocaleString()}
-                    </div>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>All-time API hits</div>
                 </div>
 
-                <div className="glass-card" style={{ padding: '1rem', borderRadius: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)', fontSize: '0.7rem', fontWeight: 500 }}>
-                            <HardDrive size={12} /> File Storage
-                        </div>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>{formatBytes(data?.storage?.limit)} limit</span>
+                <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Gauge size={16} color="#3b82f6" /> Latency Trend (ms)
+                        </h3>
                     </div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.5px', lineHeight: 1, marginBottom: '8px' }}>
-                        {formatBytes(data?.storage?.used)}
+                    <div style={{ height: '280px' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={data?.timeSeries}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
+                                <XAxis dataKey="_id" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} dy={10} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} />
+                                <Tooltip content={<LatencyTooltip />} />
+                                <Line type="monotone" dataKey="avgLatency" stroke="#3b82f6" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 6, fill: '#3b82f6', strokeWidth: 0 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
                     </div>
-                    <div style={{ width: '100%', height: '4px', background: 'var(--color-bg-input)', borderRadius: '2px', overflow: 'hidden' }}>
-                        <div style={{ width: `${storagePercent}%`, height: '100%', background: 'linear-gradient(90deg, var(--color-primary), #34d399)', borderRadius: '2px', transition: 'width 0.5s ease' }} />
-                    </div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>{storagePercent.toFixed(1)}% used</div>
-                </div>
-
-                <div className="glass-card" style={{ padding: '1rem', borderRadius: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)', fontSize: '0.7rem', fontWeight: 500 }}>
-                            <Database size={12} /> Database Size
-                        </div>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>{formatBytes(data?.database?.limit)} limit</span>
-                    </div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.5px', lineHeight: 1, marginBottom: '8px' }}>
-                        {formatBytes(data?.database?.used || 0)}
-                    </div>
-                    <div style={{ width: '100%', height: '4px', background: 'var(--color-bg-input)', borderRadius: '2px', overflow: 'hidden' }}>
-                        <div style={{ width: `${dbPercent}%`, height: '100%', background: dbPercent > 80 ? '#ef4444' : 'linear-gradient(90deg, #3b82f6, #60a5fa)', borderRadius: '2px', transition: 'width 0.5s ease' }} />
-                    </div>
-                    <div style={{ fontSize: '0.65rem', color: dbPercent > 80 ? '#ef4444' : 'var(--color-text-muted)', marginTop: '4px' }}>{dbPercent.toFixed(1)}% used</div>
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-                <div className="glass-card" style={{ padding: '1rem', borderRadius: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)', marginBottom: '6px', fontSize: '0.7rem', fontWeight: 500 }}>
-                        <Gauge size={12} /> Average Response Time
-                    </div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.5px', lineHeight: 1 }}>
-                        {data?.avgResponseTimeMs !== null && data?.avgResponseTimeMs !== undefined
-                            ? `${data.avgResponseTimeMs.toFixed(2)} ms`
-                            : 'No data'}
-                    </div>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                        For the selected time range
+            {/* Breakdowns Section */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+                <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '16px' }}>
+                    <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '1.5rem' }}>Top Endpoints</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {data?.topEndpoints?.length > 0 ? data.topEndpoints.map((ep, idx) => (
+                            <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: METHOD_COLORS[ep.method], background: `${METHOD_COLORS[ep.method]}15`, padding: '2px 6px', borderRadius: '4px', width: '45px', textAlign: 'center' }}>{ep.method}</span>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 500, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ep.path}</span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexShrink: 0 }}>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{ep.count}</div>
+                                        <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>requests</div>
+                                    </div>
+                                    <div style={{ textAlign: 'right', width: '60px' }}>
+                                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: ep.avgLatency > 500 ? '#ef4444' : 'inherit' }}>{ep.avgLatency.toFixed(0)}ms</div>
+                                        <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>avg</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )) : <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', textAlign: 'center', padding: '2rem' }}>No data for this range</p>}
                     </div>
                 </div>
 
-                <div className="glass-card" style={{ padding: '1rem', borderRadius: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)', marginBottom: '6px', fontSize: '0.7rem', fontWeight: 500 }}>
-                        <AlertCircle size={12} /> Error Rate
-                    </div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.5px', lineHeight: 1 }}>
-                        {data?.errorRate !== null && data?.errorRate !== undefined
-                            ? `${data.errorRate.toFixed(2)}%`
-                            : 'No data'}
-                    </div>
-                    <div style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                        Percentage of requests with status ≥ 400
-                    </div>
-                </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
-                    <SectionHeader title="Traffic Overview (7d)" />
-                    <div className="glass-card" style={{ padding: '1rem', borderRadius: '8px', height: '300px', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ flex: 1, minHeight: 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '16px', flex: 1 }}>
+                        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '1.25rem' }}>Status Codes</h3>
+                        <div style={{ height: '140px' }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={data?.chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-                                    <XAxis
-                                        dataKey="_id"
-                                        stroke="var(--color-text-muted)"
-                                        fontSize={9}
-                                        tickLine={false}
-                                        axisLine={false}
-                                        dy={8}
-                                    />
-                                    <YAxis
-                                        stroke="var(--color-text-muted)"
-                                        fontSize={9}
-                                        tickLine={false}
-                                        axisLine={false}
-                                        allowDecimals={false}
-                                    />
-                                    <Tooltip
-                                        cursor={{ fill: 'rgba(255,255,255,0.02)' }}
-                                        contentStyle={{ backgroundColor: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: '6px', color: '#fff', fontSize: '0.75rem' }}
-                                    />
-                                    <Bar dataKey="count" fill="var(--color-primary)" radius={[3, 3, 0, 0]} barSize={28} />
+                                <BarChart data={data?.distributions?.statusCodes} layout="vertical" margin={{ left: -30 }}>
+                                    <XAxis type="number" hide />
+                                    <YAxis dataKey="_id" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 600 }} />
+                                    <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: '8px', fontSize: '0.75rem' }} />
+                                    <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={20}>
+                                        {data?.distributions?.statusCodes?.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry._id] || '#94a3b8'} />
+                                        ))}
+                                    </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
-                </div>
 
-                <div>
-                    <SectionHeader title="Recent Logs" />
-                    <div className="glass-card" style={{ borderRadius: '8px', overflow: 'hidden', height: '300px', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ overflowY: 'auto', flex: 1 }} className="custom-scrollbar">
-                            <table style={{ width: '100%', fontSize: '0.73rem', borderCollapse: 'collapse' }}>
-                                <thead style={{ position: 'sticky', top: 0, background: 'var(--color-bg-card)', zIndex: 1, boxShadow: '0 1px 0 var(--color-border)' }}>
-                                    <tr style={{ textAlign: 'left', color: 'var(--color-text-muted)', fontSize: '0.65rem', textTransform: 'uppercase' }}>
-                                        <th style={{ padding: '7px 10px', fontWeight: 600, width: '60px' }}>Status</th>
-                                        <th style={{ padding: '7px 10px', fontWeight: 600, width: '55px' }}>Method</th>
-                                        <th style={{ padding: '7px 10px', fontWeight: 600 }}>Path</th>
-                                        <th style={{ padding: '7px 10px', fontWeight: 600, textAlign: 'right', width: '60px' }}>Time</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {(!data?.logs || data.logs.length === 0) ? (
-                                        <tr>
-                                            <td colSpan="4" style={{ padding: '1rem 10px', textAlign: 'left', color: 'var(--color-text-muted)', fontSize: '0.72rem' }}>
-                                                No recent activity
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        data.logs.map((log) => (
-                                            <tr key={log._id} style={{ borderBottom: '1px solid var(--color-border)', transition: 'background 0.15s' }} className="log-row">
-                                                <td style={{ padding: '5px 10px' }}>
-                                                    <span style={{
-                                                        color: getStatusColor(log.status),
-                                                        backgroundColor: `${getStatusColor(log.status)}15`,
-                                                        padding: '1px 5px',
-                                                        borderRadius: '3px',
-                                                        fontSize: '0.65rem',
-                                                        fontWeight: 700,
-                                                        border: `1px solid ${getStatusColor(log.status)}25`
-                                                    }}>
-                                                        {log.status}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: '5px 10px', fontWeight: 600, fontSize: '0.68rem' }}>
-                                                    <span style={{ color: METHOD_COLORS[log.method] || '#fff' }}>{log.method}</span>
-                                                </td>
-                                                <td style={{ padding: '5px 10px', fontFamily: 'monospace', fontSize: '0.7rem', color: 'var(--color-text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>
-                                                    {(log.path && typeof log.path === 'string') ? log.path.replace('/api/', '/') : '/'}
-                                                </td>
-                                                <td style={{ padding: '5px 10px', color: 'var(--color-text-muted)', textAlign: 'right', whiteSpace: 'nowrap', fontSize: '0.65rem' }}>
-                                                   {(() => {
-  const timestamp = log.timestamp;
-  if (!timestamp) return '—';
-  const date = new Date(timestamp);
-  if (isNaN(date.getTime())) return 'Invalid date';
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-})()}
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div style={{ padding: '6px 10px', borderTop: '1px solid var(--color-border)', fontSize: '0.65rem', color: 'var(--color-text-muted)', textAlign: 'right' }}>
-                            Showing latest {data?.logs?.length || 0} entries
+                    <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '16px', flex: 1 }}>
+                        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '1rem' }}>Method Breakdown</h3>
+                        <div style={{ height: '140px', display: 'flex', alignItems: 'center' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={data?.distributions?.methods}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={40}
+                                        outerRadius={55}
+                                        paddingAngle={5}
+                                        dataKey="count"
+                                        nameKey="_id"
+                                    >
+                                        {data?.distributions?.methods?.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={METHOD_COLORS[entry._id] || '#94a3b8'} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                    <Legend verticalAlign="middle" align="right" layout="vertical" iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
+                                </PieChart>
+                            </ResponsiveContainer>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            {/* Logs Table */}
+            <SectionHeader title="Live Request Log" />
+            <div className="glass-card" style={{ borderRadius: '16px', overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                        <thead style={{ background: 'rgba(255,255,255,0.02)', color: 'var(--color-text-muted)' }}>
+                            <tr style={{ textAlign: 'left' }}>
+                                <th style={{ padding: '14px 20px', fontWeight: 600 }}>Status</th>
+                                <th style={{ padding: '14px 20px', fontWeight: 600 }}>Method</th>
+                                <th style={{ padding: '14px 20px', fontWeight: 600 }}>Endpoint</th>
+                                <th style={{ padding: '14px 20px', fontWeight: 600, textAlign: 'right' }}>Time</th>
+                                <th style={{ padding: '14px 20px', fontWeight: 600, textAlign: 'right' }}>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {data?.logs?.length > 0 ? data.logs.map(log => (
+                                <tr key={log._id} style={{ borderTop: '1px solid var(--color-border)' }} className="log-row">
+                                    <td style={{ padding: '12px 20px' }}>
+                                        <span style={{ 
+                                            color: getStatusColor(log.status), 
+                                            background: `${getStatusColor(log.status)}15`,
+                                            padding: '2px 8px', borderRadius: '5px', fontWeight: 700, fontSize: '0.7rem',
+                                            border: `1px solid ${getStatusColor(log.status)}30`
+                                        }}>{log.status}</span>
+                                    </td>
+                                    <td style={{ padding: '12px 20px' }}>
+                                        <span style={{ fontWeight: 700, color: METHOD_COLORS[log.method] }}>{log.method}</span>
+                                    </td>
+                                    <td style={{ padding: '12px 20px', fontFamily: 'monospace', opacity: 0.9 }}>
+                                        {log.path.replace('/api/', '/')}
+                                    </td>
+                                    <td style={{ padding: '12px 20px', textAlign: 'right', fontWeight: 600 }}>
+                                        {log.responseTimeMs ? `${log.responseTimeMs.toFixed(0)}ms` : '—'}
+                                    </td>
+                                    <td style={{ padding: '12px 20px', textAlign: 'right', color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>
+                                        {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                    </td>
+                                </tr>
+                            )) : <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>No logs found</td></tr>}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
             <style>{`
                 .spin { animation: spin 1s linear infinite; }
                 @keyframes spin { 100% { transform: rotate(360deg); } }
-                .log-row:hover { background-color: rgba(255,255,255,0.015); }
+                .log-row:hover { background: rgba(255,255,255,0.015); }
                 .skeleton {
-                    position: relative; overflow: hidden;
                     background: linear-gradient(90deg, #1c1c1c 25%, #2a2a2a 50%, #1c1c1c 75%);
                     background-size: 200% 100%;
                     animation: skeleton-loading 1.5s infinite;
-                    border-radius: 4px;
                 }
                 @keyframes skeleton-loading { 
                     0% { background-position: 200% 0; }
@@ -346,3 +363,54 @@ const dbPercent = Math.min(((data?.database?.used || 0) / dbLimit) * 100, 100);
         </div>
     );
 }
+
+function KPICard({ title, value, subtext, icon, color, progress }) {
+    return (
+        <div className="glass-card" style={{ padding: '1.25rem', borderRadius: '16px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: color }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>{title}</span>
+                <div style={{ color: color, opacity: 0.8 }}>{icon}</div>
+            </div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, marginBottom: '6px' }}>{value || '0'}</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>{subtext}</div>
+            {progress !== undefined && (
+                <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', marginTop: '12px', overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.min(progress, 100)}%`, height: '100%', background: color, borderRadius: '2px' }} />
+                </div>
+            )}
+        </div>
+    );
+}
+
+const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+        return (
+            <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', padding: '10px 14px', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.4)' }}>
+                <p style={{ margin: '0 0 8px 0', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>{label}</p>
+                {payload.map((entry, idx) => (
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '20px', alignItems: 'center', marginBottom: idx === 0 ? '4px' : 0 }}>
+                        <span style={{ fontSize: '0.75rem', color: entry.color, fontWeight: 600 }}>{entry.name === 'success' ? 'Success' : 'Errors'}</span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{entry.value}</span>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+    return null;
+};
+
+const LatencyTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+        return (
+            <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', padding: '10px 14px', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.4)' }}>
+                <p style={{ margin: '0 0 8px 0', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>{label}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '20px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 600 }}>Avg Latency</span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{payload[0].value.toFixed(1)}ms</span>
+                </div>
+            </div>
+        );
+    }
+    return null;
+};
