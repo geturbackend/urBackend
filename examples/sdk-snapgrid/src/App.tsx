@@ -42,7 +42,7 @@ function App() {
         const result = await sdk.storage.upload(file);
        
 
-        const imageUrl = result.url + "?raw=true";
+        const imageUrl = new URL(result.url).toString();
 
         await fetch("http://localhost:1235/api/images", {
           method: "POST",
