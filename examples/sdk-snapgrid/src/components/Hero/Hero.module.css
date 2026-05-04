@@ -36,7 +36,7 @@
     transparent 75%
   );
   pointer-events: none;
-  animation: ambientBreathe 9s ease-in-out infinite;
+  animation: ambient-breathe 9s ease-in-out infinite;
 }
 
 .ambientLeft {
@@ -51,17 +51,17 @@
     transparent 68%
   );
   pointer-events: none;
-  animation: ambientBreathe 14s ease-in-out infinite reverse;
+  animation:ambient-breathe 14s ease-in-out infinite reverse;
 }
 
-@keyframes ambientBreathe {
+@keyframes ambient-breathe  {
   0%, 100% { opacity: 1;   transform: translateX(-50%) scale(1);    }
   50%       { opacity: 0.6; transform: translateX(-50%) scale(1.12); }
 }
 
 /* The left blob doesn't translateX */
-.ambientLeft { animation-name: ambientBreatheSm; }
-@keyframes ambientBreatheSm {
+.ambientLeft { animation-name: ambient-breatheSm; }
+@keyframes ambient-breatheSm {
   0%, 100% { opacity: 0.7; transform: scale(1);    }
   50%       { opacity: 1;   transform: scale(1.18); }
 }
