@@ -33,8 +33,7 @@ const { getPresignedUploadUrl } = require("@urbackend/common");
 const { verifyUploadedFile } = require("@urbackend/common");
 const { getPublicIp } = require("@urbackend/common");
 const { clearCompiledModel } = require("@urbackend/common");
-const { createUniqueIndexes } = require("@urbackend/common");
-
+const { createUniqueIndexes, ApiAnalytics } = require("@urbackend/common");
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const SAFETY_MAX_BYTES = 100 * 1024 * 1024;
 const CONFIRM_UPLOAD_SIZE_TOLERANCE_BYTES = 64;
@@ -1959,25 +1958,27 @@ module.exports.deleteProject = async (req, res) => {
   }
 };
 
-module.exports.analytics = async (req, res) => {
+// MODIFIED analytics function to include API performance metrics
+module.exports.analytics = async (req, res, next) => {
   try {
     const { projectId } = req.params;
-    const project = await Project.findOne({
-      _id: projectId,
-      owner: req.user._id,
-    });
-    if (!project)
-      return res
-        .status(404)
-        .json({ error: "Project not found or access denied." });
+    const { range = 'last24h' } = req.query;
+
+    const project = await Project.findOne({ _id: projectId, owner: req.user._id });
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        data: {},
+        message: "Project not found or access denied.",
+      });
+    }
+
+    // Existing analytics
     const totalRequests = await Log.countDocuments({ projectId });
-    const logs = await Log.find({ projectId })
-      .sort({ timestamp: -1 })
-      .limit(50);
+    const logs = await Log.find({ projectId }).sort({ timestamp: -1 }).limit(50);
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
     const chartData = await Log.aggregate([
       {
         $match: {
@@ -1994,18 +1995,65 @@ module.exports.analytics = async (req, res) => {
       { $sort: { _id: 1 } },
     ]);
 
-    res.json({
-      storage: { used: project.storageUsed, limit: project.storageLimit },
-      database: { used: project.databaseUsed, limit: project.databaseLimit },
-      totalRequests,
-      logs,
-      chartData,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+    // New performance metrics
+    // ✅ Whitelist allowed ranges (including explicit 'allTime')
+const VALID_RANGES = new Set(['last1h', 'last24h', 'last7d', 'last30d', 'allTime']);
+if (!VALID_RANGES.has(range)) {
+  return res.status(400).json({
+    success: false,
+    data: {},
+    message: `Invalid range. Allowed values: ${[...VALID_RANGES].join(', ')}.`,
+  });
+}
 
+let startDate = new Date();
+switch (range) {
+  case 'last1h': startDate.setHours(startDate.getHours() - 1); break;
+  case 'last24h': startDate.setDate(startDate.getDate() - 1); break;
+  case 'last7d': startDate.setDate(startDate.getDate() - 7); break;
+  case 'last30d': startDate.setDate(startDate.getDate() - 30); break;
+  case 'allTime': startDate = new Date(0); break;
+}
+
+    const match = {
+      projectId: new mongoose.Types.ObjectId(projectId),
+      timestamp: { $gte: startDate },
+    };
+
+   // Single aggregation for both latency and error metrics
+const analyticsAgg = await ApiAnalytics.aggregate([
+  { $match: match },
+  {
+    $group: {
+      _id: null,
+      avg: { $avg: '$responseTimeMs' },
+      total: { $sum: 1 },
+      errors: { $sum: { $cond: [{ $gte: ['$statusCode', 400] }, 1, 0] } },
+    },
+  },
+]);
+const avgResponseTimeMs = analyticsAgg[0]?.avg ?? null;
+const errorRate = analyticsAgg[0] ? (analyticsAgg[0].errors / analyticsAgg[0].total) * 100 : 0;
+
+    // ✅ Correct response format
+    return res.json({
+      success: true,
+      data: {
+        storage: { used: project.storageUsed, limit: project.storageLimit },
+        database: { used: project.databaseUsed, limit: project.databaseLimit },
+        totalRequests,
+        logs,
+        chartData,
+        avgResponseTimeMs,
+        errorRate,
+        range,
+      },
+      message: 'Analytics fetched successfully.',
+    });
+ } catch (err) {
+    console.error('Analytics error:', err);
+    return next(new AppError(500, 'Failed to fetch analytics.'));
+}};
 // FUNCTION - TOGGLE AUTH
 module.exports.toggleAuth = async (req, res) => {
   try {

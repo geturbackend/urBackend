@@ -1,10 +1,9 @@
 const rateLimit = require('express-rate-limit');
-const { Log, redis } = require('@urbackend/common');
+const { Log, redis, ApiAnalytics } = require('@urbackend/common');
 const { getDayKey, DEFAULT_DAILY_TTL_SECONDS, incrWithTtlAtomic } = require('../utils/usageCounter');
 
 
 // Rate Limiter 
-
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
@@ -15,17 +14,21 @@ const limiter = rateLimit({
     validate: { trustProxy: false }
 });
 
-// Logger 
+// Logger with API analytics
 const logger = (req, res, next) => {
-    console.time("logger middleware")
+    console.time("logger middleware");
+    
+    // Capture start time for response time measurement
+    const startHr = process.hrtime();
+    
     // Check for Data, Storage, AND UserAuth routes
     if (
         req.originalUrl.startsWith('/api/data') ||
         req.originalUrl.startsWith('/api/storage') ||
         req.originalUrl.startsWith('/api/userAuth')
     ) {
-
         res.on('finish', async () => {
+            // --- Existing logging and usage counter ---
             if (req.project) {
                 try {
                     Log.create({
@@ -37,7 +40,6 @@ const logger = (req, res, next) => {
                     });
 
                     // Usage counter (Redis): daily API requests per project
-                    // Skip increment if usageGate already incremented atomically
                     if (!req._dailyCountIncremented) {
                         const day = getDayKey();
                         const reqCountKey = `project:usage:req:count:${req.project._id}:${day}`;
@@ -49,9 +51,30 @@ const logger = (req, res, next) => {
                     console.error("Logging failed:", e.message);
                 }
             }
+            
+            // --- NEW: API performance analytics ---
+            if (req.project) {
+                const diff = process.hrtime(startHr);
+                const responseTimeMs = (diff[0] * 1e3 + diff[1] / 1e6).toFixed(2);
+                
+                // Asynchronously store analytics
+                setImmediate(async () => {
+                    try {
+                        await ApiAnalytics.create({
+                            projectId: req.project._id,
+                            endpoint: req.route?.path || req.originalUrl,
+                            method: req.method,
+                            statusCode: res.statusCode,
+                            responseTimeMs: parseFloat(responseTimeMs),
+                        });
+                    } catch (err) {
+                        console.error('Failed to save API analytics:', err);
+                    }
+                });
+            }
         });
     }
-    console.timeEnd("logger middleware")
+    console.timeEnd("logger middleware");
     next();
 };
 
