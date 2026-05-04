@@ -122,12 +122,12 @@ function ProjectDetails() {
                         <div className="glass-card" style={{ padding: '1.25rem', borderRadius: '12px' }}>
                             <div style={{ display: 'flex', gap: '2rem', marginBottom: '1rem' }}>
                                 <div>
-                                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>Total Requests (24h)</span>
-                                    <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{analytics?.rangeStats?.totalRequests || 0}</div>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Traffic (24h)</span>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#3b82f6' }}>{analytics?.rangeStats?.totalRequests || 0}</div>
                                 </div>
                                 <div>
-                                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>Database Size</span>
-                                    <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{(project.databaseUsed / (1024 * 1024)).toFixed(2)} MB</div>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Database Used</span>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#a78bfa' }}>{(project.databaseUsed / (1024 * 1024)).toFixed(2)} MB</div>
                                 </div>
                             </div>
                             <AnalyticsChart data={analytics?.timeSeries} />

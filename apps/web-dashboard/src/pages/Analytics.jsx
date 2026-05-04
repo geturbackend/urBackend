@@ -14,17 +14,17 @@ import {
 import SectionHeader from '../components/Dashboard/SectionHeader';
 
 const STATUS_COLORS = {
-    '2xx': '#22c55e',
+    '2xx': '#10b981',
     '3xx': '#3b82f6',
     '4xx': '#f59e0b',
     '5xx': '#ef4444',
 };
 
 const METHOD_COLORS = {
-    GET: '#60a5fa',
-    POST: '#34d399',
-    PATCH: '#a78bfa',
-    PUT: '#a78bfa',
+    GET: '#3b82f6',
+    POST: '#10b981',
+    PATCH: '#f59e0b',
+    PUT: '#f59e0b',
     DELETE: '#ef4444',
 };
 
@@ -38,7 +38,7 @@ const getStatusColor = (status) => {
     if (status >= 500) return '#ef4444';
     if (status >= 400) return '#f59e0b';
     if (status >= 300) return '#3b82f6';
-    return '#22c55e';
+    return '#10b981';
 };
 
 const RANGE_OPTIONS = [
@@ -93,6 +93,7 @@ export default function Analytics() {
     );
 
     const rangeStats = data?.rangeStats || {};
+    const selectedRangeLabel = RANGE_OPTIONS.find(r => r.value === range)?.label || '24h';
     
     return (
         <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '4rem', padding: '0 1rem' }}>
@@ -109,7 +110,7 @@ export default function Analytics() {
                     </div>
                     <div>
                         <h1 style={{ fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>Analytics</h1>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: 0 }}>Performance and usage insights for your project</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: 0 }}>Data insights for the last {selectedRangeLabel}</p>
                     </div>
                 </div>
 
@@ -147,30 +148,30 @@ export default function Analytics() {
             {/* KPI Row */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
                 <KPICard 
-                    title="Total Requests" 
+                    title="Traffic" 
                     value={rangeStats.totalRequests?.toLocaleString()} 
-                    subtext={`Total API hits in ${RANGE_OPTIONS.find(r => r.value === range).label}`}
+                    subtext={`Requests in ${selectedRangeLabel}`}
                     icon={<Globe size={18} />}
-                    color="var(--color-primary)"
-                />
-                <KPICard 
-                    title="Avg Latency" 
-                    value={`${rangeStats.avgResponseTimeMs?.toFixed(1)}ms`} 
-                    subtext={`p95: ${rangeStats.p95ResponseTimeMs?.toFixed(1)}ms`}
-                    icon={<Clock size={18} />}
                     color="#3b82f6"
                 />
                 <KPICard 
-                    title="Error Rate" 
+                    title="Latency" 
+                    value={`${rangeStats.avgResponseTimeMs?.toFixed(0)}ms`} 
+                    subtext={`p95 speed: ${rangeStats.p95ResponseTimeMs?.toFixed(0)}ms`}
+                    icon={<Clock size={18} />}
+                    color="#10b981"
+                />
+                <KPICard 
+                    title="Errors" 
                     value={`${rangeStats.errorRate?.toFixed(2)}%`} 
-                    subtext={`${((rangeStats.errorRate / 100) * rangeStats.totalRequests).toFixed(0)} failed requests`}
+                    subtext={`${((rangeStats.errorRate / 100) * rangeStats.totalRequests).toFixed(0)} failures detected`}
                     icon={<AlertCircle size={18} />}
                     color={rangeStats.errorRate > 5 ? '#ef4444' : '#f59e0b'}
                 />
                 <KPICard 
-                    title="Storage Used" 
+                    title="Storage" 
                     value={formatBytes(data?.storage?.used)} 
-                    subtext={`of ${formatBytes(data?.storage?.limit)} limit`}
+                    subtext={`of ${formatBytes(data?.storage?.limit)} available`}
                     icon={<HardDrive size={18} />}
                     color="#a78bfa"
                     progress={(data?.storage?.used / data?.storage?.limit) * 100}
@@ -182,16 +183,17 @@ export default function Analytics() {
                 <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                         <h3 style={{ fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Activity size={16} color="var(--color-primary)" /> Requests Over Time
+                            <Activity size={16} color="#3b82f6" /> Traffic Distribution
                         </h3>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>BY TIME</span>
                     </div>
                     <div style={{ height: '280px' }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={data?.timeSeries}>
                                 <defs>
                                     <linearGradient id="colorSuccess" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3}/>
-                                        <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0}/>
+                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                                     </linearGradient>
                                     <linearGradient id="colorError" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
@@ -202,7 +204,7 @@ export default function Analytics() {
                                 <XAxis dataKey="_id" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} dy={10} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} />
                                 <Tooltip content={<CustomTooltip />} />
-                                <Area type="monotone" dataKey="success" stackId="1" stroke="var(--color-primary)" fill="url(#colorSuccess)" strokeWidth={2} />
+                                <Area type="monotone" dataKey="success" stackId="1" stroke="#10b981" fill="url(#colorSuccess)" strokeWidth={2} />
                                 <Area type="monotone" dataKey="errors" stackId="1" stroke="#ef4444" fill="url(#colorError)" strokeWidth={2} />
                             </AreaChart>
                         </ResponsiveContainer>
@@ -212,8 +214,9 @@ export default function Analytics() {
                 <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                         <h3 style={{ fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Gauge size={16} color="#3b82f6" /> Latency Trend (ms)
+                            <Gauge size={16} color="#10b981" /> Response Performance
                         </h3>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>LATENCY (MS)</span>
                     </div>
                     <div style={{ height: '280px' }}>
                         <ResponsiveContainer width="100%" height="100%">
@@ -222,7 +225,7 @@ export default function Analytics() {
                                 <XAxis dataKey="_id" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} dy={10} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} />
                                 <Tooltip content={<LatencyTooltip />} />
-                                <Line type="monotone" dataKey="avgLatency" stroke="#3b82f6" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 6, fill: '#3b82f6', strokeWidth: 0 }} />
+                                <Line type="monotone" dataKey="avgLatency" stroke="#10b981" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 6, fill: '#10b981', strokeWidth: 0 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -232,32 +235,35 @@ export default function Analytics() {
             {/* Breakdowns Section */}
             <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
                 <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '16px' }}>
-                    <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '1.5rem' }}>Top Endpoints</h3>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                        <h3 style={{ fontSize: '0.9rem', fontWeight: 600 }}>Most Active Endpoints</h3>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>TOP 10</span>
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {data?.topEndpoints?.length > 0 ? data.topEndpoints.map((ep, idx) => (
                             <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: METHOD_COLORS[ep.method], background: `${METHOD_COLORS[ep.method]}15`, padding: '2px 6px', borderRadius: '4px', width: '45px', textAlign: 'center' }}>{ep.method}</span>
+                                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: METHOD_COLORS[ep.method] || '#fff', background: `${METHOD_COLORS[ep.method] || '#fff'}15`, padding: '2px 6px', borderRadius: '4px', width: '45px', textAlign: 'center' }}>{ep.method}</span>
                                     <span style={{ fontSize: '0.8rem', fontWeight: 500, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ep.path}</span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexShrink: 0 }}>
                                     <div style={{ textAlign: 'right' }}>
                                         <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{ep.count}</div>
-                                        <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>requests</div>
+                                        <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>hits</div>
                                     </div>
                                     <div style={{ textAlign: 'right', width: '60px' }}>
-                                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: ep.avgLatency > 500 ? '#ef4444' : 'inherit' }}>{ep.avgLatency.toFixed(0)}ms</div>
+                                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: ep.avgLatency > 500 ? '#ef4444' : '#10b981' }}>{ep.avgLatency.toFixed(0)}ms</div>
                                         <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>avg</div>
                                     </div>
                                 </div>
                             </div>
-                        )) : <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', textAlign: 'center', padding: '2rem' }}>No data for this range</p>}
+                        )) : <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', textAlign: 'center', padding: '2rem' }}>No data for {selectedRangeLabel}</p>}
                     </div>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '16px', flex: 1 }}>
-                        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '1.25rem' }}>Status Codes</h3>
+                        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '1.25rem' }}>Status Breakdown</h3>
                         <div style={{ height: '140px' }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={data?.distributions?.statusCodes} layout="vertical" margin={{ left: -30 }}>
@@ -303,7 +309,7 @@ export default function Analytics() {
             </div>
 
             {/* Logs Table */}
-            <SectionHeader title="Live Request Log" />
+            <SectionHeader title={`Recent Logs (${selectedRangeLabel})`} />
             <div className="glass-card" style={{ borderRadius: '16px', overflow: 'hidden' }}>
                 <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
@@ -328,7 +334,7 @@ export default function Analytics() {
                                         }}>{log.status}</span>
                                     </td>
                                     <td style={{ padding: '12px 20px' }}>
-                                        <span style={{ fontWeight: 700, color: METHOD_COLORS[log.method] }}>{log.method}</span>
+                                        <span style={{ fontWeight: 700, color: METHOD_COLORS[log.method] || '#fff' }}>{log.method}</span>
                                     </td>
                                     <td style={{ padding: '12px 20px', fontFamily: 'monospace', opacity: 0.9 }}>
                                         {log.path.replace('/api/', '/')}
@@ -340,7 +346,7 @@ export default function Analytics() {
                                         {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                     </td>
                                 </tr>
-                            )) : <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>No logs found</td></tr>}
+                            )) : <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>No logs for this range</td></tr>}
                         </tbody>
                     </table>
                 </div>
@@ -406,7 +412,7 @@ const LatencyTooltip = ({ active, payload, label }) => {
             <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', padding: '10px 14px', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.4)' }}>
                 <p style={{ margin: '0 0 8px 0', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>{label}</p>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '20px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 600 }}>Avg Latency</span>
+                    <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>Avg Latency</span>
                     <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{payload[0].value.toFixed(1)}ms</span>
                 </div>
             </div>
