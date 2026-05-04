@@ -33,36 +33,32 @@ export default function Analytics() {
     const [refreshing, setRefreshing] = useState(false);
     const [range, setRange] = useState('last24h');
 
-    const fetchData = useCallback(async (selectedRange = range) => {
-        try {
-            setRefreshing(true);
-            const res = await api.get(`/api/projects/${projectId}/analytics?range=${selectedRange}`);
-            if (res.data.success) {
-                setData(res.data.data);
-            } else {
-                console.error(res.data.message);
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
+    const fetchData = useCallback(async (selectedRange = 'last24h') => {
+    try {
+        setRefreshing(true);
+        const res = await api.get(`/api/projects/${projectId}/analytics?range=${selectedRange}`);
+        if (res.data.success) {
+            setData(res.data.data);
+        } else {
+            console.error(res.data.message);
         }
-    }, [projectId, range]);
+    } catch (err) {
+        console.error(err);
+    } finally {
+        setLoading(false);
+        setRefreshing(false);
+    }
+}, [projectId]);   // ✅ range removed from dependencies
 
-    useEffect(() => {
-        let isMounted = true;
-        Promise.resolve().then(() => {
-            if (isMounted) fetchData();
-        });
-        return () => { isMounted = false; };
-    }, [fetchData]);
+useEffect(() => {
+    fetchData('last24h');   // initial load with default range
+}, [fetchData]);  // ✅ no range dependency
 
-    const handleRangeChange = (e) => {
-        const newRange = e.target.value;
-        setRange(newRange);
-        fetchData(newRange);
-    };
+const handleRangeChange = (e) => {
+    const newRange = e.target.value;
+    setRange(newRange);           // still update the UI state
+    fetchData(newRange);          // explicit fetch with the new range
+};
 
     if (loading) return (
         <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>

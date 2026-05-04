@@ -16,7 +16,7 @@ const limiter = rateLimit({
 
 // Logger with API analytics
 const logger = (req, res, next) => {
-    console.time("logger middleware");
+    
     
     // Capture start time for response time measurement
     const startHr = process.hrtime();
@@ -74,7 +74,7 @@ const logger = (req, res, next) => {
             }
         });
     }
-    console.timeEnd("logger middleware");
+   
     next();
 };
 
