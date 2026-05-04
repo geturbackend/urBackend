@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../utils/api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Activity, HardDrive, Database, RefreshCw, Clock, Globe, Zap } from 'lucide-react';
+import { Activity, HardDrive, Database, RefreshCw, Globe, Zap, Gauge, AlertCircle } from 'lucide-react';
 import SectionHeader from '../components/Dashboard/SectionHeader';
 
 const getStatusColor = (status) => {
@@ -31,21 +31,26 @@ export default function Analytics() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [range, setRange] = useState('last24h');
 
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (selectedRange = range) => {
         try {
             setRefreshing(true);
-            const res = await api.get(`/api/projects/${projectId}/analytics`);
-            setData(res.data);
+            const res = await api.get(`/api/projects/${projectId}/analytics?range=${selectedRange}`);
+            if (res.data.success) {
+                setData(res.data.data);
+            } else {
+                console.error(res.data.message);
+            }
         } catch (err) {
             console.error(err);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [projectId]);
+    }, [projectId, range]);
 
-    useEffect(() => { 
+    useEffect(() => {
         let isMounted = true;
         Promise.resolve().then(() => {
             if (isMounted) fetchData();
@@ -53,14 +58,21 @@ export default function Analytics() {
         return () => { isMounted = false; };
     }, [fetchData]);
 
+    const handleRangeChange = (e) => {
+        const newRange = e.target.value;
+        setRange(newRange);
+        fetchData(newRange);
+    };
+
     if (loading) return (
         <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            {/* Skeleton */}
+            {/* Header skeleton */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <div className="skeleton" style={{ width: '140px', height: '18px' }} />
-                <div className="skeleton" style={{ width: '80px', height: '28px', borderRadius: '4px' }} />
+                <div className="skeleton" style={{ width: '120px', height: '28px', borderRadius: '4px' }} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+            {/* First row: 3 cards skeleton */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
                 {[1,2,3].map(i => (
                     <div key={i} className="glass-card" style={{ padding: '1rem', borderRadius: '8px' }}>
                         <div className="skeleton" style={{ width: '50%', height: '12px', marginBottom: '8px' }} />
@@ -69,6 +81,16 @@ export default function Analytics() {
                     </div>
                 ))}
             </div>
+            {/* Second row: 2 new cards skeleton */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+                {[1,2].map(i => (
+                    <div key={i} className="glass-card" style={{ padding: '1rem', borderRadius: '8px' }}>
+                        <div className="skeleton" style={{ width: '50%', height: '12px', marginBottom: '8px' }} />
+                        <div className="skeleton" style={{ width: '70%', height: '28px' }} />
+                    </div>
+                ))}
+            </div>
+            {/* Chart and logs skeletons */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="glass-card" style={{ height: '340px', borderRadius: '8px' }} />
                 <div className="glass-card" style={{ height: '340px', borderRadius: '8px' }} />
@@ -81,8 +103,8 @@ export default function Analytics() {
 
     return (
         <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '3rem' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            {/* Header with range selector */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'rgba(62, 207, 142, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(62, 207, 142, 0.15)' }}>
                         <Activity size={16} color="var(--color-primary)" />
@@ -92,20 +114,33 @@ export default function Analytics() {
                         <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>Real-time usage metrics and request logs</p>
                     </div>
                 </div>
-                <button
-                    onClick={fetchData}
-                    className="btn btn-secondary"
-                    disabled={refreshing}
-                    style={{ height: '30px', fontSize: '0.75rem', padding: '0 12px', gap: '5px' }}
-                >
-                    <RefreshCw size={12} className={refreshing ? 'spin' : ''} />
-                    {refreshing ? 'Updating...' : 'Refresh'}
-                </button>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <select
+                        value={range}
+                        onChange={handleRangeChange}
+                        className="input-field"
+                        style={{ width: '140px', height: '30px', fontSize: '0.75rem', padding: '0 8px', margin: 0 }}
+                    >
+                        <option value="last1h">Last hour</option>
+                        <option value="last24h">Last 24 hours</option>
+                        <option value="last7d">Last 7 days</option>
+                        <option value="last30d">Last 30 days</option>
+                        <option value="allTime">All time</option>
+                    </select>
+                    <button
+                        onClick={() => fetchData(range)}
+                        className="btn btn-secondary"
+                        disabled={refreshing}
+                        style={{ height: '30px', fontSize: '0.75rem', padding: '0 12px', gap: '5px' }}
+                    >
+                        <RefreshCw size={12} className={refreshing ? 'spin' : ''} />
+                        {refreshing ? 'Updating...' : 'Refresh'}
+                    </button>
+                </div>
             </div>
 
-            {/* Stats Row — 3 compact cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-                
+            {/* Stats Row — 3 compact cards (existing) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
                 {/* Total Requests */}
                 <div className="glass-card" style={{ padding: '1rem', borderRadius: '8px', position: 'relative', overflow: 'hidden' }}>
                     <div style={{ position: 'absolute', top: '-8px', right: '-8px', opacity: 0.04 }}>
@@ -155,9 +190,41 @@ export default function Analytics() {
                 </div>
             </div>
 
+            {/* New row for API performance metrics (2 cards) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+                {/* Average Response Time */}
+                <div className="glass-card" style={{ padding: '1rem', borderRadius: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)', marginBottom: '6px', fontSize: '0.7rem', fontWeight: 500 }}>
+                        <Gauge size={12} /> Average Response Time
+                    </div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.5px', lineHeight: 1 }}>
+                        {data?.avgResponseTimeMs !== null && data?.avgResponseTimeMs !== undefined
+                            ? `${data.avgResponseTimeMs.toFixed(2)} ms`
+                            : 'No data'}
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                        For the selected time range
+                    </div>
+                </div>
+
+                {/* Error Rate */}
+                <div className="glass-card" style={{ padding: '1rem', borderRadius: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)', marginBottom: '6px', fontSize: '0.7rem', fontWeight: 500 }}>
+                        <AlertCircle size={12} /> Error Rate
+                    </div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.5px', lineHeight: 1 }}>
+                        {data?.errorRate !== null && data?.errorRate !== undefined
+                            ? `${data.errorRate.toFixed(2)}%`
+                            : 'No data'}
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                        Percentage of requests with status ≥ 400
+                    </div>
+                </div>
+            </div>
+
             {/* Main content: chart + logs side by side */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-
                 {/* Traffic Chart */}
                 <div>
                     <SectionHeader title="Traffic Overview (7d)" />
