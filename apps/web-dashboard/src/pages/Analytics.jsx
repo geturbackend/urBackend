@@ -102,11 +102,11 @@ export default function Analytics() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem', flexWrap: 'wrap', gap: '20px' }}>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     <div style={{ 
-                        width: '40px', height: '40px', borderRadius: '10px', 
-                        background: 'rgba(62, 207, 142, 0.1)', display: 'flex', 
-                        alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(62, 207, 142, 0.1)' 
+                        width: '40px', height: '40px', borderRadius: '4px', 
+                        background: 'rgba(255, 255, 255, 0.03)', display: 'flex', 
+                        alignItems: 'center', justifyContent: 'center', border: '1px solid var(--color-border)' 
                     }}>
-                        <TrendingUp size={20} color="var(--color-primary)" />
+                        <TrendingUp size={20} color="var(--color-text-muted)" />
                     </div>
                     <div>
                         <h1 style={{ fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>Analytics</h1>
@@ -114,7 +114,7 @@ export default function Analytics() {
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '4px', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '4px', borderRadius: '4px', border: '1px solid var(--color-border)' }}>
                     {RANGE_OPTIONS.map(opt => (
                         <button
                             key={opt.value}
@@ -123,7 +123,7 @@ export default function Analytics() {
                                 padding: '6px 16px',
                                 fontSize: '0.75rem',
                                 fontWeight: range === opt.value ? 600 : 500,
-                                borderRadius: '7px',
+                                borderRadius: '2px',
                                 border: 'none',
                                 background: range === opt.value ? 'var(--color-primary)' : 'transparent',
                                 color: range === opt.value ? '#000' : 'var(--color-text-muted)',
@@ -146,41 +146,59 @@ export default function Analytics() {
             </div>
 
             {/* KPI Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
+            <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
+                gap: '1.25rem', 
+                marginBottom: '2rem',
+                position: 'relative'
+            }}>
+                {/* Subtle loading overlay for cards */}
+                {refreshing && (
+                    <div style={{
+                        position: 'absolute', top: -10, left: -10, right: -10, bottom: -10,
+                        background: 'rgba(0,0,0,0.1)', backdropFilter: 'blur(2px)',
+                        zIndex: 10, borderRadius: '4px', display: 'flex', 
+                        alignItems: 'center', justifyContent: 'center'
+                    }}>
+                        <RefreshCw size={24} className="spin" color="var(--color-primary)" />
+                    </div>
+                )}
+                
                 <KPICard 
                     title="Traffic" 
                     value={rangeStats.totalRequests?.toLocaleString()} 
                     subtext={`Requests in ${selectedRangeLabel}`}
                     icon={<Globe size={18} />}
-                    color="#3b82f6"
+                    color="var(--color-border)"
                 />
                 <KPICard 
                     title="Latency" 
                     value={`${rangeStats.avgResponseTimeMs?.toFixed(0)}ms`} 
                     subtext={`p95 speed: ${rangeStats.p95ResponseTimeMs?.toFixed(0)}ms`}
                     icon={<Clock size={18} />}
-                    color="#10b981"
+                    color="var(--color-border)"
                 />
                 <KPICard 
                     title="Errors" 
                     value={`${rangeStats.errorRate?.toFixed(2)}%`} 
                     subtext={`${((rangeStats.errorRate / 100) * rangeStats.totalRequests).toFixed(0)} failures detected`}
                     icon={<AlertCircle size={18} />}
-                    color={rangeStats.errorRate > 5 ? '#ef4444' : '#f59e0b'}
+                    color="var(--color-border)"
                 />
                 <KPICard 
                     title="Storage" 
                     value={formatBytes(data?.storage?.used)} 
                     subtext={`of ${formatBytes(data?.storage?.limit)} available`}
                     icon={<HardDrive size={18} />}
-                    color="#a78bfa"
+                    color="var(--color-border)"
                     progress={(data?.storage?.used / data?.storage?.limit) * 100}
                 />
             </div>
 
             {/* Charts Section */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
-                <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '16px' }}>
+                <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                         <h3 style={{ fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Activity size={16} color="#3b82f6" /> Traffic Distribution
@@ -211,7 +229,7 @@ export default function Analytics() {
                     </div>
                 </div>
 
-                <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '16px' }}>
+                <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                         <h3 style={{ fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Gauge size={16} color="#10b981" /> Response Performance
@@ -234,16 +252,16 @@ export default function Analytics() {
 
             {/* Breakdowns Section */}
             <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
-                <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '16px' }}>
+                <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                         <h3 style={{ fontSize: '0.9rem', fontWeight: 600 }}>Most Active Endpoints</h3>
                         <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>TOP 10</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {data?.topEndpoints?.length > 0 ? data.topEndpoints.map((ep, idx) => (
-                            <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                            <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.03)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: METHOD_COLORS[ep.method] || '#fff', background: `${METHOD_COLORS[ep.method] || '#fff'}15`, padding: '2px 6px', borderRadius: '4px', width: '45px', textAlign: 'center' }}>{ep.method}</span>
+                                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: METHOD_COLORS[ep.method] || '#fff', background: `${METHOD_COLORS[ep.method] || '#fff'}15`, padding: '2px 6px', borderRadius: '2px', width: '45px', textAlign: 'center' }}>{ep.method}</span>
                                     <span style={{ fontSize: '0.8rem', fontWeight: 500, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ep.path}</span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexShrink: 0 }}>
@@ -262,14 +280,14 @@ export default function Analytics() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '16px', flex: 1 }}>
+                    <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '4px', flex: 1 }}>
                         <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '1.25rem' }}>Status Breakdown</h3>
                         <div style={{ height: '140px' }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={data?.distributions?.statusCodes} layout="vertical" margin={{ left: -30 }}>
                                     <XAxis type="number" hide />
                                     <YAxis dataKey="_id" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 600 }} />
-                                    <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: '8px', fontSize: '0.75rem' }} />
+                                    <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: '4px', fontSize: '0.75rem' }} />
                                     <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={20}>
                                         {data?.distributions?.statusCodes?.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry._id] || '#94a3b8'} />
@@ -280,7 +298,7 @@ export default function Analytics() {
                         </div>
                     </div>
 
-                    <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '16px', flex: 1 }}>
+                    <div className="glass-card" style={{ padding: '1.5rem', borderRadius: '4px', flex: 1 }}>
                         <h3 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '1rem' }}>Method Breakdown</h3>
                         <div style={{ height: '140px', display: 'flex', alignItems: 'center' }}>
                             <ResponsiveContainer width="100%" height="100%">
@@ -310,7 +328,7 @@ export default function Analytics() {
 
             {/* Logs Table */}
             <SectionHeader title={`Recent Logs (${selectedRangeLabel})`} />
-            <div className="glass-card" style={{ borderRadius: '16px', overflow: 'hidden' }}>
+            <div className="glass-card" style={{ borderRadius: '4px', overflow: 'hidden' }}>
                 <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
                         <thead style={{ background: 'rgba(255,255,255,0.02)', color: 'var(--color-text-muted)' }}>
@@ -329,7 +347,7 @@ export default function Analytics() {
                                         <span style={{ 
                                             color: getStatusColor(log.status), 
                                             background: `${getStatusColor(log.status)}15`,
-                                            padding: '2px 8px', borderRadius: '5px', fontWeight: 700, fontSize: '0.7rem',
+                                            padding: '2px 8px', borderRadius: '4px', fontWeight: 700, fontSize: '0.7rem',
                                             border: `1px solid ${getStatusColor(log.status)}30`
                                         }}>{log.status}</span>
                                     </td>
@@ -372,17 +390,16 @@ export default function Analytics() {
 
 function KPICard({ title, value, subtext, icon, color, progress }) {
     return (
-        <div className="glass-card" style={{ padding: '1.25rem', borderRadius: '16px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: color }} />
+        <div className="glass-card" style={{ padding: '1.25rem', borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>{title}</span>
-                <div style={{ color: color, opacity: 0.8 }}>{icon}</div>
+                <div style={{ color: 'var(--color-text-muted)', opacity: 0.5 }}>{icon}</div>
             </div>
             <div style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, marginBottom: '6px' }}>{value || '0'}</div>
             <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>{subtext}</div>
             {progress !== undefined && (
-                <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', marginTop: '12px', overflow: 'hidden' }}>
-                    <div style={{ width: `${Math.min(progress, 100)}%`, height: '100%', background: color, borderRadius: '2px' }} />
+                <div style={{ width: '100%', height: '2px', background: 'rgba(255,255,255,0.05)', borderRadius: '1px', marginTop: '12px', overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.min(progress, 100)}%`, height: '100%', background: 'var(--color-text-muted)', borderRadius: '1px' }} />
                 </div>
             )}
         </div>
@@ -392,7 +409,7 @@ function KPICard({ title, value, subtext, icon, color, progress }) {
 const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
         return (
-            <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', padding: '10px 14px', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.4)' }}>
+            <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', padding: '10px 14px', borderRadius: '4px', boxShadow: '0 10px 25px rgba(0,0,0,0.4)' }}>
                 <p style={{ margin: '0 0 8px 0', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>{label}</p>
                 {payload.map((entry, idx) => (
                     <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '20px', alignItems: 'center', marginBottom: idx === 0 ? '4px' : 0 }}>
@@ -409,7 +426,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 const LatencyTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
         return (
-            <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', padding: '10px 14px', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.4)' }}>
+            <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', padding: '10px 14px', borderRadius: '4px', boxShadow: '0 10px 25px rgba(0,0,0,0.4)' }}>
                 <p style={{ margin: '0 0 8px 0', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>{label}</p>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '20px', alignItems: 'center' }}>
                     <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>Avg Latency</span>

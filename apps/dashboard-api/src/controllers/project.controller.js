@@ -2083,7 +2083,8 @@ module.exports.analytics = async (req, res, next) => {
     }
 
     // 4. Logs (last 50)
-    const logs = await Log.find(match).sort({ timestamp: -1 }).limit(50).lean();
+    const rawLogs = await ApiAnalytics.find(match).sort({ timestamp: -1 }).limit(50).lean();
+    const logs = rawLogs.map(l => ({ ...l, path: l.endpoint, status: l.statusCode }));
 
     // Cumulative stats for the project
     const allTimeRequests = await Log.countDocuments({ projectId });
