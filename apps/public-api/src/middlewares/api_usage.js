@@ -2,7 +2,6 @@ const rateLimit = require('express-rate-limit');
 const { Log, redis, ApiAnalytics } = require('@urbackend/common');
 const { getDayKey, DEFAULT_DAILY_TTL_SECONDS, incrWithTtlAtomic } = require('../utils/usageCounter');
 
-
 // Rate Limiter 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -10,14 +9,14 @@ const limiter = rateLimit({
     message: { error: "Too many requests, please try again later." },
     standardHeaders: true,
     legacyHeaders: false,
-    validate: { xForwardedForHeader: false },
-    validate: { trustProxy: false }
+    validate: {
+        xForwardedForHeader: false,
+        trustProxy: false
+    }
 });
 
 // Logger with API analytics
 const logger = (req, res, next) => {
-    
-    
     // Capture start time for response time measurement
     const startHr = process.hrtime();
     
