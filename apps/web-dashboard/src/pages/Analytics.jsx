@@ -34,31 +34,32 @@ export default function Analytics() {
     const [range, setRange] = useState('last24h');
 
     const fetchData = useCallback(async (selectedRange = 'last24h') => {
-    try {
-        setRefreshing(true);
-        const res = await api.get(`/api/projects/${projectId}/analytics?range=${selectedRange}`);
-        if (res.data.success) {
-            setData(res.data.data);
-        } else {
-            console.error(res.data.message);
+        try {
+            setRefreshing(true);
+            const res = await api.get(`/api/projects/${projectId}/analytics?range=${selectedRange}`);
+            if (res.data.success) {
+                setData(res.data.data);
+            } else {
+                console.error(res.data.message);
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
         }
-    } catch (err) {
-        console.error(err);
-    } finally {
-        setLoading(false);
-        setRefreshing(false);
-    }
-}, [projectId]);   // ✅ range removed from dependencies
+    }, [projectId]);
 
-useEffect(() => {
-    fetchData('last24h');   // initial load with default range
-}, [fetchData]);  // ✅ no range dependency
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    useEffect(() => {
+        fetchData('last24h');
+    }, [fetchData]);
 
-const handleRangeChange = (e) => {
-    const newRange = e.target.value;
-    setRange(newRange);           // still update the UI state
-    fetchData(newRange);          // explicit fetch with the new range
-};
+    const handleRangeChange = (e) => {
+        const newRange = e.target.value;
+        setRange(newRange);
+        fetchData(newRange);
+    };
 
     if (loading) return (
         <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -69,7 +70,7 @@ const handleRangeChange = (e) => {
             </div>
             {/* First row: 3 cards skeleton */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
-                {[1,2,3].map(i => (
+                {[1, 2, 3].map(i => (
                     <div key={i} className="glass-card" style={{ padding: '1rem', borderRadius: '8px' }}>
                         <div className="skeleton" style={{ width: '50%', height: '12px', marginBottom: '8px' }} />
                         <div className="skeleton" style={{ width: '70%', height: '28px' }} />
@@ -79,7 +80,7 @@ const handleRangeChange = (e) => {
             </div>
             {/* Second row: 2 new cards skeleton */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-                {[1,2].map(i => (
+                {[1, 2].map(i => (
                     <div key={i} className="glass-card" style={{ padding: '1rem', borderRadius: '8px' }}>
                         <div className="skeleton" style={{ width: '50%', height: '12px', marginBottom: '8px' }} />
                         <div className="skeleton" style={{ width: '70%', height: '28px' }} />
