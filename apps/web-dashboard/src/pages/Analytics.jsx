@@ -170,28 +170,24 @@ export default function Analytics() {
                     value={rangeStats.totalRequests?.toLocaleString()} 
                     subtext={`Requests in ${selectedRangeLabel}`}
                     icon={<Globe size={18} />}
-                    color="var(--color-border)"
                 />
                 <KPICard 
                     title="Latency" 
                     value={`${rangeStats.avgResponseTimeMs?.toFixed(0)}ms`} 
                     subtext={`p95 speed: ${rangeStats.p95ResponseTimeMs?.toFixed(0)}ms`}
                     icon={<Clock size={18} />}
-                    color="var(--color-border)"
                 />
                 <KPICard 
                     title="Errors" 
                     value={`${rangeStats.errorRate?.toFixed(2)}%`} 
                     subtext={`${((rangeStats.errorRate / 100) * rangeStats.totalRequests).toFixed(0)} failures detected`}
                     icon={<AlertCircle size={18} />}
-                    color="var(--color-border)"
                 />
                 <KPICard 
                     title="Storage" 
                     value={formatBytes(data?.storage?.used)} 
                     subtext={`of ${formatBytes(data?.storage?.limit)} available`}
                     icon={<HardDrive size={18} />}
-                    color="var(--color-border)"
                     progress={(data?.storage?.used / data?.storage?.limit) * 100}
                 />
             </div>
@@ -388,7 +384,7 @@ export default function Analytics() {
     );
 }
 
-function KPICard({ title, value, subtext, icon, color, progress }) {
+function KPICard({ title, value, subtext, icon, progress }) {
     return (
         <div className="glass-card" style={{ padding: '1.25rem', borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
