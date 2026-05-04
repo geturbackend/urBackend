@@ -23,6 +23,7 @@ const Otp = require("./models/otp");
 const Webhook = require("./models/Webhook");
 const WebhookDelivery = require("./models/WebhookDelivery");
 const ProRequest = require("./models/ProRequest");
+const ApiAnalytics = require("./models/ApiAnalytics");
 
 // Queues
 const { authEmailQueue, initAuthEmailWorker } = require("./queues/authEmailQueue");
@@ -174,4 +175,5 @@ module.exports = {
   AppError,
   getPresignedUploadUrl,
   verifyUploadedFile,
+  ApiAnalytics,
 };
