@@ -17,7 +17,12 @@
     "concurrently": "^9.2.1"
   },
   "dependencies": {
-    "path": "^0.12.7"
+    "axios": "^1.16.0",
+    "lucide-react": "^1.14.0",
+    "path": "^0.12.7",
+    "react": "^19.2.5",
+    "react-hot-toast": "^2.6.0",
+    "react-router-dom": "^7.15.0"
   },
   "overrides": {
     "rollup": "npm:@rollup/wasm-node"
