@@ -163,6 +163,7 @@ const buildFieldSchemaZod = (depth = 1) => {
     )
     .refine(
       (field) => {
+        if (field.required === true && field.default !== undefined) return false;
         if (field.default === undefined) return true;
         if (field.required === true) return false;
         if (field.type === "String") return typeof field.default === "string";
