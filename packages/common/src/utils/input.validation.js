@@ -163,17 +163,25 @@ const buildFieldSchemaZod = (depth = 1) => {
     )
     .refine(
       (field) => {
-        if (field.required === true && field.default !== undefined) return false;
+        // Reject defaults on required fields
+        if (field.required === true && field.default !== undefined)
+          return false;
+        // Reject defaults for unsupported types
         if (field.default === undefined) return true;
-        if (field.required === true) return false;
-        if (field.type === "String") return typeof field.default === "string";
-        if (field.type === "Number") return typeof field.default === "number";
-        if (field.type === "Boolean") return typeof field.default === "boolean";
-        return false; // Disallow defaults for Object, Array, Ref, Date
+        const unsupported = ["Date", "Object", "Array", "Ref"];
+        if (unsupported.includes(field.type)) return false;
+        // Type-match check
+        if (field.type === "String" && typeof field.default !== "string")
+          return false;
+        if (field.type === "Number" && typeof field.default !== "number")
+          return false;
+        if (field.type === "Boolean" && typeof field.default !== "boolean")
+          return false;
+        return true;
       },
       {
         message:
-          "Default value type must match field type and cannot be set on required fields",
+          "Default value type must match field type, and required fields cannot have defaults",
       },
     );
 
@@ -282,23 +290,33 @@ const buildApiFieldSchemaZod = (depth = 1) => {
           "Invalid field configuration, nesting depth exceeded (max 3 levels), or unique is only supported for top-level primitive fields.",
       },
     )
-    .refine( 
+    .refine(
       (field) => {
+        // Reject defaults on required fields
+        if (field.required === true && field.default !== undefined)
+          return false;
+        // Reject defaults for unsupported types
         if (field.default === undefined) return true;
-        if (field.required === true) return false;
 
         const normalType =
           field.type.charAt(0).toUpperCase() +
           field.type.slice(1).toLowerCase();
 
-        if (normalType === "String") return typeof field.default === "string";
-        if (normalType === "Number") return typeof field.default === "number";
-        if (normalType === "Boolean") return typeof field.default === "boolean";
-        return false; // Disallow defaults for Object, Array, Ref, Date
+        const unsupported = ["Date", "Object", "Array", "Ref"];
+        if (unsupported.includes(normalType)) return false;
+
+        // Type-match check
+        if (normalType === "String" && typeof field.default !== "string")
+          return false;
+        if (normalType === "Number" && typeof field.default !== "number")
+          return false;
+        if (normalType === "Boolean" && typeof field.default !== "boolean")
+          return false;
+        return true;
       },
       {
         message:
-          "Default value type must match field type and cannot be set on required fields",
+          "Default value type must match field type, and required fields cannot have defaults",
       },
     );
 
