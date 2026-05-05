@@ -164,12 +164,16 @@ const buildFieldSchemaZod = (depth = 1) => {
     .refine(
       (field) => {
         if (field.default === undefined) return true;
+        if (field.required === true) return false;
         if (field.type === "String") return typeof field.default === "string";
         if (field.type === "Number") return typeof field.default === "number";
         if (field.type === "Boolean") return typeof field.default === "boolean";
         return false; // Disallow defaults for Object, Array, Ref, Date
       },
-      { message: "Default value type must match field type" },
+      {
+        message:
+          "Default value type must match field type and cannot be set on required fields",
+      },
     );
 
   return base;
@@ -280,6 +284,7 @@ const buildApiFieldSchemaZod = (depth = 1) => {
     .refine( 
       (field) => {
         if (field.default === undefined) return true;
+        if (field.required === true) return false;
 
         const normalType =
           field.type.charAt(0).toUpperCase() +
@@ -290,7 +295,10 @@ const buildApiFieldSchemaZod = (depth = 1) => {
         if (normalType === "Boolean") return typeof field.default === "boolean";
         return false; // Disallow defaults for Object, Array, Ref, Date
       },
-      { message: "Default value type must match field type" },
+      {
+        message:
+          "Default value type must match field type and cannot be set on required fields",
+      },
     );
 
   return base;
