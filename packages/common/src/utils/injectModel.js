@@ -77,6 +77,11 @@ function buildFieldDef(field, projectId, isExternal, isUsersCollection = false) 
     required: !!field.required,
   };
 
+  // pass default through when defined
+  if (field.default !== undefined) {
+    def.default = field.default;
+  }
+
   // HARDEN: Exclude password by default for project users
   if (isUsersCollection && normalizeKey(field.key) === "password") {
     def.select = false;

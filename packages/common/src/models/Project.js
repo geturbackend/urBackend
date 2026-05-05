@@ -23,6 +23,8 @@ const fieldSchema = new mongoose.Schema({
   ref: { type: String },
   // For type: 'Array' — describes each array item { type, fields? }
   items: { type: mongoose.Schema.Types.Mixed },
+
+  default: { type: mongoose.Schema.Types.Mixed, default: undefined },
 });
 
 // For type: 'Object' — recursive sub-fields
