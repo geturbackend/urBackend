@@ -110,6 +110,7 @@ const buildFieldSchemaZod = (depth = 1) => {
       ]),
       required: z.boolean().optional(),
       unique: z.boolean().optional(),
+      default: z.any().optional(),
       ref: z.string().optional(),
       items: z
         .object({
@@ -159,6 +160,16 @@ const buildFieldSchemaZod = (depth = 1) => {
         message:
           "Invalid field configuration, nesting depth exceeded (max 3 levels), or unique is only supported for top-level primitive fields.",
       },
+    )
+    .refine(
+      (field) => {
+        if (field.default === undefined) return true;
+        if (field.type === "String") return typeof field.default === "string";
+        if (field.type === "Number") return typeof field.default === "number";
+        if (field.type === "Boolean") return typeof field.default === "boolean";
+        return false; // Disallow defaults for Object, Array, Ref, Date
+      },
+      { message: "Default value type must match field type" },
     );
 
   return base;
@@ -202,6 +213,7 @@ const buildApiFieldSchemaZod = (depth = 1) => {
       ]),
       required: z.boolean().optional(),
       unique: z.boolean().optional(),
+      default: z.any().optional(),
       ref: z.string().optional(),
       items: z
         .object({
@@ -264,6 +276,21 @@ const buildApiFieldSchemaZod = (depth = 1) => {
         message:
           "Invalid field configuration, nesting depth exceeded (max 3 levels), or unique is only supported for top-level primitive fields.",
       },
+    )
+    .refine( 
+      (field) => {
+        if (field.default === undefined) return true;
+
+        const normalType =
+          field.type.charAt(0).toUpperCase() +
+          field.type.slice(1).toLowerCase();
+
+        if (normalType === "String") return typeof field.default === "string";
+        if (normalType === "Number") return typeof field.default === "number";
+        if (normalType === "Boolean") return typeof field.default === "boolean";
+        return false; // Disallow defaults for Object, Array, Ref, Date
+      },
+      { message: "Default value type must match field type" },
     );
 
   return base;

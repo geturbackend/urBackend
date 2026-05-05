@@ -17,7 +17,7 @@ const ALL_TYPES = [...PRIMITIVE_TYPES, 'Object', 'Array', 'Ref'];
 const ARRAY_ITEM_TYPES = [...PRIMITIVE_TYPES, 'Object', 'Ref'];
 
 function createEmptyField() {
-    return { _id: nextFieldId(), key: '', type: 'String', required: false, unique: false };
+    return { _id: nextFieldId(), key: '', type: 'String', required: false, unique: false, default: undefined };
 }
 
 // FUNCTION - FIELD ROW COMPONENT
@@ -33,6 +33,7 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
             delete updated.fields;
             delete updated.items;
             delete updated.ref;
+            delete updated.default;
             if (value === 'Object') {
                 updated.fields = [createEmptyField()];
                 updated.unique = false;
@@ -44,6 +45,11 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
                 updated.unique = false;
             }
         }
+
+        if (prop === 'required' && value) {
+            delete updated.default;
+        }
+        
         onChange(index, updated);
     };
 
@@ -51,6 +57,32 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
         const newFields = [...(field.fields || [])];
         newFields[subIndex] = updatedSubField;
         onChange(index, { ...field, fields: newFields });
+    };
+
+    const handleDefaultChange = (rawValue) => {
+      if (field.locked) return;
+    
+      let nextDefault;
+      if (field.type === 'String') {
+        nextDefault = rawValue === '' ? undefined : rawValue;
+      } else if (field.type === 'Number') {
+        if (rawValue === '') nextDefault = undefined;
+        else {
+          const parsed = Number(rawValue);
+          nextDefault = Number.isNaN(parsed) ? undefined : parsed;
+        }
+      } else if (field.type === 'Boolean') {
+        if (rawValue === '') nextDefault = undefined;
+        else nextDefault = rawValue === 'true';
+      } else {
+        nextDefault = undefined;
+      }
+    
+      const updated = { ...field };
+      if (nextDefault === undefined) delete updated.default;
+      else updated.default = nextDefault;
+    
+      onChange(index, updated);
     };
 
     const addSubField = () => {
@@ -211,6 +243,38 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
                 </button>
             </div>
 
+            {!field.required && ['String', 'Number', 'Boolean'].includes(field.type) && (
+              <div style={{ marginLeft: '26px', marginBottom: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+                  → Default Value:
+                </span>
+
+                {field.type === 'Boolean' ? (
+                  <select
+                    value={field.default === true ? 'true' : field.default === false ? 'false' : ''}
+                    disabled={field.locked}
+                    onChange={(e) => handleDefaultChange(e.target.value)}
+                    className="input-field"
+                    style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
+                  >
+                    <option value="">No default</option>
+                    <option value="true">true</option>
+                    <option value="false">false</option>
+                  </select>
+                ) : (
+                  <input
+                    type={field.type === 'Number' ? 'number' : 'text'}
+                    value={field.default ?? ''}
+                    disabled={field.locked}
+                    onChange={(e) => handleDefaultChange(e.target.value)}
+                    className="input-field"
+                    placeholder={field.type === 'Number' ? 'e.g. 0' : 'e.g. pending'}
+                    style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
+                  />
+                )}
+              </div>
+            )}
+
             {/* Ref — Collection Picker */}
             {field.type === 'Ref' && (
                 <div style={{ marginLeft: '26px', marginBottom: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -312,7 +376,6 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
                                 ))}
                             </div>
                         )}
-
                         {/* Array of Ref — collection picker */}
                         {field.items?.type === 'Ref' && (
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
@@ -342,7 +405,13 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
 // FUNCTION - CLEAN FIELDS FOR API
 function cleanFieldsForApi(fields) {
     return fields.map(f => {
-        const { _id, ...clean } = f;
+      const { _id, ...clean } = f;
+      
+      const supportsDefault = ['String', 'Number', 'Boolean'].includes(clean.type);
+      if (clean.required || !supportsDefault || clean.default === undefined) {
+        delete clean.default;
+      }
+      
         if (clean.fields) clean.fields = cleanFieldsForApi(clean.fields);
         if (clean.items?.fields) {
             clean.items = { ...clean.items, fields: cleanFieldsForApi(clean.items.fields) };

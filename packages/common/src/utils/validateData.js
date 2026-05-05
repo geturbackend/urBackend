@@ -122,6 +122,14 @@ function validateData(incomingData, schemaRules) {
             ? normalizedValueMap.get(fieldKey)
             : incomingData[field.key];
 
+      if (
+        (value === undefined || value === null) &&
+        !field.required &&
+        field.default !== undefined
+        ) {
+          value = field.default;
+        }
+      
         // ✅ FIX: trim BEFORE validation and storage
         if (field.type === 'String' && typeof value === 'string') {
             value = value.trim();

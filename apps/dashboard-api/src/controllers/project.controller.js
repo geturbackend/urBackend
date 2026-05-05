@@ -99,6 +99,9 @@ const sanitizeSchemaFields = (schema = []) => {
       if (!normalizedKey) return null;
 
       const next = { ...field, key: normalizedKey };
+      if (field.default !== undefined) {
+        next.default = field.default;
+      }
 
       if (Array.isArray(field.fields)) {
         next.fields = sanitizeSchemaFields(field.fields);
