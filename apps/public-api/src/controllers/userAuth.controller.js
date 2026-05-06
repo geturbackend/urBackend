@@ -1329,20 +1329,28 @@ module.exports.requestPasswordReset = async (req, res) => {
     try {
         const project = req.project;
         const { email } = onlyEmailSchema.parse(req.body);
+        const normalizedEmail = email.toLowerCase().trim();
 
         const usersColConfig = project.collections.find(c => c.name === 'users');
         if (!usersColConfig) return res.status(404).json({ error: "Auth collection not found" });
 
         const connection = await getConnection(project._id);
         const Model = getCompiledModel(connection, usersColConfig, project._id, project.resources.db.isExternal);
-        
-        const user = await Model.findOne({ email });
+
+        const user = await Model.findOne({ email: normalizedEmail });
         if (!user) {
             return res.json({ message: "If that email exists, a reset code has been sent." });
         }
 
+        try {
+            await checkPublicOtpCooldown(project._id, normalizedEmail, 'reset');
+        } catch (cooldownErr) {
+            return res.status(cooldownErr.statusCode || 429).json({ error: cooldownErr.message });
+        }
+
         const otp = crypto.randomInt(100000, 1000000).toString();
-        await redis.set(`project:${project._id}:otp:reset:${email}`, otp, 'EX', 300);
+        await redis.set(`project:${project._id}:otp:reset:${normalizedEmail}`, otp, 'EX', 300);
+        await setPublicOtpCooldown(project._id, normalizedEmail, 'reset');
 
         await authEmailQueue.add('send-reset-email', { email, otp, type: 'password_reset', pname: project.name, projectId: String(project._id) });
 
@@ -1358,8 +1366,9 @@ module.exports.resetPasswordUser = async (req, res) => {
     try {
         const project = req.project;
         const { email, otp, newPassword } = resetPasswordSchema.parse(req.body);
+        const normalizedEmail = email.toLowerCase().trim();
 
-        const redisKey = `project:${project._id}:otp:reset:${email}`;
+        const redisKey = `project:${project._id}:otp:reset:${normalizedEmail}`;
         const storedOtp = await redis.get(redisKey);
 
         if (!storedOtp || storedOtp !== otp) {
@@ -1373,7 +1382,7 @@ module.exports.resetPasswordUser = async (req, res) => {
         if (!collection) return res.status(404).json({ error: "Auth collection not found" });
 
         const result = await collection.updateOne(
-            { email },
+            { email: normalizedEmail },
             { $set: { password: hashedPassword } }
         );
 
