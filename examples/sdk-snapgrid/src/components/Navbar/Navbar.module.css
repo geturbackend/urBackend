@@ -42,10 +42,10 @@
   color: var(--gold);
   line-height: 1;
   filter: drop-shadow(0 0 8px rgba(201, 168, 76, 0.6));
-  animation: pulseMark 3s ease-in-out infinite;
+  animation: pulse-mark 3s ease-in-out infinite;
 }
 
-@keyframes pulseMark {
+ @keyframes pulse-mark{
   0%, 100% { filter: drop-shadow(0 0 8px rgba(201, 168, 76, 0.6)); }
   50% { filter: drop-shadow(0 0 16px rgba(201, 168, 76, 0.9)); }
 }

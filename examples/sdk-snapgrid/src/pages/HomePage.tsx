@@ -40,7 +40,7 @@ export function HomePage() {
               <img
                 className="post-card-image"
                 src={`https://picsum.photos/300/40${i}`}
-                alt=""
+                alt={`Gallery image ${i}`}
               />
             </div>
           ))}
