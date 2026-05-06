@@ -255,7 +255,7 @@ module.exports.getAllData = async (req, res) => {
     let items = data;
     let nextCursor = null;
     if (useCursor) {
-      const limit = Math.min(parseInt(req.query.limit, 10) || 50, 100);
+      const limit = Math.min(parseInt(req.query.limit, 10) || 100, 100);
       features.generateNextCursor(data, limit);
       items = data.slice(0, limit);
       nextCursor = features.nextCursor;
@@ -268,12 +268,12 @@ module.exports.getAllData = async (req, res) => {
           total,
           cursor: req.query.cursor || null,
           nextCursor,
-          limit: Math.max(1, Math.min(parseInt(req.query.limit, 10) || 50, 100)),
+          limit: Math.max(1, Math.min(parseInt(req.query.limit, 10) || 100, 100)),
         }
       : {
           total,
           page: parseInt(req.query.page, 10) || 1,
-          limit: Math.max(1, Math.min(parseInt(req.query.limit, 10) || 50, 100)),
+          limit: Math.max(1, Math.min(parseInt(req.query.limit, 10) || 100, 100)),
         };
 
     res.json({

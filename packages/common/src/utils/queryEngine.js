@@ -194,7 +194,7 @@ class QueryEngine {
      */
     cursorPaginate() {
         const cursor = this.queryString.cursor;
-        const limit = Math.min(parseInt(this.queryString.limit, 10) || 50, 100);
+        const limit = Math.min(parseInt(this.queryString.limit, 10) || 100, 100);
 
         // If cursor provided, decode and use range filter
         if (cursor) {
@@ -221,14 +221,24 @@ class QueryEngine {
                     currentMongoQuery._id = { [rangeOp]: decodedCursor._id };
                 } else {
                     // For non-_id fields, apply range filter on that field
-                    // Also add tie-breaker using _id for stability
-                    currentMongoQuery.$and = [
+                    // Use an $or tie-breaker to avoid skipping documents when
+                    // multiple records share the same sort field value.
+                    // 1) sortField compares by rangeOp against cursor.sortValue
+                    // 2) sortField equals cursor.sortValue AND _id compares by rangeOp
+                    currentMongoQuery.$or = [
                         { [sortField]: { [rangeOp]: decodedCursor.sortValue } },
-                        { _id: { [rangeOp]: decodedCursor._id } }
+                        { [sortField]: decodedCursor.sortValue, _id: { [rangeOp]: decodedCursor._id } }
                     ];
                 }
 
-                this.query = this.query.model.find(currentMongoQuery);
+                // Preserve previously-applied query options (sort, populate, lean, etc.)
+                // by using the existing query instance rather than creating a brand
+                // new Query from the model.
+                if (typeof this.query.clone === 'function') {
+                    this.query = this.query.clone().find(currentMongoQuery);
+                } else {
+                    this.query = this.query.find(currentMongoQuery);
+                }
             } else {
                 // Invalid cursor, fall back to no cursor pagination
                 this.query = this.query.limit(limit);
@@ -251,7 +261,9 @@ class QueryEngine {
     generateNextCursor(documents, limit) {
         if (documents.length > limit) {
             // There is a next page, create cursor from the last fetched document
-            this.lastDocument = documents[limit];
+            // The sentinel document is at index `limit` (we fetched limit+1).
+            // The last real document for the page is at index `limit - 1`.
+            this.lastDocument = documents[limit - 1];
 
             let sortField = '_id';
             if (this.queryString.sort) {
