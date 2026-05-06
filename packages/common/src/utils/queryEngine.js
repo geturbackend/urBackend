@@ -11,9 +11,11 @@ class QueryEngine {
         this.query = query;
         this.queryString = queryString;
         this.hasRegexFilter = false;
+        this.nextCursor = null;
+        this.lastDocument = null;
     }
 
-    static EXCLUDED_FIELDS = ['page', 'sort', 'limit', 'fields', 'populate', 'expand', 'count', 'meta'];
+    static EXCLUDED_FIELDS = ['page', 'sort', 'limit', 'fields', 'populate', 'expand', 'count', 'meta', 'cursor'];
     static MAX_REGEX_PATTERN_LENGTH = 128;
     static REGEX_MAX_TIME_MS = 2000;
 
@@ -153,6 +155,130 @@ class QueryEngine {
             countQuery.maxTimeMS(QueryEngine.REGEX_MAX_TIME_MS);
         }
         return await countQuery;
+    }
+
+    /**
+     * Encodes a cursor object (containing sort field value and _id) to a Base64 string.
+     * @param {Object} cursorData - Object with 'sortValue' and '_id'
+     * @returns {string} Base64-encoded cursor
+     */
+    static encodeCursor(cursorData) {
+        try {
+            const json = JSON.stringify(cursorData);
+            return Buffer.from(json).toString('base64');
+        } catch (err) {
+            return null;
+        }
+    }
+
+    /**
+     * Decodes a Base64 cursor string back to an object.
+     * @param {string} cursor - Base64-encoded cursor
+     * @returns {Object|null} Decoded cursor object or null if invalid
+     */
+    static decodeCursor(cursor) {
+        try {
+            if (!cursor || typeof cursor !== 'string') return null;
+            const json = Buffer.from(cursor, 'base64').toString('utf-8');
+            return JSON.parse(json);
+        } catch (err) {
+            return null;
+        }
+    }
+
+    /**
+     * Applies cursor-based pagination to the query.
+     * If cursor is provided, uses range filtering instead of skip/limit.
+     * Fetches limit+1 documents to determine if there's a next page.
+     * @returns {QueryEngine} this
+     */
+    cursorPaginate() {
+        const cursor = this.queryString.cursor;
+        const limit = Math.min(parseInt(this.queryString.limit, 10) || 100, 100);
+
+        // If cursor provided, decode and use range filter
+        if (cursor) {
+            const decodedCursor = QueryEngine.decodeCursor(cursor);
+            if (decodedCursor && decodedCursor._id && decodedCursor.sortValue !== undefined) {
+                // Determine sort direction from queryString
+                let isSortDesc = false;
+                if (this.queryString.sort) {
+                    const sortParts = this.queryString.sort.split(':');
+                    isSortDesc = sortParts[1] && (sortParts[1] === '-1' || sortParts[1].toLowerCase() === 'desc');
+                }
+
+                // Add range filter based on sort direction
+                const currentMongoQuery = this.query.getQuery() || {};
+                const rangeOp = isSortDesc ? '$lt' : '$gt';
+
+                // If sort is by _id, use _id for range filtering
+                let sortField = '_id';
+                if (this.queryString.sort) {
+                    sortField = this.queryString.sort.split(':')[0];
+                }
+
+                if (sortField === '_id') {
+                    currentMongoQuery._id = { [rangeOp]: decodedCursor._id };
+                } else {
+                    // For non-_id fields, apply range filter on that field
+                    // Use an $or tie-breaker to avoid skipping documents when
+                    // multiple records share the same sort field value.
+                    // 1) sortField compares by rangeOp against cursor.sortValue
+                    // 2) sortField equals cursor.sortValue AND _id compares by rangeOp
+                    currentMongoQuery.$or = [
+                        { [sortField]: { [rangeOp]: decodedCursor.sortValue } },
+                        { [sortField]: decodedCursor.sortValue, _id: { [rangeOp]: decodedCursor._id } }
+                    ];
+                }
+
+                // Preserve previously-applied query options (sort, populate, lean, etc.)
+                // by using the existing query instance rather than creating a brand
+                // new Query from the model.
+                if (typeof this.query.clone === 'function') {
+                    this.query = this.query.clone().find(currentMongoQuery);
+                } else {
+                    this.query = this.query.find(currentMongoQuery);
+                }
+            } else {
+                // Invalid cursor, fall back to no cursor pagination
+                this.query = this.query.limit(limit);
+            }
+        } else {
+            this.query = this.query.limit(limit);
+        }
+
+        // Fetch limit + 1 to check if there's a next page
+        this.query = this.query.limit(limit + 1);
+        return this;
+    }
+
+    /**
+     * Generates nextCursor from the last document if there's a next page.
+     * Should be called after query execution.
+     * @param {Array} documents - Array of documents returned from query
+     * @param {number} limit - The pagination limit
+     */
+    generateNextCursor(documents, limit) {
+        if (documents.length > limit) {
+            // There is a next page, create cursor from the last fetched document
+            // The sentinel document is at index `limit` (we fetched limit+1).
+            // The last real document for the page is at index `limit - 1`.
+            this.lastDocument = documents[limit - 1];
+
+            let sortField = '_id';
+            if (this.queryString.sort) {
+                sortField = this.queryString.sort.split(':')[0];
+            }
+
+            const sortValue = sortField === '_id' ? this.lastDocument._id : this.lastDocument[sortField];
+            this.nextCursor = QueryEngine.encodeCursor({
+                sortValue: sortValue,
+                _id: this.lastDocument._id
+            });
+        } else {
+            this.nextCursor = null;
+            this.lastDocument = null;
+        }
     }
 }
 
