@@ -10,3 +10,5 @@ coverage/
 plan.md
 /.kiroo
 /xtemp/
+
+apps/public-api/src/uploads/
