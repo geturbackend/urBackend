@@ -71,7 +71,19 @@ When using `templateName`, urBackend resolves in this order:
 
 For URL values, prefer escaped placeholders like `{{appUrl}}`. URL-like variables are sanitized to safe `http/https` values.
 
-### Code examples
+### How to use
+
+<Steps>
+  <Step title="Get your Secret Key">
+    Log in to the [urBackend Dashboard](https://urbackend.bitbros.in/dashboard), create a new project, and copy your **Secret Key** (`sk_live_...`) from the project settings.
+  </Step>
+  <Step title="Copy the Code">
+    Copy your preferred language snippet from below. Use **Direct Mode** if you just want to send a quick HTML/Text email without setting up templates.
+  </Step>
+  <Step title="Paste and Run">
+    Paste the code into your app, replace `sk_live_YOUR_SECRET_KEY` with your actual key, change the `to` email address, and run it!
+  </Step>
+</Steps>
 
 <Info>
   The Java examples use the native `java.net.http.HttpClient` (requires **Java 11+**) and Text Blocks for JSON formatting (requires **Java 15+**).
