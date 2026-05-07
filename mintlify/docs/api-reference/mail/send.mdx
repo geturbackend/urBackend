@@ -73,6 +73,10 @@ For URL values, prefer escaped placeholders like `{{appUrl}}`. URL-like variable
 
 ### Code examples
 
+<Info>
+  The Java examples use the native `java.net.http.HttpClient` (requires **Java 11+**) and Text Blocks for JSON formatting (requires **Java 15+**).
+</Info>
+
 <CodeGroup>
 
 ```javascript fetch (template mode)
@@ -107,6 +111,70 @@ const res = await fetch('https://api.ub.bitbros.in/api/mail/send', {
     html: '<h1>Hello</h1><p>Your account is ready.</p>'
   })
 });
+```
+
+```java Java (template mode)
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+public class Main {
+  public static void main(String[] args) throws Exception {
+    String jsonBody = """
+      {
+        "to": "user@example.com",
+        "templateName": "welcome",
+        "variables": {
+          "name": "Ava",
+          "projectName": "Acme",
+          "appUrl": "https://acme.com"
+        }
+      }
+      """;
+
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create("https://api.ub.bitbros.in/api/mail/send"))
+        .header("Content-Type", "application/json")
+        .header("x-api-key", "sk_live_YOUR_SECRET_KEY")
+        .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+        .build();
+
+    HttpClient client = HttpClient.newHttpClient();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    System.out.println(response.body());
+  }
+}
+```
+
+```java Java (direct mode)
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+public class Main {
+  public static void main(String[] args) throws Exception {
+    String jsonBody = """
+      {
+        "to": "user@example.com",
+        "subject": "Welcome to Acme",
+        "html": "<h1>Hello</h1><p>Your account is ready.</p>"
+      }
+      """;
+
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create("https://api.ub.bitbros.in/api/mail/send"))
+        .header("Content-Type", "application/json")
+        .header("x-api-key", "sk_live_YOUR_SECRET_KEY")
+        .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+        .build();
+
+    HttpClient client = HttpClient.newHttpClient();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    System.out.println(response.body());
+  }
+}
 ```
 
 </CodeGroup>
