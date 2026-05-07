@@ -18,6 +18,8 @@ const fetchCsrfToken = async () => {
         return csrfToken;
     } catch (err) {
         console.error("Failed to fetch CSRF token:", err);
+        // Clear the promise so subsequent requests will retry instead of reusing a failed result.
+        csrfTokenPromise = null;
         return null;
     }
 };
@@ -26,12 +28,16 @@ const fetchCsrfToken = async () => {
 csrfTokenPromise = fetchCsrfToken();
 
 api.interceptors.request.use(async (config) => {
-    const method = config.method.toLowerCase();
+    // Guard against undefined method (defaults to 'get')
+    const method = (config.method || 'get').toLowerCase();
     
     if (['post', 'put', 'delete', 'patch'].includes(method)) {
         if (!csrfToken) {
-            // Wait for the in-flight eager fetch instead of spawning a new one.
-            csrfToken = await (csrfTokenPromise ?? fetchCsrfToken());
+            // If the eager fetch failed (csrfTokenPromise is null), trigger a fresh fetch.
+            if (!csrfTokenPromise) {
+                csrfTokenPromise = fetchCsrfToken();
+            }
+            csrfToken = await csrfTokenPromise;
         }
         if (csrfToken) {
             config.headers['X-CSRF-Token'] = csrfToken;
