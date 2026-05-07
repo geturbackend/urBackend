@@ -7,6 +7,9 @@ const api = axios.create({
 });
 
 let csrfToken = null;
+// Eagerly start fetching the CSRF token as soon as this module loads so the
+// token is already available by the time the user submits any form.
+let csrfTokenPromise = null;
 
 const fetchCsrfToken = async () => {
     try {
@@ -15,16 +18,26 @@ const fetchCsrfToken = async () => {
         return csrfToken;
     } catch (err) {
         console.error("Failed to fetch CSRF token:", err);
+        // Clear the promise so subsequent requests will retry instead of reusing a failed result.
+        csrfTokenPromise = null;
         return null;
     }
 };
 
+// Kick off the fetch immediately — reuse the same promise to avoid duplicate requests.
+csrfTokenPromise = fetchCsrfToken();
+
 api.interceptors.request.use(async (config) => {
-    const method = config.method.toLowerCase();
+    // Guard against undefined method (defaults to 'get')
+    const method = (config.method || 'get').toLowerCase();
     
     if (['post', 'put', 'delete', 'patch'].includes(method)) {
         if (!csrfToken) {
-            csrfToken = await fetchCsrfToken();
+            // If the eager fetch failed (csrfTokenPromise is null), trigger a fresh fetch.
+            if (!csrfTokenPromise) {
+                csrfTokenPromise = fetchCsrfToken();
+            }
+            csrfToken = await csrfTokenPromise;
         }
         if (csrfToken) {
             config.headers['X-CSRF-Token'] = csrfToken;
