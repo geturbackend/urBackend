@@ -468,11 +468,9 @@ function CreateCollection() {
     useEffect(() => {
         let isMounted = true;
         const fetchCollections = async () => {
-            if (isMounted) {
-                setCollectionsLoading(true);
-                setCollections([]);
-                setCollectionsError(null);
-            }
+            setCollectionsLoading(true);
+            setCollections([]);
+            setCollectionsError(null);
             try {
                 const res = await api.get(`/api/projects/${projectId}`);
                 if (isMounted) setCollections(res.data.collections || []);
