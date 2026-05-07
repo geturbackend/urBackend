@@ -241,19 +241,46 @@ module.exports.getAllData = async (req, res) => {
 
     const total = await features.count();
 
-    features.paginate();
+    // Use cursor-based pagination if cursor parameter is provided, otherwise use offset-based
+    const useCursor = !!req.query.cursor;
+    if (useCursor) {
+      features.cursorPaginate();
+    } else {
+      features.paginate();
+    }
 
     const data = await features.query.lean();
 
+    // Handle cursor pagination: slice to actual limit and generate next cursor
+    let items = data;
+    let nextCursor = null;
+    if (useCursor) {
+      const limit = Math.min(parseInt(req.query.limit, 10) || 100, 100);
+      features.generateNextCursor(data, limit);
+      items = data.slice(0, limit);
+      nextCursor = features.nextCursor;
+    }
+
     if (isDebug) console.log(`[DEBUG] getall took ${(performance.now() - start).toFixed(2)}ms`);
+
+    const responseMeta = useCursor
+      ? {
+          total,
+          cursor: req.query.cursor || null,
+          nextCursor,
+          limit: Math.max(1, Math.min(parseInt(req.query.limit, 10) || 100, 100)),
+        }
+      : {
+          total,
+          page: parseInt(req.query.page, 10) || 1,
+          limit: Math.max(1, Math.min(parseInt(req.query.limit, 10) || 100, 100)),
+        };
 
     res.json({
       success: true,
       data: {
-        items: data,
-        total,
-        page: parseInt(req.query.page, 10) || 1,
-        limit: Math.max(1, Math.min(parseInt(req.query.limit, 10) || 50, 100)),
+        items,
+        ...responseMeta,
       },
       message: "Data fetched successfully",
     });
