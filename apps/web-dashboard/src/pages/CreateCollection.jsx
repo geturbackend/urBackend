@@ -21,7 +21,7 @@ function createEmptyField() {
 }
 
 // FUNCTION - FIELD ROW COMPONENT
-function FieldRow({ field, index, depth, collections, collectionsLoading, onChange, onRemove }) {
+function FieldRow({ field, index, depth, collections, collectionsLoading, collectionsError, onChange, onRemove }) {
     const [expanded, setExpanded] = useState(true);
 
     const handleChange = (prop, value) => {
@@ -283,12 +283,12 @@ function FieldRow({ field, index, depth, collections, collectionsLoading, onChan
                     </span>
                     <select
                         value={field.ref || ''}
-                        disabled={collectionsLoading}
+                        disabled={collectionsLoading || collectionsError}
                         onChange={(e) => handleChange('ref', e.target.value)}
                         className="input-field"
                         style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
                     >
-                        <option value="">{collectionsLoading ? 'Loading collections…' : 'Select collection...'}</option>
+                        <option value="">{collectionsLoading ? 'Loading collections…' : collectionsError ? 'Failed to load' : 'Select collection...'}</option>
                         {collections.map(c => (
                             <option key={c.name} value={c.name}>{c.name}</option>
                         ))}
@@ -322,6 +322,7 @@ function FieldRow({ field, index, depth, collections, collectionsLoading, onChan
                                 depth={depth + 1}
                                 collections={collections}
                                 collectionsLoading={collectionsLoading}
+                                collectionsError={collectionsError}
                                 onChange={handleSubFieldChange}
                                 onRemove={removeSubField}
                             />
@@ -373,6 +374,7 @@ function FieldRow({ field, index, depth, collections, collectionsLoading, onChan
                                         depth={depth + 1}
                                         collections={collections}
                                         collectionsLoading={collectionsLoading}
+                                        collectionsError={collectionsError}
                                         onChange={handleItemSubFieldChange}
                                         onRemove={removeItemSubField}
                                     />
@@ -387,12 +389,12 @@ function FieldRow({ field, index, depth, collections, collectionsLoading, onChan
                                 </span>
                                 <select
                                     value={field.items?.ref || ''}
-                                    disabled={collectionsLoading}
+                                    disabled={collectionsLoading || collectionsError}
                                     onChange={(e) => handleItemsChange('ref', e.target.value)}
                                     className="input-field"
                                     style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
                                 >
-                                    <option value="">{collectionsLoading ? 'Loading collections…' : 'Select collection...'}</option>
+                                    <option value="">{collectionsLoading ? 'Loading collections…' : collectionsError ? 'Failed to load' : 'Select collection...'}</option>
                                     {collections.map(c => (
                                         <option key={c.name} value={c.name}>{c.name}</option>
                                     ))}
@@ -459,6 +461,7 @@ function CreateCollection() {
     const [loading, setLoading] = useState(false);
     const [collections, setCollections] = useState([]);
     const [collectionsLoading, setCollectionsLoading] = useState(true);
+    const [collectionsError, setCollectionsError] = useState(null);
 
     // Fetch existing collections for Ref picker — runs immediately on mount
     // so it fires in parallel with any other in-flight requests.
@@ -468,11 +471,18 @@ function CreateCollection() {
             if (isMounted) {
                 setCollectionsLoading(true);
                 setCollections([]);
+                setCollectionsError(null);
             }
             try {
                 const res = await api.get(`/api/projects/${projectId}`);
                 if (isMounted) setCollections(res.data.collections || []);
-            } catch { /* ignore */ } finally {
+            } catch (err) {
+                console.error('Failed to fetch collections for Ref picker:', err);
+                if (isMounted) {
+                    setCollectionsError('Failed to load collections');
+                    toast.error('Failed to load collections for references');
+                }
+            } finally {
                 if (isMounted) setCollectionsLoading(false);
             }
         };
@@ -611,6 +621,7 @@ function CreateCollection() {
                                 depth={1}
                                 collections={collections}
                                 collectionsLoading={collectionsLoading}
+                                collectionsError={collectionsError}
                                 onChange={handleFieldChange}
                                 onRemove={removeField}
                             />
