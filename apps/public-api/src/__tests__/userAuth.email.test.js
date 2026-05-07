@@ -368,6 +368,7 @@ describe('Email Authentication Flow', () => {
             const res = makeRes();
 
             mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123' });
+            redis.get.mockResolvedValueOnce(null); // no cooldown
 
             await controller.requestPasswordReset(req, res);
 
@@ -376,6 +377,51 @@ describe('Email Authentication Flow', () => {
                 email: 'reset@user.com'
             }));
             expect(res.json).toHaveBeenCalled();
+        });
+
+        test('returns 429 when reset OTP cooldown is active', async () => {
+            const req = makeReq({ body: { email: 'reset@user.com' } });
+            const res = makeRes();
+
+            mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123' });
+            redis.get.mockResolvedValueOnce('1'); // cooldown active
+            redis.ttl.mockResolvedValueOnce(45);
+
+            await controller.requestPasswordReset(req, res);
+
+            expect(authEmailQueue.add).not.toHaveBeenCalled();
+            expect(res.status).toHaveBeenCalledWith(429);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                error: expect.stringContaining('45 seconds')
+            }));
+        });
+
+        test('sets cooldown after sending reset OTP', async () => {
+            const req = makeReq({ body: { email: 'reset@user.com' } });
+            const res = makeRes();
+
+            mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123' });
+            redis.get.mockResolvedValueOnce(null);
+
+            await controller.requestPasswordReset(req, res);
+
+            const cooldownCall = redis.set.mock.calls.find(c => c[0].includes('otp:cooldown:reset'));
+            expect(cooldownCall).toBeDefined();
+            expect(cooldownCall[2]).toBe('EX');
+            expect(cooldownCall[3]).toBe(60);
+        });
+
+        test('uses normalized email in Redis key', async () => {
+            const req = makeReq({ body: { email: 'Reset@User.COM' } });
+            const res = makeRes();
+
+            mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123' });
+            redis.get.mockResolvedValueOnce(null);
+
+            await controller.requestPasswordReset(req, res);
+
+            const otpCall = redis.set.mock.calls.find(c => c[0].includes('otp:reset'));
+            expect(otpCall[0]).toContain('reset@user.com');
         });
     });
 
