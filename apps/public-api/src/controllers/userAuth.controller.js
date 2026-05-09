@@ -1063,6 +1063,8 @@ module.exports.login = async (req, res, next) => {
         return res.status(statusCode).json({ error: message });
     };
 
+    const sendLockoutServiceError = (message = 'Login lockout service unavailable') => sendAuthError(503, message);
+
     try {
         const project = req.project;
         const { email, password } = loginSchema.parse(req.body);
@@ -1071,10 +1073,10 @@ module.exports.login = async (req, res, next) => {
 
         let lockStatus = { locked: false, retryAfterSeconds: 0 };
         try {
-            // Fail-open: if Redis is unavailable, do not block login attempts.
             lockStatus = await checkLockout(projectId, normalizedEmail);
         } catch (lockErr) {
             console.error('[login-lockout] checkLockout failed:', lockErr?.message || lockErr);
+            return sendLockoutServiceError();
         }
 
         if (lockStatus.locked) {
@@ -1092,10 +1094,10 @@ module.exports.login = async (req, res, next) => {
         if (!user) {
             let failedStatus = { locked: false, retryAfterSeconds: 0, attempts: 0 };
             try {
-                // Fail-open: if Redis is unavailable, do not block login on attempt tracking.
                 failedStatus = await recordFailedAttempt(projectId, normalizedEmail);
             } catch (attemptErr) {
                 console.error('[login-lockout] recordFailedAttempt failed (user missing):', attemptErr?.message || attemptErr);
+                return sendLockoutServiceError();
             }
 
             if (failedStatus.locked) {
@@ -1108,10 +1110,10 @@ module.exports.login = async (req, res, next) => {
         if (!validPass) {
             let failedStatus = { locked: false, retryAfterSeconds: 0, attempts: 0 };
             try {
-                // Fail-open: if Redis is unavailable, do not block login on attempt tracking.
                 failedStatus = await recordFailedAttempt(projectId, normalizedEmail);
             } catch (attemptErr) {
                 console.error('[login-lockout] recordFailedAttempt failed (invalid password):', attemptErr?.message || attemptErr);
+                return sendLockoutServiceError();
             }
 
             if (failedStatus.locked) {
