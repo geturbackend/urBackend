@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Eye, EyeOff, KeyRound, Lock, Mail } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import AuthShell from '../components/AuthShell';
+import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 
@@ -16,12 +17,18 @@ function ForgotPassword() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState({ score: 0, isStrongEnough: false });
   const [formData, setFormData] = useState({
     email: location.state?.email || '',
     otp: '',
     newPassword: '',
     confirmPassword: '',
   });
+
+  const userInputs = useMemo(
+    () => [formData.email],
+    [formData.email]
+  );
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -89,6 +96,11 @@ function ForgotPassword() {
     }
     if (formData.newPassword !== formData.confirmPassword) {
       toast.error('Passwords do not match.');
+      return;
+    }
+
+    if (!passwordStrength.isStrongEnough) {
+      toast.error('Please choose a stronger password.');
       return;
     }
 
@@ -203,6 +215,11 @@ function ForgotPassword() {
                 {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+            <PasswordStrengthMeter
+              password={formData.newPassword}
+              userInputs={userInputs}
+              onStrengthChange={setPasswordStrength}
+            />
           </div>
 
           <div className="auth-field">
@@ -232,7 +249,11 @@ function ForgotPassword() {
             </div>
           </div>
 
-          <button type="submit" className="btn btn-primary auth-submit" disabled={isSubmitting}>
+          <button
+            type="submit"
+            className="btn btn-primary auth-submit"
+            disabled={isSubmitting || (formData.newPassword.length > 0 && !passwordStrength.isStrongEnough)}
+          >
             {isSubmitting ? 'Resetting...' : 'Reset password'}
           </button>
 

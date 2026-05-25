@@ -4,6 +4,7 @@ import { Eye, EyeOff, Github, Lock, Mail, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import AuthShell from '../components/AuthShell';
+import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import { API_URL } from '../config';
@@ -19,6 +20,7 @@ function Signup() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState({ score: 0, isStrongEnough: false });
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -26,38 +28,28 @@ function Signup() {
     }
   }, [authLoading, isAuthenticated, navigate]);
 
-  const passwordChecks = useMemo(
-    () => [
-      {
-        label: 'At least 6 characters',
-        passed: formData.password.length >= 6,
-      },
-      {
-        label: 'Contains a letter',
-        passed: /[A-Za-z]/.test(formData.password),
-      },
-      {
-        label: 'Contains a number',
-        passed: /\d/.test(formData.password),
-      },
-    ],
-    [formData.password]
+  const userInputs = useMemo(
+    () => [formData.name, formData.email],
+    [formData.name, formData.email]
   );
-
-  if (authLoading) {
-    return null;
-  }
 
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((current) => ({ ...current, [name]: value }));
   };
 
+  if (authLoading) return null;
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!formData.email || !formData.password) {
       toast.error('Email and password are required.');
+      return;
+    }
+
+    if (!passwordStrength.isStrongEnough) {
+      toast.error('Please choose a stronger password.');
       return;
     }
 
@@ -179,21 +171,18 @@ function Signup() {
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
+          <PasswordStrengthMeter
+            password={formData.password}
+            userInputs={userInputs}
+            onStrengthChange={setPasswordStrength}
+          />
         </div>
 
-        <div className="auth-password-checks">
-          {passwordChecks.map((check) => (
-            <div
-              key={check.label}
-              className={`auth-password-check ${check.passed ? 'is-passed' : ''}`}
-            >
-              <span className="auth-password-check__dot" />
-              <span>{check.label}</span>
-            </div>
-          ))}
-        </div>
-
-        <button type="submit" className="btn btn-secondary auth-submit" disabled={isSubmitting}>
+        <button
+          type="submit"
+          className="btn btn-secondary auth-submit"
+          disabled={isSubmitting || (formData.password.length > 0 && !passwordStrength.isStrongEnough)}
+        >
           {isSubmitting ? 'Creating account...' : 'Create account'}
         </button>
       </form>

@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { Lock, Trash2, AlertTriangle, Save, CheckCircle } from 'lucide-react';
 import { API_URL } from '../config';
 import ConfirmationModal from './ConfirmationModal';
+import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
 
 export default function Settings() {
     const { logout, user, isLoading } = useAuth();
@@ -12,6 +13,9 @@ export default function Settings() {
     // Password State
     const [passData, setPassData] = useState({ currentPassword: '', newPassword: '' });
     const [loadingPass, setLoadingPass] = useState(false);
+    const [passwordStrength, setPasswordStrength] = useState({ score: 0, isStrongEnough: false });
+
+    const userInputs = useMemo(() => [user?.email], [user?.email]);
 
     // Delete Account State
     const [deletePass, setDeletePass] = useState('');
@@ -22,13 +26,21 @@ export default function Settings() {
     // Handle Password Change
     const handlePasswordChange = async (e) => {
         e.preventDefault();
+        if (!passwordStrength.isStrongEnough) {
+            toast.error('Please choose a stronger password.');
+            return;
+        }
         setLoadingPass(true);
         try {
             await api.put(`/api/auth/change-password`, passData);
-            toast.success("Password updated!");
+            toast.success('Password updated!');
             setPassData({ currentPassword: '', newPassword: '' });
         } catch (err) {
-            toast.error(err.response?.data || "Failed to update password");
+            const data = err.response?.data;
+            let message = 'Failed to update password';
+            if (typeof data?.error === 'string') message = data.error;
+            else if (Array.isArray(data?.error)) message = data.error[0]?.message || message;
+            toast.error(message);
         } finally {
             setLoadingPass(false);
         }
@@ -146,10 +158,15 @@ if (pageLoading) return <SettingsSkeleton />;
                                 minLength={6}
                                 style={{ width: '100%', padding: '12px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '8px', color: '#fff' }}
                             />
+                            <PasswordStrengthMeter
+                                password={passData.newPassword}
+                                userInputs={userInputs}
+                                onStrengthChange={setPasswordStrength}
+                            />
                         </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <button type="submit" className="btn btn-primary" disabled={loadingPass} style={{ padding: '10px 20px' }}>
+                        <button type="submit" className="btn btn-primary" disabled={loadingPass || (passData.newPassword.length > 0 && !passwordStrength.isStrongEnough)} style={{ padding: '10px 20px' }}>
                             {loadingPass ? 'Updating...' : <><Save size={18} /> Update Password</>}
                         </button>
                     </div>

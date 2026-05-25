@@ -4,6 +4,7 @@ const {
   MAX_FIELD_DEPTH,
   UNIQUE_SUPPORTED_TYPES,
 } = require("./schema.constants");
+const { validatePasswordStrength } = require("./passwordStrength");
 
 module.exports.loginSchema = z.object({
   email: z
@@ -15,6 +16,15 @@ module.exports.loginSchema = z.object({
     .string()
     .min(6, { message: "Password must be at least 6 characters" })
     .max(100, { message: "Password is too long." }),
+}).superRefine((data, ctx) => {
+  const result = validatePasswordStrength(data.password);
+  if (result) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["password"],
+      message: result.message,
+    });
+  }
 });
 
 module.exports.signupSchema = z.object({
@@ -38,6 +48,15 @@ module.exports.signupSchema = z.object({
 module.exports.changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
   newPassword: z.string().min(6, "New password must be at least 6 characters"),
+}).superRefine((data, ctx) => {
+  const result = validatePasswordStrength(data.newPassword);
+  if (result) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["newPassword"],
+      message: result.message,
+    });
+  }
 });
 
 module.exports.deleteAccountSchema = z.object({
@@ -60,6 +79,15 @@ module.exports.resetPasswordSchema = z.object({
     .string()
     .min(6, "Password must be at least 6 characters")
     .max(100, "Password is too long."),
+}).superRefine((data, ctx) => {
+  const result = validatePasswordStrength(data.newPassword);
+  if (result) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["newPassword"],
+      message: result.message,
+    });
+  }
 });
 
 module.exports.createProjectSchema = z.object({

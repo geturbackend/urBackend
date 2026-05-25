@@ -113,7 +113,7 @@ const sessionManager = require("./utils/session.manager");
 const planLimits = require("./utils/planLimits");
 const AppError = require("./utils/AppError");
 const { checkLockout, recordFailedAttempt, clearLockout } = require("./utils/loginLockout");
-
+const { validatePasswordStrength } = require("./utils/passwordStrength");
 module.exports = {
   connectDB,
   redis,
@@ -213,4 +213,5 @@ module.exports = {
   trashCleanupQueue,
   enqueueCollectionCleanup,
   initTrashCleanupWorker,
+  validatePasswordStrength,
 };
