@@ -16,15 +16,6 @@ module.exports.loginSchema = z.object({
     .string()
     .min(6, { message: "Password must be at least 6 characters" })
     .max(100, { message: "Password is too long." }),
-}).superRefine((data, ctx) => {
-  const result = validatePasswordStrength(data.password);
-  if (result) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["password"],
-      message: result.message,
-    });
-  }
 });
 
 module.exports.signupSchema = z.object({
@@ -43,6 +34,15 @@ module.exports.signupSchema = z.object({
     .string()
     .min(6, { message: "Password must be at least 6 characters." })
     .max(100, { message: "Password is too long." }),
+}).superRefine((data, ctx) => {
+  const result = validatePasswordStrength(data.password);
+  if (result) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["password"],
+      message: result.message,
+    });
+  }
 });
 
 module.exports.changePasswordSchema = z.object({
@@ -536,6 +536,15 @@ module.exports.userSignupSchema = z.object({
     .string()
     .min(6, { message: "Password must be at least 6 characters." })
     .max(100, { message: "Password is too long." }),
+}).superRefine((data, ctx) => {
+  const result = validatePasswordStrength(data.password);
+  if (result) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["password"],
+      message: result.message,
+    });
+  }
 });
 
 // Webhook event config schema for per-collection events
