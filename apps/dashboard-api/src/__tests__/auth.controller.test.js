@@ -70,6 +70,10 @@ jest.mock('@urbackend/common', () => {
             email: z.string().email(),
             password: z.string().min(1),
         }),
+        registerSchema: z.object({
+            email: z.string().email(),
+            password: z.string().min(1),
+        }),
         changePasswordSchema: z.object({
             currentPassword: z.string().min(1),
             newPassword: z.string().min(6),
