@@ -15,6 +15,7 @@ const {
     deleteCollection,
     getData,
     deleteRow,
+    recoverRow,
     insertData,
     editRow,
     listFiles,
@@ -66,6 +67,9 @@ router.get('/:projectId/collections/:collectionName/data', authMiddleware, getDa
 
 // DELETE REQ FOR ROW
 router.delete('/:projectId/collections/:collectionName/data/:id', authMiddleware, deleteRow);
+
+// PATCH REQ FOR RECOVER ROW
+router.patch('/:projectId/collections/:collectionName/data/:id/recover', authMiddleware, recoverRow);
 
 // PATCH REQ FOR EDIT ROW
 router.patch('/:projectId/collections/:collectionName/data/:id', authMiddleware, editRow);

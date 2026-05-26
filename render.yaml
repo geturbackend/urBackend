@@ -1,0 +1,56 @@
+services:
+  # 1. Python AI Microservice (Private Service)
+  - type: pserv
+    name: urbackend-python-service
+    env: python
+    rootDir: apps/python-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    plan: starter # Uses your $50 credits safely ($7/mo)
+    envVars:
+      - key: INTERNAL_SECRET
+        sync: false # Set this manually in dashboard
+      - key: GROQ_API_KEY
+        sync: false # Set this manually in dashboard
+      - key: REDIS_URL
+        sync: false # If using Redis cloud
+
+  # 2. Dashboard API
+  - type: web
+    name: urbackend-dashboard-api
+    env: node
+    rootDir: apps/dashboard-api
+    buildCommand: npm install
+    startCommand: npm start
+    plan: starter
+    envVars:
+      - key: PYTHON_SERVICE_URL
+        # This automatically links to the internal private python service
+        value: http://urbackend-python-service:8000
+      - key: INTERNAL_SECRET
+        sync: false # Must match the one in Python Service
+      - key: MONGO_URL
+        sync: false
+
+  # 3. Public API
+  - type: web
+    name: urbackend-public-api
+    env: node
+    rootDir: apps/public-api
+    buildCommand: npm install
+    startCommand: npm start
+    plan: starter
+    envVars:
+      - key: MONGO_URL
+        sync: false
+
+  # 4. Web Dashboard (React)
+  - type: web
+    name: urbackend-web-dashboard
+    env: static
+    rootDir: apps/web-dashboard
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://urbackend-dashboard-api.onrender.com

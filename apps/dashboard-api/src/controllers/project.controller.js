@@ -22,7 +22,7 @@ const { getConnection } = require("@urbackend/common");
 const { getCompiledModel } = require("@urbackend/common");
 const { QueryEngine } = require("@urbackend/common");
 const { storageRegistry } = require("@urbackend/common");
-const { AppError } = require("@urbackend/common");
+const { AppError, dispatchWebhooks, enqueueCollectionCleanup, syncCollectionCleanup } = require("@urbackend/common");
 const { resolveEffectivePlan } = require("@urbackend/common");
 const {
   deleteProjectByApiKeyCache,
@@ -37,7 +37,6 @@ const { getPublicIp } = require("@urbackend/common");
 const { clearCompiledModel } = require("@urbackend/common");
 const { createUniqueIndexes, ApiAnalytics, MailLog } = require("@urbackend/common");
 const { emitEvent } = require('../utils/emitEvent');
-const { enqueueCollectionCleanup } = require('@urbackend/common');
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const SAFETY_MAX_BYTES = 100 * 1024 * 1024;
 const CONFIRM_UPLOAD_SIZE_TOLERANCE_BYTES = 64;
@@ -935,21 +934,30 @@ module.exports.insertData = async (req, res) => {
   }
 };
 
-module.exports.deleteRow = async (req, res) => {
+/**
+ * Soft-deletes a document by setting isDeleted: true and recording the deletion time.
+ * @param {import('express').Request} req - Express request
+ * @param {import('express').Response} res - Express response
+ */
+module.exports.deleteRow = async (req, res, next) => {
   try {
     const { projectId, collectionName, id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return next(new AppError(400, "Invalid document ID format."));
+    }
 
     const project = await Project.findOne({
       _id: projectId,
       owner: req.user._id,
     });
-    if (!project) return res.status(404).json({ error: "Project not found." });
+    if (!project) return next(new AppError(404, "Project not found."));
 
     const collectionConfig = project.collections.find(
       (c) => c.name === collectionName,
     );
     if (!collectionConfig) {
-      return res.status(404).json({ error: "Collection not found." });
+      return next(new AppError(404, "Collection not found."));
     }
 
     const connection = await getConnection(projectId);
@@ -972,7 +980,7 @@ module.exports.deleteRow = async (req, res) => {
     ).lean();
 
     if (!result) {
-      return res.status(404).json({ success: false, data: {}, message: "Document not found." });
+      return next(new AppError(404, "Document not found."));
     }
 
     // We don't decrement databaseUsed here because the document still occupies space.
@@ -986,7 +994,89 @@ module.exports.deleteRow = async (req, res) => {
     res.json({ success: true, data: { id: result._id }, message: "Document moved to trash" });
   } catch (err) {
     console.error("Delete Error:", err);
-    res.status(500).json({ error: err.message });
+    next(new AppError(500, "Failed to delete document"));
+  }
+};
+/**
+ * Recovers a soft-deleted document from trash.
+ * @param {import('express').Request} req - Express request
+ * @param {import('express').Response} res - Express response
+ * @param {import('express').NextFunction} next - Error handler
+ */
+module.exports.recoverRow = async (req, res, next) => {
+  try {
+    const { projectId, collectionName, id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return next(new AppError(400, "Invalid document ID format."));
+    }
+
+    const project = await Project.findOne({
+      _id: projectId,
+      owner: req.user._id,
+    }).lean();
+    if (!project) {
+      return next(new AppError(404, "Project not found."));
+    }
+
+    const collectionConfig = project.collections.find(
+      (c) => c.name === collectionName,
+    );
+    if (!collectionConfig) {
+      return next(new AppError(404, "Collection not found."));
+    }
+
+    const connection = await getConnection(projectId);
+    const Model = getCompiledModel(
+      connection,
+      collectionConfig,
+      projectId,
+      project.resources.db.isExternal,
+    );
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const result = await Model.findOneAndUpdate(
+      { 
+        _id: id, 
+        isDeleted: true,
+        deletedAt: { $gte: thirtyDaysAgo }
+      },
+      { 
+        $set: { 
+          isDeleted: false, 
+          deletedAt: null 
+        } 
+      },
+      { new: true }
+    ).lean();
+
+    if (!result) {
+      return next(new AppError(404, "Document not found or recovery window expired (30 days)."));
+    }
+
+    dispatchWebhooks({
+      projectId: project._id,
+      collection: collectionName,
+      action: "recover",
+      document: result,
+      documentId: id,
+      options: { bypassLimit: true }
+    });
+
+    try {
+      await syncCollectionCleanup(projectId, collectionName);
+    } catch (err) {
+      console.error("Failed to sync trash cleanup job after recovery", { projectId, collectionName, err });
+    }
+
+    res.json({ success: true, data: result, message: "Document recovered from trash" });
+  } catch (err) {
+    console.error("Recover Error:", err);
+    if (err && err.code === 11000) {
+      return next(new AppError(409, "Cannot restore document: a unique field value conflicts with an existing active document."));
+    }
+    return next(new AppError(500, "Failed to recover document."));
   }
 };
 

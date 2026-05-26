@@ -150,9 +150,64 @@ function initTrashCleanupWorker() {
   return worker;
 }
 
+/**
+ * Synchronize the cleanup schedule for a collection.
+ * Used after document recovery to ensure we don't have orphaned jobs
+ * waiting for a document that is no longer deleted.
+ */
+async function syncCollectionCleanup(projectId, collectionName) {
+  try {
+    const jobId = `${projectId}:${collectionName}`;
+    
+    
+    const job = await trashCleanupQueue.getJob(jobId);
+    if (!job) return; 
+
+    
+    const state = await job.getState();
+    if (state !== 'delayed' && state !== 'waiting') return;
+
+    
+    const project = await Project.findById(projectId).lean();
+    if (!project) return;
+    
+    const colConfig = project.collections.find(c => c.name === collectionName);
+    if (!colConfig) return;
+
+    const projectConn = await getConnection(projectId);
+    const Model = getCompiledModel(projectConn, colConfig, projectId, project.resources.db.isExternal);
+
+    const nextPending = await Model.findOne(
+      { isDeleted: true },
+      { deletedAt: 1 },
+      { sort: { deletedAt: 1 } }
+    ).lean();
+
+    
+    if (!nextPending) {
+      
+      await job.remove();
+      console.log(`[TrashCleanup] Removed orphaned job ${jobId} (no more deleted docs)`);
+    } else {
+      // Other docs still exist: reschedule if the next doc is later than the current job
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+      const nextRunAt = nextPending.deletedAt.getTime() + thirtyDaysMs;
+      const delay = Math.max(0, nextRunAt - Date.now());
+      
+      // If the new delay is significantly different (e.g. > 1 min), replace the job
+      // BullMQ doesn't support easy 'updateDelay', so we remove and re-add via enqueueCollectionCleanup
+      await enqueueCollectionCleanup(projectId, collectionName, delay);
+      console.log(`[TrashCleanup] Rescheduled job ${jobId} for new earliest document`);
+    }
+  } catch (err) {
+    console.error(`[TrashCleanup] Failed to sync cleanup for ${projectId}:${collectionName}:`, err.message);
+  }
+}
+
 module.exports = {
   trashCleanupQueue,
   enqueueCollectionCleanup,
+  syncCollectionCleanup,
   initTrashCleanupWorker,
   runFullTrashCleanup,
   processCollectionCleanup

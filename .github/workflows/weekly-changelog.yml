@@ -72,13 +72,11 @@ jobs:
 
           # Create monthly file if it doesn't exist yet
           if [ ! -f "$FILE" ]; then
-            cat > "$FILE" << MDXEOF
----
-title: Changelog
-description: What's new in urBackend — new features, improvements, and fixes.
----
-
-MDXEOF
+            echo "---" > "$FILE"
+            echo "title: Changelog" >> "$FILE"
+            echo "description: What's new in urBackend — new features, improvements, and fixes." >> "$FILE"
+            echo "---" >> "$FILE"
+            echo "" >> "$FILE"
           fi
 
           # Insert new <Update> entry right after the closing --- of frontmatter
@@ -98,23 +96,17 @@ MDXEOF
 
           echo "Updated: $FILE"
 
-      - name: Open Pull Request
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          BRANCH="changelog/week-of-$(date +%Y-%m-%d)-${{ github.run_id }}"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
-          git add mintlify/docs/changelog/
-          git diff --staged --quiet && echo "No changes to commit" && exit 0
-          git commit -m "docs: weekly changelog update $(date +%Y-%m-%d)"
-          git push origin "$BRANCH"
-          gh pr create \
-            --repo ${{ github.repository }} \
-            --base main \
-            --head "$BRANCH" \
-            --title "docs: weekly changelog update $(date +%Y-%m-%d)" \
-            --body "Auto-generated weekly changelog entry. Please review before merging." \
-            --label "documentation"
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          # Use a PAT if available. This bypasses repos where GITHUB_TOKEN is
+          # restricted from creating PRs via GitHub Actions settings.
+          token: ${{ secrets.CHANGELOG_PR_TOKEN || secrets.GITHUB_TOKEN }}
+          branch: changelog/week-of-${{ github.run_id }}
+          base: main
+          commit-message: 'docs: weekly changelog update'
+          title: 'docs: weekly changelog update'
+          body: 'Auto-generated weekly changelog entry. Please review before merging.'
+          labels: documentation
+          add-paths: |
+            mintlify/docs/changelog/

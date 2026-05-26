@@ -159,7 +159,7 @@ export default function RowDetailDrawer({ isOpen, onClose, record, fields = [], 
             gap: "1.25rem",
           }}>
             {Object.entries(record)
-              .filter(([key]) => !['_id', '__v', 'createdAt', 'updatedAt'].includes(key))
+              .filter(([key]) => !['_id', '__v', 'createdAt', 'updatedAt', 'isDeleted', 'deletedAt'].includes(key))
               .map(([key, value]) => (
               <div
                 key={key}
@@ -234,11 +234,23 @@ export default function RowDetailDrawer({ isOpen, onClose, record, fields = [], 
                      </div>
                  )}
                  {record.updatedAt && (
-                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem" }}>
-                         <span style={{ color: "var(--color-text-muted)" }}>updatedAt</span>
-                         <span style={{ color: "var(--color-text-main)" }}>{new Date(record.updatedAt).toLocaleString()}</span>
-                     </div>
-                 )}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem" }}>
+                          <span style={{ color: "var(--color-text-muted)" }}>updatedAt</span>
+                          <span style={{ color: "var(--color-text-main)" }}>{new Date(record.updatedAt).toLocaleString()}</span>
+                      </div>
+                  )}
+                  {record.isDeleted && (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem" }}>
+                          <span style={{ color: "var(--color-text-muted)" }}>isDeleted</span>
+                          <span style={{ color: "var(--color-text-main)" }}>{String(record.isDeleted)}</span>
+                      </div>
+                  )}
+                  {record.deletedAt && (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem" }}>
+                          <span style={{ color: "var(--color-text-muted)" }}>deletedAt</span>
+                          <span style={{ color: "var(--color-text-main)" }}>{new Date(record.deletedAt).toLocaleString()}</span>
+                      </div>
+                  )}
              </div>
           </div>
         </div>

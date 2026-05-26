@@ -4,13 +4,13 @@ const { Project } = require("@urbackend/common");
 const { getConnection } = require("@urbackend/common");
 const { getCompiledModel } = require("@urbackend/common");
 const { QueryEngine } = require("@urbackend/common");
-const { validateData, validateUpdateData, aggregateSchema } = require("@urbackend/common");
+const { validateData, validateUpdateData, aggregateSchema, dispatchWebhooks } = require("@urbackend/common");
 const { performance } = require('perf_hooks');
-const { dispatchWebhooks } = require('../utils/webhookDispatcher');
 const { z } = require("zod");
 const { 
   AppError, 
-  enqueueCollectionCleanup 
+  enqueueCollectionCleanup,
+  syncCollectionCleanup
 } = require("@urbackend/common");
 
 const isDebug = process.env.DEBUG === 'true';
@@ -561,7 +561,11 @@ module.exports.updateSingleData = async (req, res) => {
   }
 };
 
-// DELETE DATA
+/**
+ * Soft-deletes a single document by its ID (moves it to trash).
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
 module.exports.deleteSingleDoc = async (req, res) => {
   try {
     const { collectionName, id } = req.params;
@@ -620,5 +624,84 @@ module.exports.deleteSingleDoc = async (req, res) => {
       console.error(err);
     }
     res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * Recovers a single soft-deleted document from trash.
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ * @param {import('express').NextFunction} next - Express next function.
+ */
+module.exports.recoverSingleDoc = async (req, res, next) => {
+  try {
+    const { collectionName, id } = req.params;
+    const project = req.project;
+
+    if (!isValidId(id)) {
+      return next(new AppError(400, "Invalid document ID format."));
+    }
+
+    const collectionConfig = project.collections.find(
+      (c) => c.name === collectionName,
+    );
+    if (!collectionConfig) {
+      return next(new AppError(404, "Collection not found"));
+    }
+
+    const connection = await getConnection(project._id);
+    const Model = getCompiledModel(
+      connection,
+      collectionConfig,
+      project._id,
+      project.resources.db.isExternal,
+    );
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const result = await Model.findOneAndUpdate(
+      { 
+        _id: id, 
+        isDeleted: true, 
+        deletedAt: { $gte: thirtyDaysAgo },
+        ...(req.rlsFilter || {}) 
+      },
+      { 
+        $set: { 
+          isDeleted: false, 
+          deletedAt: null 
+        } 
+      },
+      { new: true }
+    ).lean();
+
+    if (!result) {
+      return next(new AppError(404, "Document not found or recovery window expired (30 days)."));
+    }
+
+    dispatchWebhooks({
+      projectId: project._id,
+      collection: collectionName,
+      action: 'recover',
+      document: result,
+      documentId: id,
+      options: {}
+    });
+
+    try {
+      await syncCollectionCleanup(project._id, collectionName);
+    } catch (err) {
+      console.error("Failed to sync trash cleanup job after recovery", { projectId: String(project._id), collectionName, err });
+    }
+
+    res.json({ success: true, data: result, message: "Document recovered from trash" });
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'test') {
+      console.error(err);
+    }
+    if (isDuplicateKeyError(err)) {
+      return next(new AppError(409, "Cannot restore document: a unique field value conflicts with an existing active document."));
+    }
+    return next(new AppError(500, "Failed to recover document."));
   }
 };

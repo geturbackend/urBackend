@@ -51,6 +51,7 @@ const {
 const {
   trashCleanupQueue,
   enqueueCollectionCleanup,
+  syncCollectionCleanup,
   initTrashCleanupWorker,
 } = require("./queues/trashCleanupQueue");
 
@@ -115,6 +116,9 @@ const planLimits = require("./utils/planLimits");
 const AppError = require("./utils/AppError");
 const { checkLockout, recordFailedAttempt, clearLockout } = require("./utils/loginLockout");
 const { validatePasswordStrength } = require("./utils/passwordStrength");
+const { dispatchWebhooks } = require("./utils/webhookDispatcher");
+const { getDayKey, getMonthKey, getEndOfMonthTtlSeconds, incrWithTtlAtomic } = require("./utils/usageCounter");
+
 module.exports = {
   connectDB,
   redis,
@@ -214,6 +218,12 @@ module.exports = {
   clearLockout,
   trashCleanupQueue,
   enqueueCollectionCleanup,
+  syncCollectionCleanup,
   initTrashCleanupWorker,
   validatePasswordStrength,
+  dispatchWebhooks,
+  getDayKey,
+  getMonthKey,
+  getEndOfMonthTtlSeconds,
+  incrWithTtlAtomic,
 };

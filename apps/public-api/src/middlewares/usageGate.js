@@ -8,9 +8,11 @@ const {
   AppError,
   sanitizeObjectId,
   getConnection,
-  getCompiledModel
+  getCompiledModel,
+  getDayKey,
+  DEFAULT_DAILY_TTL_SECONDS,
+  incrWithTtlAtomic
 } = require('@urbackend/common');
-const { getDayKey, DEFAULT_DAILY_TTL_SECONDS, incrWithTtlAtomic } = require('../utils/usageCounter');
 
 /**
  * Resolves the plan context for the current project's owner.

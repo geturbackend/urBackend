@@ -105,9 +105,11 @@ const analyticsRoute = require('./routes/analytics');
 const billingRoute = require('./routes/billing');
 const eventsRoute = require('./routes/events');
 const adminMetricsRoute = require('./routes/admin.metrics');
+const aiRoute = require('./routes/ai.routes');
 
 app.use('/api/auth', authRoute); 
 app.use('/api/projects', dashboardLimiter, projectRoute);
+app.use('/api/projects/:projectId/ai', dashboardLimiter, aiRoute);
 app.use('/api/projects', dashboardLimiter, webhookRoute);
 app.use('/api/releases', releaseRoute);
 app.use('/api/analytics', dashboardLimiter, analyticsRoute);

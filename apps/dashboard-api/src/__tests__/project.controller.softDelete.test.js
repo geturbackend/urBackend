@@ -7,16 +7,28 @@ const mockModel = {
     findOneAndUpdate: mockFindOneAndUpdate,
 };
 
+const mockDispatchWebhooks = jest.fn();
+
 jest.mock('@urbackend/common', () => ({
     Project: {
         findOne: mockFindOne,
     },
     getConnection: jest.fn().mockResolvedValue({}),
     getCompiledModel: jest.fn(() => mockModel),
-    enqueueCollectionCleanup: jest.fn().mockResolvedValue(true)
+    dispatchWebhooks: mockDispatchWebhooks,
+    enqueueCollectionCleanup: jest.fn().mockResolvedValue(true),
+    syncCollectionCleanup: jest.fn().mockResolvedValue(true),
+    AppError: class AppError extends Error {
+        constructor(statusCode, message) {
+            super(message);
+            this.statusCode = statusCode;
+            this.isOperational = true;
+        }
+    }
 }));
 
-const { deleteRow } = require('../controllers/project.controller');
+const { deleteRow, recoverRow } = require('../controllers/project.controller');
+const mongoose = require('mongoose');
 
 function makeReq() {
     return {
@@ -43,6 +55,7 @@ describe('Soft Delete in dashboard project.controller', () => {
     test('deleteRow sets isDeleted: true instead of hard deleting', async () => {
         const req = makeReq();
         const res = makeRes();
+        const next = jest.fn();
 
         // Mock project
         const project = {
@@ -59,7 +72,7 @@ describe('Soft Delete in dashboard project.controller', () => {
             lean: jest.fn().mockResolvedValue(doc)
         });
 
-        await deleteRow(req, res);
+        await deleteRow(req, res, next);
 
         expect(mockFindOne).toHaveBeenCalled();
         expect(mockFindOneAndUpdate).toHaveBeenCalledWith(
@@ -75,14 +88,12 @@ describe('Soft Delete in dashboard project.controller', () => {
             data: { id: '507f1f77bcf86cd799439011' }, 
             message: "Document moved to trash" 
         });
-        
-        // Should not save project (to update databaseUsed) since it's a soft delete
-        expect(project.save).not.toHaveBeenCalled();
     });
 
-    test('deleteRow returns 404 if document is already soft-deleted or not found', async () => {
+    test('deleteRow returns 404 via next(AppError) if document is already soft-deleted or not found', async () => {
         const req = makeReq();
         const res = makeRes();
+        const next = jest.fn();
 
         // Mock project
         const project = {
@@ -97,13 +108,137 @@ describe('Soft Delete in dashboard project.controller', () => {
             lean: jest.fn().mockResolvedValue(null)
         });
 
-        await deleteRow(req, res);
+        await deleteRow(req, res, next);
 
-        expect(res.status).toHaveBeenCalledWith(404);
-        expect(res.json).toHaveBeenCalledWith({ 
-            success: false, 
-            data: {}, 
-            message: "Document not found." 
+        expect(next).toHaveBeenCalledWith(expect.objectContaining({
+            statusCode: 404,
+            message: "Document not found."
+        }));
+    });
+
+    test('recoverRow restores a soft-deleted document', async () => {
+        const req = makeReq();
+        const res = makeRes();
+        const next = jest.fn();
+
+        // Mock project
+        const project = {
+            _id: 'proj_1',
+            resources: { db: { isExternal: false } },
+            collections: [{ name: 'posts', model: [] }]
+        };
+        
+        // recoverRow uses Project.findOne({ _id: projectId, owner: req.user._id }).lean()
+        const mockProjectFind = {
+            lean: jest.fn().mockResolvedValue(project)
+        };
+        mockFindOne.mockReturnValue(mockProjectFind);
+
+        // Mock document
+        const restoredDoc = { _id: '507f1f77bcf86cd799439011', isDeleted: false, deletedAt: null };
+        mockFindOneAndUpdate.mockReturnValue({
+            lean: jest.fn().mockResolvedValue(restoredDoc)
         });
+
+        await recoverRow(req, res, next);
+
+        expect(mockFindOne).toHaveBeenCalledWith({ _id: 'proj_1', owner: 'user_1' });
+        expect(mockFindOneAndUpdate).toHaveBeenCalledWith(
+            expect.objectContaining({ 
+                _id: '507f1f77bcf86cd799439011', 
+                isDeleted: true,
+                deletedAt: expect.objectContaining({ $gte: expect.any(Date) })
+            }),
+            expect.objectContaining({
+                $set: { isDeleted: false, deletedAt: null }
+            }),
+            { new: true }
+        );
+        
+        expect(res.json).toHaveBeenCalledWith({ 
+            success: true, 
+            data: restoredDoc, 
+            message: "Document recovered from trash" 
+        });
+
+        expect(mockDispatchWebhooks).toHaveBeenCalledWith(expect.objectContaining({
+            action: 'recover',
+            document: restoredDoc,
+            projectId: 'proj_1'
+        }));
+        const { syncCollectionCleanup } = require('@urbackend/common');
+        expect(syncCollectionCleanup).toHaveBeenCalledWith('proj_1', 'posts');
+    });
+
+    test('recoverRow returns 404 via next(AppError) if document is not in trash', async () => {
+        const req = makeReq();
+        const res = makeRes();
+        const next = jest.fn();
+
+        // Mock project
+        const project = {
+            _id: 'proj_1',
+            resources: { db: { isExternal: false } },
+            collections: [{ name: 'posts', model: [] }]
+        };
+        const mockProjectFind = {
+            lean: jest.fn().mockResolvedValue(project)
+        };
+        mockFindOne.mockReturnValue(mockProjectFind);
+
+        mockFindOneAndUpdate.mockReturnValue({
+            lean: jest.fn().mockResolvedValue(null)
+        });
+
+        await recoverRow(req, res, next);
+
+        expect(next).toHaveBeenCalledWith(expect.objectContaining({
+            statusCode: 404,
+            message: "Document not found or recovery window expired (30 days)."
+        }));
+    });
+
+    test('recoverRow returns 409 via next(AppError) if document restoration causes a unique field conflict', async () => {
+        const req = makeReq();
+        const res = makeRes();
+        const next = jest.fn();
+
+        const project = {
+            _id: 'proj_1',
+            resources: { db: { isExternal: false } },
+            collections: [{ name: 'posts', model: [] }]
+        };
+        mockFindOne.mockReturnValue({
+            lean: jest.fn().mockResolvedValue(project)
+        });
+
+        const error = new Error('Duplicate key');
+        error.code = 11000;
+        mockFindOneAndUpdate.mockReturnValue({
+            lean: jest.fn().mockRejectedValue(error)
+        });
+
+        await recoverRow(req, res, next);
+
+        expect(next).toHaveBeenCalledWith(expect.objectContaining({
+            statusCode: 409,
+            message: expect.stringContaining("unique field value conflicts")
+        }));
+    });
+
+    test('recoverRow returns 400 via next(AppError) if document ID is invalid', async () => {
+        const req = {
+            params: { projectId: 'proj_1', collectionName: 'posts', id: 'invalid-id' },
+            user: { _id: 'user_1' }
+        };
+        const res = makeRes();
+        const next = jest.fn();
+
+        await recoverRow(req, res, next);
+
+        expect(next).toHaveBeenCalledWith(expect.objectContaining({
+            statusCode: 400,
+            message: "Invalid document ID format."
+        }));
     });
 });

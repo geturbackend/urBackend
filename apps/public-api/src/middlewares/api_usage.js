@@ -1,6 +1,5 @@
 const rateLimit = require('express-rate-limit');
-const { Log, redis, ApiAnalytics } = require('@urbackend/common');
-const { getDayKey, DEFAULT_DAILY_TTL_SECONDS, incrWithTtlAtomic } = require('../utils/usageCounter');
+const { Log, redis, ApiAnalytics, getDayKey, DEFAULT_DAILY_TTL_SECONDS, incrWithTtlAtomic } = require('@urbackend/common');
 const FIRST_API_SUCCESS_FLAG_TTL_SECONDS = 2 * 365 * 24 * 60 * 60;
 
 // Rate Limiter 

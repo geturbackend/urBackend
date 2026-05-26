@@ -3,12 +3,13 @@ import {
   Menu, List as ListIcon, Table as TableIcon, Code, 
   Filter, RefreshCw, Shield, Plus 
 } from 'lucide-react';
+import AiQueryBar from './AiQueryBar';
 
 const DatabaseHeader = ({ 
   project, activeCollection, dataLength, viewMode, setViewMode, 
   showFilterMenu, setShowFilterMenu, filtersCount, 
   onRefresh, onRlsClick, onAddRecord, onOpenSidebar,
-  showDeleted, setShowDeleted
+  showDeleted, setShowDeleted, onFiltersGenerated
 }) => {
   return (
     <header className="db-header glass-panel" style={{ 
@@ -38,6 +39,15 @@ const DatabaseHeader = ({
       </div>
 
       <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {activeCollection?.name !== 'users' && (
+          <div style={{ marginRight: '10px' }}>
+            <AiQueryBar 
+              projectId={project?._id} 
+              activeCollection={activeCollection} 
+              onFiltersGenerated={onFiltersGenerated} 
+            />
+          </div>
+        )}
         <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginRight: '10px' }}>{dataLength} Records</span>
 
         {/* Soft Delete Toggle */}

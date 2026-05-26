@@ -43,6 +43,7 @@ export default function Database() {
       filters: []
   });
   const [totalRecords, setTotalRecords] = useState(0);
+  const [recoveringIds, setRecoveringIds] = useState(new Set());
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [rlsEnabled, setRlsEnabled] = useState(false);
   const [rlsMode, setRlsMode] = useState("public-read");
@@ -148,12 +149,60 @@ export default function Database() {
     } catch { toast.error("Failed to save RLS"); return false; }
   };
 
+  /**
+   * Deletes a record from the active collection.
+   * @param {string} id - The ID of the record to delete.
+   */
   const handleDeleteRecord = async (id) => {
     try {
       await api.delete(`/api/projects/${projectId}/collections/${activeCollection.name}/data/${id}`);
       setData(prev => prev.filter(item => item._id !== id));
       toast.success("Document deleted");
     } catch { toast.error("Failed to delete document"); }
+  };
+
+  const handleFiltersGenerated = (aiFilters, aiSort) => {
+      setQueryParams(prev => ({
+          ...prev,
+          page: 1,
+          filters: aiFilters,
+          sort: aiSort || prev.sort
+      }));
+  };
+
+  /**
+   * Restores a soft-deleted record from the trash for the active collection.
+   * @param {string} id - The ID of the record to recover.
+   */
+  const handleRecoverRecord = async (id) => {
+    const originalRecord = data.find(item => item._id === id);
+    if (!originalRecord) return;
+
+    setRecoveringIds(prev => new Set(prev).add(id));
+    
+    // Optimistic Update: clear isDeleted flag locally
+    setData(prev => prev.map(item => 
+      item._id === id ? { ...item, isDeleted: false, deletedAt: null } : item
+    ));
+
+    try {
+      await api.patch(`/api/projects/${projectId}/collections/${activeCollection.name}/data/${id}/recover`);
+      toast.success("Document restored successfully");
+    } catch (err) {
+      // Rollback to original state on failure
+      setData(prev => prev.map(item => 
+        item._id === id ? originalRecord : item
+      ));
+      
+      const errMsg = err.response?.data?.message || err.response?.data?.error || err.message;
+      toast.error(errMsg ? `Failed to restore document: ${errMsg}` : "Failed to restore document");
+    } finally {
+      setRecoveringIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
   };
 
   /**
@@ -207,6 +256,7 @@ export default function Database() {
               onOpenSidebar={() => setIsSidebarOpen(true)}
               showDeleted={showDeleted}
               setShowDeleted={setShowDeleted}
+              onFiltersGenerated={handleFiltersGenerated}
             />
 
             <div className="db-content" style={{ flex: 1, overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column' }}>
@@ -271,9 +321,23 @@ export default function Database() {
                     </div>
                   </div>
                 ) : viewMode === "list" ? (
-                  <RecordList data={data} activeCollection={activeCollection} onView={setSelectedRecord} />
+                  <RecordList 
+                    data={data} 
+                    activeCollection={activeCollection} 
+                    onView={setSelectedRecord} 
+                    onRecover={handleRecoverRecord}
+                    recoveringIds={recoveringIds}
+                  />
                 ) : viewMode === "table" ? (
-                  <CollectionTable data={data} activeCollection={activeCollection} onDelete={(id) => { setSelectedId(id); setShowModal(true); }} onView={setSelectedRecord} onEdit={(rec) => { if (activeCollection?.name === 'users') return; setEditingRecord(rec); setIsAddModalOpen(true); }} />
+                  <CollectionTable 
+                    data={data} 
+                    activeCollection={activeCollection} 
+                    onDelete={(id) => { setSelectedId(id); setShowModal(true); }} 
+                    onView={setSelectedRecord} 
+                    onEdit={(rec) => { if (activeCollection?.name === 'users') return; setEditingRecord(rec); setIsAddModalOpen(true); }} 
+                    onRecover={handleRecoverRecord}
+                    recoveringIds={recoveringIds}
+                  />
                 ) : (
                   <div style={{ height: '100%', overflow: 'auto', padding: '1.5rem', background: '#050505', color: 'var(--color-primary)', fontFamily: 'monospace', fontSize: '0.8rem' }}>
                     <pre>{JSON.stringify(data, null, 2)}</pre>
@@ -304,13 +368,12 @@ export default function Database() {
         )}
       </main>
 
-      {/* RowDetailDrawer: hide Edit for users collection */}
       <RowDetailDrawer
         isOpen={!!selectedRecord}
         onClose={() => setSelectedRecord(null)}
         record={selectedRecord}
         fields={activeCollection?.model || []}
-        onEdit={activeCollection?.name === 'users' ? null : (rec) => { setEditingRecord(rec); setIsAddModalOpen(true); }}
+        onEdit={(activeCollection?.name === 'users' || selectedRecord?.isDeleted) ? null : (rec) => { setEditingRecord(rec); setIsAddModalOpen(true); }}
       />
       
       {isAddModalOpen && (

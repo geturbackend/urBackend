@@ -43,6 +43,7 @@ jest.mock('../controllers/project.controller', () => {
     deleteCollection: jest.fn(ok),
     getData: jest.fn(ok),
     deleteRow: jest.fn(ok),
+    recoverRow: jest.fn(ok),
     insertData: jest.fn(ok),
     editRow: jest.fn(ok),
     listFiles: jest.fn(ok),

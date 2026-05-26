@@ -3,6 +3,39 @@ title: Changelog (May 2026)
 description: What's new in urBackend — new features, improvements, and fixes for May.
 ---
 
+<Update label="2026-05-25" description="Updates from May 12 – May 25" tags={["Feature", "Improvement", "Fix"]}>
+## New features
+
+**Soft Delete & Trash Cleanup Worker** — You can now soft-delete records through the API. A background worker permanently removes items from the trash after your configured retention period.
+
+**Mail Platform Expansion** — You can now use BYOK (Bring Your Own Key) with the Mail API, send Broadcasts, and follow a comprehensive developer guide to get started.
+
+**Login Lockout Protection** — You now get a Redis-backed per-email login lockout after 5 failed attempts. Locked logins return `423` with a retry countdown.
+
+## Improvements
+
+**Timeline UI for Features Section** — You now navigate the features section through a modern, scrollable timeline view instead of the classic grid.
+
+**Landing Page UI/UX** — You get a smoother first-time experience thanks to refined layout and interaction cues on the landing page.
+
+**NoSQL Injection Sanitization** — You're protected by stronger API security that sanitizes root-level array payloads and recursively sanitizes nested MongoDB operators.
+
+**Automated Release Notes** — You can now follow a unified `CHANGELOG.md` that adheres to the "Keep a Changelog" standard, with weekly release notes automated via GitHub Actions.
+
+## Bug fixes
+
+- Handle `423` login lockout with retry countdown
+- Address PR review feedback for AI Query Builder
+- Resolve remaining review issues from PR `#124`
+- Make database empty‑state `cURL` snippet RLS‑aware to prevent `403` errors
+- Replace hardcoded sender domains with environment variables and fallbacks
+- Fix email parameter trimming and remove regex-based sender parsing
+- Sanitize root-level array payloads and nested operators for NoSQL security
+- Enforce broadcast gating with plan limits
+- Address CodeQL server-side request forgery findings
+- Append run_id to changelog branch name to prevent same-day conflicts
+</Update>
+
 
 <Update label="2026-05-12" description="Week of April 28 – May 12" tags={["Feature", "Improvement", "Fix"]}>
 ## New features
