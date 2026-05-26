@@ -70,6 +70,7 @@ const {
 const {
   loginSchema,
   signupSchema,
+  registerSchema,
   changePasswordSchema,
   deleteAccountSchema,
   onlyEmailSchema,
@@ -138,6 +139,7 @@ module.exports = {
   sendProRequestConfirmationEmail,
   loginSchema,
   signupSchema,
+  registerSchema,
   changePasswordSchema,
   deleteAccountSchema,
   onlyEmailSchema,

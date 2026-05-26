@@ -18,6 +18,27 @@ module.exports.loginSchema = z.object({
     .max(100, { message: "Password is too long." }),
 });
 
+module.exports.registerSchema = z.object({
+  email: z
+    .string()
+    .min(1, { message: "Email is required." })
+    .email({ message: "Invalid email format." })
+    .max(100, { message: "Email is too long." }),
+  password: z
+    .string()
+    .min(6, { message: "Password must be at least 6 characters" })
+    .max(100, { message: "Password is too long." }),
+}).superRefine((data, ctx) => {
+  const result = validatePasswordStrength(data.password);
+  if (result) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["password"],
+      message: result.message,
+    });
+  }
+});
+
 module.exports.signupSchema = z.object({
   username: z
     .string()

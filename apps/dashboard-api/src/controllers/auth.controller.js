@@ -8,6 +8,7 @@ const { sendOtp } = require("@urbackend/common");
 const crypto = require("crypto");
 const {
     loginSchema,
+    registerSchema,
     changePasswordSchema,
     deleteAccountSchema,
     onlyEmailSchema,
@@ -274,7 +275,7 @@ async function checkOtpCooldown(userId) {
 
 module.exports.register = async (req, res) => {
     try {
-        const { email, password } = loginSchema.parse(req.body);
+        const { email, password } = registerSchema.parse(req.body);
 
         const existingUser = await Developer.findOne({ email });
         if (existingUser) return res.status(400).json({ error: "Email already exists" });
