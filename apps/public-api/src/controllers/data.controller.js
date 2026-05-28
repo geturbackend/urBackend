@@ -7,8 +7,8 @@ const { QueryEngine } = require("@urbackend/common");
 const { validateData, validateUpdateData, aggregateSchema, dispatchWebhooks } = require("@urbackend/common");
 const { performance } = require('perf_hooks');
 const { z } = require("zod");
-const { 
-  AppError, 
+const {
+  AppError,
   enqueueCollectionCleanup,
   syncCollectionCleanup
 } = require("@urbackend/common");
@@ -111,7 +111,7 @@ module.exports.insertData = async (req, res) => {
 
 // BULK INSERT DATA
 
-  module.exports.bulkInsertData = async (req, res, next) => {
+module.exports.bulkInsertData = async (req, res, next) => {
   try {
     const MAX_BULK_INSERT_LIMIT = 100;
 
@@ -160,7 +160,7 @@ module.exports.insertData = async (req, res) => {
         // Prevent manual injection of soft-delete fields
         delete cleanData.isDeleted;
         delete cleanData.deletedAt;
-        
+
         validData.push(sanitize({
           ...cleanData,
           isDeleted: false,
@@ -197,14 +197,14 @@ module.exports.insertData = async (req, res) => {
       console.error(err);
     }
 
-  if (isDuplicateKeyError(err)) {
-    return next(
-      new AppError("Duplicate value violates unique constraint.", 409)
-    );
-  }
+    if (isDuplicateKeyError(err)) {
+      return next(
+        new AppError("Duplicate value violates unique constraint.", 409)
+      );
+    }
 
-  return next(new AppError("Failed to insert bulk data", 500));
-}
+    return next(new AppError("Failed to insert bulk data", 500));
+  }
 };
 
 // GET ALL DATA
@@ -287,16 +287,16 @@ module.exports.getAllData = async (req, res) => {
 
     const responseMeta = useCursor
       ? {
-          total,
-          cursor: req.query.cursor || null,
-          nextCursor,
-          limit: Math.max(1, Math.min(parseInt(req.query.limit, 10) || 100, 100)),
-        }
+        total,
+        cursor: req.query.cursor || null,
+        nextCursor,
+        limit: Math.max(1, Math.min(parseInt(req.query.limit, 10) || 100, 100)),
+      }
       : {
-          total,
-          page: parseInt(req.query.page, 10) || 1,
-          limit: Math.max(1, Math.min(parseInt(req.query.limit, 10) || 100, 100)),
-        };
+        total,
+        page: parseInt(req.query.page, 10) || 1,
+        limit: Math.max(1, Math.min(parseInt(req.query.limit, 10) || 100, 100)),
+      };
 
     res.json({
       success: true,
@@ -351,7 +351,7 @@ module.exports.getSingleDoc = async (req, res) => {
     );
 
     const baseFilter = req.rlsFilter && typeof req.rlsFilter === 'object' ? req.rlsFilter : {};
-    
+
     // Soft delete filter
     const includeDeleted = req.query.include_deleted === 'true';
     const softDeleteFilter = includeDeleted ? {} : { isDeleted: { $ne: true } };
@@ -443,7 +443,7 @@ module.exports.aggregateData = async (req, res) => {
     // $geoNear and $search must be the first stage in the pipeline if present
     let effectivePipeline = [];
     const firstStage = pipeline.length > 0 ? Object.keys(pipeline[0])[0] : null;
-    
+
     if (firstStage === '$geoNear' || firstStage === '$search') {
       effectivePipeline = [
         pipeline[0],
@@ -527,14 +527,49 @@ module.exports.updateSingleData = async (req, res) => {
     const sanitizedData = sanitize(updateData);
 
     const baseFilter = req.rlsFilter && typeof req.rlsFilter === 'object' ? req.rlsFilter : {};
+    const queryFilter = { $and: [{ _id: id }, { isDeleted: { $ne: true } }, baseFilter] };
+
+    let sizeDelta = 0;
+
+    // Only enforce quota for internal databases
+    if (!project.resources.db.isExternal) {
+      // 1. Fetch the existing document to calculate its BSON size
+      const existingDoc = await Model.findOne(queryFilter).lean();
+      if (!existingDoc) return res.status(404).json({ error: "Document not found." });
+
+      // 2. Measure original size using the built-in Mongoose BSON calculator
+      const oldSize = mongoose.mongo.BSON.calculateObjectSize(existingDoc);
+
+      // 3. Simulate the new payload merge and measure new size
+      const simulatedNewDoc = { ...existingDoc, ...sanitizedData };
+      const newSize = mongoose.mongo.BSON.calculateObjectSize(simulatedNewDoc);
+
+      // 4. Calculate sizeDelta
+      sizeDelta = newSize - oldSize;
+
+      // 5. Enforce quota if size is strictly increasing
+      if (sizeDelta > 0) {
+        if ((project.databaseUsed || 0) + sizeDelta > project.databaseLimit) {
+          return res.status(403).json({ error: "Storage quota exceeded. Please upgrade your plan." });
+        }
+      }
+    }
 
     const result = await Model.findOneAndUpdate(
-      { $and: [{ _id: id }, { isDeleted: { $ne: true } }, baseFilter] },
+      queryFilter,
       { $set: sanitizedData },
       { new: true, runValidators: true },
     ).lean();
 
     if (!result) return res.status(404).json({ error: "Document not found." });
+
+    // 6. Background update tracking loop (only increment if size increased)
+    if (!project.resources.db.isExternal && sizeDelta > 0) {
+      await Project.findByIdAndUpdate(
+        project._id,
+        { $inc: { databaseUsed: sizeDelta } }
+      );
+    }
 
     dispatchWebhooks({
       projectId: project._id,
@@ -590,11 +625,11 @@ module.exports.deleteSingleDoc = async (req, res) => {
 
     const result = await Model.findOneAndUpdate(
       { _id: id, isDeleted: { $ne: true }, ...(req.rlsFilter || {}) },
-      { 
-        $set: { 
-          isDeleted: true, 
-          deletedAt: new Date() 
-        } 
+      {
+        $set: {
+          isDeleted: true,
+          deletedAt: new Date()
+        }
       },
       { new: false } // return the original document for webhook
     ).lean();
@@ -607,7 +642,7 @@ module.exports.deleteSingleDoc = async (req, res) => {
     try {
       await enqueueCollectionCleanup(project._id, collectionName);
     } catch (err) {
-      console.error("Failed to enqueue trash cleanup job", { projectId: String(project._id), collectionName,  err });
+      console.error("Failed to enqueue trash cleanup job", { projectId: String(project._id), collectionName, err });
     }
 
     dispatchWebhooks({
@@ -660,17 +695,17 @@ module.exports.recoverSingleDoc = async (req, res, next) => {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
     const result = await Model.findOneAndUpdate(
-      { 
-        _id: id, 
-        isDeleted: true, 
+      {
+        _id: id,
+        isDeleted: true,
         deletedAt: { $gte: thirtyDaysAgo },
-        ...(req.rlsFilter || {}) 
+        ...(req.rlsFilter || {})
       },
-      { 
-        $set: { 
-          isDeleted: false, 
-          deletedAt: null 
-        } 
+      {
+        $set: {
+          isDeleted: false,
+          deletedAt: null
+        }
       },
       { new: true }
     ).lean();
