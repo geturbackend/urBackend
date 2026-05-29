@@ -861,6 +861,21 @@ select option {
   text-transform: uppercase;
 }
 
+.auth-form-card__mode--clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.auth-form-card__mode--clickable:hover {
+  background: var(--color-auth-mode-bg);
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.auth-form-card__mode--clickable:active {
+  opacity: 0.8;
+}
+
 .auth-form-card__header h1 {
   margin-bottom: 0.4rem;
   color: var(--color-auth-heading);

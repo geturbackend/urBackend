@@ -7,7 +7,7 @@ export default defineConfig({
     jsx: 'automatic',
   },
   optimizeDeps: {
-    esbuildOptions: {
+    rolldownOptions: {
       jsx: 'automatic',
     },
   },

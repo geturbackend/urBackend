@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff, Github, Home, Lock, Mail, UserRound } from 'lucide-react';
+import { Eye, EyeOff, Github, Lock, Mail, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import AuthShell from '../components/AuthShell';
@@ -96,23 +96,15 @@ function Signup() {
 
   return (
     <AuthShell
-      modeLabel="Create account"
+      modeLabel="← Home / Create Account"
       title=""
       subtitle=""
       alternateText="Already have access?"
       alternateLabel="Sign in instead"
       alternateTo="/login"
+      onModeClick={() => navigate('/')}
     >
       <form className="auth-form" onSubmit={handleSubmit}>
-        <button
-          type="button"
-          className="btn btn-outline auth-submit auth-back-button"
-          onClick={() => navigate('/')}
-        >
-          <Home size={17} />
-          Back to Home
-        </button>
-
         <button
           type="button"
           className="btn btn-primary auth-submit"
