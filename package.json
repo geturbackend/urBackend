@@ -20,13 +20,13 @@
     ]
   },
   "devDependencies": {
-    "concurrently": "^9.2.1",
-    "husky": "^9.1.7",
-    "lint-staged": "^17.0.5"
+    "concurrently": "9.2.1",
+    "husky": "9.1.7",
+    "lint-staged": "17.0.5"
   },
   "dependencies": {
-    "@aws-sdk/lib-storage": "^3.1053.0",
-    "path": "^0.12.7"
+    "@aws-sdk/lib-storage": "3.1053.0",
+    "path": "0.12.7"
   },
   "overrides": {
     "rollup": "npm:@rollup/wasm-node"
