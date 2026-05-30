@@ -14,30 +14,30 @@
     "transform": {}
   },
   "dependencies": {
-    "@bull-board/api": "^7.1.5",
-    "@bull-board/express": "^7.1.5",
-    "@kiroo/sdk": "^0.1.2",
-    "@supabase/supabase-js": "^2.84.0",
+    "@bull-board/api": "7.1.5",
+    "@bull-board/express": "7.1.5",
+    "@kiroo/sdk": "0.1.2",
+    "@supabase/supabase-js": "2.84.0",
     "@urbackend/common": "*",
-    "bcryptjs": "^3.0.2",
-    "bullmq": "^5.70.1",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
-    "csurf": "^1.11.0",
-    "dotenv": "^17.2.3",
-    "express": "^5.1.0",
-    "express-rate-limit": "^8.2.1",
-    "ioredis": "^5.10.0",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.19.2",
-    "multer": "^2.0.2",
-    "razorpay": "^2.9.6",
-    "resend": "^6.6.0",
-    "uuid": "^9.0.1",
-    "zod": "^4.1.13"
+    "bcryptjs": "3.0.2",
+    "bullmq": "5.70.1",
+    "cookie-parser": "1.4.7",
+    "cors": "2.8.5",
+    "csurf": "1.11.0",
+    "dotenv": "17.2.3",
+    "express": "5.1.0",
+    "express-rate-limit": "8.2.1",
+    "ioredis": "5.10.0",
+    "jsonwebtoken": "9.0.2",
+    "mongoose": "8.19.2",
+    "multer": "2.0.2",
+    "razorpay": "2.9.6",
+    "resend": "6.6.0",
+    "uuid": "9.0.1",
+    "zod": "4.1.13"
   },
   "devDependencies": {
-    "jest": "^30.3.0",
-    "supertest": "^7.2.2"
+    "jest": "30.3.0",
+    "supertest": "7.2.2"
   }
 }
