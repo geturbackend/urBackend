@@ -374,7 +374,8 @@ describe('mail.controller', () => {
         const mockRedis = { eval: jest.fn().mockResolvedValue(0) };
         jest.doMock('../../../../packages/common/src/config/redis', () => mockRedis);
 
-        const { initPublicEmailWorker } = require('../../../../packages/common/src/queues/publicEmailQueue');
+        const { initPublicEmailWorker, resetPublicEmailWorker } = require('../../../../packages/common/src/queues/publicEmailQueue');
+        await resetPublicEmailWorker();
         const worker = initPublicEmailWorker();
         
         const mockJob = {
@@ -409,7 +410,8 @@ describe('mail.controller', () => {
         const mockRedis = { eval: jest.fn().mockResolvedValue(0) };
         jest.doMock('../../../../packages/common/src/config/redis', () => mockRedis);
 
-        const { initPublicEmailWorker } = require('../../../../packages/common/src/queues/publicEmailQueue');
+        const { initPublicEmailWorker, resetPublicEmailWorker } = require('../../../../packages/common/src/queues/publicEmailQueue');
+        await resetPublicEmailWorker();
         const worker = initPublicEmailWorker();
         
         const mockJob = {

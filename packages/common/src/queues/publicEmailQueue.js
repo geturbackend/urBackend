@@ -12,6 +12,21 @@ const DECR_IF_EXISTS_SCRIPT = `if redis.call('EXISTS', KEYS[1]) == 1 then return
 const publicEmailQueue = new Queue('public-email-queue', { connection });
 
 let worker = null;
+const resetPublicEmailWorker = async () => {
+    if (!worker) return;
+    try {
+        if (typeof worker.removeAllListeners === 'function') {
+            worker.removeAllListeners();
+        }
+        if (typeof worker.close === 'function') {
+            await worker.close();
+        }
+    } catch (_) {
+        // Best-effort cleanup for test/runtime shutdown paths.
+    } finally {
+        worker = null;
+    }
+};
 
 const initPublicEmailWorker = () => {
     if (worker) return worker;
@@ -117,4 +132,4 @@ const initPublicEmailWorker = () => {
     return worker;
 };
 
-module.exports = { publicEmailQueue, initPublicEmailWorker };
+module.exports = { publicEmailQueue, initPublicEmailWorker, resetPublicEmailWorker };
