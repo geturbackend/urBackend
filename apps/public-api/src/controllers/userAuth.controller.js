@@ -23,6 +23,16 @@ const {
     shouldExposeRefreshToken
 } = require('../utils/refreshToken');
 
+const checkUserSoftDeleted = (user) => {
+    if (user && user.isDeleted) {
+        const dateStr = user.deletedAt 
+            ? new Date(new Date(user.deletedAt).getTime() + 30 * 24 * 60 * 60 * 1000).toDateString()
+            : 'soon';
+        return `Your account is scheduled for deletion on ${dateStr}. Please contact the administrator to recover it.`;
+    }
+    return null;
+};
+
 const SOCIAL_PROVIDER_KEYS = ['github', 'google'];
 const SOCIAL_STATE_TTL_SECONDS = 600;
 const SOCIAL_REFRESH_EXCHANGE_TTL_SECONDS = 60;
@@ -514,6 +524,12 @@ const findOrCreateSocialUser = async ({ project, usersColConfig, Model, provider
 
     let user = await Model.findOne({ [providerIdField]: profile.providerUserId });
     if (user) {
+        const deletedMsg = checkUserSoftDeleted(user);
+        if (deletedMsg) {
+            const err = new Error(deletedMsg);
+            err.statusCode = 403;
+            throw err;
+        }
         return { user, isNewUser: false, linkedByEmail: false };
     }
 
@@ -525,6 +541,12 @@ const findOrCreateSocialUser = async ({ project, usersColConfig, Model, provider
 
     user = await Model.findOne({ email: profile.email });
     if (user) {
+        const deletedMsg = checkUserSoftDeleted(user);
+        if (deletedMsg) {
+            const err = new Error(deletedMsg);
+            err.statusCode = 403;
+            throw err;
+        }
         // P1: Only link if provider email is verified; reject if unverified to prevent account takeover
         if (!profile.emailVerified) {
             const err = new Error(`Cannot link ${providerName} account: the provider email is not verified. Please verify your email with ${providerName} first.`);
@@ -957,6 +979,9 @@ module.exports.signup = async (req, res) => {
         const existingUser = await Model.findOne({ email: normalizedEmail });
 
         if (existingUser) {
+            const deletedMsg = checkUserSoftDeleted(existingUser);
+            if (deletedMsg) return res.status(403).json({ error: deletedMsg });
+
             // Check if user is unverified. If so, we can trigger a resend instead of a hard error.
             const verificationField = getVerificationField(usersColConfig);
             const isVerified = verificationField ? !!existingUser[verificationField] : true;
@@ -1092,6 +1117,10 @@ module.exports.login = async (req, res, next) => {
 
         const user = await Model.findOne({ email: normalizedEmail }).select('+password');
 
+        if (user && user.isDeleted) {
+            return sendAuthError(403, checkUserSoftDeleted(user));
+        }
+
         if (!user) {
             let failedStatus = { locked: false, retryAfterSeconds: 0, attempts: 0 };
             try {
@@ -1206,6 +1235,9 @@ module.exports.publicProfile = async (req, res) => {
 
         const user = await Model.findOne({ username }, { password: 0 }).lean();
         if (!user) return res.status(404).json({ error: "User not found" });
+
+        const deletedMsg = checkUserSoftDeleted(user);
+        if (deletedMsg) return res.status(403).json({ error: deletedMsg });
 
         const profile = sanitizePublicProfile(user, usersColConfig);
         return res.json(profile);
@@ -1409,7 +1441,8 @@ module.exports.requestPasswordReset = async (req, res) => {
         }
 
         const user = await Model.findOne({ email: normalizedEmail });
-        if (!user) {
+        
+        if (!user || (user && user.isDeleted)) {
             await setPublicOtpCooldown(project._id, normalizedEmail, 'reset');
             return res.json({ message: "If that email exists, a reset code has been sent." });
         }

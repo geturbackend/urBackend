@@ -91,7 +91,19 @@ function ProjectDetails() {
                             <h2 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>New {newKey.type} Key</h2>
                             <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>Copy this now. It won't be shown again.</p>
                         </div>
-                        <code style={{ display: 'block', padding: '12px', background: '#000', borderRadius: '6px', fontSize: '0.85rem', wordBreak: 'break-all', marginBottom: '1.5rem', border: '1px solid var(--color-border)', color: 'var(--color-primary)' }}>{newKey.key}</code>
+                        <div style={{ display: 'flex', alignItems: 'center', background: '#000', borderRadius: '6px', border: '1px solid var(--color-border)', marginBottom: '1.5rem', overflow: 'hidden' }}>
+                            <code style={{ flex: 1, padding: '12px', fontSize: '0.85rem', wordBreak: 'break-all', color: 'var(--color-primary)', borderRight: '1px solid var(--color-border)' }}>{newKey.key}</code>
+                            <button 
+                                onClick={() => {
+                                    navigator.clipboard.writeText(newKey.key);
+                                    toast.success("Copied to clipboard!");
+                                }} 
+                                style={{ padding: '0 16px', background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                title="Copy"
+                            >
+                                <Copy size={16} />
+                            </button>
+                        </div>
                         <button onClick={() => setNewKey(null)} className="btn btn-primary" style={{ width: '100%' }}>I've copied it</button>
                     </div>
                 </div>

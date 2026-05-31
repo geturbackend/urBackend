@@ -54,8 +54,22 @@ export async function parseApiError(response: Response): Promise<UrBackendError>
 
   try {
     data = await response.json();
-    if (typeof data === 'object' && data !== null && 'message' in data) {
-      message = (data as { message: string }).message || message;
+    if (typeof data === 'object' && data !== null) {
+      if ('error' in data) {
+        if (typeof (data as any).error === 'string') {
+          message = (data as any).error;
+        } else if (Array.isArray((data as any).error) && (data as any).error.length > 0) {
+          message = (data as any).error.map((e: any) => e.message || String(e)).join(', ');
+        } else {
+          message = JSON.stringify((data as any).error);
+        }
+      } else if ('message' in data) {
+        if (typeof (data as any).message === 'string') {
+          message = (data as any).message;
+        } else {
+          message = JSON.stringify((data as any).message);
+        }
+      }
     }
   } catch {
     // If not JSON, use status text

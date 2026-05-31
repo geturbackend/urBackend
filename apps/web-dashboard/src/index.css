@@ -75,10 +75,10 @@
   --header-height: 48px; /* Slimmer header */
   --border-radius: 4px;
 
-  /* Glassmorphism - Darker & Smoother */
+  /* Glassmorphism - Premium & Smoother */
   --glass-bg: rgba(10, 10, 10, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.05);
-  --glass-backdrop: blur(12px);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-backdrop: blur(16px);
 }
 
 .light-mode {
@@ -191,11 +191,17 @@ a {
 }
 
 /* Glassmorphism Panel */
-.glass-panel {
-  background: var(--glass-bg);
+.glass-card {
+  background: var(--color-glass-card-bg);
   backdrop-filter: var(--glass-backdrop);
-  border: 1px solid var(--glass-border);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--color-glass-card-border);
+  box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.6);
 }
 
 /* Premium Card */
@@ -215,8 +221,16 @@ a {
 /* --- PREMIUM DESIGN SYSTEM EXTENSIONS --- */
 .glass-card {
   background: var(--color-glass-card-bg);
-  backdrop-filter: blur(12px);
+  backdrop-filter: var(--glass-backdrop);
   border: 1px solid var(--color-glass-card-border);
+  box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.6);
+  transform: translateY(-2px);
 }
 
 .gradient-text {
@@ -341,7 +355,7 @@ a {
 }
 
 .btn:active {
-  transform: scale(0.98);
+  transform: scale(0.96);
 }
 
 .btn-primary {
@@ -637,7 +651,7 @@ a {
 
 /* --- PROJECT NAVIGATION BAR --- */
 .project-navbar {
-  background: var(--color-bg-card);
+  background: rgba(10, 10, 10, 0.75);
   border-bottom: 1px solid var(--color-border);
   padding: 0 2rem;
   display: flex;
@@ -647,7 +661,8 @@ a {
   position: sticky;
   top: 0;
   z-index: 110;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px -8px rgba(0, 0, 0, 0.5);
 }
 
 .nav-left {
@@ -719,6 +734,7 @@ a {
   height: 2px;
   background: var(--color-primary);
   border-radius: 2px 2px 0 0;
+  box-shadow: 0 -2px 10px rgba(62, 207, 142, 0.4);
 }
 
 /* Responsive Navigation */
