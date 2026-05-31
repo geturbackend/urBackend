@@ -1,7 +1,7 @@
 {
   "name": "@urbackend/react",
-  "version": "1.0.1",
-  "description": "React bindings and UI components for urBackend",
+  "version": "0.1.0",
+  "description": "React SDK for urBackend",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
