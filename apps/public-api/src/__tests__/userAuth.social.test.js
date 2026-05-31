@@ -51,6 +51,7 @@ jest.mock('@urbackend/common', () => {
         redis: {
             set: jest.fn().mockResolvedValue('OK'),
             get: jest.fn(),
+            getdel: jest.fn(),
             del: jest.fn().mockResolvedValue(1),
         },
         Project: {
@@ -441,7 +442,7 @@ describe('public userAuth social auth', () => {
     });
 
     test('exchangeSocialRefreshToken returns refresh token and deletes exchange code', async () => {
-        redis.get.mockResolvedValueOnce(JSON.stringify({
+        redis.getdel.mockResolvedValueOnce(JSON.stringify({
             token: 'issued_access_token',
             refreshToken: 'issued_refresh_token',
         }));
@@ -455,8 +456,7 @@ describe('public userAuth social auth', () => {
 
         await controller.exchangeSocialRefreshToken(req, res);
 
-        expect(redis.get).toHaveBeenCalledWith('project:social-auth:refresh-exchange:code_123');
-        expect(redis.del).toHaveBeenCalledWith('project:social-auth:refresh-exchange:code_123');
+        expect(redis.getdel).toHaveBeenCalledWith('project:social-auth:refresh-exchange:code_123');
         expect(res.status).toHaveBeenCalledWith(200);
         expect(res.json).toHaveBeenCalledWith({
             success: true,
@@ -468,7 +468,7 @@ describe('public userAuth social auth', () => {
     });
 
     test('exchangeSocialRefreshToken rejects invalid or expired code', async () => {
-        redis.get.mockResolvedValueOnce(null);
+        redis.getdel.mockResolvedValueOnce(null);
 
         const req = makeReq();
         req.body = {
@@ -487,7 +487,7 @@ describe('public userAuth social auth', () => {
     });
 
     test('exchangeSocialRefreshToken rejects mismatched token and deletes exchange code', async () => {
-        redis.get.mockResolvedValueOnce(JSON.stringify({
+        redis.getdel.mockResolvedValueOnce(JSON.stringify({
             token: 'expected_access_token',
             refreshToken: 'issued_refresh_token',
         }));
@@ -500,8 +500,6 @@ describe('public userAuth social auth', () => {
         const res = makeRes();
 
         await controller.exchangeSocialRefreshToken(req, res);
-
-        expect(redis.del).toHaveBeenCalledWith('project:social-auth:refresh-exchange:code_456');
         expect(res.status).toHaveBeenCalledWith(403);
         expect(res.json).toHaveBeenCalledWith({
             success: false,

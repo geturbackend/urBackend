@@ -913,7 +913,7 @@ module.exports.exchangeSocialRefreshToken = async (req, res) => {
         }
 
         const exchangeKey = getSocialRefreshExchangeKey(rtCode);
-        const rawExchange = await redis.get(exchangeKey);
+        const rawExchange = await redis.getdel(exchangeKey);
         if (!rawExchange) {
             return res.status(400).json({
                 success: false,
@@ -925,7 +925,6 @@ module.exports.exchangeSocialRefreshToken = async (req, res) => {
         try {
             parsedExchange = JSON.parse(rawExchange);
         } catch (err) {
-            await redis.del(exchangeKey);
             return res.status(400).json({
                 success: false,
                 message: 'Invalid or expired refresh token exchange code',
@@ -933,14 +932,12 @@ module.exports.exchangeSocialRefreshToken = async (req, res) => {
         }
 
         if (parsedExchange.token !== token || !parsedExchange.refreshToken) {
-            await redis.del(exchangeKey);
             return res.status(403).json({
                 success: false,
                 message: 'Invalid refresh token exchange payload',
             });
         }
 
-        await redis.del(exchangeKey);
         return res.status(200).json({
             success: true,
             data: {

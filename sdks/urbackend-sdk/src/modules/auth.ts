@@ -494,8 +494,8 @@ export class AuthModule {
    * Exchanges social authentication rtCode for a refresh token
    * 
    * @param {SocialExchangePayload} payload - Social exchange data
+   * @param {string} payload.token - Access token fragment from social provider
    * @param {string} payload.rtCode - Return code from social provider
-   * @param {string} payload.provider - Social provider ('github' or 'google')
    * @returns {Promise<SocialExchangeResponse>} Promise resolving to authentication response
    * 
    * @throws {AuthError} If rtCode is invalid or expired
@@ -503,12 +503,12 @@ export class AuthModule {
    * 
    * @example
    * // After user returns from social login
-   * const rtCode = new URLSearchParams(window.location.search).get('rtCode');
-   * if (rtCode) {
-   *   const response = await auth.socialExchange({
-   *     rtCode: rtCode,
-   *     provider: 'github'
-   *   });
+   * const urlParams = new URLSearchParams(window.location.search);
+   * const hashParams = new URLSearchParams(window.location.hash.substring(1));
+   * const rtCode = urlParams.get('rtCode');
+   * const token = hashParams.get('token');
+   * if (rtCode && token) {
+   *   const response = await auth.socialExchange({ token, rtCode });
    *   console.log('Social login successful:', response.accessToken);
    * }
    */

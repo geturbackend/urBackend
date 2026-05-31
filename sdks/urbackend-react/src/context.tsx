@@ -49,6 +49,7 @@ export const UrProvider: React.FC<UrProviderProps> = ({ apiKey, baseUrl, childre
         const urlParams = new URLSearchParams(window.location.search);
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const token = hashParams.get('token');
+        const rtCode = urlParams.get('rtCode');
         const error = urlParams.get('error');
 
         if (error) {
@@ -58,6 +59,15 @@ export const UrProvider: React.FC<UrProviderProps> = ({ apiKey, baseUrl, childre
         } else if (token) {
           // Social auth succeeded, establish session immediately
           auth.setToken(token);
+          
+          if (rtCode) {
+            // Exchange for long-lived refresh token
+            try {
+              await auth.socialExchange({ token, rtCode });
+            } catch (err) {
+              console.error('Failed to exchange refresh token', err);
+            }
+          }
           window.history.replaceState({}, document.title, window.location.pathname);
         } else {
           // Attempt to silently refresh session using the HTTP-only cookie
