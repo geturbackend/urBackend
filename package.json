@@ -1,6 +1,6 @@
 {
   "name": "urbackend-monorepo",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "private": true,
   "license": "AGPL-3.0-only",
   "workspaces": [
@@ -16,7 +16,7 @@
   },
   "lint-staged": {
     "apps/web-dashboard/**/*.{js,jsx}": [
-     "npm exec --workspace=web-dashboard eslint"
+      "npm exec --workspace=web-dashboard eslint"
     ]
   },
   "devDependencies": {
