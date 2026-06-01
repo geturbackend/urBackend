@@ -192,9 +192,9 @@ module.exports.bulkInsertData = async (req, res, next) => {
       }
 
       if ((project.databaseUsed || 0) + totalDocSize > project.databaseLimit) {
-        return res.status(403).json({
-          error: "Database limit exceeded.",
-        });
+        return next(
+          new AppError(403, "Database limit exceeded.")
+        );
       }
     }
 
