@@ -3,28 +3,37 @@ title: Changelog
 description: What's new in urBackend — new features, improvements, and fixes.
 ---
 
-<Update label="2026-06-01" description="Week of 2026-05-25–2026-06-01" tags={["Feature", "Improvement", "Fix", "Security"]}>
-## New features
+<Update label="2026-06-01" description="Week of 2026-05-25–2026-06-01" tags={["Feature"]}>
+  ## New Features
 
-- You can now export databases asynchronously through a queue-based pipeline for improved performance.
-- You can now recover soft-deleted records for better data management.
-- You can now return to the home page from the signup page using the new **Home** button.
-- You can now jump back to the top of long pages using the new **Back to Top** button.
+  - Export databases asynchronously through a queue-based pipeline for improved performance.
+  - Recover soft-deleted records for better data management.
+  - Return to the home page from the signup page via the new **Home** button.
+  - Jump to the top of long pages via the new **Back to Top** button.
+</Update>
 
-## Improvements
+<Update label="2026-06-01" description="Week of 2026-05-25–2026-06-01" tags={["Improvement"]}>
+  ## Improvements
 
-- You now get standardized formatting across editors via `.editorconfig`.
-- You benefit from faster sync webhook dispatch, now offloaded to `bullmq`.
-- You get a cleaner onboarding experience with an updated `.env.example` and added source comments.
-- You get improved code quality via the new `husky` and `lint-staged` pre-commit hook.
+  - Standardized formatting across editors via `.editorconfig`.
+  - Faster sync webhook dispatch, now offloaded to `bullmq`.
+  - Cleaner onboarding experience with an updated `.env.example` and added source comments.
+  - Improved code quality via `husky` and `lint-staged` pre-commit hooks.
+</Update>
 
-## Bug fixes
+<Update label="2026-06-01" description="Week of 2026-05-25–2026-06-01" tags={["Fix"]}>
+  ## Bug Fixes
 
-- Fix dashboard get data query engine (#230)
-- Fix query engine limit fields mock (#231)
-- Enforce SameSite=Lax on all cookies to prevent CSRF attacks (#240)
-- Patch storage quota evasion loophole in update pipeline (#224)
-- Add missing max length constraints to auth schemas (#221)
-- Add timeout handling for OAuth fetch requests (#220)
-- Pin root dependency versions (#236) 
+  - Fix dashboard get data query engine (`#230`)
+  - Fix query engine limit fields mock (`#231`)
+  - Pin root dependency versions (`#236`)
+</Update>
+
+<Update label="2026-06-01" description="Week of 2026-05-25–2026-06-01" tags={["Security"]}>
+  ## Security
+
+  - Enforce `SameSite=Lax` on all cookies to prevent CSRF attacks (`#240`)
+  - Add timeout handling for OAuth fetch requests (`#220`)
+  - Patch storage quota evasion loophole in update pipeline (`#224`)
+  - Add missing max-length constraints to auth schemas (`#221`)
 </Update>
