@@ -1,0 +1,32 @@
+---
+title: Changelog
+description: What's new in urBackend — new features, improvements, and fixes.
+---
+
+<Update label="2026-06-01" description="Week of 2026-05-25–2026-06-01" tags={["Feature", "Improvement", "Fix", "Security"]}>
+## New features
+
+**Queue-based async DB export pipeline** — Implement a queue-based asynchronous database export pipeline for improved performance.
+**Soft-delete recovery** — Implement soft-delete recovery for better data management.
+**Back to Home button on signup page** — Add a "Back to Home" button to the signup page for easier navigation.
+**Back to Top button** — Add a "Back to Top" button for better navigation on long pages.
+**Home button on signup page** — Add a "Home" button to the signup page for easier navigation.
+
+## Improvements
+
+**Standardized formatting** — Standardize formatting across editors using .editorconfig.
+**Offload sync webhook dispatch** — Offload sync webhook dispatch to bullmq for improved performance.
+**Onboarding improvements** — Improve onboarding by cleaning up .env.example and adding source comments.
+**Husky and lint-staged pre-commit hook** — Setup husky and lint-staged pre-commit hook for improved code quality.
+
+## Bug fixes
+
+- Fix dashboard get data query engine (#230)
+- Fix query engine limit fields mock (#231)
+- Enforce SameSite=Lax on all cookies to prevent CSRF attacks (#240)
+- Patch storage quota evasion loophole in update pipeline (#224)
+- Add missing max length constraints to auth schemas (#221)
+- Add timeout handling for OAuth fetch requests (#220)
+- Pin root dependency versions (#236) 
+</Update>
+
