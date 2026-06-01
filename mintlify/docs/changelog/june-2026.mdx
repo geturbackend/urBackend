@@ -6,18 +6,17 @@ description: What's new in urBackend — new features, improvements, and fixes.
 <Update label="2026-06-01" description="Week of 2026-05-25–2026-06-01" tags={["Feature", "Improvement", "Fix", "Security"]}>
 ## New features
 
-**Queue-based async DB export pipeline** — Implement a queue-based asynchronous database export pipeline for improved performance.
-**Soft-delete recovery** — Implement soft-delete recovery for better data management.
-**Back to Home button on signup page** — Add a "Back to Home" button to the signup page for easier navigation.
-**Back to Top button** — Add a "Back to Top" button for better navigation on long pages.
-**Home button on signup page** — Add a "Home" button to the signup page for easier navigation.
+- You can now export databases asynchronously through a queue-based pipeline for improved performance.
+- You can now recover soft-deleted records for better data management.
+- You can now return to the home page from the signup page using the new **Home** button.
+- You can now jump back to the top of long pages using the new **Back to Top** button.
 
 ## Improvements
 
-**Standardized formatting** — Standardize formatting across editors using .editorconfig.
-**Offload sync webhook dispatch** — Offload sync webhook dispatch to bullmq for improved performance.
-**Onboarding improvements** — Improve onboarding by cleaning up .env.example and adding source comments.
-**Husky and lint-staged pre-commit hook** — Setup husky and lint-staged pre-commit hook for improved code quality.
+- You now get standardized formatting across editors via `.editorconfig`.
+- You benefit from faster sync webhook dispatch, now offloaded to `bullmq`.
+- You get a cleaner onboarding experience with an updated `.env.example` and added source comments.
+- You get improved code quality via the new `husky` and `lint-staged` pre-commit hook.
 
 ## Bug fixes
 
@@ -29,4 +28,3 @@ description: What's new in urBackend — new features, improvements, and fixes.
 - Add timeout handling for OAuth fetch requests (#220)
 - Pin root dependency versions (#236) 
 </Update>
-
