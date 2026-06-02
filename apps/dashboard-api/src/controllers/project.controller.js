@@ -308,7 +308,7 @@ module.exports.createProject = async (req, res) => {
       session.endSession();
     }
     
-    if (err.message && err.message.includes("Transaction numbers are only allowed")) {
+    if (err.message && (err.message.includes("Transaction numbers are only allowed") || err.message.includes("buffering timed out"))) {
       try {
         const { projectObj, newProject } = await executeOperation(null);
         emitEvent(req.user._id, 'project_created', { projectName: projectObj.name }, newProject._id);
@@ -743,7 +743,7 @@ module.exports.createCollection = async (req, res) => {
       session.endSession();
     }
 
-    if (err.message && err.message.includes("Transaction numbers are only allowed")) {
+    if (err.message && (err.message.includes("Transaction numbers are only allowed") || err.message.includes("buffering timed out"))) {
       try {
         const { project, projectId, collectionName } = await executeOperation(null);
         await deleteProjectById(projectId);

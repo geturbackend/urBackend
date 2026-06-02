@@ -180,8 +180,32 @@ module.exports.bulkInsertData = async (req, res, next) => {
       project._id,
       project.resources.db.isExternal
     );
+    let totalDocSize = 0;
+
+    if (!project.resources.db.isExternal) {
+      for (const data of validData) {
+        const docForSize = data._id
+          ? data
+          : { ...data, _id: new mongoose.Types.ObjectId() };
+
+        totalDocSize += mongoose.mongo.BSON.calculateObjectSize(docForSize);
+      }
+
+      if ((project.databaseUsed || 0) + totalDocSize > project.databaseLimit) {
+        return next(
+          new AppError(403, "Database limit exceeded.")
+        );
+      }
+    }
 
     const result = await Model.insertMany(validData, { ordered: true });
+
+    if (!project.resources.db.isExternal) {
+      await Project.updateOne(
+        { _id: project._id },
+        { $inc: { databaseUsed: totalDocSize } }
+      );
+    }
 
     return res.status(201).json({
       success: true,
