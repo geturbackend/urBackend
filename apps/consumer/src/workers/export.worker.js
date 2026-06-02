@@ -19,8 +19,28 @@ const {
     getBucket
 } = require('@urbackend/common');
 
-// Maximum documents per export to prevent resource exhaustion and unbounded collection streaming
+// Maximum documents written per export.
+// The cursor is queried for MAX_EXPORT_ROWS + 1 documents so we can
+// distinguish a truncated result (collection has more documents than the cap)
+// from an exact match (collection has exactly MAX_EXPORT_ROWS documents).
 const MAX_EXPORT_ROWS = 100000;
+
+/**
+ * Write a chunk to a Writable stream and wait for the drain event if the
+ * internal buffer is full. Honoring backpressure prevents unbounded memory
+ * growth when disk or object-storage throughput is slower than Mongo cursor
+ * throughput.
+ *
+ * @param {import('stream').Writable} stream
+ * @param {string} chunk
+ * @returns {Promise<void>}
+ */
+async function writeChunk(stream, chunk) {
+    const canContinue = stream.write(chunk);
+    if (!canContinue) {
+        await new Promise((resolve) => stream.once('drain', resolve));
+    }
+}
 
 const initExportWorker = () => {
     const worker = new Worker(exportQueue.name, async (job) => {
@@ -31,7 +51,7 @@ const initExportWorker = () => {
             "name collections resources.db.isExternal resources.storage.isExternal +resources.storage.config.encrypted +resources.storage.config.iv +resources.storage.config.tag"
         );
         if (!project) throw new Error('Project not found');
-        
+
         const col = project.collections.find(c => c.name === collectionName);
         if (!col) throw new Error(`Collection ${collectionName} not found`);
 
@@ -54,33 +74,44 @@ const initExportWorker = () => {
 
         console.log(`[ExportWorker] Preparing upload to storage (Provider: ${provider})...`);
 
+        // wasTruncated is set when the collection contains more than MAX_EXPORT_ROWS
+        // documents. The cursor is limited to MAX_EXPORT_ROWS + 1 so we can detect
+        // truncation without a separate count query.
+        let wasTruncated = false;
+
         if (provider === 'supabase') {
             const tempFilePath = path.join(os.tmpdir(), `export_${projectId}_${collectionName}_${Date.now()}.json`);
             const writeStream = fs.createWriteStream(tempFilePath);
-            
-            try {
-                writeStream.write('{\n');
-                const Model = getCompiledModel(connection, col, projectId, project.resources.db.isExternal);
-                
-                writeStream.write(`  "${col.name}": [\n`);
 
-                const cursor = Model.find().lean().limit(MAX_EXPORT_ROWS).cursor();
+            try {
+                await writeChunk(writeStream, '{\n');
+                const Model = getCompiledModel(connection, col, projectId, project.resources.db.isExternal);
+
+                await writeChunk(writeStream, `  "${col.name}": [\n`);
+
+                // Query one extra row to detect whether the result was capped.
+                const cursor = Model.find().lean().limit(MAX_EXPORT_ROWS + 1).cursor();
                 let first = true;
                 let exportedCount = 0;
 
                 for await (const doc of cursor) {
+                    if (exportedCount >= MAX_EXPORT_ROWS) {
+                        // We received the sentinel row; mark truncated and stop writing.
+                        wasTruncated = true;
+                        break;
+                    }
                     exportedCount++;
-                    if (!first) writeStream.write(',\n');
-                    writeStream.write(`    ${JSON.stringify(doc)}`);
+                    if (!first) await writeChunk(writeStream, ',\n');
+                    await writeChunk(writeStream, `    ${JSON.stringify(doc)}`);
                     first = false;
                 }
 
-                if (exportedCount >= MAX_EXPORT_ROWS) {
-                    console.warn(`[ExportWorker] Export truncated: reached limit of ${MAX_EXPORT_ROWS} documents`);
+                if (wasTruncated) {
+                    console.warn(`[ExportWorker] Export truncated: collection exceeds the ${MAX_EXPORT_ROWS}-document cap`);
                 }
 
-                writeStream.write('\n  ]\n');
-                writeStream.write('}\n');
+                await writeChunk(writeStream, '\n  ]\n');
+                await writeChunk(writeStream, '}\n');
                 writeStream.end();
 
                 await new Promise((resolve, reject) => {
@@ -90,11 +121,11 @@ const initExportWorker = () => {
 
                 console.log(`[ExportWorker] Temp file created, uploading...`);
                 const fileBuffer = fs.readFileSync(tempFilePath);
-                
+
                 const { error } = await client.storage.from(bucket).upload(storagePath, fileBuffer, {
                     contentType: 'application/json'
                 });
-                
+
                 if (error) throw error;
             } finally {
                 if (fs.existsSync(tempFilePath)) {
@@ -111,30 +142,34 @@ const initExportWorker = () => {
             });
 
             try {
-                passThrough.write('{\n');
-                
-                const Model = getCompiledModel(connection, col, projectId, project.resources.db.isExternal);
-                
-                passThrough.write(`  "${col.name}": [\n`);
+                await writeChunk(passThrough, '{\n');
 
-                const cursor = Model.find().lean().limit(MAX_EXPORT_ROWS).cursor();
+                const Model = getCompiledModel(connection, col, projectId, project.resources.db.isExternal);
+
+                await writeChunk(passThrough, `  "${col.name}": [\n`);
+
+                // Query one extra row to detect whether the result was capped.
+                const cursor = Model.find().lean().limit(MAX_EXPORT_ROWS + 1).cursor();
                 let first = true;
                 let exportedCount = 0;
 
                 for await (const doc of cursor) {
+                    if (exportedCount >= MAX_EXPORT_ROWS) {
+                        wasTruncated = true;
+                        break;
+                    }
                     exportedCount++;
-                    if (!first) passThrough.write(',\n');
-                    passThrough.write(`    ${JSON.stringify(doc)}`);
+                    if (!first) await writeChunk(passThrough, ',\n');
+                    await writeChunk(passThrough, `    ${JSON.stringify(doc)}`);
                     first = false;
                 }
 
-                if (exportedCount >= MAX_EXPORT_ROWS) {
-                    console.warn(`[ExportWorker] Export truncated: reached limit of ${MAX_EXPORT_ROWS} documents`);
+                if (wasTruncated) {
+                    console.warn(`[ExportWorker] Export truncated: collection exceeds the ${MAX_EXPORT_ROWS}-document cap`);
                 }
 
-                passThrough.write('\n  ]\n');
-
-                passThrough.write('}\n');
+                await writeChunk(passThrough, '\n  ]\n');
+                await writeChunk(passThrough, '}\n');
                 passThrough.end();
 
                 console.log(`[ExportWorker] Database stream ended. Awaiting final storage upload...`);
@@ -159,9 +194,16 @@ const initExportWorker = () => {
             downloadUrl = await getSignedUrl(s3Client, command, { expiresIn: 86400 });
         }
 
-        // queue the email to be sent to the user
-        await emailQueue.add('send-export-email', { email, downloadUrl, projectName: project.name });
-        console.log(`[ExportWorker] Export completed! Email queued for ${email}`);
+        // Pass wasTruncated to the email handler so the recipient knows
+        // the file contains a capped subset of the collection.
+        await emailQueue.add('send-export-email', {
+            email,
+            downloadUrl,
+            projectName: project.name,
+            wasTruncated,
+            maxExportRows: MAX_EXPORT_ROWS
+        });
+        console.log(`[ExportWorker] Export completed! Email queued for ${email}${wasTruncated ? ' (truncated)' : ''}`);
     }, { connection: redis, concurrency: 2 });
 
     worker.on('completed', (job) => {
