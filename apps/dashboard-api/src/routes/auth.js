@@ -34,17 +34,19 @@ router.post('/login', authLimiter, login);
 router.get('/github/start', startGithubAuth);
 router.get('/github/callback', handleGithubCallback);
 
+// OTP and password-reset routes must use authLimiter (10 req/15 min) because
+// they are credential-adjacent endpoints. Placing them before router.use(dashboardLimiter)
+// ensures only authLimiter applies; they never fall through to the 1000 req/15 min bucket.
+router.post('/send-otp', authLimiter, sendOtp);
+router.post('/verify-otp', authLimiter, verifyOtp);
+router.post('/forgot-password', authLimiter, forgotPassword);
+router.post('/reset-password', authLimiter, resetPassword);
+
 router.use(dashboardLimiter);
 
 router.put('/change-password', authorization, changePassword);
 
 router.delete('/delete-account', authorization, deleteAccount);
-
-router.post('/send-otp', sendOtp);
-router.post('/verify-otp', verifyOtp);
-
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
 
 router.post('/refresh-token', refreshToken);
 router.post('/logout', authorization, logout);
