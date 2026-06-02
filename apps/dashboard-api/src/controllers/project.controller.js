@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const net = require("net");
 const { Project } = require("@urbackend/common");
 const { Developer } = require("@urbackend/common");
 const { Log } = require("@urbackend/common");
@@ -483,12 +484,46 @@ const dropCollectionIfExists = async (connection, collectionName) => {
   }
 };
 
+function ipv4ToInt(ip) {
+  return ip.split(".").reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
+}
+
+function isRestrictedIPv4(ip) {
+  const n = ipv4ToInt(ip);
+  // Loopback 127.0.0.0/8
+  if (n >= ipv4ToInt("127.0.0.0") && n <= ipv4ToInt("127.255.255.255")) return true;
+  // RFC-1918: 10.0.0.0/8
+  if (n >= ipv4ToInt("10.0.0.0") && n <= ipv4ToInt("10.255.255.255")) return true;
+  // RFC-1918: 172.16.0.0/12
+  if (n >= ipv4ToInt("172.16.0.0") && n <= ipv4ToInt("172.31.255.255")) return true;
+  // RFC-1918: 192.168.0.0/16
+  if (n >= ipv4ToInt("192.168.0.0") && n <= ipv4ToInt("192.168.255.255")) return true;
+  // Link-local / cloud instance metadata (AWS, GCP, Azure): 169.254.0.0/16
+  if (n >= ipv4ToInt("169.254.0.0") && n <= ipv4ToInt("169.254.255.255")) return true;
+  // Unspecified: 0.0.0.0/8
+  if (n >= ipv4ToInt("0.0.0.0") && n <= ipv4ToInt("0.255.255.255")) return true;
+  return false;
+}
+
 const isSafeUri = (uri) => {
   try {
     const parsed = new URL(uri);
     const host = parsed.hostname.toLowerCase();
-    const badHosts = ["localhost", "127.0.0.1", "0.0.0.0", "::1"];
-    return !badHosts.includes(host);
+
+    // Block well-known loopback and internal hostnames
+    const blockedHostnames = ["localhost", "metadata.google.internal"];
+    if (blockedHostnames.includes(host)) return false;
+
+    // If the host is a bare IPv4 address, check all restricted ranges
+    if (net.isIPv4(host)) return !isRestrictedIPv4(host);
+
+    // Block IPv6 loopback (::1 and its full-form equivalents)
+    if (net.isIPv6(host)) {
+      const expanded = host.replace(/^\[|\]$/g, "");
+      if (expanded === "::1" || expanded === "0:0:0:0:0:0:0:1") return false;
+    }
+
+    return true;
   } catch (e) {
     return false;
   }
