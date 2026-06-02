@@ -15,6 +15,7 @@ import { PUBLIC_API_URL } from '../config';
 export default function Auth() {
     const normalizeUsersResponse = (payload) => {
         if (Array.isArray(payload)) return payload;
+        if (Array.isArray(payload?.items)) return payload.items;
         if (Array.isArray(payload?.data?.items)) return payload.data.items;
         return [];
     };
