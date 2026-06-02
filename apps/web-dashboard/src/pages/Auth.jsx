@@ -13,6 +13,12 @@ import AddRecordDrawer from '../components/AddRecordDrawer';
 import { PUBLIC_API_URL } from '../config';
 
 export default function Auth() {
+    const normalizeUsersResponse = (payload) => {
+        if (Array.isArray(payload)) return payload;
+        if (Array.isArray(payload?.data?.items)) return payload.data.items;
+        return [];
+    };
+
     const { projectId } = useParams();
     const navigate = useNavigate();
 
@@ -70,7 +76,7 @@ export default function Auth() {
                     if (projRes.data.authProviders) setAuthProviders(projRes.data.authProviders);
                     if (projRes.data.isAuthEnabled) {
                         const usersRes = await api.get(`/api/projects/${projectId}/collections/users/data`);
-                        setUsers(usersRes.data);
+                        setUsers(normalizeUsersResponse(usersRes.data));
                     }
                 }
             } catch { toast.error("Failed to load auth details"); }
@@ -148,7 +154,7 @@ export default function Auth() {
         if (!confirm('Delete this user? This cannot be undone.')) return;
         try {
             await api.delete(`/api/projects/${projectId}/collections/users/data/${userId}`);
-            setUsers(prev => prev.filter(u => u._id !== userId));
+            setUsers(prev => normalizeUsersResponse(prev).filter(u => u._id !== userId));
             toast.success('User deleted');
         } catch (err) {
             toast.error(err.response?.data?.error || 'Failed to delete user');
@@ -211,12 +217,12 @@ export default function Auth() {
                             // Edit: use admin PUT, backend strips password from updateAdminUser
                             await api.put(`/api/projects/${projectId}/admin/users/${editingUser._id}`, userData);
                             toast.success('User updated successfully');
-                            setUsers(prev => prev.map(u => u._id === editingUser._id ? { ...u, ...userData, password: undefined } : u));
+                            setUsers(prev => normalizeUsersResponse(prev).map(u => u._id === editingUser._id ? { ...u, ...userData, password: undefined } : u));
                         } else {
                             await api.post(`/api/projects/${projectId}/admin/users`, userData);
                             toast.success('User created successfully');
                             const usersRes = await api.get(`/api/projects/${projectId}/collections/users/data`);
-                            setUsers(usersRes.data);
+                            setUsers(normalizeUsersResponse(usersRes.data));
                         }
                         setIsAddModalOpen(false);
                         setEditingUser(null);
