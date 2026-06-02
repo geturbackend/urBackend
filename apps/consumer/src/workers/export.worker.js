@@ -6,18 +6,21 @@ const path = require('path');
 const { GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
-const { 
-    redis, 
-    exportQueue, 
+const {
+    redis,
+    exportQueue,
     emailQueue,
-    Project, 
-    getConnection, 
+    Project,
+    getConnection,
     getCompiledModel,
     getS3CompatibleStorage,
     getStorage,
     decrypt,
     getBucket
 } = require('@urbackend/common');
+
+// Maximum documents per export to prevent resource exhaustion and unbounded collection streaming
+const MAX_EXPORT_ROWS = 100000;
 
 const initExportWorker = () => {
     const worker = new Worker(exportQueue.name, async (job) => {
@@ -60,16 +63,22 @@ const initExportWorker = () => {
                 const Model = getCompiledModel(connection, col, projectId, project.resources.db.isExternal);
                 
                 writeStream.write(`  "${col.name}": [\n`);
-                
-                const cursor = Model.find().lean().cursor();
+
+                const cursor = Model.find().lean().limit(MAX_EXPORT_ROWS).cursor();
                 let first = true;
-                
+                let exportedCount = 0;
+
                 for await (const doc of cursor) {
+                    exportedCount++;
                     if (!first) writeStream.write(',\n');
                     writeStream.write(`    ${JSON.stringify(doc)}`);
                     first = false;
                 }
-                
+
+                if (exportedCount >= MAX_EXPORT_ROWS) {
+                    console.warn(`[ExportWorker] Export truncated: reached limit of ${MAX_EXPORT_ROWS} documents`);
+                }
+
                 writeStream.write('\n  ]\n');
                 writeStream.write('}\n');
                 writeStream.end();
@@ -107,18 +116,24 @@ const initExportWorker = () => {
                 const Model = getCompiledModel(connection, col, projectId, project.resources.db.isExternal);
                 
                 passThrough.write(`  "${col.name}": [\n`);
-                
-                const cursor = Model.find().lean().cursor();
+
+                const cursor = Model.find().lean().limit(MAX_EXPORT_ROWS).cursor();
                 let first = true;
-                
+                let exportedCount = 0;
+
                 for await (const doc of cursor) {
+                    exportedCount++;
                     if (!first) passThrough.write(',\n');
                     passThrough.write(`    ${JSON.stringify(doc)}`);
                     first = false;
                 }
-                
+
+                if (exportedCount >= MAX_EXPORT_ROWS) {
+                    console.warn(`[ExportWorker] Export truncated: reached limit of ${MAX_EXPORT_ROWS} documents`);
+                }
+
                 passThrough.write('\n  ]\n');
-                
+
                 passThrough.write('}\n');
                 passThrough.end();
 
