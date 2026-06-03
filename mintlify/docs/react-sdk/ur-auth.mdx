@@ -1,0 +1,42 @@
+---
+title: "<UrAuth>"
+description: "A complete, drop-in authentication UI component."
+---
+
+The `<UrAuth>` component provides a beautiful, fully-functional authentication screen out of the box. It supports Email/Password login, Sign Up, Password Resets, and OAuth (Social Login).
+
+## Usage
+
+Simply drop the component into your login page. It will automatically detect if the user is logging in or signing up, and communicate with your urBackend project.
+
+```tsx
+import { UrAuth } from '@urbackend/react';
+
+export default function LoginPage() {
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center' }}>
+      <UrAuth 
+        providers={['google', 'github']} 
+        theme="light" 
+      />
+    </div>
+  );
+}
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `theme` | `'light' \| 'dark'` | `'light'` | The visual theme of the component. |
+| `providers` | `Array<'google' \| 'github'>` | `[]` | Social auth providers to display. These must be enabled in your urBackend Dashboard first. |
+
+## Customizing the Design
+
+The `<UrAuth>` component uses a modern, square design aesthetic (sharp corners). It adapts well to both light and dark backgrounds depending on the `theme` prop you provide.
+
+## Behavior
+
+1. **Email Login**: Prompts the user for email and password. If successful, updates the global `UrProvider` state automatically.
+2. **Social Login**: Redirects the user to the provider (e.g. Google). Upon successful login, the user is redirected to the `Site URL` you configured in your urBackend Dashboard settings.
+3. **Password Reset**: Allows users to request an OTP and reset their password inline.

@@ -25,6 +25,8 @@
 ![License](https://img.shields.io/github/license/yash-pouranik/urbackend)
 ![Issues](https://img.shields.io/github/issues/yash-pouranik/urbackend)
 ![Stars](https://img.shields.io/github/stars/yash-pouranik/urbackend)
+![GSSOC'26](https://img.shields.io/badge/GSSOC-2026-8b5cf6)
+![NSOC'26](https://img.shields.io/badge/NSOC-2026-14b8a6)
 
 </div>
 

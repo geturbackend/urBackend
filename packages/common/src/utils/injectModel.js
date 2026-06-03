@@ -77,6 +77,11 @@ function buildFieldDef(field, projectId, isExternal, isUsersCollection = false) 
     required: !!field.required,
   };
 
+  // pass default through when defined
+  if (field.default !== undefined) {
+    def.default = field.default;
+  }
+
   // HARDEN: Exclude password by default for project users
   if (isUsersCollection && normalizeKey(field.key) === "password") {
     def.select = false;
@@ -100,10 +105,19 @@ function buildMongooseSchema(fieldsArray = [], projectId, isExternal, isUsersCol
     schemaDef[normalizedKey] = buildFieldDef(field, projectId, isExternal, isUsersCollection);
   });
 
-  return new mongoose.Schema(schemaDef, {
+  // Explicitly add soft-delete fields to ensure schema consistency on inserts
+  schemaDef.isDeleted = { type: Boolean, default: false };
+  schemaDef.deletedAt = { type: Date, default: null };
+
+  const schema = new mongoose.Schema(schemaDef, {
     timestamps: true,
     strict: false,
   });
+
+  // Compound index to optimize the daily trash cleanup worker
+  schema.index({ isDeleted: 1, deletedAt: 1 });
+
+  return schema;
 }
 function getCompiledModel(connection, collectionData, projectId, isExternal) {
   let collectionName = "";

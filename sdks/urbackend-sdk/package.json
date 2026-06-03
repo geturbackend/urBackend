@@ -1,7 +1,10 @@
 {
   "name": "@urbackend/sdk",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Official TypeScript SDK for urBackend BaaS",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "files": [
     "dist",
@@ -51,12 +54,12 @@
     "@types/node": "^25.5.0",
     "@typescript-eslint/eslint-plugin": "^8.57.2",
     "@typescript-eslint/parser": "^8.57.2",
-    "@vitest/coverage-v8": "^4.1.2",
+    "@vitest/coverage-v8": "^1.6.0",
     "eslint": "^10.1.0",
     "prettier": "^3.8.1",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.57.2",
-    "vitest": "^4.1.2"
+    "vitest": "^1.6.0"
   }
 }

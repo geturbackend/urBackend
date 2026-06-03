@@ -17,11 +17,11 @@ const ALL_TYPES = [...PRIMITIVE_TYPES, 'Object', 'Array', 'Ref'];
 const ARRAY_ITEM_TYPES = [...PRIMITIVE_TYPES, 'Object', 'Ref'];
 
 function createEmptyField() {
-    return { _id: nextFieldId(), key: '', type: 'String', required: false, unique: false };
+    return { _id: nextFieldId(), key: '', type: 'String', required: false, unique: false, default: undefined };
 }
 
 // FUNCTION - FIELD ROW COMPONENT
-function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
+function FieldRow({ field, index, depth, collections, collectionsLoading, collectionsError, onChange, onRemove }) {
     const [expanded, setExpanded] = useState(true);
 
     const handleChange = (prop, value) => {
@@ -33,6 +33,7 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
             delete updated.fields;
             delete updated.items;
             delete updated.ref;
+            delete updated.default;
             if (value === 'Object') {
                 updated.fields = [createEmptyField()];
                 updated.unique = false;
@@ -44,6 +45,11 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
                 updated.unique = false;
             }
         }
+
+        if (prop === 'required' && value) {
+            delete updated.default;
+        }
+        
         onChange(index, updated);
     };
 
@@ -51,6 +57,32 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
         const newFields = [...(field.fields || [])];
         newFields[subIndex] = updatedSubField;
         onChange(index, { ...field, fields: newFields });
+    };
+
+    const handleDefaultChange = (rawValue) => {
+      if (field.locked) return;
+    
+      let nextDefault;
+      if (field.type === 'String') {
+        nextDefault = rawValue === '' ? undefined : rawValue;
+      } else if (field.type === 'Number') {
+        if (rawValue === '') nextDefault = undefined;
+        else {
+          const parsed = Number(rawValue);
+          nextDefault = Number.isNaN(parsed) ? undefined : parsed;
+        }
+      } else if (field.type === 'Boolean') {
+        if (rawValue === '') nextDefault = undefined;
+        else nextDefault = rawValue === 'true';
+      } else {
+        nextDefault = undefined;
+      }
+    
+      const updated = { ...field };
+      if (nextDefault === undefined) delete updated.default;
+      else updated.default = nextDefault;
+    
+      onChange(index, updated);
     };
 
     const addSubField = () => {
@@ -211,6 +243,38 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
                 </button>
             </div>
 
+            {!field.required && ['String', 'Number', 'Boolean'].includes(field.type) && (
+              <div style={{ marginLeft: '26px', marginBottom: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+                  → Default Value:
+                </span>
+
+                {field.type === 'Boolean' ? (
+                  <select
+                    value={field.default === true ? 'true' : field.default === false ? 'false' : ''}
+                    disabled={field.locked}
+                    onChange={(e) => handleDefaultChange(e.target.value)}
+                    className="input-field"
+                    style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
+                  >
+                    <option value="">No default</option>
+                    <option value="true">true</option>
+                    <option value="false">false</option>
+                  </select>
+                ) : (
+                  <input
+                    type={field.type === 'Number' ? 'number' : 'text'}
+                    value={field.default ?? ''}
+                    disabled={field.locked}
+                    onChange={(e) => handleDefaultChange(e.target.value)}
+                    className="input-field"
+                    placeholder={field.type === 'Number' ? 'e.g. 0' : 'e.g. pending'}
+                    style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
+                  />
+                )}
+              </div>
+            )}
+
             {/* Ref — Collection Picker */}
             {field.type === 'Ref' && (
                 <div style={{ marginLeft: '26px', marginBottom: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -219,11 +283,12 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
                     </span>
                     <select
                         value={field.ref || ''}
+                        disabled={collectionsLoading || collectionsError}
                         onChange={(e) => handleChange('ref', e.target.value)}
                         className="input-field"
                         style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
                     >
-                        <option value="">Select collection...</option>
+                        <option value="">{collectionsLoading ? 'Loading collections…' : collectionsError ? 'Failed to load' : 'Select collection...'}</option>
                         {collections.map(c => (
                             <option key={c.name} value={c.name}>{c.name}</option>
                         ))}
@@ -256,6 +321,8 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
                                 index={subIdx}
                                 depth={depth + 1}
                                 collections={collections}
+                                collectionsLoading={collectionsLoading}
+                                collectionsError={collectionsError}
                                 onChange={handleSubFieldChange}
                                 onRemove={removeSubField}
                             />
@@ -306,13 +373,14 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
                                         index={subIdx}
                                         depth={depth + 1}
                                         collections={collections}
+                                        collectionsLoading={collectionsLoading}
+                                        collectionsError={collectionsError}
                                         onChange={handleItemSubFieldChange}
                                         onRemove={removeItemSubField}
                                     />
                                 ))}
                             </div>
                         )}
-
                         {/* Array of Ref — collection picker */}
                         {field.items?.type === 'Ref' && (
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
@@ -321,11 +389,12 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
                                 </span>
                                 <select
                                     value={field.items?.ref || ''}
+                                    disabled={collectionsLoading || collectionsError}
                                     onChange={(e) => handleItemsChange('ref', e.target.value)}
                                     className="input-field"
                                     style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
                                 >
-                                    <option value="">Select collection...</option>
+                                    <option value="">{collectionsLoading ? 'Loading collections…' : collectionsError ? 'Failed to load' : 'Select collection...'}</option>
                                     {collections.map(c => (
                                         <option key={c.name} value={c.name}>{c.name}</option>
                                     ))}
@@ -342,7 +411,13 @@ function FieldRow({ field, index, depth, collections, onChange, onRemove }) {
 // FUNCTION - CLEAN FIELDS FOR API
 function cleanFieldsForApi(fields) {
     return fields.map(f => {
-        const { _id, ...clean } = f;
+      const { _id, ...clean } = f;
+      
+      const supportsDefault = ['String', 'Number', 'Boolean'].includes(clean.type);
+      if (clean.required || !supportsDefault || clean.default === undefined) {
+        delete clean.default;
+      }
+      
         if (clean.fields) clean.fields = cleanFieldsForApi(clean.fields);
         if (clean.items?.fields) {
             clean.items = { ...clean.items, fields: cleanFieldsForApi(clean.items.fields) };
@@ -385,15 +460,31 @@ function CreateCollection() {
     const [fields, setFields] = useState(getInitialFields());
     const [loading, setLoading] = useState(false);
     const [collections, setCollections] = useState([]);
+    const [collectionsLoading, setCollectionsLoading] = useState(true);
+    const [collectionsError, setCollectionsError] = useState(null);
 
-    // Fetch existing collections for Ref picker
+    // Fetch existing collections for Ref picker — runs immediately on mount
+    // so it fires in parallel with any other in-flight requests.
     useEffect(() => {
         let isMounted = true;
         const fetchCollections = async () => {
+            if (isMounted) {
+                setCollectionsLoading(true);
+                setCollections([]);
+                setCollectionsError(null);
+            }
             try {
                 const res = await api.get(`/api/projects/${projectId}`);
                 if (isMounted) setCollections(res.data.collections || []);
-            } catch { /* ignore */ }
+            } catch (err) {
+                console.error('Failed to fetch collections for Ref picker:', err);
+                if (isMounted) {
+                    setCollectionsError('Failed to load collections');
+                    toast.error('Failed to load collections for references');
+                }
+            } finally {
+                if (isMounted) setCollectionsLoading(false);
+            }
         };
         fetchCollections();
         return () => { isMounted = false; };
@@ -468,7 +559,7 @@ function CreateCollection() {
             </button>
 
             <div className="card">
-                <h2 style={{ marginBottom: '2rem', fontSize: '1.5rem', fontWeight: 600 }}>Create New Table</h2>
+                <h2 style={{ marginBottom: '2rem', fontSize: '1.5rem', fontWeight: 600 }}>Create Collection</h2>
 
                 <div className="form-group">
                     <label className="form-label">Name</label>
@@ -492,14 +583,14 @@ function CreateCollection() {
 
                 <div style={{ marginTop: '2.5rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Columns</h3>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Fields</h3>
                         <button
                             type="button"
                             onClick={addField}
                             className="btn btn-secondary"
                             style={{ fontSize: '0.85rem' }}
                         >
-                            <Plus size={14} /> Add Column
+                            <Plus size={14} /> Add Field
                         </button>
                     </div>
 
@@ -529,6 +620,8 @@ function CreateCollection() {
                                 index={index}
                                 depth={1}
                                 collections={collections}
+                                collectionsLoading={collectionsLoading}
+                                collectionsError={collectionsError}
                                 onChange={handleFieldChange}
                                 onRemove={removeField}
                             />

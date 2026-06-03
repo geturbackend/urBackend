@@ -1,0 +1,618 @@
+---
+title: "Mail Platform"
+description: "Comprehensive developer guide for urBackend Mail Platform: BYOK, batch delivery, logs, audiences, contacts, broadcasts, and webhook processing."
+---
+
+## Overview
+
+urBackend Mail Platform extends transactional sending into a full delivery workflow with:
+
+- async queue-backed single sending (`/api/mail/send`)
+- direct provider batch sending (`/api/mail/send-batch`)
+- BYOK (Bring Your Own Key) with encrypted project-level Resend keys
+- delivery tracking via persistent `MailLog`
+- audience/contact management (BYOK-gated)
+- marketing broadcasts (BYOK + Pro gated)
+- webhook-driven status updates with Svix verification
+
+Implementation references:
+
+- [Mail Platform implementation PR #172](https://github.com/geturbackend/urBackend/pull/172)
+- [Mail security fixes PR #175](https://github.com/geturbackend/urBackend/pull/175)
+
+### How Mail Platform fits urBackend
+
+- **Public API** (`/api/mail/*`): app/runtime sending, logs, live status, webhook receiver.
+- **Dashboard API** (`/api/projects/:projectId/mail/*`): operator/admin workflows (logs, live checks, audiences, contacts, broadcasts).
+- **Dashboard UI** (`/project/:projectId/mail`): unified Mail Platform control plane.
+
+### Architecture
+
+```mermaid
+flowchart LR
+  A1[Client request\n/api/mail/send] --> B[Public API]
+  A2[Client request\n/api/mail/send-batch] --> B
+  B --> C[Quota reservation + BYOK/default provider resolve]
+  C --> D[BullMQ mail queue (single-send path)]
+  D --> E[Resend API]
+  C --> E[Resend API (batch-send direct path)]
+  E --> F[Delivery events webhook]
+  F --> G[POST /api/mail/webhook\nSvix verify]
+  G --> H[(MailLog)]
+  H --> I[Dashboard/Public log queries]
+```
+
+### Feature gating matrix
+
+| Capability | Free (shared key) | Free + BYOK | Pro + BYOK |
+|---|---:|---:|---:|
+| Transactional send (`/api/mail/send`) | ✅ | ✅ | ✅ |
+| Batch send (`/api/mail/send-batch`, max 100 items) | ✅ | ✅ | ✅ |
+| Delivery logs + live status | ✅ | ✅ | ✅ |
+| Audiences & Contacts | ❌ | ✅ | ✅ |
+| Marketing Broadcasts | ❌ | ❌ | ✅ |
+
+## Getting started
+
+### Prerequisites
+
+- Resend account
+- Valid Resend key with format: `re_[A-Za-z0-9_]+`
+- urBackend project with a **Secret Key** (`sk_live_...`) for public API calls
+
+### Configure BYOK in Dashboard
+
+1. Open **Project Settings** for your project.
+2. Set `resendApiKey` with your Resend key (`re_...`).
+3. Optionally set `resendFromEmail`.
+4. Save. urBackend stores this key encrypted at rest.
+
+### Required server environment
+
+| Variable | Required | Purpose |
+|---|---:|---|
+| `RESEND_API_KEY` | ✅ (fallback) | Default/shared provider key |
+| `RESEND_API_KEY_2` | Optional | Higher-priority fallback key |
+| `RESEND_WEBHOOK_SECRET` | ✅ for webhook verification | Svix secret for `/api/mail/webhook` |
+| `EMAIL_FROM` | ✅ recommended | Default sender fallback |
+
+### Register webhook in Resend
+
+In Resend dashboard, configure webhook URL:
+
+`POST https://<your-public-api-domain>/api/mail/webhook`
+
+Enable relevant events at minimum:
+
+- `email.sent`
+- `email.delivered`
+- `email.bounced`
+- `email.complained`
+
+## Sending emails
+
+<Warning>
+All `/api/mail/*` send endpoints require your **Secret Key** (`sk_live_...`) in `x-api-key`.
+</Warning>
+
+### POST `/api/mail/send` (single)
+
+#### Request schema
+
+| Field | Type | Required | Notes |
+|---|---|---:|---|
+| `to` | `string` | ✅ | recipient email |
+| `subject` | `string` | Direct mode ✅ | required when not using template fields |
+| `html` | `string` | Direct mode one of `html/text` | HTML body |
+| `text` | `string` | Direct mode one of `html/text` | Text body |
+| `templateId` | `string` | Template mode one of `templateId/templateName` | 24-char ObjectId |
+| `templateName` | `string` | Template mode one of `templateId/templateName` | key/name lookup |
+| `variables` | `object` | Optional | template vars |
+
+#### Quota and limits
+
+- per-request monthly quota slot is reserved in Redis
+- on terminal failure, slot is refunded
+- over-limit returns HTTP `429`
+
+#### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X POST "https://api.ub.bitbros.in/api/mail/send" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
+  -d '{
+    "to": "user@example.com",
+    "subject": "Welcome",
+    "html": "<h1>Hello</h1>"
+  }'
+```
+
+```ts JavaScript SDK
+import { UrBackendClient } from 'urbackend-sdk';
+
+const client = new UrBackendClient({ apiKey: process.env.URB_SECRET_KEY! });
+const result = await client.mail.send({
+  to: 'user@example.com',
+  subject: 'Welcome',
+  html: '<h1>Hello</h1>'
+});
+console.log(result.id, result.provider);
+```
+
+</CodeGroup>
+
+#### Success envelope
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "<queue-job-id>",
+    "provider": "byok",
+    "monthlyUsage": 12,
+    "monthlyLimit": 100
+  },
+  "message": "Mail queued successfully."
+}
+```
+
+### POST `/api/mail/send-batch` (max 100)
+
+#### Request schema
+
+Array of 1..100 items:
+
+```json
+[
+  {
+    "to": "u1@example.com",
+    "subject": "Campaign",
+    "html": "<p>Hello</p>"
+  }
+]
+```
+
+Each item supports `to`, `subject`, `html?`, `text?`.
+
+#### Quota behavior
+
+- reserves one quota slot per batch item before provider call
+- if provider call fails, each reserved slot is refunded
+- response includes per-item provider result objects
+
+#### Partial success
+
+`data` returns per-recipient/provider results. Treat each item independently in your caller logic.
+
+#### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X POST "https://api.ub.bitbros.in/api/mail/send-batch" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
+  -d '[
+    {"to":"a@example.com","subject":"Hi A","html":"<p>A</p>"},
+    {"to":"b@example.com","subject":"Hi B","html":"<p>B</p>"}
+  ]'
+```
+
+```ts JavaScript SDK
+import { UrBackendClient } from 'urbackend-sdk';
+
+const client = new UrBackendClient({ apiKey: process.env.URB_SECRET_KEY! });
+const result = await client.request('POST', '/api/mail/send-batch', {
+  body: [
+    { to: 'a@example.com', subject: 'Hi A', html: '<p>A</p>' },
+    { to: 'b@example.com', subject: 'Hi B', html: '<p>B</p>' }
+  ]
+});
+console.log(result);
+```
+
+</CodeGroup>
+
+## Mail logs
+
+### GET `/api/mail/logs` (public) and GET `/api/projects/:projectId/mail/logs` (dashboard)
+
+#### `MailLog` fields
+
+- `resendEmailId`
+- `to`
+- `subject`
+- `status`
+- `usingByok`
+- `templateUsed`
+- `sentAt`
+
+Status enum:
+
+`queued | sent | delivered | bounced | complained | failed`
+
+Sorting/pagination behavior:
+
+- current implementation returns latest 50, sorted by `sentAt DESC`
+
+<CodeGroup>
+
+```bash curl
+curl "https://api.ub.bitbros.in/api/mail/logs" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY"
+```
+
+```ts JavaScript SDK
+const logs = await client.request('GET', '/api/mail/logs');
+console.log(logs);
+```
+
+</CodeGroup>
+
+Dashboard API variant (bearer auth):
+
+```bash
+curl "https://dashboard-api.ub.bitbros.in/api/projects/<projectId>/mail/logs" \
+  -H "Authorization: Bearer <dashboard-jwt>"
+```
+
+### Live status
+
+- Public: `GET /api/mail/logs/:resendId`
+- Dashboard: `GET /api/projects/:projectId/mail/logs/:resendId/live`
+
+Use live status when you need real-time provider status. Use stored logs for analytics/history and low-latency UI lists.
+
+- `404` if log entry does not belong to the current project (cross-project isolation)
+
+<CodeGroup>
+
+```bash curl
+curl "https://api.ub.bitbros.in/api/mail/logs/re_123" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY"
+```
+
+```ts JavaScript SDK
+const status = await client.request('GET', '/api/mail/logs/re_123');
+console.log(status.dbLog, status.resendStatus);
+```
+
+</CodeGroup>
+
+Dashboard API live check:
+
+```bash
+curl "https://dashboard-api.ub.bitbros.in/api/projects/<projectId>/mail/logs/re_123/live" \
+  -H "Authorization: Bearer <dashboard-jwt>"
+```
+
+## Audiences & Contacts (BYOK-gated)
+
+These endpoints proxy Resend API and require a valid BYOK key on the project.
+
+Error status/message semantics follow upstream Resend responses where applicable.
+
+### Audiences endpoints
+
+- `GET /api/mail/audiences`
+- `POST /api/mail/audiences` body: `{ "name": "VIP Customers" }`
+- `DELETE /api/mail/audiences/:audienceId`
+
+<CodeGroup>
+
+```bash curl
+curl "https://api.ub.bitbros.in/api/mail/audiences" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY"
+
+curl -X POST "https://api.ub.bitbros.in/api/mail/audiences" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
+  -d '{"name":"VIP Customers"}'
+
+curl -X DELETE "https://api.ub.bitbros.in/api/mail/audiences/aud_123" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY"
+```
+
+```ts JavaScript SDK
+await client.request('GET', '/api/mail/audiences');
+await client.request('POST', '/api/mail/audiences', { body: { name: 'VIP Customers' } });
+await client.request('DELETE', '/api/mail/audiences/aud_123');
+```
+
+</CodeGroup>
+
+### Contacts endpoints
+
+- `GET /api/mail/audiences/:audienceId/contacts`
+- `POST /api/mail/audiences/:audienceId/contacts`
+- `PATCH /api/mail/audiences/:audienceId/contacts/:contactId`
+- `DELETE /api/mail/audiences/:audienceId/contacts/:contactId`
+
+Contact payload fields:
+
+`email`, `firstName`, `lastName`, `unsubscribed`
+
+<CodeGroup>
+
+```bash curl
+curl -X POST "https://api.ub.bitbros.in/api/mail/audiences/aud_123/contacts" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
+  -d '{
+    "email": "contact@example.com",
+    "firstName": "Ada",
+    "lastName": "Lovelace",
+    "unsubscribed": false
+  }'
+```
+
+```ts JavaScript SDK
+const contact = await client.request('POST', '/api/mail/audiences/aud_123/contacts', {
+  body: {
+    email: 'contact@example.com',
+    firstName: 'Ada',
+    lastName: 'Lovelace',
+    unsubscribed: false
+  }
+});
+console.log(contact);
+```
+
+</CodeGroup>
+
+For the remaining contact endpoints:
+
+<CodeGroup>
+
+```bash curl
+curl "https://api.ub.bitbros.in/api/mail/audiences/aud_123/contacts" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY"
+
+curl -X PATCH "https://api.ub.bitbros.in/api/mail/audiences/aud_123/contacts/ct_123" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
+  -d '{"firstName":"Ada","unsubscribed":true}'
+
+curl -X DELETE "https://api.ub.bitbros.in/api/mail/audiences/aud_123/contacts/ct_123" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY"
+```
+
+```ts JavaScript SDK
+await client.request('GET', '/api/mail/audiences/aud_123/contacts');
+await client.request('PATCH', '/api/mail/audiences/aud_123/contacts/ct_123', {
+  body: { firstName: 'Ada', unsubscribed: true }
+});
+await client.request('DELETE', '/api/mail/audiences/aud_123/contacts/ct_123');
+```
+
+</CodeGroup>
+
+## Marketing broadcasts (BYOK + Pro)
+
+Endpoints:
+
+- `POST /api/mail/broadcasts`
+- `POST /api/mail/broadcasts/:id/send`
+- `GET /api/mail/broadcasts`
+- `GET /api/mail/broadcasts/:id`
+- `DELETE /api/mail/broadcasts/:id`
+
+### Two-step flow
+
+1. **Create** broadcast (draft/scheduled payload)
+2. **Send** broadcast by id
+
+### `from` resolution order
+
+1. `from` from request body
+2. `project.resendFromEmail`
+3. `EMAIL_FROM` env fallback
+
+### Quota checks
+
+Broadcast create/send/list/detail/delete paths run behind mail usage gating middleware and plan checks.
+
+<CodeGroup>
+
+```bash curl
+# 1) Create
+curl -X POST "https://api.ub.bitbros.in/api/mail/broadcasts" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
+  -d '{
+    "audienceId": "aud_123",
+    "subject": "May launch",
+    "html": "<h1>We shipped</h1>",
+    "scheduledAt": "2026-05-20T10:00:00.000Z"
+  }'
+
+# 2) Send
+curl -X POST "https://api.ub.bitbros.in/api/mail/broadcasts/brd_123/send" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY"
+```
+
+```ts JavaScript SDK
+const created = await client.request('POST', '/api/mail/broadcasts', {
+  body: {
+    audienceId: 'aud_123',
+    subject: 'May launch',
+    html: '<h1>We shipped</h1>'
+  }
+});
+
+await client.request('POST', `/api/mail/broadcasts/${created.id}/send`);
+```
+
+</CodeGroup>
+
+Other broadcast endpoints:
+
+<CodeGroup>
+
+```bash curl
+curl "https://api.ub.bitbros.in/api/mail/broadcasts" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY"
+
+curl "https://api.ub.bitbros.in/api/mail/broadcasts/brd_123" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY"
+
+curl -X DELETE "https://api.ub.bitbros.in/api/mail/broadcasts/brd_123" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY"
+```
+
+```ts JavaScript SDK
+await client.request('GET', '/api/mail/broadcasts');
+await client.request('GET', '/api/mail/broadcasts/brd_123');
+await client.request('DELETE', '/api/mail/broadcasts/brd_123');
+```
+
+</CodeGroup>
+
+## Webhook integration
+
+Endpoint: `POST /api/mail/webhook`
+
+### Why raw-body parsing is required
+
+Svix signatures are computed over raw payload bytes. `express.raw({ type: 'application/json' })` must run before JSON parser on this path.
+
+### Secret configuration
+
+Set `RESEND_WEBHOOK_SECRET` in server env. Webhook signature verification and event processing only occur when this secret is configured correctly.
+
+- Current behavior when missing/misconfigured: the handler returns HTTP `200` with `{"success":true,"message":"Webhook ignored: secret not configured."}` and skips verification/processing.
+
+### Event mapping to `MailLog.status`
+
+| Resend event type | MailLog status |
+|---|---|
+| `email.sent` | `sent` |
+| `email.delivered` | `delivered` |
+| `email.bounced` | `bounced` |
+| `email.complained` | `complained` |
+| `email.delivery_delayed` | `queued` |
+
+`email.sent` represents provider acceptance (intermediate state), not final inbox delivery.
+
+### Retry behavior
+
+Resend controls webhook retries for non-2xx/timeout outcomes. Keep endpoint idempotent and safe for repeated delivery attempts.
+
+<CodeGroup>
+
+```bash curl
+curl -X POST "https://api.ub.bitbros.in/api/mail/webhook" \
+  -H "Content-Type: application/json" \
+  -H "svix-id: <id>" \
+  -H "svix-timestamp: <timestamp>" \
+  -H "svix-signature: <signature>" \
+  -d '{"type":"email.delivered","data":{"email_id":"re_123"}}'
+```
+
+```ts JavaScript (server webhook simulator)
+await fetch('https://api.ub.bitbros.in/api/mail/webhook', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'svix-id': '<id>',
+    'svix-timestamp': '<timestamp>',
+    'svix-signature': '<signature>'
+  },
+  body: JSON.stringify({
+    type: 'email.delivered',
+    data: { email_id: 're_123' }
+  })
+});
+```
+
+</CodeGroup>
+
+## Dashboard UI guide
+
+Route: `/project/:projectId/mail`
+
+### Delivery Logs tab
+
+- status badge (`queued/sent/delivered/bounced/complained/failed`)
+- subject, recipient(s), provider id, sent time
+- live status modal fetches provider status by resend id
+
+### Audiences & Contacts tab
+
+- create/delete audiences
+- add/remove contacts
+- locked if BYOK key is not configured
+
+### Marketing Broadcasts tab
+
+- compose audience + subject + html
+- send campaign via broadcast API
+- locked unless BYOK is configured and account is Pro
+
+<Info>
+Add product screenshots/annotated walkthrough images in this section if your docs deployment supports hosted image assets.
+</Info>
+
+## Security notes
+
+- BYOK format validation: `^re_[A-Za-z0-9_]+$`
+- key encryption at rest uses shared `encrypt`/`decrypt` helpers (AES)
+- rotate/clear BYOK through project update workflows (`PATCH /api/projects/:projectId` with `resendApiKey: null`, then set a new `re_...` key)
+- live status endpoints validate project ownership before provider lookups
+- webhook authenticity is checked with Svix verification
+
+## Error reference
+
+| Endpoint | Status | Typical message |
+|---|---:|---|
+| `POST /api/mail/send` | `400` | Invalid mail payload / template not found / subject required |
+| `POST /api/mail/send` | `403` | Secret key required |
+| `POST /api/mail/send` | `429` | Monthly mail limit exceeded |
+| `POST /api/mail/send-batch` | `400` | Invalid batch mail payload |
+| `POST /api/mail/send-batch` | `403` | Secret key required |
+| `POST /api/mail/send-batch` | `429` | Monthly mail limit exceeded |
+| `GET /api/mail/logs/:resendId` | `400` | Invalid resendId format |
+| `GET /api/mail/logs/:resendId` | `404` | Mail log entry not found for this project |
+| `GET /api/mail/audiences` + audience mutations | `403` | This feature requires a BYOK Resend key |
+| `GET/PATCH/DELETE /api/mail/audiences/:id/contacts/*` | `400` | Invalid audience/contact id format |
+| `GET/PATCH/DELETE /api/mail/audiences/:id/contacts/*` | `403` | Contacts require a custom Resend API Key (BYOK) |
+| `POST /api/mail/broadcasts*` | `400` | audienceId, subject, and html are required |
+| `POST /api/mail/broadcasts*` | `403` | Broadcasts require both BYOK and Pro plan |
+| `POST /api/mail/webhook` | `400` | Webhook signature verification failed |
+| Provider-proxied endpoints | passthrough | Upstream Resend status/message are surfaced |
+
+Most endpoints follow urBackend envelope shape:
+
+```json
+{
+  "success": false,
+  "data": {},
+  "message": "Human-readable error"
+}
+```
+
+Webhook signature failures currently return:
+
+```json
+{
+  "success": false,
+  "message": "Webhook signature verification failed."
+}
+```
+
+## Changelog & migration notes
+
+Compared to legacy single-send usage:
+
+- `/api/mail/send` is now asynchronous queue-backed
+- `/api/mail/send-batch` adds bulk dispatch (up to 100 items/request)
+- `MailLog` is first-class for auditability and dashboard visibility
+- new BYOK-gated resources: audiences, contacts
+- new BYOK+Pro resource: broadcasts
+- webhook path requires raw-body middleware placement before JSON parser
+- new env dependencies for production-grade mail processing (`RESEND_WEBHOOK_SECRET`, sender defaults)
+
+For release-level change history, see [May 2026 changelog](/changelog/may-2026).

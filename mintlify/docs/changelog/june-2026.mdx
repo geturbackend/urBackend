@@ -1,0 +1,33 @@
+---
+title: Changelog
+description: What's new in urBackend — new features, improvements, and fixes.
+---
+
+<Update label="2026-06-01" description="Week of 2026-05-25–2026-06-01">
+  ## 🚀 New Features
+
+  - Export databases asynchronously through a queue-based pipeline for improved performance.
+  - Recover soft-deleted records for better data management.
+  - Return to the home page from the signup page via the new **Home** button.
+  - Jump to the top of long pages via the new **Back to Top** button.
+
+  ## 🛠 Improvements
+
+  - Standardized formatting across editors via `.editorconfig`.
+  - Faster sync webhook dispatch, now offloaded to `bullmq`.
+  - Cleaner onboarding experience with an updated `.env.example` and added source comments.
+  - Improved code quality via `husky` and `lint-staged` pre-commit hooks.
+
+  ## 🐛 Bug Fixes
+
+  - Fix dashboard get data query engine (`#230`)
+  - Fix query engine limit fields mock (`#231`)
+  - Pin root dependency versions (`#236`)
+
+  ## 🔒 Security
+
+  - Enforce `SameSite=Lax` on all cookies to prevent CSRF attacks (`#240`)
+  - Add timeout handling for OAuth fetch requests (`#220`)
+  - Patch storage quota evasion loophole in update pipeline (`#224`)
+  - Add missing max-length constraints to auth schemas (`#221`)
+</Update>

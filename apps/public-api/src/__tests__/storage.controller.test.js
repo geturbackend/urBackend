@@ -31,6 +31,10 @@ jest.mock('@urbackend/common', () => {
         getBucket: jest.fn(() => 'dev-files'),
         getPresignedUploadUrl: jest.fn(),
         verifyUploadedFile: jest.fn(),
+        getMonthKey: jest.fn(() => '2026-05'),
+        getEndOfMonthTtlSeconds: jest.fn(() => 3600),
+        incrWithTtlAtomic: jest.fn().mockResolvedValue(true),
+        redis: { status: 'ready', eval: jest.fn() },
         __mockStorageFrom: mockStorageFrom, // expose for assertions
     };
 });

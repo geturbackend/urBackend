@@ -1,7 +1,7 @@
 import { NavLink, useParams, Link } from 'react-router-dom';
 import {
     LayoutDashboard, Database, Shield, HardDrive, Settings, BarChart2,
-    ArrowLeft, Webhook
+    ArrowLeft, Webhook, Mail
 } from 'lucide-react';
 
 function ProjectNavbar() {
@@ -43,6 +43,11 @@ function ProjectNavbar() {
                 <NavLink to={`/project/${projectId}/storage`} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                     <HardDrive size={18} />
                     <span>Storage</span>
+                </NavLink>
+
+                <NavLink to={`/project/${projectId}/mail`} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                    <Mail size={18} />
+                    <span>Mail</span>
                 </NavLink>
 
                 <NavLink to={`/project/${projectId}/analytics`} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>

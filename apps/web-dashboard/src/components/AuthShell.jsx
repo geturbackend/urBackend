@@ -8,6 +8,7 @@ function AuthShell({
   alternateTo,
   alternateText,
   children,
+  onModeClick,
 }) {
   return (
     <div className="auth-shell">
@@ -17,7 +18,18 @@ function AuthShell({
       <div className="auth-shell__content">
         <div className="auth-form-card">
           <div className="auth-form-card__header">
-            <span className="auth-form-card__mode">{modeLabel}</span>
+            {onModeClick ? (
+              <button
+                type="button"
+                className="auth-form-card__mode auth-form-card__mode--clickable"
+                onClick={onModeClick}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                {modeLabel}
+              </button>
+            ) : (
+              <span className="auth-form-card__mode">{modeLabel}</span>
+            )}
             {title ? <h1>{title}</h1> : null}
             {subtitle ? <p>{subtitle}</p> : null}
           </div>

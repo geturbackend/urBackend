@@ -1,5 +1,6 @@
 import React from 'react';
 import { Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import UsageProgressBar from './UsageProgressBar';
 import { usePlan } from '../../context/PlanContext';
 
@@ -10,7 +11,8 @@ const formatBytes = (bytes) => {
 };
 
 const UsageQuota = () => {
-  const { planData, openUpgradeModal } = usePlan();
+  const { planData } = usePlan();
+  const navigate = useNavigate();
 
   if (!planData) return null;
 
@@ -27,12 +29,12 @@ const UsageQuota = () => {
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
         <h4 style={{ fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
-          <Zap size={12} color="#7B61FF" /> Usage Quota
+          <Zap size={12} color="#00f5d4" /> Usage Quota
         </h4>
         <span style={{
           fontSize: '0.6rem', padding: '1px 5px', borderRadius: '3px', fontWeight: 600,
-          background: isPro ? 'rgba(123, 97, 255, 0.15)' : 'rgba(100,100,100,0.1)',
-          color: isPro ? '#7B61FF' : 'var(--color-text-muted)'
+          background: isPro ? 'rgba(0, 245, 212, 0.12)' : 'rgba(100,100,100,0.1)',
+          color: isPro ? '#00f5d4' : 'var(--color-text-muted)'
         }}>
           {isPro ? 'PRO' : 'FREE'}
         </span>
@@ -100,17 +102,17 @@ const UsageQuota = () => {
       {!isPro && (
         <button
           id="usage-quota-upgrade-btn"
-          onClick={openUpgradeModal}
+          onClick={() => navigate('/pricing')}
           style={{
             marginTop: '0.75rem', width: '100%',
-            background: 'linear-gradient(135deg, #7B61FF22, #00C2FF11)',
-            border: '1px solid #7B61FF44',
+            background: 'transparent',
+            border: '1px solid #00f5d4',
             borderRadius: '6px', padding: '6px',
-            fontSize: '0.7rem', fontWeight: 600, color: '#7B61FF',
+            fontSize: '0.7rem', fontWeight: 600, color: '#00f5d4',
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px'
           }}
         >
-          <Zap size={10} /> Get 1 month Pro for free (Beta)
+          <Zap size={10} /> View Pricing & Upgrade
         </button>
       )}
     </div>

@@ -6,9 +6,9 @@ keywords: ["storage", "upload", "files", "cdn", "sdk"]
 
 Access storage methods via `client.storage`. Uploaded files are served from a public CDN — no extra configuration required.
 
-<Note>
-Storage operations accept both `pk_live_...` and `sk_live_...` keys. Use `pk_live_...` in browser code for user-initiated uploads, and `sk_live_...` for server-side uploads. Never expose your secret key in browser code.
-</Note>
+<Warning>
+  Storage operations require your **secret key** (`sk_live_...`). These operations should only be performed server-side.
+</Warning>
 
 ---
 
@@ -39,18 +39,13 @@ upload(file: File | Blob | Buffer, filename?: string): Promise<UploadResponse>
 Store the `path` alongside the `url` in your database. You need it to delete the file.
 </Note>
 
-**Example — browser file input**
+**Example — Node.js upload**
 
 ```typescript
-const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+const fs = require('fs');
+const file = fs.readFileSync('./abc123.jpg');
 
-if (!input?.files?.length) {
-  throw new Error('No file selected');
-}
-
-const file = input.files[0];
-
-const { url, path, provider } = await client.storage.upload(file);
+const { url, path, provider } = await client.storage.upload(file, 'abc123.jpg');
 console.log(url);  // 'https://cdn.example.com/uploads/abc123.jpg'
 console.log(provider); // 'internal'
 ```
@@ -78,7 +73,7 @@ deleteFile(path: string): Promise<{ deleted: boolean }>
 | Limit | Value |
 |---|---|
 | Max file size | 10 MB per file |
-| Total storage per project | 100 MB (Free Tier) |
+| Total storage per project | 20 MB (Free Tier) |
 
 <Note>
 Uploads that exceed 10 MB are rejected with a `StorageError`. 

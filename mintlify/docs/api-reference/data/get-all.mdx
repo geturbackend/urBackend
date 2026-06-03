@@ -11,17 +11,17 @@ Returns a list of documents from the specified collection. Supports pagination, 
   `/api/data/users*` is blocked for all keys. Use `/api/userAuth/*` for user management.
 </Warning>
 
-### Required Header
+### Required header
 
 `x-api-key`: your `pk_live_…` or `sk_live_…` key.
 
-### Path Parameters
+### Path parameters
 
 <ParamField path="collectionName" type="string" required>
   The name of the collection to query (e.g., `posts`, `comments`, `inventory`).
 </ParamField>
 
-### Query Parameters
+### Query parameters
 
 <ParamField query="page" type="number">
   Page number for pagination. Defaults to `1`.
@@ -36,33 +36,56 @@ Returns a list of documents from the specified collection. Supports pagination, 
   first, `sort=title` for ascending alphabetical).
 </ParamField>
 
-<ParamField query="filter[field][op]" type="string">
-  Filter documents by field value. Replace `field` with the document field name and `op` with
-  a comparison operator. Example: `filter[status][eq]=published&filter[views][gt]=100`
+<ParamField query="field_op" type="string">
+  Filter documents by field value. Append an operator suffix to the field name for comparisons (e.g., `_gt`, `_lt`, `_ne`, `_in`, `_regex`). For exact matches, use the field name without a suffix. Example: `status=published&views_gt=100`
 </ParamField>
 
-### RLS Behavior
+<ParamField query="include_deleted" type="boolean">
+  Setting `include_deleted` to `true` includes soft-deleted documents; it defaults to `false`
+</ParamField>
+
+### RLS behavior
 
 If the collection has **RLS** enabled:
 
 - `public-read` mode: anyone can read all documents with a valid `x-api-key`.
 - `private` mode: requires `Authorization: Bearer <accessToken>` — only the owner's documents are returned.
 
-### Response Fields
+### Response fields
 
 <ResponseField name="success" type="boolean">
   `true` when the request succeeded.
 </ResponseField>
 
-<ResponseField name="data" type="array">
-  Array of document objects matching the query. Each document includes its `_id` and all stored fields.
+<ResponseField name="data" type="object">
+  Object containing the results and pagination metadata.
+  <Expandable title="properties">
+    <ResponseField name="items" type="array">
+      Array of document objects matching the query.
+    </ResponseField>
+    <ResponseField name="total" type="number">
+      Total number of documents matching the query (ignoring pagination).
+    </ResponseField>
+    <ResponseField name="page" type="number">
+      Current page number (present in offset-based pagination).
+    </ResponseField>
+    <ResponseField name="cursor" type="string">
+      Current cursor (present in cursor-based pagination).
+    </ResponseField>
+    <ResponseField name="nextCursor" type="string">
+      Cursor for the next page, or `null`.
+    </ResponseField>
+    <ResponseField name="limit" type="number">
+      Number of results per page.
+    </ResponseField>
+  </Expandable>
 </ResponseField>
 
 <ResponseField name="message" type="string">
   Human-readable status message.
 </ResponseField>
 
-### Code Examples
+### Code examples
 
 <CodeGroup>
 
@@ -71,7 +94,8 @@ const params = new URLSearchParams({
   page: '1',
   limit: '10',
   sort: '-createdAt',
-  'filter[status][eq]': 'published'
+  status: 'published',
+  include_deleted: 'true'
 });
 
 const res = await fetch(
@@ -83,12 +107,13 @@ const res = await fetch(
   }
 );
 
-const { success, data, message } = await res.json();
-// data is an array of matching documents
+const { data } = await res.json();
+// data.items contains the array of matching documents
+// data.total contains the total count
 ```
 
 ```bash curl
-curl "https://api.ub.bitbros.in/api/data/posts?page=1&limit=10&sort=-createdAt&filter[status][eq]=published" \
+curl "https://api.ub.bitbros.in/api/data/posts?page=1&limit=10&sort=-createdAt&status=published&include_deleted=true" \
   -H "x-api-key: pk_live_YOUR_KEY"
 ```
 
@@ -103,26 +128,35 @@ const res = await fetch('https://api.ub.bitbros.in/api/data/notes', {
 
 </CodeGroup>
 
-### Success Response
+### Success response
 
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "_id": "64fd1234abcd5678ef901234",
-      "title": "Why BaaS is the future",
-      "status": "published",
-      "createdAt": "2024-01-15T10:30:00.000Z"
-    },
-    {
-      "_id": "64fd5678abcd1234ef905678",
-      "title": "Getting started with urBackend",
-      "status": "published",
-      "createdAt": "2024-01-14T08:00:00.000Z"
-    }
-  ],
-  "message": "Documents fetched successfully"
+  "data": {
+    "items": [
+      {
+        "_id": "64fd1234abcd5678ef901234",
+        "title": "Why BaaS is the future",
+        "status": "published",
+        "isDeleted": false,
+        "deletedAt": null,
+        "createdAt": "2024-01-15T10:30:00.000Z"
+      },
+      {
+        "_id": "64fd5678abcd1234ef905678",
+        "title": "Getting started with urBackend",
+        "status": "published",
+        "isDeleted": true,
+        "deletedAt": "2026-05-20T10:30:00.000Z",
+        "createdAt": "2024-01-14T08:00:00.000Z"
+      }
+    ],
+    "total": 42,
+    "page": 1,
+    "limit": 10
+  },
+  "message": "Data fetched successfully"
 }
 ```
 

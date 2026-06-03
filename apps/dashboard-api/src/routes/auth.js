@@ -31,6 +31,13 @@ const dashboardLimiter = rateLimit({
 router.post('/register', authLimiter, register);
 
 router.post('/login', authLimiter, login);
+
+router.post('/send-otp', authLimiter, sendOtp);
+router.post('/verify-otp', authLimiter, verifyOtp);
+
+router.post('/forgot-password', authLimiter, forgotPassword);
+router.post('/reset-password', authLimiter, resetPassword);
+
 router.get('/github/start', startGithubAuth);
 router.get('/github/callback', handleGithubCallback);
 
@@ -39,12 +46,6 @@ router.use(dashboardLimiter);
 router.put('/change-password', authorization, changePassword);
 
 router.delete('/delete-account', authorization, deleteAccount);
-
-router.post('/send-otp', sendOtp);
-router.post('/verify-otp', verifyOtp);
-
-router.post('/forgot-password', forgotPassword);
-router.post('/reset-password', resetPassword);
 
 router.post('/refresh-token', refreshToken);
 router.post('/logout', authorization, logout);

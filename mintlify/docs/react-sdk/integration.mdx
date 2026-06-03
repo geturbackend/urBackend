@@ -1,0 +1,97 @@
+---
+title: "Full Integration Example"
+description: "See how all the pieces of the React SDK fit together in a complete application."
+---
+
+Here is a complete, single-file example showing how to build an application with urBackend using `create-react-app` or `Vite`.
+
+This example includes:
+1. The global `<UrProvider>`.
+2. A client-side router (using simple state for demonstration).
+3. A public Login page (`<GuestRoute>`) with the pre-built `<UrAuth>` UI.
+4. A secure Dashboard page (`<ProtectedRoute>`).
+5. A `<UrUserButton>` for the profile dropdown and logout.
+
+## `App.tsx`
+
+```tsx
+import { useState, useEffect } from 'react';
+import { 
+  UrProvider, 
+  UrAuth, 
+  ProtectedRoute, 
+  GuestRoute, 
+  UrUserButton, 
+  useUser 
+} from '@urbackend/react';
+
+// --- Components ---
+
+function LoginPage({ navigate }: { navigate: (path: string) => void }) {
+  return (
+    // If they are already logged in, send them straight to the dashboard
+    <GuestRoute fallback={<div>Loading...</div>} onRedirect={() => navigate('/dashboard')}>
+      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
+        <UrAuth providers={['google', 'github']} />
+      </div>
+    </GuestRoute>
+  );
+}
+
+function Dashboard({ navigate }: { navigate: (path: string) => void }) {
+  const { user } = useUser();
+
+  return (
+    // If they are NOT logged in, kick them back to login
+    <ProtectedRoute fallback={<div>Loading...</div>} onRedirect={() => navigate('/')}>
+      
+      {/* Top right profile dropdown */}
+      <UrUserButton 
+        onSettingsClick={() => alert('Opening Settings')}
+        onProfileClick={() => alert('Opening Profile')}
+      />
+      
+      <div style={{ padding: '40px', fontFamily: 'sans-serif' }}>
+        <h1>Dashboard</h1>
+        <p>Welcome back, {user?.name || user?.email}!</p>
+        <p>Your user ID is: <code>{user?._id}</code></p>
+      </div>
+
+    </ProtectedRoute>
+  );
+}
+
+// --- Main Router ---
+
+function Router() {
+  const [route, setRoute] = useState(window.location.pathname);
+
+  useEffect(() => {
+    const handlePop = () => setRoute(window.location.pathname);
+    window.addEventListener('popstate', handlePop);
+    return () => window.removeEventListener('popstate', handlePop);
+  }, []);
+
+  const navigate = (path: string) => {
+    window.history.pushState({}, '', path);
+    setRoute(path);
+  };
+
+  if (route === '/dashboard') {
+    return <Dashboard navigate={navigate} />;
+  }
+
+  // Default route (Login)
+  return <LoginPage navigate={navigate} />;
+}
+
+// --- Root Entry Point ---
+
+export default function App() {
+  return (
+    <UrProvider apiKey="pk_live_your_publishable_api_key">
+      <Router />
+    </UrProvider>
+  );
+}
+```

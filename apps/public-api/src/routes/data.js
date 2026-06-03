@@ -15,6 +15,7 @@ const {
   getSingleDoc, 
   updateSingleData, 
   deleteSingleDoc, 
+  recoverSingleDoc,
   aggregateData 
 } = require("../controllers/data.controller");
 
@@ -88,6 +89,17 @@ router.delete(
   resolvePublicAuthContext,
   authorizeWriteOperation,
   deleteSingleDoc
+);
+
+// RECOVER SOFT-DELETED DATA
+router.patch(
+  '/:collectionName/:id/recover',
+  verifyApiKey,
+  blockUsersCollectionDataAccess,
+  checkUsageLimits,
+  resolvePublicAuthContext,
+  authorizeWriteOperation,
+  recoverSingleDoc
 );
 
 

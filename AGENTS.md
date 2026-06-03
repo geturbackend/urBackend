@@ -10,6 +10,11 @@ Main apps:
 - `apps/web-dashboard`: React/Vite dashboard
 - `packages/common`: shared models, validation, middleware, encryption, DB/model utilities
 
+SDKs:
+- `sdks/urbackend-sdk`: Core TypeScript/JavaScript SDK (Framework-agnostic)
+- `sdks/urbackend-react`: React SDK (`UrProvider`, `useUrContext`, UI components)
+- `sdks/urbackend-python`: Official Python SDK (Requests-based)
+
 Workspace scripts are defined in [package.json](/package.json).
 
 ## Important project rules
@@ -69,6 +74,7 @@ Behavior:
 ## Redis key patterns
 - Refresh session: `project:auth:refresh:session:{tokenId}`
 - OAuth state: `project:auth:oauth:state:{state}` (10min TTL)
+- Social Refresh Exchange: `project:social-auth:refresh-exchange:{rtCode}` (Uses atomic `GETDEL` for concurrency safety)
 - Mail count: `project:mail:count:{projectId}:{YYYY-MM}` (TTL = end of month)
 - Do NOT change these patterns — existing sessions will break
 
@@ -144,11 +150,26 @@ cd apps/web-dashboard
 npm run build
 ```
 
+Run SDK tests:
+```bash
+# JS Core SDK
+npm run test --workspace=@urbackend/sdk
+
+# React SDK (Vitest)
+npm run test --workspace=@urbackend/react
+
+# Python SDK (pytest)
+cd sdks/urbackend-python
+pytest
+```
+
 ## Testing expectations
 
 Before shipping auth, RLS, or schema changes:
 - run `apps/public-api` tests
 - run `apps/dashboard-api` tests
+- run `@urbackend/sdk` tests
+- run `@urbackend/react` tests
 - run `apps/web-dashboard` lint
 - run `apps/web-dashboard` build when frontend changed
 

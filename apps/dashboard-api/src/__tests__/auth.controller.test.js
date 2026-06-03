@@ -55,10 +55,15 @@ jest.mock('@urbackend/common', () => {
     const Project = jest.fn();
     Project.deleteMany = jest.fn().mockResolvedValue(undefined);
 
+    const PlatformEvent = {
+        create: jest.fn().mockResolvedValue(undefined),
+    };
+
     return {
         Developer,
         Otp,
         Project,
+        PlatformEvent,
         sendOtp: jest.fn().mockResolvedValue(undefined),
         // Use real zod shapes so validation logic is exercised.
         loginSchema: z.object({

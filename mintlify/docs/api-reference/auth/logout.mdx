@@ -20,10 +20,6 @@ Like the refresh endpoint, logout needs to read the current refresh token to kno
 
 ### Response Fields
 
-<ResponseField name="success" type="boolean">
-  `true` when the session was revoked.
-</ResponseField>
-
 <ResponseField name="message" type="string">
   Human-readable confirmation message.
 </ResponseField>
@@ -64,8 +60,6 @@ curl -X POST "https://api.ub.bitbros.in/api/userAuth/logout" \
 
 ```json
 {
-  "success": true,
-  "data": {},
   "message": "Logged out successfully"
 }
 ```

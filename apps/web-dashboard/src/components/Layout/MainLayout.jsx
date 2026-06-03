@@ -4,7 +4,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import ProjectNavbar from './ProjectNavbar';
 import { useLayout } from '../../context/LayoutContext';
-
+import BackToTop from './BackToTop';
 // Use the new official logo from public directory
 const logoImage = "https://cdn.jsdelivr.net/gh/yash-pouranik/urBackend@main/frontend/public/logo.png";
 
@@ -68,6 +68,7 @@ function MainLayout({ children }) {
                     {children}
                 </div>
             </div>
+            <BackToTop />
         </div>
     );
 }

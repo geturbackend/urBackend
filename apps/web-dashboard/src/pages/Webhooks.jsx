@@ -108,7 +108,7 @@ export default function Webhooks() {
     setFormData(prev => {
       const events = { ...prev.events };
       if (!events[collection]) {
-        events[collection] = { insert: false, update: false, delete: false };
+        events[collection] = { insert: false, update: false, delete: false, recover: false };
       }
       events[collection] = { ...events[collection], [action]: !events[collection][action] };
       return { ...prev, events };
@@ -441,7 +441,7 @@ if (loading) return <WebhooksSkeleton />;
                         <div key={coll.name} style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                           <span style={{ fontWeight: 500, minWidth: '120px' }}>{coll.name}</span>
                           <div style={{ display: 'flex', gap: '1rem' }}>
-                            {['insert', 'update', 'delete'].map((action) => (
+                            {['insert', 'update', 'delete', 'recover'].map((action) => (
                               <label key={action} style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                                 <input
                                   type="checkbox"

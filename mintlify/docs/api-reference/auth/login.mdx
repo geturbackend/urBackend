@@ -23,39 +23,27 @@ Validates the user's credentials and returns a short-lived JWT access token. A r
 
 ### Response Fields
 
-<ResponseField name="success" type="boolean">
-  `true` on successful authentication.
+<ResponseField name="accessToken" type="string">
+  Short-lived JWT. Include this in the `Authorization: Bearer` header for authenticated requests.
 </ResponseField>
-
-<ResponseField name="data" type="object">
-  <Expandable title="data">
-    <ResponseField name="accessToken" type="string">
-      Short-lived JWT. Include this in the `Authorization: Bearer` header for authenticated requests.
+<ResponseField name="expiresIn" type="string">
+  Human-readable duration until the access token expires (e.g., `"15m"`).
+</ResponseField>
+<ResponseField name="user" type="object">
+  <Expandable title="user">
+    <ResponseField name="_id" type="string">
+      MongoDB ObjectId of the authenticated user.
     </ResponseField>
-    <ResponseField name="expiresIn" type="string">
-      Human-readable duration until the access token expires (e.g., `"15m"`).
+    <ResponseField name="email" type="string">
+      The user's email address.
     </ResponseField>
-    <ResponseField name="user" type="object">
-      <Expandable title="user">
-        <ResponseField name="_id" type="string">
-          MongoDB ObjectId of the authenticated user.
-        </ResponseField>
-        <ResponseField name="email" type="string">
-          The user's email address.
-        </ResponseField>
-        <ResponseField name="name" type="string">
-          The user's name.
-        </ResponseField>
-        <ResponseField name="...additional fields" type="any">
-          Any other non-sensitive fields from your `users` collection.
-        </ResponseField>
-      </Expandable>
+    <ResponseField name="name" type="string">
+      The user's name.
+    </ResponseField>
+    <ResponseField name="...additional fields" type="any">
+      Any other non-sensitive fields from your `users` collection.
     </ResponseField>
   </Expandable>
-</ResponseField>
-
-<ResponseField name="message" type="string">
-  Human-readable status message.
 </ResponseField>
 
 <Note>
@@ -88,8 +76,7 @@ const res = await fetch('https://api.ub.bitbros.in/api/userAuth/login', {
   })
 });
 
-const { success, data, message } = await res.json();
-const { accessToken, expiresIn, user } = data;
+const { accessToken, expiresIn, user } = await res.json();
 ```
 
 ```bash curl
@@ -109,17 +96,13 @@ curl -X POST "https://api.ub.bitbros.in/api/userAuth/login" \
 
 ```json
 {
-  "success": true,
-  "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "expiresIn": "15m",
-    "user": {
-      "_id": "64fd1234abcd5678ef901234",
-      "email": "alice@example.com",
-      "name": "Alice"
-    }
-  },
-  "message": "Login successful"
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresIn": "15m",
+  "user": {
+    "_id": "64fd1234abcd5678ef901234",
+    "email": "alice@example.com",
+    "name": "Alice"
+  }
 }
 ```
 

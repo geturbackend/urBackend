@@ -19,9 +19,21 @@ export default function Footer() {
                             The instant Backend-as-a-Service for frontend developers. Ship faster.
                         </p>
 
+                        <h3 style={{fontSize: '18px', fontWeight: 'bold'}}>
+                            Subscribe To Our Newsletter :
+                        </h3>
+                        <p style={{ color: '#C0C0C0', marginBottom: '0.5rem', maxWidth: '350px', fontSize: '15px' }}>
+                           Be the first to know what’s shipping next.
+                        </p>
                         <div className="footer-input-wrapper">
-                            <input type="email" placeholder="Stay up to date" />
-                            <button><ArrowRight size={16} /></button>
+                            <input 
+                                type="email" 
+                                placeholder="Enter your E-mail" 
+                                aria-label="Email address for newsletter subscription"
+                            />
+                            <button type="button" aria-label="Subscribe to newsletter">
+                                <ArrowRight size={16} />
+                            </button>
                         </div>
                     </div>
 
@@ -50,7 +62,7 @@ export default function Footer() {
                         <a href="https://github.com/yash-pouranik/urBackend" target="_blank" className="social-icon"><Github size={20} /></a>
                     </div>
                     <div className="legal-links">
-                        <span>&copy; 2025 urBackend Inc.</span>
+                        <span>&copy; 2026 urBackend Inc.</span>
                     </div>
                 </div>
 
@@ -65,7 +77,7 @@ export default function Footer() {
                 .modern-footer {
                     background-color: #050505;
                     border-top: 1px solid #222;
-                    padding-top: 6rem;
+                    padding-top: 4rem;
                     color: #fff;
                     overflow: hidden;
                     position: relative;
@@ -73,12 +85,14 @@ export default function Footer() {
 
                 /* --- KEY FIXES HERE --- */
                 .footer-top {
-                    display: flex;
+                    width: 80%;
+                    display: grid;
+                    grid-template-columns: minmax(280px, 360px) 1fr;
                     flex-wrap: wrap;
-                    justify-content: center; /* Center alignment */
+                    justify-self: center;
                     gap: 4rem; /* Reduced from 8rem to prevent wrapping */
                     margin-bottom: 5rem;
-                    text-align: left; /* Keep text left aligned inside blocks */
+                    text-align: left; /* Keep text left aligned inside blocks */    
                 }
 
                 .footer-brand-col {
@@ -87,9 +101,14 @@ export default function Footer() {
                 }
 
                 .footer-nav-grid {
+                    padding-top: 1rem;
+                    padding-left: clamp(0rem, 4vw, 3rem);
+                    width: 100%;
                     display: flex;
-                    gap: 3rem; /* Reduced from 5rem */
+                    flex-direction: row;
+                    gap: clamp(1.5rem, 3vw, 3rem);
                     flex-wrap: wrap;
+                    justify-content: space-evenly;
                 }
                 /* --------------------- */
 
@@ -101,7 +120,7 @@ export default function Footer() {
                     border-radius: 50px;
                     padding: 6px;
                     width: 100%; /* Fill column width */
-                    max-width: 320px;
+                    max-width: 360px;
                     transition: border-color 0.2s;
                 }
                 .footer-input-wrapper:focus-within {
@@ -164,8 +183,11 @@ export default function Footer() {
                     justify-content: center; /* Centered */
                     gap: 4rem; /* Gap between Socials and Legal */
                     align-items: center;
-                    padding-bottom: 3rem;
+                    padding-bottom: 1rem;
+                    padding-top: 1rem;
                     border-bottom: 1px solid #222;
+                    border-top: 1px solid #222;
+
                     flex-wrap: wrap;
                 }
                 .social-links { display: flex; gap: 1.5rem; }
@@ -201,27 +223,37 @@ export default function Footer() {
                 /* Mobile Tweaks */
                 @media (max-width: 900px) {
                     .footer-top { 
+                        width: 100%;
+                        display: flex;
                         flex-direction: column; 
-                        align-items: center; 
-                        text-align: center;
+                        align-items: center;
+                        text-align: left;
                         gap: 3rem;
+                        padding: 0 1.5rem;
                     }
                     .footer-brand-col { 
                         display: flex; 
-                        flex-direction: column; 
-                        align-items: center; 
+                        flex-direction: column;
+                        align-items: center;
+                        width: 100%;
                     }
                     .footer-nav-grid { 
-                        gap: 3rem; 
-                        justify-content: center; 
-                        text-align: center; /* Center links on mobile for better symmetry */
+                        width: 100%;
+                        gap: 0; 
+                        padding-left: 0;
+                        justify-content: flex-start;
+                        text-align: left;
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
                     }
-                    /* If using left align on mobile, ensure consistent width */
-                    /* .footer-nav-grid { text-align: left; } */
+                    .footer-col {
+                        align-items: center;
+                    }
                     
                     .footer-middle { 
-                        flex-direction: column; 
+                        flex-direction: row; 
                         gap: 2rem; 
+                        align-items: center;
                     }
                 }
             `}</style>

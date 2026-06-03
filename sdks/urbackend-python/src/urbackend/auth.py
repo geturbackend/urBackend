@@ -402,12 +402,12 @@ class AuthModule:
     def social_exchange(self, rt_code: str, token: str) -> Dict[str, Any]:
         """Exchange an OAuth ``rtCode`` + one-time ``token`` for a urBackend refresh token.
 
-        Both ``rtCode`` and ``token`` are returned as query parameters on the
-        OAuth callback URL (``<siteUrl>/auth/callback?rtCode=...&token=...``).
+        The ``rtCode`` is returned as a query parameter and ``token`` is returned in the URL fragment
+        on the OAuth callback URL (``<siteUrl>/auth/callback?rtCode=...#token=...``).
 
         Args:
             rt_code: The ``rtCode`` query parameter from the OAuth callback URL.
-            token: The one-time security ``token`` query parameter from the callback URL.
+            token: The one-time security ``token`` fragment parameter from the callback URL.
 
         Returns:
             Dict with ``refreshToken`` that can be used with :meth:`refresh_token`.
@@ -416,9 +416,11 @@ class AuthModule:
             AuthError: ``rtCode`` or ``token`` invalid or expired.
 
         Example:
-            >>> # In a Django callback view:
-            >>> rt_code = request.GET.get("rtCode")
-            >>> token   = request.GET.get("token")
+            >>> # The frontend must extract the token from the URL fragment (#token=...)
+            >>> # and send it to your backend (e.g., via a POST request), along with rtCode.
+            >>> payload = request.json()
+            >>> rt_code = payload.get("rtCode")
+            >>> token   = payload.get("token")
             >>> session = client.auth.social_exchange(rt_code, token)
             >>> # Now call refresh_token to get an accessToken:
             >>> new_session = client.auth.refresh_token(session["refreshToken"])

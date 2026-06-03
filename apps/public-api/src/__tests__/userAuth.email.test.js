@@ -85,6 +85,9 @@ jest.mock('@urbackend/common', () => {
         getRefreshSession: jest.fn(),
         persistRefreshSession: jest.fn().mockResolvedValue(undefined),
         revokeSessionChain: jest.fn().mockResolvedValue(undefined),
+        checkLockout: jest.fn().mockResolvedValue({ locked: false, retryAfterSeconds: 0 }),
+        recordFailedAttempt: jest.fn().mockResolvedValue({ locked: false, retryAfterSeconds: 0, attempts: 1 }),
+        clearLockout: jest.fn().mockResolvedValue(undefined),
     };
 });
 
@@ -99,7 +102,7 @@ jest.mock('../utils/refreshToken', () => ({
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { redis, authEmailQueue, __mockModel: mockModel } = require('@urbackend/common');
+const { redis, authEmailQueue, __mockModel: mockModel, checkLockout, recordFailedAttempt, clearLockout } = require('@urbackend/common');
 const { issueAuthTokens } = require('../utils/refreshToken');
 const controller = require('../controllers/userAuth.controller');
 
@@ -238,6 +241,8 @@ describe('Email Authentication Flow', () => {
                 type: 'verification'
             }));
 
+            expect(clearLockout).toHaveBeenCalledWith('project_1', 'new@user.com');
+
             expect(issueAuthTokens).toHaveBeenCalled();
             expect(res.status).toHaveBeenCalledWith(201);
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
@@ -333,7 +338,9 @@ describe('Email Authentication Flow', () => {
 
             await controller.login(req, res);
 
+            expect(checkLockout).toHaveBeenCalledWith('project_1', 'test@user.com');
             expect(bcrypt.compare).toHaveBeenCalledWith('password123', 'hashed_pw');
+            expect(clearLockout).toHaveBeenCalledWith('project_1', 'test@user.com');
             expect(issueAuthTokens).toHaveBeenCalled();
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
                 token: 'signed_access_token'
@@ -356,7 +363,61 @@ describe('Email Authentication Flow', () => {
 
             await controller.login(req, res);
 
+            expect(recordFailedAttempt).toHaveBeenCalledWith('project_1', 'test@user.com');
             expect(res.status).toHaveBeenCalledWith(400);
+        });
+
+        test('returns 423 when account is already locked', async () => {
+            const req = makeReq({
+                body: { email: 'test@user.com', password: 'password123' }
+            });
+            const res = makeRes();
+
+            checkLockout.mockResolvedValueOnce({ locked: true, retryAfterSeconds: 900 });
+
+            await controller.login(req, res);
+
+            expect(bcrypt.compare).not.toHaveBeenCalled();
+            expect(recordFailedAttempt).not.toHaveBeenCalled();
+            expect(res.status).toHaveBeenCalledWith(423);
+        });
+
+        test('returns 423 when failures reach lockout threshold', async () => {
+            const req = makeReq({
+                body: { email: 'test@user.com', password: 'wrongpassword' }
+            });
+            const res = makeRes();
+
+            mockModel.findOne.mockReturnValueOnce({
+                select: jest.fn().mockResolvedValueOnce({
+                    _id: 'user_123',
+                    password: 'hashed_pw'
+                })
+            });
+            bcrypt.compare.mockResolvedValueOnce(false);
+            recordFailedAttempt.mockResolvedValueOnce({ locked: true, retryAfterSeconds: 900, attempts: 5 });
+
+            await controller.login(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(423);
+        });
+
+        test('user-not-found branch records attempt and returns 423 when lockout is reached', async () => {
+            const req = makeReq({
+                body: { email: 'missing@user.com', password: 'wrongpassword' }
+            });
+            const res = makeRes();
+
+            checkLockout.mockResolvedValueOnce({ locked: false, retryAfterSeconds: 0 });
+            mockModel.findOne.mockReturnValueOnce({
+                select: jest.fn().mockResolvedValueOnce(null)
+            });
+            recordFailedAttempt.mockResolvedValueOnce({ locked: true, retryAfterSeconds: 900, attempts: 5 });
+
+            await controller.login(req, res);
+
+            expect(recordFailedAttempt).toHaveBeenCalledWith('project_1', 'missing@user.com');
+            expect(res.status).toHaveBeenCalledWith(423);
         });
     });
 
@@ -368,6 +429,7 @@ describe('Email Authentication Flow', () => {
             const res = makeRes();
 
             mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123' });
+            redis.get.mockResolvedValueOnce(null); // no cooldown
 
             await controller.requestPasswordReset(req, res);
 
@@ -376,6 +438,67 @@ describe('Email Authentication Flow', () => {
                 email: 'reset@user.com'
             }));
             expect(res.json).toHaveBeenCalled();
+        });
+
+        test('returns 429 when reset OTP cooldown is active (before DB lookup)', async () => {
+            const req = makeReq({ body: { email: 'reset@user.com' } });
+            const res = makeRes();
+
+            redis.get.mockResolvedValueOnce('1'); // cooldown active — checked before findOne
+            redis.ttl.mockResolvedValueOnce(45);
+
+            await controller.requestPasswordReset(req, res);
+
+            expect(mockModel.findOne).not.toHaveBeenCalled(); // DB never queried
+            expect(authEmailQueue.add).not.toHaveBeenCalled();
+            expect(res.status).toHaveBeenCalledWith(429);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                success: false,
+                message: expect.stringContaining('45 seconds')
+            }));
+        });
+
+        test('sets cooldown for unknown email to prevent account enumeration', async () => {
+            const req = makeReq({ body: { email: 'unknown@user.com' } });
+            const res = makeRes();
+
+            redis.get.mockResolvedValueOnce(null); // no cooldown
+            mockModel.findOne.mockResolvedValueOnce(null); // user does not exist
+
+            await controller.requestPasswordReset(req, res);
+
+            const cooldownCall = redis.set.mock.calls.find(c => c[0].includes('otp:cooldown:reset'));
+            expect(cooldownCall).toBeDefined(); // cooldown set even for unknown email
+            expect(authEmailQueue.add).not.toHaveBeenCalled();
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: expect.any(String) }));
+        });
+
+        test('sets cooldown after sending reset OTP', async () => {
+            const req = makeReq({ body: { email: 'reset@user.com' } });
+            const res = makeRes();
+
+            mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123' });
+            redis.get.mockResolvedValueOnce(null);
+
+            await controller.requestPasswordReset(req, res);
+
+            const cooldownCall = redis.set.mock.calls.find(c => c[0].includes('otp:cooldown:reset'));
+            expect(cooldownCall).toBeDefined();
+            expect(cooldownCall[2]).toBe('EX');
+            expect(cooldownCall[3]).toBe(60);
+        });
+
+        test('uses normalized email in Redis key', async () => {
+            const req = makeReq({ body: { email: 'Reset@User.COM' } });
+            const res = makeRes();
+
+            mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123' });
+            redis.get.mockResolvedValueOnce(null);
+
+            await controller.requestPasswordReset(req, res);
+
+            const otpCall = redis.set.mock.calls.find(c => c[0].includes('otp:reset'));
+            expect(otpCall[0]).toContain('reset@user.com');
         });
     });
 
@@ -396,6 +519,7 @@ describe('Email Authentication Flow', () => {
                 { email: 'reset@user.com' },
                 { $set: { password: 'hashed_pw' } }
             );
+            expect(clearLockout).toHaveBeenCalledWith('project_1', 'reset@user.com');
             expect(redis.del).toHaveBeenCalled();
             expect(res.json).toHaveBeenCalled();
         });

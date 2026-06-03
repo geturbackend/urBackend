@@ -143,6 +143,7 @@ async function getStorage(project) {
                 client = createS3Adapter(config);
             } else {
                 throw new Error("Unknown storage provider: " + provider);
+                console.error("[getStorage] Unknown storage provider: ", provider);
             }
         } catch (err) {
             console.error("Storage config error:", err);
@@ -266,4 +267,112 @@ async function verifyUploadedFile(project, filePath) {
     return head.ContentLength;
 }
 
-module.exports = { getStorage, getPresignedUploadUrl, verifyUploadedFile };
+async function getS3CompatibleStorage(project) {
+    if (!project?._id) {
+        throw new Error("Project document is required");
+    }
+
+    // INTERNAL SUPABASE STORAGE
+    if (!project.resources?.storage?.isExternal) {
+
+        if (
+            !process.env.SUPABASE_URL ||
+            !process.env.SUPABASE_PUBLIC_KEY ||
+            !process.env.SUPABASE_SECRET_KEY
+        ) {
+            throw new Error(
+                "Internal Supabase S3 configuration is incomplete"
+            );
+        }
+
+        const s3Client = new S3Client({
+            region: "auto",
+            endpoint: process.env.SUPABASE_URL,
+            forcePathStyle: true,
+            credentials: {
+                accessKeyId: process.env.SUPABASE_PUBLIC_KEY,
+                secretAccessKey: process.env.SUPABASE_SECRET_KEY
+            }
+        });
+
+        return {
+            provider: "supabase_internal",
+            s3Client
+        };
+    }
+
+    // EXTERNAL STORAGE
+    let config;
+
+    try {
+        const decrypted = decrypt(project.resources.storage.config);
+        config = JSON.parse(decrypted);
+    } catch (err) {
+        console.error("[getS3CompatibleStorage] Invalid config:", err);
+        throw new Error("Invalid storage configuration");
+    }
+
+    const provider = config.storageProvider || "supabase";
+
+    // EXTERNAL SUPABASE VIA S3 GATEWAY
+    if (provider === "supabase") {
+
+        if (
+            !config.s3Endpoint ||
+            !config.s3AccessKeyId ||
+            !config.s3SecretAccessKey
+        ) {
+            throw new Error(
+                "Supabase S3-compatible configuration is incomplete"
+            );
+        }
+
+        const s3Client = new S3Client({
+            region: "auto",
+            endpoint: config.s3Endpoint,
+            forcePathStyle: true,
+            credentials: {
+                accessKeyId: config.s3AccessKeyId,
+                secretAccessKey: config.s3SecretAccessKey
+            }
+        });
+
+        return {
+            provider,
+            s3Client
+        };
+    }
+
+    // AWS S3 / CLOUDFLARE R2
+    if (provider === "s3" || provider === "cloudflare_r2") {
+
+        if (
+            !config.endpoint ||
+            !config.accessKeyId ||
+            !config.secretAccessKey
+        ) {
+            throw new Error(
+                "S3-compatible storage configuration is incomplete"
+            );
+        }
+
+        const s3Client = new S3Client({
+            region: config.region || "auto",
+            endpoint: config.endpoint,
+            forcePathStyle: true,
+            credentials: {
+                accessKeyId: config.accessKeyId,
+                secretAccessKey: config.secretAccessKey
+            }
+        });
+
+        return {
+            provider,
+            s3Client
+        };
+    }
+
+    throw new Error(`Unsupported storage provider: ${provider}`);
+}
+
+module.exports = { getStorage, getPresignedUploadUrl, verifyUploadedFile, getS3CompatibleStorage };

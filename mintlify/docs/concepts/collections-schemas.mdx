@@ -52,6 +52,14 @@ The schema engine is strict about types:
 
 Sending the wrong type returns a `400` validation error.
 
+## System-managed fields
+
+urBackend adds the `isDeleted` (Boolean, default `false`) and `deletedAt` (Date, default `null`) fields to every collection to manage soft deletes. The system strictly manages these fields so you cannot set, modify, or filter by them directly from the client.
+
+<Note>
+  Documents with `isDeleted: true` are excluded from normal read queries by default. To view them, you must use the `include_deleted=true` query parameter.
+</Note>
+
 ## Defining field constraints
 
 ### Required fields

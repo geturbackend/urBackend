@@ -32,11 +32,11 @@ export default function Releases() {
     }, []);
 
     return (
-        <div className="container" style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+        <div className="container" style={{ maxWidth: '900px', margin: '0 auto', padding: '48px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', gap: '20px', flexWrap: 'wrap' }}>
                 <div>
-                    <h1 style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: '10px' }}>Changelog</h1>
-                    <p style={{ color: 'var(--color-text-muted)', fontSize: '1.1rem' }}>
+                    <h1 style={{ fontSize: '2.3rem', fontWeight: 700, marginBottom: '10px' }}>Changelog</h1>
+                    <p style={{ color: 'var(--color-text-muted)', fontSize: '1rem' }}>
                         The latest updates and improvements to urBackend.
                     </p>
                 </div>
@@ -44,7 +44,7 @@ export default function Releases() {
                     <button 
                         onClick={() => navigate('/admin/create-release')}
                         className="btn btn-primary"
-                        style={{ gap: '8px' }}
+                        style={{ gap: '8px', background: '#00f5d4', color: '#000', border: '1px solid #00f5d4' }}
                     >
                         <Plus size={18} /> New Release
                     </button>
@@ -68,14 +68,14 @@ export default function Releases() {
     </div>
 ) : releases.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '80px 20px', background: 'var(--color-bg-secondary)', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
-                    <Rocket size={48} color="var(--color-text-muted)" style={{ marginBottom: '20px' }} />
+                    <Rocket size={48} color="#00f5d4" style={{ marginBottom: '20px' }} />
                     <h3>No releases yet</h3>
                     <p style={{ color: 'var(--color-text-muted)' }}>Stay tuned for our first major update!</p>
                 </div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
                     {releases.map((release) => (
-                        <div key={release._id} style={{ position: 'relative', paddingLeft: '30px', borderLeft: '2px solid var(--color-border)' }}>
+                        <div key={release._id} style={{ position: 'relative', paddingLeft: '30px', borderLeft: '2px solid #1f1f1f' }}>
                             <div style={{ 
                                 position: 'absolute', 
                                 left: '-9px', 
@@ -83,14 +83,14 @@ export default function Releases() {
                                 width: '16px', 
                                 height: '16px', 
                                 borderRadius: '50%', 
-                                background: 'var(--color-primary)',
-                                boxShadow: '0 0 10px var(--color-primary)'
+                                background: '#00f5d4',
+                                boxShadow: '0 0 10px rgba(0, 245, 212, 0.5)'
                             }}></div>
                             
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
                                 <span style={{ 
-                                    background: 'rgba(99, 102, 241, 0.1)', 
-                                    color: 'var(--color-primary)', 
+                                    background: 'rgba(0, 245, 212, 0.12)', 
+                                    color: '#00f5d4', 
                                     padding: '4px 12px', 
                                     borderRadius: '20px', 
                                     fontSize: '0.85rem', 
@@ -116,18 +116,6 @@ export default function Releases() {
             )}
 
             <style>{`
-                .spinner {
-                    width: 40px;
-                    height: 40px;
-                    border: 3px solid rgba(99, 102, 241, 0.1);
-                    border-radius: 50%;
-                    border-top-color: var(--color-primary);
-                    animation: spin 1s linear infinite;
-                }
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
-                }
-                
                 .markdown-content {
                     color: var(--color-text-muted);
                     line-height: 1.7;
@@ -157,20 +145,21 @@ export default function Releases() {
                 }
                 
                 .markdown-content code {
-                    background: rgba(255, 255, 255, 0.1);
+                    background: #101010;
                     padding: 2px 6px;
                     border-radius: 4px;
                     font-family: monospace;
                     font-size: 0.9em;
+                    color: #00f5d4;
                 }
                 
                 .markdown-content pre {
-                    background: #1e1e1e;
+                    background: #0d0d0d;
                     padding: 16px;
                     border-radius: 8px;
                     overflow-x: auto;
                     margin-bottom: 16px;
-                    border: 1px solid var(--color-border);
+                    border: 1px solid #1f1f1f;
                 }
                 
                 .markdown-content pre code {
@@ -179,7 +168,7 @@ export default function Releases() {
                 }
                 
                 .markdown-content blockquote {
-                    border-left: 4px solid var(--color-primary);
+                    border-left: 4px solid #00f5d4;
                     padding-left: 16px;
                     margin: 0 0 16px 0;
                     font-style: italic;
@@ -192,12 +181,12 @@ export default function Releases() {
                     margin-bottom: 16px;
                 }
                 .markdown-content th, .markdown-content td {
-                    border: 1px solid var(--color-border);
+                    border: 1px solid #1f1f1f;
                     padding: 8px 12px;
                     text-align: left;
                 }
                 .markdown-content th {
-                    background: rgba(255, 255, 255, 0.05);
+                    background: #0f0f0f;
                 }
             `}</style>
         </div>

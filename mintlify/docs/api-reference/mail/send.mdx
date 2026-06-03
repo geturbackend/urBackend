@@ -7,6 +7,10 @@ description: "Send transactional email with direct content or a named template."
 
 Sends transactional email from your project.
 
+<Info>
+  For the complete Mail Platform documentation (BYOK, batch sending, logs, audiences, contacts, broadcasts, webhooks, and dashboard workflows), see <a href="/guides/mail-platform">Mail Platform guide</a>.
+</Info>
+
 <Warning>
   This endpoint requires a **Secret Key** (`sk_live_...`). Do not call it from browser/client code.
 </Warning>
@@ -71,7 +75,23 @@ When using `templateName`, urBackend resolves in this order:
 
 For URL values, prefer escaped placeholders like `{{appUrl}}`. URL-like variables are sanitized to safe `http/https` values.
 
-### Code examples
+### How to use
+
+<Steps>
+  <Step title="Get your Secret Key">
+    Log in to the [urBackend Dashboard](https://urbackend.bitbros.in/dashboard), create a new project, and copy your **Secret Key** (`sk_live_...`) or you can get it from rotating it from project overview page.
+  </Step>
+  <Step title="Copy the Code">
+    Copy your preferred language snippet from below. Use **Direct Mode** if you just want to send a quick HTML/Text email without setting up templates or use welcome template for fast test.
+  </Step>
+  <Step title="Paste and Run">
+    Paste the code into your app, replace `sk_live_YOUR_SECRET_KEY` with your actual key, change the `to` email address, and run it!
+  </Step>
+</Steps>
+
+<Info>
+  The Java examples use the native `java.net.http.HttpClient` (requires **Java 11+**) and Text Blocks for JSON formatting (requires **Java 15+**).
+</Info>
 
 <CodeGroup>
 
@@ -107,6 +127,70 @@ const res = await fetch('https://api.ub.bitbros.in/api/mail/send', {
     html: '<h1>Hello</h1><p>Your account is ready.</p>'
   })
 });
+```
+
+```java Java (template mode)
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+public class Main {
+  public static void main(String[] args) throws Exception {
+    String jsonBody = """
+      {
+        "to": "user@example.com",
+        "templateName": "welcome",
+        "variables": {
+          "name": "Ava",
+          "projectName": "Acme",
+          "appUrl": "https://acme.com"
+        }
+      }
+      """;
+
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create("https://api.ub.bitbros.in/api/mail/send"))
+        .header("Content-Type", "application/json")
+        .header("x-api-key", "sk_live_YOUR_SECRET_KEY")
+        .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+        .build();
+
+    HttpClient client = HttpClient.newHttpClient();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    System.out.println(response.body());
+  }
+}
+```
+
+```java Java (direct mode)
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+public class Main {
+  public static void main(String[] args) throws Exception {
+    String jsonBody = """
+      {
+        "to": "user@example.com",
+        "subject": "Welcome to Acme",
+        "html": "<h1>Hello</h1><p>Your account is ready.</p>"
+      }
+      """;
+
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create("https://api.ub.bitbros.in/api/mail/send"))
+        .header("Content-Type", "application/json")
+        .header("x-api-key", "sk_live_YOUR_SECRET_KEY")
+        .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+        .build();
+
+    HttpClient client = HttpClient.newHttpClient();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    System.out.println(response.body());
+  }
+}
 ```
 
 </CodeGroup>

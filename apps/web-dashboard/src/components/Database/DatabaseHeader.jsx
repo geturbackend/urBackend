@@ -1,13 +1,15 @@
 import React from 'react';
 import { 
   Menu, List as ListIcon, Table as TableIcon, Code, 
-  Filter, RefreshCw, Shield, Plus 
+  Filter, RefreshCw, Shield, Plus, Download
 } from 'lucide-react';
+import AiQueryBar from './AiQueryBar';
 
 const DatabaseHeader = ({ 
   project, activeCollection, dataLength, viewMode, setViewMode, 
   showFilterMenu, setShowFilterMenu, filtersCount, 
-  onRefresh, onRlsClick, onAddRecord, onOpenSidebar 
+  onRefresh, onRlsClick, onAddRecord, onOpenSidebar,
+  showDeleted, setShowDeleted, onFiltersGenerated, onExport, isExporting
 }) => {
   return (
     <header className="db-header glass-panel" style={{ 
@@ -37,7 +39,22 @@ const DatabaseHeader = ({
       </div>
 
       <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {activeCollection?.name !== 'users' && (
+          <div style={{ marginRight: '10px' }}>
+            <AiQueryBar 
+              projectId={project?._id} 
+              activeCollection={activeCollection} 
+              onFiltersGenerated={onFiltersGenerated} 
+            />
+          </div>
+        )}
         <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginRight: '10px' }}>{dataLength} Records</span>
+
+        {/* Soft Delete Toggle */}
+        <label style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', marginRight: '10px' }}>
+            <input type="checkbox" checked={showDeleted} onChange={(e) => setShowDeleted(e.target.checked)} />
+            Show Deleted
+        </label>
 
         {/* View Toggles */}
         <div className="view-toggle" style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', padding: '2px', borderRadius: '6px', gap: '2px' }}>
@@ -87,6 +104,16 @@ const DatabaseHeader = ({
             <Shield size={14} /> RLS
           </button>
         )}
+
+        
+        {activeCollection?.name !== 'users' && (
+          <button onClick={onExport} disabled={isExporting} className="btn btn-secondary" style={{ padding: '6px 12px', height: '32px', gap: '6px', fontSize: '0.75rem' }}>
+            <Download size={14} /> Export
+          </button>
+      
+        )}
+
+        
 
         {activeCollection?.name !== 'users' && (
           <button onClick={onAddRecord} className="btn btn-primary" style={{ padding: '6px 12px', height: '32px', gap: '6px', fontSize: '0.75rem' }}>

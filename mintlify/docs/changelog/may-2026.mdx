@@ -1,0 +1,72 @@
+---
+title: Changelog (May 2026)
+description: What's new in urBackend — new features, improvements, and fixes for May.
+---
+
+<Update label="2026-05-25" description="Updates from May 12 – May 25" tags={["Feature", "Improvement", "Fix"]}>
+## New features
+
+**Soft Delete & Trash Cleanup Worker** — You can now soft-delete records through the API. A background worker permanently removes items from the trash after your configured retention period.
+
+**Mail Platform Expansion** — You can now use BYOK (Bring Your Own Key) with the Mail API, send Broadcasts, and follow a comprehensive developer guide to get started.
+
+**Login Lockout Protection** — You now get a Redis-backed per-email login lockout after 5 failed attempts. Locked logins return `423` with a retry countdown.
+
+## Improvements
+
+**Timeline UI for Features Section** — You now navigate the features section through a modern, scrollable timeline view instead of the classic grid.
+
+**Landing Page UI/UX** — You get a smoother first-time experience thanks to refined layout and interaction cues on the landing page.
+
+**NoSQL Injection Sanitization** — You're protected by stronger API security that sanitizes root-level array payloads and recursively sanitizes nested MongoDB operators.
+
+**Automated Release Notes** — You can now follow a unified `CHANGELOG.md` that adheres to the "Keep a Changelog" standard, with weekly release notes automated via GitHub Actions.
+
+## Bug fixes
+
+- Handle `423` login lockout with retry countdown
+- Address PR review feedback for AI Query Builder
+- Resolve remaining review issues from PR `#124`
+- Make database empty‑state `cURL` snippet RLS‑aware to prevent `403` errors
+- Replace hardcoded sender domains with environment variables and fallbacks
+- Fix email parameter trimming and remove regex-based sender parsing
+- Sanitize root-level array payloads and nested operators for NoSQL security
+- Enforce broadcast gating with plan limits
+- Address CodeQL server-side request forgery findings
+- Append run_id to changelog branch name to prevent same-day conflicts
+</Update>
+
+
+<Update label="2026-05-12" description="Week of April 28 – May 12" tags={["Feature", "Improvement", "Fix"]}>
+## New features
+
+**Metrics Stack & Telemetry** — You now get a comprehensive analytics and telemetry stack. The admin dashboard shows a full activation funnel from signup to first API success. You can also view interactive D1, D7, and D30 retention cohorts. You can track churn signals in the same view. A new "My Performance" widget lets you track your 30-day API and Mail usage.
+
+**Proactive Reliability Alerts** — A new background worker continuously monitors API error rates across all your projects. If your project exceeds a 5% error rate within a 15-minute window, you'll see a `reliability_spike` event flagged in the admin dashboard.
+
+**Mail API migrated to BullMQ** — Your requests to `/api/mail/send` no longer block on the synchronous request path. All outgoing emails now route through a high-performance Redis-backed BullMQ queue. This reduces 429 rate-limiting responses. The queue also handles automatic retries and refunds your quota safely on permanent failures.
+
+**Interactive User Onboarding** — You now see a premium, full-page guided onboarding flow with glassmorphism UI. It replaces the old checklist. The flow walks you through project creation, API key generation, and your first API calls.
+
+**Schema Default Values** — You can now define optional default values for fields within your collection schemas. The runtime strictly enforces these defaults. Defaults pass through `Zod` validation and inject cleanly into `MongoDB` during insertions.
+
+**API Performance Analytics** — The public API now tracks detailed latency and error-rate metrics for you. You can view your average response times and error percentages directly in the dashboard. You can filter the data using a new time-range selector.
+
+## Improvements
+
+**Cursor Pagination** — You can now use cursor-based pagination in the database API. This eliminates off-by-one errors. Automatic tie-breaker sorting preserves query determinism on large collections. The default limit is now aligned to 100 records.
+
+**Dashboard UI Redesign** — You now see redesigned analytics pages and dashboard headers with a squared, premium dark-mode aesthetic. The header stats display your dynamic API request usage directly.
+
+**Password Reset OTP Cooldown** — Your password reset flow now uses an atomic Redis-based OTP cooldown. This protects you against account enumeration attacks. The endpoint returns standardized success responses regardless of whether the email exists.
+
+## Bug fixes
+
+- Patched a severe polynomial regular expression denial-of-service (ReDoS) vulnerability in the release link extraction logic.
+- Resolved high-severity dependency vulnerabilities and updated the dashboard build configuration for Vite 6 compatibility.
+- Fixed a bug that caused login lockout to persist after a successful password reset.
+- Fixed duplicate key handling and negative limit clamping in bulk insert APIs.
+- Masked PII (personally identifiable information) from server logs and implemented robust email redaction.
+- Resolved a `ns does not exist` error that occasionally triggered during first collection creation.
+- Replaced `Math.random()` with cryptographically secure `crypto.randomInt()` for all OTP generation.
+</Update>

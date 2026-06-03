@@ -2,6 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "luma",
   "name": "urBackend",
+  "domain": "docs.ub.bitbros.in",
   "colors": {
     "primary": "#53e5ae",
     "light": "#347c64",
@@ -12,6 +13,11 @@
     "dark": "https://media.brand.dev/4b788915-4c6f-48d5-b961-63e90c4e3c5e.png"
   },
   "favicon": "https://media.brand.dev/98c8a636-fed2-4095-a2d6-1ed768aca5dd.png",
+  "seo": {
+    "metatags": {
+      "google-site-verification": "o5KNQ9R-ummCVpBGTiPWtBLvDPdVm-uxMuIQXmj3mlU"
+    }
+  },
   "navbar": {
     "primary": {
       "type": "github",
@@ -38,18 +44,19 @@
               "concepts/row-level-security"
             ]
           },
+           {
+             "group": "Guides",
+             "pages": [
+               "guides/authentication",
+               "guides/social-auth",
+               "guides/mail-platform",
+               "guides/database",
+               "guides/storage",
+               "guides/webhooks"
+             ]
+           },
           {
-            "group": "Guides",
-            "pages": [
-              "guides/authentication",
-              "guides/social-auth",
-              "guides/database",
-              "guides/storage",
-              "guides/webhooks"
-            ]
-          },
-          {
-            "group": "SDK",
+            "group": "TypeScript SDK",
             "pages": [
               "sdk/overview",
               "sdk/auth",
@@ -57,6 +64,18 @@
               "sdk/storage",
               "sdk/schema",
               "sdk/mail"
+            ]
+          },
+          {
+            "group": "React SDK",
+            "pages": [
+              "react-sdk/overview",
+              "react-sdk/ur-provider",
+              "react-sdk/ur-auth",
+              "react-sdk/ur-user-button",
+              "react-sdk/routing",
+              "react-sdk/hooks",
+              "react-sdk/integration"
             ]
           },
           {
@@ -74,6 +93,7 @@
           {
             "group": "Changelog",
             "pages": [
+              "changelog/may-2026",
               "changelog/april-2026"
             ]
           }
@@ -104,6 +124,7 @@
             "pages": [
               "api-reference/data/get-all",
               "api-reference/data/get-one",
+              "api-reference/data/aggregate",
               "api-reference/data/insert",
               "api-reference/data/update",
               "api-reference/data/delete"

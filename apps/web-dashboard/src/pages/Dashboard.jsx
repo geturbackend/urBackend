@@ -17,6 +17,7 @@ import SkeletonLoader from '../components/Dashboard/SkeletonLoader';
 import RecentActivityItem from '../components/Dashboard/RecentActivityItem';
 import UsageQuota from '../components/Dashboard/UsageQuota';
 import OnboardingChecklist from '../components/Onboarding/OnboardingChecklist';
+import DeveloperMetrics from '../components/Dashboard/DeveloperMetrics';
 import DocLinks from '../components/Dashboard/DocLinks';
 
 export default function Dashboard() {
@@ -194,6 +195,9 @@ export default function Dashboard() {
           {/* 1. Usage Quota (Technical Context) */}
           <SectionHeader title="Plan & Usage" />
           <UsageQuota />
+
+          {/* 1.5 My Performance (Per-Dev Analytics) */}
+          <DeveloperMetrics />
 
           {/* 2. Onboarding (Helpful Context) */}
           <OnboardingChecklist />

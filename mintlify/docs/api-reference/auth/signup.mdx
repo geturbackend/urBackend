@@ -37,37 +37,25 @@ Creates a new user account and returns an access token. Any extra fields defined
 
 ### Response Fields
 
-<ResponseField name="success" type="boolean">
-  `true` when the user was created successfully.
-</ResponseField>
-
-<ResponseField name="data" type="object">
-  <Expandable title="data">
-    <ResponseField name="user" type="object">
-      <Expandable title="user">
-        <ResponseField name="_id" type="string">
-          MongoDB ObjectId of the newly created user.
-        </ResponseField>
-        <ResponseField name="email" type="string">
-          The registered email address.
-        </ResponseField>
-        <ResponseField name="name" type="string">
-          The user's name, if provided.
-        </ResponseField>
-        <ResponseField name="...custom fields" type="any">
-          Any other fields stored during signup.
-        </ResponseField>
-      </Expandable>
+<ResponseField name="user" type="object">
+  <Expandable title="user">
+    <ResponseField name="_id" type="string">
+      MongoDB ObjectId of the newly created user.
     </ResponseField>
-    <ResponseField name="accessToken" type="string">
-      A short-lived JWT to use in `Authorization: Bearer` headers. Prefer `accessToken`
-      over the deprecated `token` alias.
+    <ResponseField name="email" type="string">
+      The registered email address.
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      The user's name, if provided.
+    </ResponseField>
+    <ResponseField name="...custom fields" type="any">
+      Any other fields stored during signup.
     </ResponseField>
   </Expandable>
 </ResponseField>
-
-<ResponseField name="message" type="string">
-  Human-readable status message.
+<ResponseField name="accessToken" type="string">
+  A short-lived JWT to use in `Authorization: Bearer` headers. Prefer `accessToken`
+  over the deprecated `token` alias.
 </ResponseField>
 
 ### Code Examples
@@ -90,8 +78,7 @@ const res = await fetch('https://api.ub.bitbros.in/api/userAuth/signup', {
   })
 });
 
-const { success, data, message } = await res.json();
-const { user, accessToken } = data;
+const { user, accessToken } = await res.json();
 ```
 
 ```bash curl
@@ -111,17 +98,13 @@ curl -X POST "https://api.ub.bitbros.in/api/userAuth/signup" \
 
 ```json
 {
-  "success": true,
-  "data": {
-    "user": {
-      "_id": "64fd1234abcd5678ef901234",
-      "email": "alice@example.com",
-      "name": "Alice",
-      "username": "alice_dev"
-    },
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "user": {
+    "_id": "64fd1234abcd5678ef901234",
+    "email": "alice@example.com",
+    "name": "Alice",
+    "username": "alice_dev"
   },
-  "message": "User registered successfully"
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 

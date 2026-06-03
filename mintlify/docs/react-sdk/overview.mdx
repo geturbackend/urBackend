@@ -1,0 +1,96 @@
+---
+title: "React SDK Overview"
+description: "Build full-stack React applications in minutes with pre-built authentication UI, session management, and hooks."
+---
+
+The `@urbackend/react` SDK provides everything you need to build secure, scalable React applications on top of urBackend. It handles the heavy lifting of session persistence, social logins, and routing out of the box.
+
+## Features
+
+- **Pre-built Auth UI**: A beautiful, customizable `<UrAuth />` component for login/signup (email/password & social).
+- **Session Management**: Automatically persists tokens to `localStorage` and handles silent background refreshes.
+- **Protected Routing**: Simple `<ProtectedRoute>` and `<GuestRoute>` wrappers to secure your pages.
+- **Customizable UI**: Includes `<UrUserButton />` for a ready-to-use profile dropdown.
+- **Powerful Hooks**: `useUser`, `useAuth`, `useDb`, and `useStorage` to interact with your backend data natively.
+
+## Installation
+
+Install the React SDK along with the core TypeScript SDK (which it uses under the hood):
+
+```bash
+npm install @urbackend/react @urbackend/sdk
+```
+
+## Setup (Create React App / Vite)
+
+To get started, wrap your root application with the `<UrProvider>` and pass your project's Publishable API Key.
+
+<Warning>
+**Always use your Publishable Key (`pk_live_...`) in the browser.** Never use your Secret Key (`sk_live_...`) on the frontend, as it grants full administrative access.
+</Warning>
+
+```tsx src/main.tsx
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App'
+import { UrProvider } from '@urbackend/react'
+import './index.css'
+
+// Initialize the UrBackend Provider
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <UrProvider apiKey="pk_live_your_publishable_api_key">
+      <App />
+    </UrProvider>
+  </React.StrictMode>,
+)
+```
+
+## Setup (Next.js App Router)
+
+If you are using Next.js with the App Router, create a Client Component provider to wrap your application:
+
+```tsx src/components/Providers.tsx
+"use client";
+
+import { UrProvider } from '@urbackend/react';
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <UrProvider apiKey={process.env.NEXT_PUBLIC_URBACKEND_API_KEY!}>
+      {children}
+    </UrProvider>
+  );
+}
+```
+
+Then, wrap your layout:
+
+```tsx src/app/layout.tsx
+import { Providers } from '../components/Providers';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <Providers>
+          {children}
+        </Providers>
+      </body>
+    </html>
+  );
+}
+```
+
+## Next Steps
+
+Now that your provider is set up, you can start building your authentication flow and accessing your data.
+
+<CardGroup cols={2}>
+  <Card title="Authentication UI" icon="lock" href="/react-sdk/ur-auth">
+    Add a login screen in one line of code.
+  </Card>
+  <Card title="Protect Routes" icon="shield-check" href="/react-sdk/routing">
+    Secure your application pages.
+  </Card>
+</CardGroup>

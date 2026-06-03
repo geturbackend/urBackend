@@ -30,23 +30,13 @@ Include the refresh token in the `x-refresh-token` header, and set `x-refresh-to
 
 ### Response Fields
 
-<ResponseField name="success" type="boolean">
-  `true` when a new access token was issued.
-</ResponseField>
+### Response Fields
 
-<ResponseField name="data" type="object">
-  <Expandable title="data">
-    <ResponseField name="accessToken" type="string">
-      The new short-lived JWT access token.
-    </ResponseField>
-    <ResponseField name="expiresIn" type="string">
-      Human-readable duration until the new access token expires (e.g., `"15m"`).
-    </ResponseField>
-  </Expandable>
+<ResponseField name="accessToken" type="string">
+  The new short-lived JWT access token.
 </ResponseField>
-
-<ResponseField name="message" type="string">
-  Human-readable status message.
+<ResponseField name="expiresIn" type="string">
+  Human-readable duration until the new access token expires (e.g., `"15m"`).
 </ResponseField>
 
 ### Code Examples
@@ -63,8 +53,7 @@ const res = await fetch('https://api.ub.bitbros.in/api/userAuth/refresh-token', 
   credentials: 'include'
 });
 
-const { data } = await res.json();
-const newAccessToken = data.accessToken;
+const { accessToken: newAccessToken } = await res.json();
 ```
 
 ```javascript Mobile (header)
@@ -78,8 +67,7 @@ const res = await fetch('https://api.ub.bitbros.in/api/userAuth/refresh-token', 
   }
 });
 
-const { data } = await res.json();
-const newAccessToken = data.accessToken;
+const { accessToken: newAccessToken } = await res.json();
 // Persist the new refresh token returned in the x-refresh-token response header
 ```
 
@@ -89,12 +77,8 @@ const newAccessToken = data.accessToken;
 
 ```json
 {
-  "success": true,
-  "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "expiresIn": "15m"
-  },
-  "message": "Token refreshed successfully"
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresIn": "15m"
 }
 ```
 

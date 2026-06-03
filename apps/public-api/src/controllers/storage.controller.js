@@ -1,7 +1,6 @@
-const { getStorage, getPresignedUploadUrl, verifyUploadedFile, Project, isProjectStorageExternal, getBucket, redis } = require("@urbackend/common");
+const { getStorage, getPresignedUploadUrl, verifyUploadedFile, Project, isProjectStorageExternal, getBucket, redis, getMonthKey, getEndOfMonthTtlSeconds, incrWithTtlAtomic } = require("@urbackend/common");
 const { randomUUID } = require("crypto");
 const path = require("path");
-const { getMonthKey, getEndOfMonthTtlSeconds, incrWithTtlAtomic } = require("../utils/usageCounter");
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const SAFETY_MAX_BYTES = 100 * 1024 * 1024; // 100MB safety ceiling for internal storage

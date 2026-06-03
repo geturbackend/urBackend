@@ -1,0 +1,57 @@
+---
+title: "Protected & Guest Routes"
+description: "Control access to your application pages based on authentication state."
+---
+
+The React SDK provides two wrapper components that make it incredibly easy to restrict access to certain parts of your application: `<ProtectedRoute>` and `<GuestRoute>`.
+
+## `<ProtectedRoute>`
+
+Use this component to wrap pages or layouts that only **logged-in users** should be able to see (e.g., Dashboards, User Settings).
+
+If a non-authenticated user attempts to view a protected route, they will be redirected to a path you specify.
+
+```tsx
+import { ProtectedRoute } from '@urbackend/react';
+import Dashboard from './Dashboard';
+
+export default function ProtectedDashboard() {
+  return (
+    <ProtectedRoute 
+      fallback={<div>Loading session...</div>} 
+      onRedirect={() => window.location.href = '/login'}
+    >
+      <Dashboard />
+    </ProtectedRoute>
+  );
+}
+```
+
+## `<GuestRoute>`
+
+Use this component to wrap pages that only **non-logged-in users** should see (e.g., Login pages, Signup pages).
+
+If an already-authenticated user attempts to view a guest route, they will be redirected away (usually to the dashboard).
+
+```tsx
+import { GuestRoute, UrAuth } from '@urbackend/react';
+
+export default function LoginPage() {
+  return (
+    <GuestRoute 
+      fallback={<div>Loading...</div>} 
+      onRedirect={() => window.location.href = '/dashboard'}
+    >
+      <UrAuth providers={['google', 'github']} />
+    </GuestRoute>
+  );
+}
+```
+
+## Props (Both Components)
+
+| Prop | Type | Required | Description |
+|---|---|---|---|
+| `fallback` | `React.ReactNode` | Yes | What to render while the SDK is checking the authentication state (e.g. a spinner). |
+| `onRedirect` | `() => void` | Yes | A callback fired when the user needs to be redirected. You can use your framework's router (e.g. `next/navigation` or `react-router-dom`) inside this callback. |
+| `children` | `React.ReactNode` | Yes | The components to render if the access condition is met. |

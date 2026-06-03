@@ -31,6 +31,7 @@ export default function Database() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [collectionToDelete, setCollectionToDelete] = useState(null);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [editingRecord, setEditingRecord] = useState(null);
@@ -42,6 +43,7 @@ export default function Database() {
       filters: []
   });
   const [totalRecords, setTotalRecords] = useState(0);
+  const [recoveringIds, setRecoveringIds] = useState(new Set());
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [rlsEnabled, setRlsEnabled] = useState(false);
   const [rlsMode, setRlsMode] = useState("public-read");
@@ -100,21 +102,31 @@ export default function Database() {
     setLoadingData(true);
     try {
       let queryStr = `?page=${queryParams.page}&limit=${queryParams.limit}&sort=${queryParams.sort}`;
+      if (showDeleted) {
+        queryStr += `&include_deleted=true`;
+      }
       queryParams.filters.forEach(f => {
          if (f.field && f.value !== '') queryStr += `&${f.field}${f.operator === '=' ? '' : f.operator}=${encodeURIComponent(f.value)}`;
       });
       const res = await api.get(`/api/projects/${projectId}/collections/${activeCollection.name}/data${queryStr}`);
-      // Handle wrapped metadata response
-      if (res.data && res.data.items) {
+      // Handle standard API response format { success, data: { items, total } }
+      if (res.data?.success && res.data?.data?.items) {
+        setData(res.data.data.items);
+        setTotalRecords(res.data.data.total || 0);
+      } 
+      // Handle legacy metadata response { items, total }
+      else if (res.data && res.data.items) {
         setData(res.data.items);
         setTotalRecords(res.data.total || 0);
-      } else {
+      } 
+      // Fallback
+      else {
         setData(res.data || []);
         setTotalRecords(Array.isArray(res.data) ? res.data.length : 0);
       }
     } catch { toast.error("Failed to load data"); }
     finally { setLoadingData(false); }
-  }, [activeCollection, projectId, queryParams]);
+  }, [activeCollection, projectId, queryParams, showDeleted]);
 
   useEffect(() => {
     if (!activeCollection) return;
@@ -144,12 +156,89 @@ export default function Database() {
     } catch { toast.error("Failed to save RLS"); return false; }
   };
 
+  /**
+   * Deletes a record from the active collection.
+   * @param {string} id - The ID of the record to delete.
+   */
   const handleDeleteRecord = async (id) => {
     try {
       await api.delete(`/api/projects/${projectId}/collections/${activeCollection.name}/data/${id}`);
       setData(prev => prev.filter(item => item._id !== id));
       toast.success("Document deleted");
     } catch { toast.error("Failed to delete document"); }
+  };
+
+  const handleFiltersGenerated = (aiFilters, aiSort) => {
+      setQueryParams(prev => ({
+          ...prev,
+          page: 1,
+          filters: aiFilters,
+          sort: aiSort || prev.sort
+      }));
+  };
+
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportCollection = async () => {
+      if (!activeCollection || isExporting) return;
+      setIsExporting(true);
+      const toastId = toast.loading("Requesting export...");
+      try {
+          const res = await api.post(`/api/projects/${projectId}/collections/${activeCollection.name}/export`);
+          toast.success(res.data.message || "Export initiated! Check your email.", { id: toastId, duration: 6000 });
+      } catch (err) {
+          const errMsg = err.response?.data?.message || err.response?.data?.error || "Failed to export collection";
+          toast.error(errMsg, { id: toastId });
+      } finally {
+          setIsExporting(false);
+      }
+  };
+
+  /**
+   * Restores a soft-deleted record from the trash for the active collection.
+   * @param {string} id - The ID of the record to recover.
+   */
+  const handleRecoverRecord = async (id) => {
+    const originalRecord = data.find(item => item._id === id);
+    if (!originalRecord) return;
+
+    setRecoveringIds(prev => new Set(prev).add(id));
+    
+    // Optimistic Update: clear isDeleted flag locally
+    setData(prev => prev.map(item => 
+      item._id === id ? { ...item, isDeleted: false, deletedAt: null } : item
+    ));
+
+    try {
+      await api.patch(`/api/projects/${projectId}/collections/${activeCollection.name}/data/${id}/recover`);
+      toast.success("Document restored successfully");
+    } catch (err) {
+      // Rollback to original state on failure
+      setData(prev => prev.map(item => 
+        item._id === id ? originalRecord : item
+      ));
+      
+      const errMsg = err.response?.data?.message || err.response?.data?.error || err.message;
+      toast.error(errMsg ? `Failed to restore document: ${errMsg}` : "Failed to restore document");
+    } finally {
+      setRecoveringIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
+  /**
+   * Generates an RLS-aware cURL snippet for the active collection.
+   * Uses the secret key if RLS is disabled, or the publishable key with a JWT if RLS is enabled.
+   * @returns {string} The cURL command snippet
+   */
+  const getCurlSnippet = () => {
+    if (!activeCollection) return '';
+    return activeCollection.rls?.enabled
+      ? `curl -X POST https://api.urbackend.com/api/data/${activeCollection.name} \\\n  -H "x-api-key: <YOUR_PUBLISHABLE_KEY>" \\\n  -H "Authorization: Bearer <USER_JWT>" \\\n  -H "Content-Type: application/json" \\\n  -d '{}'`
+      : `curl -X POST https://api.urbackend.com/api/data/${activeCollection.name} \\\n  -H "x-api-key: <YOUR_SECRET_KEY>" \\\n  -H "Content-Type: application/json" \\\n  -d '{}'`;
   };
 
   return (
@@ -188,7 +277,12 @@ export default function Database() {
                 }
                 setIsAddModalOpen(true);
               }}
+              onExport={handleExportCollection}
+              isExporting={isExporting}
               onOpenSidebar={() => setIsSidebarOpen(true)}
+              showDeleted={showDeleted}
+              setShowDeleted={setShowDeleted}
+              onFiltersGenerated={handleFiltersGenerated}
             />
 
             <div className="db-content" style={{ flex: 1, overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column' }}>
@@ -205,14 +299,71 @@ export default function Database() {
                 {loadingData ? (
                   <div style={{ padding: '2rem', textAlign: 'center' }} className="spinner"></div>
                 ) : data.length === 0 ? (
-                  <div className="empty-state" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
-                    <FileText size={48} />
-                    <p style={{ marginTop: '1rem' }}>No records found</p>
+                  <div className="empty-state" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ padding: '2.5rem', background: 'rgba(0,0,0,0.1)', border: '1px dashed var(--color-border)', borderRadius: '12px', textAlign: 'center', maxWidth: '600px', width: '100%' }}>
+                        <FileText size={40} style={{ opacity: 0.4, marginBottom: '1rem', display: 'inline-block' }} />
+                        <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', fontWeight: 600 }}>No records found</h3>
+                        <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                            Your collection is empty. You can add a record manually or make your first API call!
+                        </p>
+                        
+                        <div style={{ background: '#111', padding: '1rem', borderRadius: '8px', textAlign: 'left', border: '1px solid var(--color-border)', position: 'relative' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+                                <span>Example POST Request</span>
+                                <button 
+                                    onClick={async () => { 
+                                        try {
+                                            await navigator.clipboard.writeText(getCurlSnippet()); 
+                                            toast.success('Snippet copied!'); 
+                                        } catch {
+                                            toast.error('Failed to copy snippet');
+                                        }
+                                    }} 
+                                    style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer' }}
+                                >
+                                    Copy
+                                </button>
+                            </div>
+                            {activeCollection?.rls?.enabled ? (
+                            <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '0.85rem', color: '#e2e8f0', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+<span style={{ color: '#f59e0b' }}>curl</span> -X POST https://api.urbackend.com/api/data/{activeCollection.name} \
+  -H <span style={{ color: '#10b981' }}>"x-api-key: &lt;YOUR_PUBLISHABLE_KEY&gt;"</span> \
+  -H <span style={{ color: '#10b981' }}>"Authorization: Bearer &lt;USER_JWT&gt;"</span> \
+  -H <span style={{ color: '#10b981' }}>"Content-Type: application/json"</span> \
+  -d <span style={{ color: '#10b981' }}>'&#123;&#125;'</span>
+                            </pre>
+                            ) : (
+                            <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '0.85rem', color: '#e2e8f0', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+<span style={{ color: '#f59e0b' }}>curl</span> -X POST https://api.urbackend.com/api/data/{activeCollection.name} \
+  -H <span style={{ color: '#10b981' }}>"x-api-key: &lt;YOUR_SECRET_KEY&gt;"</span> \
+  -H <span style={{ color: '#10b981' }}>"Content-Type: application/json"</span> \
+  -d <span style={{ color: '#10b981' }}>'&#123;&#125;'</span>
+                            </pre>
+                            )}
+                        </div>
+                        <div style={{ marginTop: '1.5rem' }}>
+                            <button className="btn btn-primary" onClick={() => setIsAddModalOpen(true)}>Add Record Manually</button>
+                        </div>
+                    </div>
                   </div>
                 ) : viewMode === "list" ? (
-                  <RecordList data={data} activeCollection={activeCollection} onView={setSelectedRecord} />
+                  <RecordList 
+                    data={data} 
+                    activeCollection={activeCollection} 
+                    onView={setSelectedRecord} 
+                    onRecover={handleRecoverRecord}
+                    recoveringIds={recoveringIds}
+                  />
                 ) : viewMode === "table" ? (
-                  <CollectionTable data={data} activeCollection={activeCollection} onDelete={(id) => { setSelectedId(id); setShowModal(true); }} onView={setSelectedRecord} onEdit={(rec) => { if (activeCollection?.name === 'users') return; setEditingRecord(rec); setIsAddModalOpen(true); }} />
+                  <CollectionTable 
+                    data={data} 
+                    activeCollection={activeCollection} 
+                    onDelete={(id) => { setSelectedId(id); setShowModal(true); }} 
+                    onView={setSelectedRecord} 
+                    onEdit={(rec) => { if (activeCollection?.name === 'users') return; setEditingRecord(rec); setIsAddModalOpen(true); }} 
+                    onRecover={handleRecoverRecord}
+                    recoveringIds={recoveringIds}
+                  />
                 ) : (
                   <div style={{ height: '100%', overflow: 'auto', padding: '1.5rem', background: '#050505', color: 'var(--color-primary)', fontFamily: 'monospace', fontSize: '0.8rem' }}>
                     <pre>{JSON.stringify(data, null, 2)}</pre>
@@ -230,19 +381,25 @@ export default function Database() {
             </div>
           </>
         ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2 }}>
-            <DbIcon size={64} />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-card)', padding: '2rem' }}>
+            <DbIcon size={64} style={{ opacity: 0.2, marginBottom: '1.5rem' }} color="var(--color-primary)" />
+            <h3 style={{ fontSize: '1.4rem', fontWeight: 600, marginBottom: '0.5rem' }}>No collections found</h3>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', marginBottom: '2rem', maxWidth: '400px', textAlign: 'center', lineHeight: '1.5' }}>
+              Collections (or Tables) are where your project's data is stored. Create your first collection to start saving data.
+            </p>
+            <button className="btn btn-primary" style={{ padding: '12px 24px', fontSize: '1rem' }} onClick={() => navigate(`/project/${projectId}/create-collection`)}>
+              Create Collection
+            </button>
           </div>
         )}
       </main>
 
-      {/* RowDetailDrawer: hide Edit for users collection */}
       <RowDetailDrawer
         isOpen={!!selectedRecord}
         onClose={() => setSelectedRecord(null)}
         record={selectedRecord}
         fields={activeCollection?.model || []}
-        onEdit={activeCollection?.name === 'users' ? null : (rec) => { setEditingRecord(rec); setIsAddModalOpen(true); }}
+        onEdit={(activeCollection?.name === 'users' || selectedRecord?.isDeleted) ? null : (rec) => { setEditingRecord(rec); setIsAddModalOpen(true); }}
       />
       
       {isAddModalOpen && (

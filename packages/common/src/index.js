@@ -23,16 +23,38 @@ const Otp = require("./models/otp");
 const Webhook = require("./models/Webhook");
 const WebhookDelivery = require("./models/WebhookDelivery");
 const ProRequest = require("./models/ProRequest");
+const ApiAnalytics = require("./models/ApiAnalytics");
+const PlatformEvent = require("./models/PlatformEvent");
+const DeveloperActivity = require("./models/DeveloperActivity");
+const MailLog = require("./models/MailLog");
 
 // Queues
 const { authEmailQueue, initAuthEmailWorker } = require("./queues/authEmailQueue");
+const { publicEmailQueue, initPublicEmailWorker } = require("./queues/publicEmailQueue");
 const { emailQueue } = require("./queues/emailQueue");
+const { exportQueue } = require("./queues/exportQueue");
 const {
   webhookQueue,
   enqueueWebhookDelivery,
   initWebhookWorker,
   generateSignature,
 } = require("./queues/webhookQueue");
+const {
+  activityRollupQueue,
+  scheduleActivityRollup,
+  initActivityRollupWorker,
+} = require("./queues/activityRollupQueue");
+const {
+  reliabilityAlertQueue,
+  scheduleReliabilityAlert,
+  initReliabilityAlertWorker,
+} = require("./queues/reliabilityAlertQueue");
+const {
+  trashCleanupQueue,
+  enqueueCollectionCleanup,
+  syncCollectionCleanup,
+  initTrashCleanupWorker,
+} = require("./queues/trashCleanupQueue");
 
 // Middleware
 const checkAuthEnabled = require('./middleware/checkAuthEnabled')
@@ -86,12 +108,15 @@ const {
 } = require("./utils/project.helpers");
 const QueryEngine = require("./utils/queryEngine");
 const { registry, storageRegistry } = require("./utils/registry");
-const { getStorage, getPresignedUploadUrl, verifyUploadedFile } = require("./utils/storage.manager");
+const { getStorage, getPresignedUploadUrl, verifyUploadedFile, getS3CompatibleStorage } = require("./utils/storage.manager");
 const validateEnv = require("./utils/validateEnv");
 const { validateData, validateUpdateData } = require("./utils/validateData");
 const sessionManager = require("./utils/session.manager");
 const planLimits = require("./utils/planLimits");
 const AppError = require("./utils/AppError");
+const { checkLockout, recordFailedAttempt, clearLockout } = require("./utils/loginLockout");
+const { dispatchWebhooks } = require("./utils/webhookDispatcher");
+const { getDayKey, getMonthKey, getEndOfMonthTtlSeconds, incrWithTtlAtomic } = require("./utils/usageCounter");
 
 module.exports = {
   connectDB,
@@ -106,6 +131,7 @@ module.exports = {
   WebhookDelivery,
   ProRequest,
   authEmailQueue,
+  exportQueue,
   emailQueue,
   webhookQueue,
   enqueueWebhookDelivery,
@@ -169,9 +195,34 @@ module.exports = {
   validateUpdateData,
   userSignupSchema,
   initAuthEmailWorker,
+  publicEmailQueue,
+  initPublicEmailWorker,
   ...sessionManager,
   ...planLimits,
   AppError,
   getPresignedUploadUrl,
   verifyUploadedFile,
+  PlatformEvent,
+  DeveloperActivity,
+  MailLog,
+  activityRollupQueue,
+  scheduleActivityRollup,
+  initActivityRollupWorker,
+  reliabilityAlertQueue,
+  scheduleReliabilityAlert,
+  initReliabilityAlertWorker,
+  ApiAnalytics,
+  checkLockout,
+  recordFailedAttempt,
+  clearLockout,
+  trashCleanupQueue,
+  enqueueCollectionCleanup,
+  syncCollectionCleanup,
+  initTrashCleanupWorker,
+  dispatchWebhooks,
+  getDayKey,
+  getMonthKey,
+  getEndOfMonthTtlSeconds,
+  incrWithTtlAtomic,
+  getS3CompatibleStorage
 };

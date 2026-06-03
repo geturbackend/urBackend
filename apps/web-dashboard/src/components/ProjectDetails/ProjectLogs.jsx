@@ -3,9 +3,9 @@ import { Clock } from 'lucide-react';
 
 const ProjectLogs = ({ logs = [] }) => {
   const getStatusColor = (status) => {
-    if (status >= 500) return '#ea5455';
-    if (status >= 400) return '#FFBD2E';
-    return '#3ECF8E';
+    if (status >= 500) return '#ef4444';
+    if (status >= 400) return '#f59e0b';
+    return '#10b981';
   };
 
   const timeAgo = (date) => {

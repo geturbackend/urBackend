@@ -9,12 +9,26 @@ function OtpVerification() {
     const location = useLocation();
     const { user, login, isLoading: authLoading } = useAuth(); // Destructure login
     const [otp, setOtp] = useState('');
+    const [countdown, setCountdown] = useState(60);
+    const [canResend, setCanResend] = useState(false);
 
     // Derived email with normalization to avoid stale/incorrect state
     const email = (location.state?.email || user?.email || '').toLowerCase().trim();
 
     // Ref to track if we have already auto-sent OTP to prevent double sends in StrictMode
     const hasSentOtp = useRef(false);
+
+    useEffect(() => {
+        let timer;
+        if (countdown > 0 && !canResend) {
+            timer = setInterval(() => {
+                setCountdown((prev) => prev - 1);
+            }, 1000);
+        } else if (countdown === 0) {
+            queueMicrotask(() => setCanResend(true));
+        }
+        return () => clearInterval(timer);
+    }, [countdown, canResend]);
 
     useEffect(() => {
         if (authLoading) return;
@@ -54,11 +68,14 @@ function OtpVerification() {
     };
 
     const handleResend = async () => {
+        if (!canResend) return;
         const loadingToast = toast.loading('Resending OTP...');
         try {
             await api.post('/api/auth/send-otp', { email });
             toast.dismiss(loadingToast);
             toast.success('OTP sent successfully!');
+            setCountdown(60);
+            setCanResend(false);
         } catch (err) {
             toast.dismiss(loadingToast);
             toast.error(err.response?.data?.error || 'Failed to send OTP');
@@ -152,12 +169,18 @@ function OtpVerification() {
 
                 <div style={{ marginTop: '20px', fontSize: '0.9rem' }}>
                     Didn't receive code?{' '}
-                    <button
-                        onClick={handleResend}
-                        style={{ background: 'none', border: 'none', color: 'var(--color-primary, #007bff)', cursor: 'pointer', textDecoration: 'underline' }}
-                    >
-                        Resend
-                    </button>
+                    {canResend ? (
+                        <button
+                            onClick={handleResend}
+                            style={{ background: 'none', border: 'none', color: 'var(--color-primary, #007bff)', cursor: 'pointer', textDecoration: 'underline' }}
+                        >
+                            Resend
+                        </button>
+                    ) : (
+                        <span style={{ color: '#888' }}>
+                            Resend in {countdown}s
+                        </span>
+                    )}
                 </div>
             </div>
         </div>

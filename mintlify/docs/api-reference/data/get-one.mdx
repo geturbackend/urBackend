@@ -7,11 +7,11 @@ description: "Retrieve a single document from a collection by its MongoDB Object
 
 Fetches one document by its `_id`. Returns `404` if no document with that ID exists in the collection.
 
-### Required Header
+### Required header
 
 `x-api-key`: your `pk_live_…` or `sk_live_…` key.
 
-### Path Parameters
+### Path parameters
 
 <ParamField path="collectionName" type="string" required>
   The name of the collection (e.g., `posts`, `products`).
@@ -21,21 +21,41 @@ Fetches one document by its `_id`. Returns `404` if no document with that ID exi
   The MongoDB ObjectId string of the document to retrieve (e.g., `64fd1234abcd5678ef901234`).
 </ParamField>
 
-### Response Fields
+### Query parameters
 
-<ResponseField name="success" type="boolean">
-  `true` when the document was found.
+<ParamField query="include_deleted" type="boolean">
+  If `true`, allows retrieval of a soft-deleted document. Defaults to `false`. Without this parameter, requesting a soft-deleted document by ID will return `404 Not Found`.
+</ParamField>
+
+### Response fields
+
+The endpoint returns the document object directly.
+
+<ResponseField name="_id" type="string">
+  The unique MongoDB ObjectId string for the document.
 </ResponseField>
 
-<ResponseField name="data" type="object">
-  The full document object, including `_id` and all stored fields.
+<ResponseField name="isDeleted" type="boolean">
+  `true` if the document is in the trash.
 </ResponseField>
 
-<ResponseField name="message" type="string">
-  Human-readable status message.
+<ResponseField name="deletedAt" type="string">
+  ISO date string of when the document was soft-deleted, or `null`.
 </ResponseField>
 
-### Code Examples
+<ResponseField name="createdAt" type="string">
+  ISO date string of when the document was created.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO date string of when the document was last updated.
+</ResponseField>
+
+<Note>
+  Other fields returned depend on your collection schema.
+</Note>
+
+### Code examples
 
 <CodeGroup>
 
@@ -43,7 +63,7 @@ Fetches one document by its `_id`. Returns `404` if no document with that ID exi
 const docId = '64fd1234abcd5678ef901234';
 
 const res = await fetch(
-  `https://api.ub.bitbros.in/api/data/posts/${docId}`,
+  `https://api.ub.bitbros.in/api/data/posts/${docId}?include_deleted=true`,
   {
     headers: {
       'x-api-key': 'pk_live_YOUR_KEY'
@@ -51,35 +71,34 @@ const res = await fetch(
   }
 );
 
-const { success, data, message } = await res.json();
-// data is the document object
+const doc = await res.json();
+// doc is the retrieved document object
 ```
 
 ```bash curl
-curl "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234" \
+curl "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234?include_deleted=true" \
   -H "x-api-key: pk_live_YOUR_KEY"
 ```
 
 </CodeGroup>
 
-### Success Response
+### Success response
 
 ```json
 {
-  "success": true,
-  "data": {
-    "_id": "64fd1234abcd5678ef901234",
-    "title": "Why BaaS is the future",
-    "body": "Content goes here...",
-    "status": "published",
-    "tags": ["tech", "development"],
-    "meta": {
-      "views": 105,
-      "likes": 12
-    },
-    "createdAt": "2024-01-15T10:30:00.000Z"
+  "_id": "64fd1234abcd5678ef901234",
+  "title": "Why BaaS is the future",
+  "body": "Content goes here...",
+  "status": "published",
+  "isDeleted": false,
+  "deletedAt": null,
+  "tags": ["tech", "development"],
+  "meta": {
+    "views": 105,
+    "likes": 12
   },
-  "message": "Document fetched successfully"
+  "createdAt": "2024-01-15T10:30:00.000Z",
+  "updatedAt": "2024-01-15T10:30:00.000Z"
 }
 ```
 

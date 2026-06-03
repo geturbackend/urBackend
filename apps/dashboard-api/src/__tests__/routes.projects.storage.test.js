@@ -43,6 +43,7 @@ jest.mock('../controllers/project.controller', () => {
     deleteCollection: jest.fn(ok),
     getData: jest.fn(ok),
     deleteRow: jest.fn(ok),
+    recoverRow: jest.fn(ok),
     insertData: jest.fn(ok),
     editRow: jest.fn(ok),
     listFiles: jest.fn(ok),
@@ -66,6 +67,13 @@ jest.mock('../controllers/project.controller', () => {
     deleteMailTemplate: jest.fn(ok),
     requestUpload: jest.fn(ok),
     confirmUpload: jest.fn(ok),
+    getMailLogs: jest.fn(ok),
+    getResendLiveStatus: jest.fn(ok),
+    manageAudiences: jest.fn(ok),
+    deleteAudience: jest.fn(ok),
+    manageContacts: jest.fn(ok),
+    deleteContact: jest.fn(ok),
+    sendMarketingBroadcast: jest.fn(ok),
   };
 });
 

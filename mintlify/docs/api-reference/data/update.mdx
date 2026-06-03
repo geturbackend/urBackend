@@ -19,11 +19,11 @@ Explicitly signals a partial update. Semantically equivalent to `PUT` in urBacke
   without affecting any other keys in `meta`.
 </Note>
 
-### Required Header
+### Required header
 
 `x-api-key`: `sk_live_…` by default. `pk_live_…` is accepted only when the collection has **RLS enabled** and the request includes `Authorization: Bearer <accessToken>`.
 
-### Path Parameters
+### Path parameters
 
 <ParamField path="collectionName" type="string" required>
   The name of the collection containing the document.
@@ -33,7 +33,7 @@ Explicitly signals a partial update. Semantically equivalent to `PUT` in urBacke
   The MongoDB ObjectId string of the document to update.
 </ParamField>
 
-### Request Body
+### Request body
 
 A JSON object containing the fields to update and their new values.
 
@@ -43,25 +43,21 @@ A JSON object containing the fields to update and their new values.
   the update body entirely.
 </Warning>
 
-### RLS Behavior
+### RLS behavior
 
 When using `pk_live` with RLS enabled, urBackend fetches the existing document and compares its owner field against the authenticated user's ID. If they don't match, the request is rejected with `403`.
 
-### Response Fields
+### Response fields
 
-<ResponseField name="success" type="boolean">
-  `true` when the update succeeded.
+<ResponseField name="message" type="string">
+  Confirmation message, returns `"Updated"` on success.
 </ResponseField>
 
 <ResponseField name="data" type="object">
   The updated document with all current field values.
 </ResponseField>
 
-<ResponseField name="message" type="string">
-  Human-readable status message.
-</ResponseField>
-
-### Code Examples
+### Code examples
 
 <CodeGroup>
 
@@ -83,7 +79,8 @@ const res = await fetch(
   }
 );
 
-const { success, data } = await res.json();
+const { data } = await res.json();
+console.log('Updated document:', data);
 ```
 
 ```javascript PATCH — partial update
@@ -102,6 +99,9 @@ const res = await fetch(
     })
   }
 );
+
+const { data } = await res.json();
+console.log('Updated document:', data);
 ```
 
 ```javascript pk_live + RLS (client-side)
@@ -122,6 +122,9 @@ const res = await fetch(
     })
   }
 );
+
+const { data } = await res.json();
+console.log('Updated document:', data);
 ```
 
 ```bash curl
@@ -133,11 +136,11 @@ curl -X PUT "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234" 
 
 </CodeGroup>
 
-### Success Response
+### Success response
 
 ```json
 {
-  "success": true,
+  "message": "Updated",
   "data": {
     "_id": "64fd1234abcd5678ef901234",
     "title": "Updated title",
@@ -146,9 +149,12 @@ curl -X PUT "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234" 
       "views": 105,
       "likes": 12
     },
-    "userId": "64fd0000abcd5678ef900001"
-  },
-  "message": "Document updated successfully"
+    "userId": "64fd0000abcd5678ef900001",
+    "isDeleted": false,
+    "deletedAt": null,
+    "createdAt": "2024-01-15T10:30:00.000Z",
+    "updatedAt": "2024-01-15T11:00:00.000Z"
+  }
 }
 ```
 

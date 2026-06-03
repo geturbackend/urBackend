@@ -12,8 +12,10 @@ const {
     deleteAccountSchema,
     onlyEmailSchema,
     resetPasswordSchema,
-    verifyOtpSchema
+    verifyOtpSchema,
+    AppError
 } = require("@urbackend/common");
+const { emitEvent } = require('../utils/emitEvent');
 
 const ACCESS_TOKEN_EXPIRES_IN = '15m';
 const REFRESH_TOKEN_EXPIRES_IN = '7d';
@@ -42,7 +44,7 @@ const getCookieOptions = () => {
         httpOnly: true,
         expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+        sameSite: 'lax'
     };
 
     if (process.env.NODE_ENV === 'production') {
@@ -81,25 +83,43 @@ const clearGithubStateCookie = (res) => {
     res.cookie(GITHUB_STATE_COOKIE, 'none', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        sameSite: 'lax',
         expires: new Date(Date.now() + 10 * 1000),
     });
 };
 
+const OAUTH_FETCH_TIMEOUT_MS = 10000;
+
 const fetchJson = async (url, options, defaultMessage) => {
-    const response = await fetch(url, options);
-    const payload = await response.json().catch(() => null);
+    // Prevent OAuth requests from hanging forever
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), OAUTH_FETCH_TIMEOUT_MS);
 
-    if (!response.ok) {
-        const message =
-            payload?.error_description ||
-            payload?.error ||
-            payload?.message ||
-            defaultMessage;
-        throw new Error(message);
+    try {
+        const response = await fetch(url, {
+            ...(options || {}),
+            signal: controller.signal,
+        });
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok) {
+            const message =
+                payload?.error_description ||
+                payload?.error ||
+                payload?.message ||
+                defaultMessage;
+            throw new AppError(message, response.status || 502);
+        }
+
+        return payload;
+    } catch (err) {
+        if (err.name === 'AbortError') {
+            throw new AppError('OAuth request timed out.', 504);
+        }
+        throw err;
+    } finally {
+        clearTimeout(timeout);
     }
-
-    return payload;
 };
 
 const exchangeGithubCodeForToken = async ({ code, req }) => {
@@ -181,6 +201,9 @@ const findOrCreateGithubDeveloper = async (profile) => {
     });
 
     await developer.save();
+    // Activation funnel — GitHub signup counts as both signup + verified
+    emitEvent(developer._id, 'signup_completed', { method: 'github' });
+    emitEvent(developer._id, 'email_verified', { method: 'github' });
     return developer;
 };
 
@@ -281,6 +304,9 @@ module.exports.register = async (req, res) => {
         const newDev = new Developer({ email: email.toLowerCase().trim(), password: hashedPassword });
         await newDev.save();
 
+        // Activation funnel — signup completed
+        emitEvent(newDev._id, 'signup_completed', { method: 'email' });
+
         res.status(201).json({ message: "Registered successfully" });
     } catch (err) {
         if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
@@ -328,7 +354,7 @@ module.exports.startGithubAuth = async (req, res) => {
     res.cookie(GITHUB_STATE_COOKIE, state, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        sameSite: 'lax',
         expires: new Date(Date.now() + GITHUB_STATE_TTL_MS),
     });
 
@@ -483,6 +509,9 @@ module.exports.verifyOtp = async (req, res) => {
         existingUser.isVerified = true;
         await existingUser.save();
 
+        // Activation funnel — email verified
+        emitEvent(existingUser._id, 'email_verified', { method: 'otp' });
+
         await sendTokenResponse(existingUser, 200, res);
     } catch (err) {
         if (err.status) return res.status(err.status).json({ error: err.message });
@@ -536,13 +565,13 @@ module.exports.resetPassword = async (req, res) => {
                 expires: new Date(Date.now() + 10 * 1000),
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+                sameSite: 'lax'
             })
             .cookie('refreshToken', 'none', {
                 expires: new Date(Date.now() + 10 * 1000),
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+                sameSite: 'lax'
             })
             .json({ message: "Password reset successfully. Please log in with your new password." });
     } catch (err) {
@@ -568,13 +597,13 @@ module.exports.logout = async (req, res) => {
             expires: new Date(Date.now() + 10 * 1000),
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+            sameSite: 'lax'
         });
         res.cookie('refreshToken', 'none', {
             expires: new Date(Date.now() + 10 * 1000),
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+            sameSite: 'lax'
         });
 
         res.status(200).json({ success: true, message: "Logged out successfully" });

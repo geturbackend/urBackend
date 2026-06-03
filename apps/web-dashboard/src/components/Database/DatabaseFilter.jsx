@@ -106,6 +106,9 @@ const DatabaseFilter = ({
                   style={{ width: '35%', height: '30px', padding: '0 6px', fontSize: '0.7rem' }}
                 >
                   <option value="" disabled>Field</option>
+                  <option value="_id">_id</option>
+                  <option value="createdAt">createdAt</option>
+                  <option value="updatedAt">updatedAt</option>
                   {activeCollection?.model?.map(f => (
                     <option key={f.key} value={f.key}>{f.key}</option>
                   ))}

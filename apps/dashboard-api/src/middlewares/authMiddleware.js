@@ -31,8 +31,9 @@ module.exports = function (req, res, next) {
         // Proceed to the next middleware or route handler
         next();
     } catch (err) {
-        console.log("err---------------2")
-        console.error(err);
+        if (process.env.NODE_ENV !== 'test') {
+            console.error(err);
+        }
 
         res.status(400).json({ error: 'Invalid Token' });
     }

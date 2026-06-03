@@ -1,0 +1,112 @@
+---
+title: "Aggregate Data"
+description: "Execute MongoDB aggregation pipelines on your collection."
+---
+
+## POST `/api/data/:collectionName/aggregate`
+
+Runs a MongoDB aggregation pipeline on the specified collection. This allows for complex data processing, grouping, and transformations.
+
+### Required header
+
+`x-api-key`: your `pk_live_…` or `sk_live_…` key.
+
+### Path parameters
+
+<ParamField path="collectionName" type="string" required>
+  The name of the collection to aggregate.
+</ParamField>
+
+### Query parameters
+
+<ParamField query="include_deleted" type="boolean">
+  If `true`, includes soft-deleted documents (where `isDeleted: true`) in the aggregation. Defaults to `false`.
+</ParamField>
+
+### Request body
+
+<ParamField body="pipeline" type="array" required>
+  An array of aggregation stages following the standard MongoDB aggregation pipeline syntax.
+</ParamField>
+
+<Note>
+  For security reasons, certain stages like `$out` and `$merge` are blocked.
+</Note>
+
+### RLS behavior
+
+If Row-Level Security (RLS) is enabled, your backend automatically injects a `$match` stage at the beginning of your pipeline (or after `$geoNear` / `$search` if present). This ensures users only aggregate data they have access to.
+
+### Response fields
+
+<ResponseField name="success" type="boolean">
+  `true` when the aggregation was executed successfully.
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  The results of the aggregation pipeline.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable status message.
+</ResponseField>
+
+### Code examples
+
+<CodeGroup>
+
+```javascript fetch
+const res = await fetch(
+  'https://api.ub.bitbros.in/api/data/orders/aggregate',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': 'pk_live_YOUR_KEY'
+    },
+    body: JSON.stringify({
+      pipeline: [
+        { $match: { status: 'completed' } },
+        { $group: { _id: '$customerId', totalAmount: { $sum: '$amount' } } },
+        { $sort: { totalAmount: -1 } }
+      ]
+    })
+  }
+);
+
+const { success, data } = await res.json();
+```
+
+```bash curl
+curl -X POST "https://api.ub.bitbros.in/api/data/orders/aggregate?include_deleted=false" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: pk_live_YOUR_KEY" \
+  -d '{
+    "pipeline": [
+      { "$group": { "_id": "$category", "count": { "$sum": 1 } } }
+    ]
+  }'
+```
+
+</CodeGroup>
+
+### Success response
+
+```json
+{
+  "success": true,
+  "data": [
+    { "_id": "electronics", "count": 42 },
+    { "_id": "books", "count": 12 }
+  ],
+  "message": "Aggregation executed successfully."
+}
+```
+
+### Errors
+
+| Status | Cause |
+| :--- | :--- |
+| `400 Bad Request` | Invalid pipeline syntax or blocked stage used |
+| `401 Unauthorized` | Missing or invalid API key |
+| `404 Not Found` | Collection does not exist |

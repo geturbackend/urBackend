@@ -15,6 +15,7 @@ const mockQueryEngine = jest.fn((query) => {
         query,
         filter() { return engine; },
         sort() { return engine; },
+        limitFields() { return engine; },
         populate() { mockEnginePopulate(...arguments); return engine; },
         paginate() { return engine; },
         count() { return Promise.resolve(0); },
@@ -26,7 +27,7 @@ jest.mock('@urbackend/common', () => ({
     sanitize: (v) => v,
     Project: {},
     getConnection: jest.fn().mockResolvedValue({}),
-    getCompiledModel: jest.fn(() => ({
+    getCompiledModel: jest.fn((connection, collectionConfig, projectId, isExternal) => ({
         find: (...args) => {
             mockFind(...args);
             return { 
@@ -117,6 +118,7 @@ describe('data.controller read RLS filters', () => {
             $and: [
                 { _id: '507f1f77bcf86cd799439011' },
                 { userId: 'user_1' },
+                { isDeleted: { $ne: true } }
             ],
         });
         expect(res.json).toHaveBeenCalled();
@@ -193,5 +195,49 @@ describe('data.controller read RLS filters', () => {
         expect(mockPopulate).toHaveBeenCalledWith('category');
         expect(res.json).toHaveBeenCalled();
         expect(res.status).not.toHaveBeenCalledWith(500);
+    });
+
+    test('getSingleDoc excludes soft-deleted documents by default', async () => {
+        const req = makeReq();
+        const res = makeRes();
+
+        await getSingleDoc(req, res);
+
+        expect(mockFindOne).toHaveBeenCalled();
+        const findOneArgs = mockFindOne.mock.calls[0][0];
+        expect(findOneArgs.$and).toEqual(
+            expect.arrayContaining([
+                { _id: '507f1f77bcf86cd799439011' },
+                { isDeleted: { $ne: true } }
+            ])
+        );
+    });
+
+    test('getSingleDoc includes soft-deleted documents when include_deleted=true is passed', async () => {
+        const req = makeReq({ 
+            query: { include_deleted: 'true' },
+            rlsFilter: { ownerId: 'user_123' }
+        });
+        const res = makeRes();
+
+        await getSingleDoc(req, res);
+
+        expect(mockFindOne).toHaveBeenCalled();
+        const findOneArgs = mockFindOne.mock.calls[0][0];
+        
+        // Assert it contains the ID and RLS filter
+        expect(findOneArgs.$and).toContainEqual({ _id: '507f1f77bcf86cd799439011' });
+        expect(findOneArgs.$and).toContainEqual({ ownerId: 'user_123' });
+        
+        // Assert it does NOT contain the soft delete filter
+        expect(findOneArgs.$and).not.toContainEqual({ isDeleted: { $ne: true } });
+        
+        // Assert no other filters are present (length should be 3 if softDeleteFilter was {}, but it's {} so it shouldn't add much, let's check exact elements)
+        const softDeleteFilter = {}; // because include_deleted is true
+        expect(findOneArgs.$and).toEqual([
+            { _id: '507f1f77bcf86cd799439011' },
+            { ownerId: 'user_123' },
+            {} // empty object from softDeleteFilter
+        ]);
     });
 });

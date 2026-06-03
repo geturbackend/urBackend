@@ -1,0 +1,42 @@
+---
+title: "<UrUserButton>"
+description: "A drop-in profile button with a dropdown menu for authenticated users."
+---
+
+The `<UrUserButton>` component renders a small profile avatar that, when clicked, opens a dropdown menu containing the user's name, email, and action buttons like "Profile", "Settings", and "Logout".
+
+It automatically disappears if the user is not logged in, making it safe to place anywhere in your application layout.
+
+## Usage
+
+```tsx
+import { UrUserButton } from '@urbackend/react';
+
+export default function Header() {
+  return (
+    <header>
+      <h1>My App</h1>
+      
+      {/* Places the button in the top right corner by default */}
+      <UrUserButton 
+        onProfileClick={() => console.log("Navigate to Profile")}
+        onSettingsClick={() => console.log("Navigate to Settings")}
+      />
+    </header>
+  );
+}
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `shape` | `'square' \| 'circle'` | `'square'` | The visual shape of the avatar button. |
+| `position` | `'top-right' \| 'top-left' \| 'bottom-right' \| 'bottom-left' \| 'inline'` | `'top-right'` | Positions the button fixed to the screen corners, or `'inline'` to fit into standard flex/grid layouts. |
+| `onProfileClick` | `() => void` | `undefined` | Callback fired when the "Profile" button in the dropdown is clicked. If undefined, the button is hidden. |
+| `onSettingsClick` | `() => void` | `undefined` | Callback fired when the "Settings" button in the dropdown is clicked. If undefined, the button is hidden. |
+| `zIndex` | `number` | `999` | The z-index of the fixed container. |
+
+## Logout Behavior
+
+The "Logout" button inside the dropdown is automatically wired up to the SDK. Clicking it will immediately log the user out and clear the session state across the application.

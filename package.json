@@ -1,6 +1,6 @@
 {
   "name": "urbackend-monorepo",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "private": true,
   "license": "AGPL-3.0-only",
   "workspaces": [
@@ -10,14 +10,23 @@
     "sdks/*"
   ],
   "scripts": {
-    "dev": "concurrently -c \"cyan,magenta,yellow\" -n \"DASHBOARD,PUBLIC,WEB\" \"npm run dev --workspace=dashboard-api\" \"npm run dev --workspace=public-api\" \"npm run dev --workspace=web-dashboard\"",
-    "build": "npm run build --workspaces --if-present"
+    "dev": "concurrently -c \"cyan,magenta,yellow,green\" -n \"DASHBOARD,PUBLIC,WEB,CONSUMER\" \"npm run dev --workspace=dashboard-api\" \"npm run dev --workspace=public-api\" \"npm run dev --workspace=web-dashboard\" \"npm run dev --workspace=consumer\"",
+    "build": "npm run build --workspaces --if-present",
+    "prepare": "husky || node -e \"\""
+  },
+  "lint-staged": {
+    "apps/web-dashboard/**/*.{js,jsx}": [
+      "npm exec --workspace=web-dashboard eslint"
+    ]
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "9.2.1",
+    "husky": "9.1.7",
+    "lint-staged": "17.0.5"
   },
   "dependencies": {
-    "path": "^0.12.7"
+    "@aws-sdk/lib-storage": "3.1053.0",
+    "path": "0.12.7"
   },
   "overrides": {
     "rollup": "npm:@rollup/wasm-node"

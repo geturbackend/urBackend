@@ -91,7 +91,23 @@ function ProjectDetails() {
                             <h2 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>New {newKey.type} Key</h2>
                             <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>Copy this now. It won't be shown again.</p>
                         </div>
-                        <code style={{ display: 'block', padding: '12px', background: '#000', borderRadius: '6px', fontSize: '0.85rem', wordBreak: 'break-all', marginBottom: '1.5rem', border: '1px solid var(--color-border)', color: 'var(--color-primary)' }}>{newKey.key}</code>
+                        <div style={{ display: 'flex', alignItems: 'center', background: '#000', borderRadius: '6px', border: '1px solid var(--color-border)', marginBottom: '1.5rem', overflow: 'hidden' }}>
+                            <code style={{ flex: 1, padding: '12px', fontSize: '0.85rem', wordBreak: 'break-all', color: 'var(--color-primary)', borderRight: '1px solid var(--color-border)' }}>{newKey.key}</code>
+                            <button 
+                                onClick={async () => {
+                                    try {
+                                        await navigator.clipboard.writeText(newKey.key);
+                                        toast.success("Copied to clipboard!");
+                                    } catch {
+                                        toast.error("Failed to copy to clipboard");
+                                    }
+                                }} 
+                                style={{ padding: '0 16px', background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                title="Copy"
+                            >
+                                <Copy size={16} />
+                            </button>
+                        </div>
                         <button onClick={() => setNewKey(null)} className="btn btn-primary" style={{ width: '100%' }}>I've copied it</button>
                     </div>
                 </div>
@@ -122,15 +138,15 @@ function ProjectDetails() {
                         <div className="glass-card" style={{ padding: '1.25rem', borderRadius: '12px' }}>
                             <div style={{ display: 'flex', gap: '2rem', marginBottom: '1rem' }}>
                                 <div>
-                                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>Total Requests (7d)</span>
-                                    <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{analytics?.totalRequests || 0}</div>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Traffic (24h)</span>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#3b82f6' }}>{analytics?.rangeStats?.totalRequests || 0}</div>
                                 </div>
                                 <div>
-                                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>Database Size</span>
-                                    <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{(project.databaseUsed / (1024 * 1024)).toFixed(2)} MB</div>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Database Used</span>
+                                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#a78bfa' }}>{(project.databaseUsed / (1024 * 1024)).toFixed(2)} MB</div>
                                 </div>
                             </div>
-                            <AnalyticsChart data={analytics?.chartData} />
+                            <AnalyticsChart data={analytics?.timeSeries} />
                         </div>
                     </section>
 

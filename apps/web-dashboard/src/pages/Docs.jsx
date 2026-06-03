@@ -486,7 +486,6 @@ const payload = await response.json();`}</pre>
                         />
                     </div>
                 );
-
             case 'storage':
                 return (
                     <div className="fade-in">

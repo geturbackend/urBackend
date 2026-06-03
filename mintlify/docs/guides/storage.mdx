@@ -8,6 +8,10 @@ urBackend handles file and image uploads for you. Upload a file and receive a pu
 **Base URL:** `https://api.ub.bitbros.in`
 
 <Warning>
+  All storage endpoints require your **secret key** (`sk_live_...`) in the `x-api-key` header. These operations should only be performed server-side.
+</Warning>
+
+<Warning>
   All uploaded files are **publicly accessible** via the returned URL. Do not upload sensitive or private documents.
 </Warning>
 
@@ -118,7 +122,7 @@ const requestRes = await fetch('https://api.ub.bitbros.in/api/storage/upload-req
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'x-api-key': 'YOUR_KEY'
+    'x-api-key': 'sk_live_YOUR_KEY'
   },
   body: JSON.stringify({
     filename: file.name,
@@ -152,7 +156,7 @@ const confirmRes = await fetch('https://api.ub.bitbros.in/api/storage/upload-con
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'x-api-key': 'YOUR_KEY'
+    'x-api-key': 'sk_live_YOUR_KEY'
   },
   body: JSON.stringify({ filePath, size: file.size })
 });
@@ -210,7 +214,7 @@ await fetch('https://api.ub.bitbros.in/api/storage/file', {
   method: 'DELETE',
   headers: {
     'Content-Type': 'application/json',
-    'x-api-key': 'YOUR_KEY'
+    'x-api-key': 'sk_live_YOUR_KEY'
   },
   body: JSON.stringify({
     path: 'YOUR_PROJECT_ID/your_file_name.png'

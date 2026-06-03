@@ -1,0 +1,112 @@
+name: Weekly Mintlify Changelog
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9:00 AM UTC
+  workflow_dispatch:      # Allow manual trigger from Actions tab
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate-changelog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e
+        with:
+          node-version: '20'
+
+      - name: Get merged PRs from last 7 days
+        id: get-prs
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
+        with:
+          script: |
+            const since = new Date();
+            since.setDate(since.getDate() - 7);
+
+            const pulls = await github.paginate(github.rest.pulls.list, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed',
+              sort: 'updated',
+              direction: 'desc',
+              per_page: 100
+            });
+
+            const merged = pulls.filter(pr =>
+              pr.merged_at && new Date(pr.merged_at) >= since
+            );
+
+            const summary = merged.map(pr =>
+              `#${pr.number} - ${pr.title} (@${pr.user.login})`
+            ).join('\n');
+
+            console.log('Merged PRs:\n' + summary);
+            core.setOutput('pr_summary', summary || 'No PRs merged this week.');
+            core.setOutput('pr_count', merged.length.toString());
+
+      - name: Generate changelog entry via Groq
+        id: generate
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          PR_SUMMARY: ${{ steps.get-prs.outputs.pr_summary }}
+          PR_COUNT: ${{ steps.get-prs.outputs.pr_count }}
+        run: |
+          node .github/scripts/generate-changelog-entry.js "$PR_SUMMARY" "$PR_COUNT" > changelog_entry.mdx
+          echo "Generated changelog entry:"
+          cat changelog_entry.mdx
+
+      - name: Prepend entry to current month's Mintlify changelog
+        run: |
+          MONTH=$(date --utc +%B | tr '[:upper:]' '[:lower:]')
+          YEAR=$(date --utc +%Y)
+          FILE="mintlify/docs/changelog/${MONTH}-${YEAR}.mdx"
+
+          # Create monthly file if it doesn't exist yet
+          if [ ! -f "$FILE" ]; then
+            echo "---" > "$FILE"
+            echo "title: Changelog" >> "$FILE"
+            echo "description: What's new in urBackend — new features, improvements, and fixes." >> "$FILE"
+            echo "---" >> "$FILE"
+            echo "" >> "$FILE"
+          fi
+
+          # Insert new <Update> entry right after the closing --- of frontmatter
+          FRONTMATTER_END=$(grep -n "^---$" "$FILE" | sed -n '2p' | cut -d: -f1)
+          if [ -z "$FRONTMATTER_END" ]; then
+            cat changelog_entry.mdx >> "$FILE"
+          else
+            {
+              head -n "$FRONTMATTER_END" "$FILE"
+              echo ""
+              cat changelog_entry.mdx
+              echo ""
+              tail -n +"$((FRONTMATTER_END + 1))" "$FILE"
+            } > /tmp/patched.mdx
+            mv /tmp/patched.mdx "$FILE"
+          fi
+
+          echo "Updated: $FILE"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          # Use a PAT if available. This bypasses repos where GITHUB_TOKEN is
+          # restricted from creating PRs via GitHub Actions settings.
+          token: ${{ secrets.CHANGELOG_PR_TOKEN || secrets.GITHUB_TOKEN }}
+          branch: changelog/week-of-${{ github.run_id }}
+          base: main
+          commit-message: 'docs: weekly changelog update'
+          title: 'docs: weekly changelog update'
+          body: 'Auto-generated weekly changelog entry. Please review before merging.'
+          labels: documentation
+          add-paths: |
+            mintlify/docs/changelog/

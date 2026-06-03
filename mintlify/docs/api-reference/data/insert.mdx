@@ -7,17 +7,17 @@ description: "Create a new document in a collection."
 
 Inserts a new document into the specified collection and returns the created document on success.
 
-### Required Header
+### Required header
 
 `x-api-key`: `sk_live_…` by default. `pk_live_…` is accepted only when the collection has **RLS enabled** and the request includes a valid `Authorization: Bearer <accessToken>` header.
 
-### Path Parameters
+### Path parameters
 
 <ParamField path="collectionName" type="string" required>
   The name of the collection to insert into (e.g., `posts`, `orders`).
 </ParamField>
 
-### Request Body
+### Request body
 
 Send a JSON object containing the document fields. The fields must conform to the collection's schema if one is defined.
 
@@ -27,21 +27,35 @@ Send a JSON object containing the document fields. The fields must conform to th
   but it doesn't match the token's user ID, the request is rejected with `403`.
 </Note>
 
-### Response Fields
+### Response fields
 
-<ResponseField name="success" type="boolean">
-  `true` when the document was created.
+The endpoint returns the created document object directly.
+
+<ResponseField name="_id" type="string">
+  The assigned unique MongoDB ObjectId string.
 </ResponseField>
 
-<ResponseField name="data" type="object">
-  The newly created document, including its assigned `_id` and any auto-injected fields.
+<ResponseField name="isDeleted" type="boolean">
+  Always `false` for new documents.
 </ResponseField>
 
-<ResponseField name="message" type="string">
-  Human-readable status message.
+<ResponseField name="deletedAt" type="string">
+  Always `null` for new documents.
 </ResponseField>
 
-### Code Examples
+<ResponseField name="createdAt" type="string">
+  ISO date string of when the document was created.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO date string of when the document was last updated.
+</ResponseField>
+
+<Note>
+  Other fields returned depend on your collection schema and the data sent.
+</Note>
+
+### Code examples
 
 <CodeGroup>
 
@@ -62,8 +76,8 @@ const res = await fetch('https://api.ub.bitbros.in/api/data/posts', {
   })
 });
 
-const { success, data } = await res.json();
-// data is the created document
+const doc = await res.json();
+// doc is the created document object
 ```
 
 ```javascript pk_live + RLS (client-side)
@@ -82,8 +96,8 @@ const res = await fetch('https://api.ub.bitbros.in/api/data/posts', {
   })
 });
 
-const { success, data } = await res.json();
-// data.userId is set to the authenticated user's ID automatically
+const doc = await res.json();
+// doc.userId is set to the authenticated user's ID automatically
 ```
 
 ```bash curl (sk_live)
@@ -99,19 +113,18 @@ curl -X POST "https://api.ub.bitbros.in/api/data/posts" \
 
 </CodeGroup>
 
-### Success Response
+### Success response
 
 ```json
 {
-  "success": true,
-  "data": {
-    "_id": "64fd1234abcd5678ef901234",
-    "title": "My first post",
-    "body": "Hello world",
-    "userId": "64fd0000abcd5678ef900001",
-    "createdAt": "2024-01-15T10:30:00.000Z"
-  },
-  "message": "Document created successfully"
+  "_id": "64fd1234abcd5678ef901234",
+  "title": "My first post",
+  "body": "Hello world",
+  "userId": "64fd0000abcd5678ef900001",
+  "isDeleted": false,
+  "deletedAt": null,
+  "createdAt": "2024-01-15T10:30:00.000Z",
+  "updatedAt": "2024-01-15T10:30:00.000Z"
 }
 ```
 

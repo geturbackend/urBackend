@@ -59,8 +59,8 @@ You need a [urBackend account](https://urbackend.bitbros.in) and a MongoDB conne
     });
 
     const result = await response.json();
-    // { success: true, data: { _id: '...', name: 'Widget', price: 9.99, inStock: true }, message: '...' }
-    console.log(result.data);
+    // { _id: '...', name: 'Widget', price: 9.99, inStock: true }
+    console.log(result);
     ```
 
     </CodeGroup>
@@ -85,7 +85,7 @@ You need a [urBackend account](https://urbackend.bitbros.in) and a MongoDB conne
       }
     });
 
-    const { data } = await response.json();
+    const data = await response.json();
     // data is an array of documents
     console.log(data);
     ```

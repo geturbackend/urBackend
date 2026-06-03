@@ -1,0 +1,109 @@
+---
+title: "React Hooks"
+description: "Interact with the urBackend SDK natively using React hooks."
+---
+
+The `@urbackend/react` SDK exports several hooks to make it easy to access authentication state and perform database/storage operations within your components.
+
+All hooks require your component to be mounted somewhere inside the `<UrProvider>`.
+
+## `useUser()`
+
+The easiest way to read the current authenticated user's profile and state.
+
+```tsx
+import { useUser } from '@urbackend/react';
+
+function UserProfile() {
+  const { user, isAuthenticated, isLoading, isInitializing } = useUser();
+
+  if (isInitializing) return <div>Loading session...</div>;
+  if (!isAuthenticated) return <div>Please log in</div>;
+
+  return (
+    <div>
+      <h1>Welcome, {user?.name}</h1>
+      <p>Email: {user?.email}</p>
+    </div>
+  );
+}
+```
+
+## `useAuth()`
+
+Provides access to authentication methods like login, signup, and logout.
+
+```tsx
+import { useAuth } from '@urbackend/react';
+
+function CustomLoginForm() {
+  const { login, logout, error, isLoading } = useAuth();
+
+  const handleLogin = async () => {
+    await login('alice@example.com', 'password123');
+  };
+
+  return (
+    <div>
+      <button onClick={handleLogin} disabled={isLoading}>
+        Log In
+      </button>
+      <button onClick={logout}>Log Out</button>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+    </div>
+  );
+}
+```
+
+## `useDb()`
+
+Provides direct access to the `urBackend` database client. Operations are automatically authenticated with the current user's session token for Row-Level Security (RLS).
+
+```tsx
+import { useState, useEffect } from 'react';
+import { useDb } from '@urbackend/react';
+
+function ProductList() {
+  const db = useDb();
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    async function fetchProducts() {
+      // Automatically passes the user's token for RLS policies
+      const data = await db.getAll('products', { limit: 10 });
+      setProducts(data);
+    }
+    fetchProducts();
+  }, [db]);
+
+  return (
+    <ul>
+      {products.map(p => <li key={p._id}>{p.name}</li>)}
+    </ul>
+  );
+}
+```
+
+## `useStorage()`
+
+Provides access to the Storage API for uploading and deleting files.
+
+```tsx
+import { useStorage } from '@urbackend/react';
+
+function Uploader() {
+  const storage = useStorage();
+
+  const handleUpload = async (file: File) => {
+    const result = await storage.upload(file, 'avatars');
+    console.log("File available at:", result.url);
+  };
+
+  return (
+    <input 
+      type="file" 
+      onChange={(e) => handleUpload(e.target.files[0])} 
+    />
+  );
+}
+```

@@ -24,7 +24,7 @@ describe('QueryEngine', () => {
         const engine = new QueryEngine(mockQuery, queryString);
         engine.filter();
 
-        expect(mockQuery.find).toHaveBeenCalledWith({ name: 'John' });
+        expect(mockQuery.find).toHaveBeenCalledWith({ name: 'John', isDeleted: { $ne: true } });
     });
 
     test('should apply existing comparison operators (_gt, _lt, etc)', () => {
@@ -33,7 +33,8 @@ describe('QueryEngine', () => {
         engine.filter();
 
         expect(mockQuery.find).toHaveBeenCalledWith({
-            age: { $gt: '18', $lt: '30' }
+            age: { $gt: '18', $lt: '30' },
+            isDeleted: { $ne: true }
         });
     });
 
@@ -43,7 +44,8 @@ describe('QueryEngine', () => {
         engine.filter();
 
         expect(mockQuery.find).toHaveBeenCalledWith({
-            status: { $ne: 'inactive' }
+            status: { $ne: 'inactive' },
+            isDeleted: { $ne: true }
         });
     });
 
@@ -52,7 +54,7 @@ describe('QueryEngine', () => {
         const engine = new QueryEngine(mockQuery, queryString);
         engine.filter();
 
-        expect(mockQuery.find).toHaveBeenCalledWith({ name: 'John' });
+        expect(mockQuery.find).toHaveBeenCalledWith({ name: 'John', isDeleted: { $ne: true } });
         // page and sort should NOT be in the find() call
         const filterArg = mockQuery.find.mock.calls[0][0];
         expect(filterArg).not.toHaveProperty('page');
@@ -65,7 +67,8 @@ describe('QueryEngine', () => {
         engine.filter();
 
         expect(mockQuery.find).toHaveBeenCalledWith({
-            status: { $in: ['active', 'pending', 'archived'] }
+            status: { $in: ['active', 'pending', 'archived'] },
+            isDeleted: { $ne: true }
         });
     });
 
@@ -75,7 +78,8 @@ describe('QueryEngine', () => {
         engine.filter();
 
         expect(mockQuery.find).toHaveBeenCalledWith({
-            status: { $in: ['active', 'pending'] }
+            status: { $in: ['active', 'pending'] },
+            isDeleted: { $ne: true }
         });
     });
 
@@ -86,7 +90,8 @@ describe('QueryEngine', () => {
 
         expect(mockQuery.find).toHaveBeenCalledWith({
             email: { $exists: true },
-            phone: { $exists: false }
+            phone: { $exists: false },
+            isDeleted: { $ne: true }
         });
     });
 
@@ -100,6 +105,33 @@ describe('QueryEngine', () => {
         expect(filterArg.name.$regex.source).toBe('John');
         expect(filterArg.name.$regex.flags).toContain('i');
         expect(mockQuery.maxTimeMS).toHaveBeenCalledWith(QueryEngine.REGEX_MAX_TIME_MS);
+    });
+
+    test('should exclude soft-deleted documents by default', () => {
+        const queryString = { name: 'test' };
+        const engine = new QueryEngine(mockQuery, queryString);
+        
+        engine.filter();
+        
+        expect(mockQuery.find).toHaveBeenCalledWith(expect.objectContaining({
+            name: 'test',
+            isDeleted: { $ne: true }
+        }));
+    });
+
+    test('should include soft-deleted documents when include_deleted=true is passed', () => {
+        const queryString = { name: 'test', include_deleted: 'true' };
+        const engine = new QueryEngine(mockQuery, queryString);
+        
+        engine.filter();
+        
+        expect(mockQuery.find).toHaveBeenCalledWith({
+            name: 'test'
+        });
+        
+        const callArgs = mockQuery.find.mock.calls[0][0];
+        expect(callArgs).not.toHaveProperty('include_deleted');
+        expect(callArgs).not.toHaveProperty('isDeleted');
     });
 
     test('should throw a query validation error for invalid _regex pattern', () => {

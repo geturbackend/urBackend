@@ -15,6 +15,7 @@ const {
     deleteCollection,
     getData,
     deleteRow,
+    recoverRow,
     insertData,
     editRow,
     listFiles,
@@ -37,11 +38,19 @@ const {
     updateMailTemplate,
     deleteMailTemplate,
     requestUpload,
-    confirmUpload
-} = require("../controllers/project.controller")
+    confirmUpload,
+    getMailLogs,
+    getResendLiveStatus,
+    manageAudiences,
+    deleteAudience,
+    manageContacts,
+    deleteContact,
+    sendMarketingBroadcast
+} = require("../controllers/project.controller");
 
 const { createAdminUser, resetPassword, getUserDetails, updateAdminUser, listUserSessions, revokeUserSession } = require('../controllers/userAuth.controller');
 
+const exportController = require('../controllers/dbExport.controller');
 
 // POST REQ FOR CREATE PROJECT
 router.post('/', authMiddleware, verifyEmail, planEnforcement.checkProjectLimit, createProject);
@@ -59,6 +68,9 @@ router.get('/:projectId/collections/:collectionName/data', authMiddleware, getDa
 
 // DELETE REQ FOR ROW
 router.delete('/:projectId/collections/:collectionName/data/:id', authMiddleware, deleteRow);
+
+// PATCH REQ FOR RECOVER ROW
+router.patch('/:projectId/collections/:collectionName/data/:id/recover', authMiddleware, recoverRow);
 
 // PATCH REQ FOR EDIT ROW
 router.patch('/:projectId/collections/:collectionName/data/:id', authMiddleware, editRow);
@@ -87,6 +99,17 @@ router.get('/:projectId/mail/templates/:templateId', authMiddleware, getMailTemp
 router.post('/:projectId/mail/templates', authMiddleware, verifyEmail, planEnforcement.attachDeveloper, planEnforcement.checkMailTemplatesGate, createMailTemplate);
 router.patch('/:projectId/mail/templates/:templateId', authMiddleware, verifyEmail, planEnforcement.attachDeveloper, planEnforcement.checkMailTemplatesGate, updateMailTemplate);
 router.delete('/:projectId/mail/templates/:templateId', authMiddleware, verifyEmail, deleteMailTemplate);
+
+// EXPANDED MAIL API PLATFORM PROXIES
+router.get('/:projectId/mail/logs', authMiddleware, getMailLogs);
+router.get('/:projectId/mail/logs/:resendId/live', authMiddleware, getResendLiveStatus);
+router.get('/:projectId/mail/audiences', authMiddleware, manageAudiences);
+router.post('/:projectId/mail/audiences', authMiddleware, verifyEmail, manageAudiences);
+router.delete('/:projectId/mail/audiences/:audienceId', authMiddleware, verifyEmail, deleteAudience);
+router.get('/:projectId/mail/audiences/:audienceId/contacts', authMiddleware, manageContacts);
+router.post('/:projectId/mail/audiences/:audienceId/contacts', authMiddleware, verifyEmail, manageContacts);
+router.delete('/:projectId/mail/audiences/:audienceId/contacts/:contactId', authMiddleware, verifyEmail, deleteContact);
+router.post('/:projectId/mail/broadcasts', authMiddleware, verifyEmail, sendMarketingBroadcast);
 
 // PATCH REQ FOR ALLOWED DOMAINS
 router.patch('/:projectId/allowed-domains', authMiddleware, verifyEmail, updateAllowedDomains);
@@ -129,5 +152,8 @@ router.put('/:projectId/admin/users/:userId', authMiddleware, loadProjectForAdmi
 // SESSION MANAGEMENT (Admin)
 router.get('/:projectId/admin/users/:userId/sessions', authMiddleware, loadProjectForAdmin, checkAuthEnabled, listUserSessions);
 router.delete('/:projectId/admin/users/:userId/sessions/:tokenId', authMiddleware, loadProjectForAdmin, checkAuthEnabled, revokeUserSession);
+
+// POST req for DB EXPORT
+router.post('/:projectId/collections/:collectionName/export', authMiddleware, exportController.dbExportHandler);
 
 module.exports = router;

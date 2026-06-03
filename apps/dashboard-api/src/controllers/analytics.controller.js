@@ -1,4 +1,4 @@
-const { Project, Log, Developer, Webhook, getConnection, resolveEffectivePlan, getPlanLimits } = require("@urbackend/common");
+const { Project, Log, Developer, Webhook, getConnection, resolveEffectivePlan, getPlanLimits, PlatformEvent, DeveloperActivity } = require("@urbackend/common");
 const mongoose = require("mongoose");
 
 /**
@@ -42,13 +42,9 @@ module.exports.getGlobalStats = async (req, res) => {
     const projects = await Project.find({ owner: user_id }).select("_id").lean();
     const projectIds = projects.map(p => p._id);
     
-    // Calculate total requests
     const totalRequests = await Log.countDocuments({ projectId: { $in: projectIds } });
-
-    // Calculate total webhooks
     const totalWebhooks = await Webhook.countDocuments({ projectId: { $in: projectIds } });
 
-    // Calculate total users across all project databases
     let totalUsers = 0;
     for (const project of projects) {
       try {
@@ -88,7 +84,8 @@ module.exports.getGlobalStats = async (req, res) => {
       message: ""
     });
   } catch (err) {
-    res.status(500).json({ success: false, data: {}, message: err.message });
+    console.error('[analytics] getGlobalStats error:', err);
+    res.status(500).json({ success: false, data: {}, message: 'Internal server error' });
   }
 };
 
@@ -118,6 +115,213 @@ module.exports.getRecentActivity = async (req, res) => {
 
     res.json(formattedLogs);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[analytics] getRecentActivity error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// ---------------------------------------------------------------------------
+// ACTIVATION FUNNEL
+// Returns step-by-step conversion rates for the current developer.
+// ---------------------------------------------------------------------------
+module.exports.getActivationFunnel = async (req, res) => {
+  try {
+    const developerId = req.user._id;
+
+    const FUNNEL_STEPS = [
+      'signup_completed',
+      'email_verified',
+      'project_created',
+      'collection_created',
+      'first_api_success',
+    ];
+
+    // Fetch one event per step (we only need existence, not count)
+    const events = await PlatformEvent.find({
+      developerId,
+      event: { $in: FUNNEL_STEPS },
+    })
+      .sort({ timestamp: 1 })
+      .select('event timestamp')
+      .lean();
+
+    const completed = {};
+    for (const e of events) {
+      if (!completed[e.event]) completed[e.event] = e.timestamp;
+    }
+
+    const steps = FUNNEL_STEPS.map((step, i) => ({
+      step,
+      order: i + 1,
+      completed: !!completed[step],
+      completedAt: completed[step] || null,
+    }));
+
+    return res.json({ success: true, data: { steps }, message: '' });
+  } catch (err) {
+    console.error('[analytics] getActivationFunnel error:', err);
+    res.status(500).json({ success: false, data: {}, message: 'Internal server error' });
+  }
+};
+
+// ---------------------------------------------------------------------------
+// RETENTION  (D1 / D7 / D30)
+// Checks whether the developer was active on Day+1, Day+7, Day+30 after signup.
+// ---------------------------------------------------------------------------
+module.exports.getRetention = async (req, res) => {
+  try {
+    const developerId = req.user._id;
+
+    // Find signup event to anchor the cohort start date
+    const signupEvent = await PlatformEvent.findOne({
+      developerId,
+      event: 'signup_completed',
+    }).sort({ timestamp: 1 }).lean();
+
+    if (!signupEvent) {
+      return res.json({
+        success: true,
+        data: { d1: false, d7: false, d30: false, signupDate: null },
+        message: '',
+      });
+    }
+
+    const signupDate = new Date(signupEvent.timestamp);
+    signupDate.setUTCHours(0, 0, 0, 0);
+
+    const checkDay = async (daysAfter) => {
+      const targetDate = new Date(signupDate);
+      targetDate.setUTCDate(targetDate.getUTCDate() + daysAfter);
+      const nextDate = new Date(targetDate);
+      nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+
+      const activity = await DeveloperActivity.findOne({
+        developerId,
+        date: { $gte: targetDate, $lt: nextDate },
+      }).lean();
+      return !!activity;
+    };
+
+    const [d1, d7, d30] = await Promise.all([
+      checkDay(1),
+      checkDay(7),
+      checkDay(30),
+    ]);
+
+    return res.json({
+      success: true,
+      data: { d1, d7, d30, signupDate },
+      message: '',
+    });
+  } catch (err) {
+    console.error('[analytics] getRetention error:', err);
+    res.status(500).json({ success: false, data: {}, message: 'Internal server error' });
+  }
+};
+
+// ---------------------------------------------------------------------------
+// FEATURE ENGAGEMENT  (trailing 30 days)
+// Returns per-feature usage totals across all projects for the developer.
+// ---------------------------------------------------------------------------
+module.exports.getEngagement = async (req, res) => {
+  try {
+    const developerId = req.user._id;
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
+
+    const agg = await DeveloperActivity.aggregate([
+      {
+        $match: {
+          developerId: new mongoose.Types.ObjectId(developerId),
+          date: { $gte: thirtyDaysAgo },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalApiCalls: { $sum: '$apiCallCount' },
+          totalMailSent: { $sum: '$mailSentCount' },
+          totalStorageUploads: { $sum: '$storageUploadsCount' },
+          totalWebhooksFired: { $sum: '$webhookTriggeredCount' },
+          activeDays: { $sum: 1 },
+          allProjectIds: { $push: '$activeProjectIds' },
+        },
+      },
+    ]);
+
+    const result = agg[0] || {
+      totalApiCalls: 0,
+      totalMailSent: 0,
+      totalStorageUploads: 0,
+      totalWebhooksFired: 0,
+      activeDays: 0,
+    };
+
+    // Unique active projects in the 30-day window
+    const flatProjectIds = (result.allProjectIds || []).flat();
+    const uniqueActiveProjects = new Set(flatProjectIds.map(String)).size;
+
+    return res.json({
+      success: true,
+      data: {
+        window: '30d',
+        totalApiCalls: result.totalApiCalls,
+        totalMailSent: result.totalMailSent,
+        totalStorageUploads: result.totalStorageUploads,
+        totalWebhooksFired: result.totalWebhooksFired,
+        activeDays: result.activeDays,
+        uniqueActiveProjects,
+      },
+      message: '',
+    });
+  } catch (err) {
+    console.error('[analytics] getEngagement error:', err);
+    res.status(500).json({ success: false, data: {}, message: 'Internal server error' });
+  }
+};
+
+// ---------------------------------------------------------------------------
+// NORTH STAR METRIC
+// "Projects making successful API calls in the last 7 days"
+// ---------------------------------------------------------------------------
+module.exports.getNorthStar = async (req, res) => {
+  try {
+    const developerId = req.user._id;
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setUTCDate(sevenDaysAgo.getUTCDate() - 7);
+
+    // Projects owned by this developer
+    const allProjects = await Project.find({ owner: developerId }).select('_id name').lean();
+    const projectIds = allProjects.map((p) => p._id);
+    const totalProjects = projectIds.length;
+
+    if (totalProjects === 0) {
+      return res.json({
+        success: true,
+        data: { activeProjects: 0, totalProjects: 0, percentage: 0 },
+        message: '',
+      });
+    }
+
+    // Projects with at least one 2xx log in the last 7 days
+    const activeProjectIds = await Log.distinct('projectId', {
+      projectId: { $in: projectIds },
+      status: { $gte: 200, $lt: 300 },
+      timestamp: { $gte: sevenDaysAgo },
+    });
+
+    const activeProjects = activeProjectIds.length;
+    const percentage = totalProjects > 0 ? Math.round((activeProjects / totalProjects) * 100) : 0;
+
+    return res.json({
+      success: true,
+      data: { activeProjects, totalProjects, percentage },
+      message: '',
+    });
+  } catch (err) {
+    console.error('[analytics] getNorthStar error:', err);
+    res.status(500).json({ success: false, data: {}, message: 'Internal server error' });
   }
 };

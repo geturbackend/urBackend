@@ -10,6 +10,7 @@ import { ArrowLeft, Copy, CheckCircle, AlertTriangle, Plus } from 'lucide-react'
 function CreateProject() {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
+    const [provisionAuth, setProvisionAuth] = useState(true);
     const [loading, setLoading] = useState(false);
     const [newProject, setNewProject] = useState(null);
 
@@ -54,8 +55,25 @@ function CreateProject() {
             const res = await api.post(`/api/projects`,
                 { name, description }
             );
+            const projectId = res.data?._id;
+            
+            if (provisionAuth && projectId) {
+                // Auto provision the users collection
+                const usersSchema = [
+                    { key: 'email', type: 'String', required: true },
+                    { key: 'password', type: 'String', required: true },
+                    { key: 'username', type: 'String', required: false },
+                    { key: 'emailVerified', type: 'Boolean', required: false }
+                ];
+                await api.post(`/api/projects/${projectId}/collections`, {
+                    projectId,
+                    collectionName: 'users',
+                    schema: usersSchema
+                });
+            }
+
             setNewProject(res.data);
-            setActiveProjectId(res.data?._id);
+            setActiveProjectId(projectId);
             toast.success("Project Created!");
             completeStep('create_project');
             completeStep('get_api_key');
@@ -70,6 +88,21 @@ function CreateProject() {
     const copyToClipboard = (text) => {
         navigator.clipboard.writeText(text);
         toast.success("Copied to clipboard!");
+    };
+
+    const downloadEnvFile = () => {
+        if (!newProject) return;
+        const envContent = `URBACKEND_PROJECT_ID=${newProject._id}\nURBACKEND_PUBLISHABLE_KEY=${newProject.publishableKey}\nURBACKEND_SECRET_KEY=${newProject.secretKey}\n`;
+        const blob = new Blob([envContent], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '.env.local';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast.success(".env file downloaded!");
     };
 
     // --- SUCCESS VIEW (API KEY) ---
@@ -128,13 +161,22 @@ function CreateProject() {
                         </div>
                     </div>
 
-                    <button
-                        onClick={() => navigate('/dashboard')}
-                        className="btn btn-primary"
-                        style={{ width: '100%', padding: '14px', justifyContent: 'center', fontSize: '1rem', fontWeight: 600 }}
-                    >
-                        I have saved the key, Go to Dashboard
-                    </button>
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                        <button
+                            onClick={downloadEnvFile}
+                            className="btn btn-secondary"
+                            style={{ flex: 1, padding: '14px', justifyContent: 'center', fontSize: '0.95rem', fontWeight: 600 }}
+                        >
+                            Download .env
+                        </button>
+                        <button
+                            onClick={() => navigate('/dashboard')}
+                            className="btn btn-primary"
+                            style={{ flex: 2, padding: '14px', justifyContent: 'center', fontSize: '0.95rem', fontWeight: 600 }}
+                        >
+                            Go to Dashboard
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -197,6 +239,21 @@ function CreateProject() {
                             style={{ minHeight: '120px', resize: 'vertical', padding: '12px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', color: '#fff', lineHeight: '1.5' }}
                             placeholder="Describe your project's purpose..."
                         />
+                    </div>
+                    
+                    <div className="form-group" style={{ marginBottom: '1rem', marginTop: '0.5rem' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={provisionAuth}
+                                onChange={(e) => setProvisionAuth(e.target.checked)}
+                                style={{ accentColor: 'var(--color-primary)', transform: 'scale(1.2)' }}
+                            />
+                            <div>
+                                <span style={{ fontSize: '0.95rem', fontWeight: 600 }}>Include standard Users collection for Authentication</span>
+                                <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', marginTop: '2px', margin: 0 }}>Automatically configures a ready-to-use users table for signup and login.</p>
+                            </div>
+                        </label>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>

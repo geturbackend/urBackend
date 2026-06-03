@@ -1,0 +1,42 @@
+---
+title: "<UrProvider>"
+description: "The core Context Provider for the urBackend React SDK."
+---
+
+The `<UrProvider>` is the heart of the React SDK. It initializes the urBackend client, manages global authentication state, and synchronizes the user's session seamlessly across your application.
+
+You must wrap your entire application (or at least the parts that require authentication and database access) inside this provider.
+
+## Usage
+
+```tsx
+import { UrProvider } from '@urbackend/react';
+
+function App() {
+  return (
+    <UrProvider apiKey="pk_live_your_publishable_api_key">
+      <YourApplicationComponents />
+    </UrProvider>
+  );
+}
+```
+
+## Props
+
+| Prop | Type | Required | Description |
+|---|---|---|---|
+| `apiKey` | `string` | Yes | Your project's Publishable API Key (`pk_live_...`). |
+| `baseUrl` | `string` | No | Overrides the default urBackend API URL. Useful for self-hosted instances. |
+| `children` | `React.ReactNode` | Yes | The components to render inside the provider. |
+
+## How it works
+
+When `<UrProvider>` mounts, it automatically:
+1. Initializes a singleton `@urbackend/sdk` instance.
+2. Checks `localStorage` and cookies for an existing active session.
+3. Automatically attempts to refresh the session in the background if the access token has expired.
+4. Exposes the `AuthUser` state and SDK client to all child components via React Context (accessed through hooks like `useUser` and `useDb`).
+
+<Note>
+The provider sets up global state. You only ever need **one** `<UrProvider>` at the root of your React tree.
+</Note>

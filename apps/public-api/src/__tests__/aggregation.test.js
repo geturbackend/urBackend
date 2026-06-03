@@ -56,12 +56,13 @@ describe('aggregateData controller', () => {
     });
 
     test('executes a valid aggregation pipeline', async () => {
-        const req = makeReq();
+        const req = makeReq({ query: {} });
         const res = makeRes();
 
         await aggregateData(req, res);
 
         expect(mockAggregate).toHaveBeenCalledWith([
+            { $match: { isDeleted: { $ne: true } } },
             { $group: { _id: '$status', count: { $sum: 1 } } },
         ]);
         expect(res.statusCode).toBe(200);
@@ -74,6 +75,7 @@ describe('aggregateData controller', () => {
 
     test('prepends the RLS match stage when req.rlsFilter is set', async () => {
         const req = makeReq({
+            query: {},
             rlsFilter: { userId: 'user_1' },
             body: {
                 pipeline: [
@@ -87,9 +89,25 @@ describe('aggregateData controller', () => {
         await aggregateData(req, res);
 
         expect(mockAggregate).toHaveBeenCalledWith([
-            { $match: { userId: 'user_1' } },
+            { $match: { userId: 'user_1', isDeleted: { $ne: true } } },
             { $match: { status: 'published' } },
             { $sort: { createdAt: -1 } },
+        ]);
+        expect(res.statusCode).toBe(200);
+    });
+
+    test('includes soft-deleted documents when include_deleted=true is passed', async () => {
+        const req = makeReq({
+            query: { include_deleted: 'true' },
+            body: { pipeline: [{ $group: { _id: '$status', count: { $sum: 1 } } }] },
+        });
+        const res = makeRes();
+
+        await aggregateData(req, res);
+
+        expect(mockAggregate).toHaveBeenCalledWith([
+            { $match: {} }, // softDeleteFilter should be empty
+            { $group: { _id: '$status', count: { $sum: 1 } } },
         ]);
         expect(res.statusCode).toBe(200);
     });

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "urbackend"
-version = "0.1.0"
+version = "0.1.1"
 description = "Official Python SDK for urBackend — the instant Backend-as-a-Service for MongoDB."
 readme = "README.md"
 license = { text = "MIT" }

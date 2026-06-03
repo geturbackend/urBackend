@@ -19,7 +19,7 @@ import {
     useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Trash2, Settings2, Check, GripVertical, Eye, Pencil } from "lucide-react";
+import { Trash2, Settings2, Check, GripVertical, Eye, Pencil, RotateCcw } from "lucide-react";
 
 /* Resizer Component - kept simple */
 const Resizer = ({ header }) => {
@@ -32,6 +32,31 @@ const Resizer = ({ header }) => {
             onPointerDown={(e) => e.stopPropagation()}
         />
     );
+};
+
+const formatDate = (val) => {
+    if (!val || typeof val !== 'string') return val;
+    // ISO date check: 2026-05-23T20:50:44.726Z
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val)) return val;
+    
+    const date = new Date(val);
+    if (isNaN(date.getTime())) return val;
+
+    return date.toLocaleString('en-GB', {
+        day: 'numeric',
+        month: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    }).toLowerCase();
+};
+
+const getDeletionTooltip = (deletedAt, now) => {
+    if (!deletedAt || !now) return "";
+    const daysRemaining = Math.max(0, 30 - Math.floor((now - new Date(deletedAt).getTime()) / (1000 * 60 * 60 * 24)));
+    return `Deleted on: ${formatDate(deletedAt)} (${daysRemaining} days until permanent deletion)`;
 };
 
 /* Draggable Header Component */
@@ -74,12 +99,21 @@ const DraggableColumnHeader = ({ header, children, style: propStyle, className }
     );
 };
 
-export default function CollectionTable({ data, activeCollection, onDelete, onView, onEdit }) {
+export default function CollectionTable({ data, activeCollection, onDelete, onView, onEdit, onRecover, recoveringIds }) {
+    const [now, setNow] = useState(null);
+
+    useEffect(() => {
+        // Use setTimeout to avoid synchronous cascading render warning
+        const timer = setTimeout(() => setNow(Date.now()), 0);
+        return () => clearTimeout(timer);
+    }, []);
+
+
     // 1. Column Definitions
     const columns = useMemo(() => {
         if (!activeCollection) return [];
 
-        const SYSTEM_FIELDS = ['_id', '__v', 'createdAt', 'updatedAt'];
+        const SYSTEM_FIELDS = ['_id', '__v', 'createdAt', 'updatedAt', 'isDeleted', 'deletedAt'];
 
         const inferType = (value) => {
             if (typeof value === 'boolean') return 'BOOLEAN';
@@ -162,11 +196,20 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                 id: "_id",
                 header: "ID",
                 accessorKey: "_id",
-                size: 150,
+                size: 180,
                 cell: (info) => (
-                    <span className="font-mono text-xs text-muted">
-                        {String(info.getValue()).substring(0, 8)}...
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span className="font-mono text-xs text-muted">
+                            {String(info.getValue()).substring(0, 8)}...
+                        </span>
+                        {info.row.original?.isDeleted && (
+                            <span className="badge badge-danger" 
+                                  title={getDeletionTooltip(info.row.original.deletedAt, now)}
+                                  style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', cursor: 'default' }}>
+                                DELETED
+                            </span>
+                        )}
+                    </div>
                 ),
             },
             {
@@ -175,44 +218,64 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                 size: 120,
                 enableResizing: false,
                 enableHiding: false,
-                cell: (info) => (
-                    <div className="flex gap-1">
-                        <button
-                            className="btn-icon"
-                            onClick={() => onView(info.row.original)}
-                            onPointerDown={e => e.stopPropagation()}
-                            aria-label="View Details"
-                            title="View Details"
-                        >
-                            <Eye size={15} />
-                        </button>
-                        {activeCollection?.name !== 'users' && (
-                            <>
-                                <button
-                                    className="btn-icon"
-                                    onClick={() => onEdit(info.row.original)}
-                                    onPointerDown={e => e.stopPropagation()}
-                                    aria-label="Edit Record"
-                                    title="Edit"
-                                >
-                                    <Pencil size={15} />
-                                </button>
-                                <button
-                                    className="btn-icon danger-hover"
-                                    onClick={() => onDelete(info.row.original._id)}
-                                    onPointerDown={e => e.stopPropagation()}
-                                    aria-label="Delete Record"
-                                    title="Delete"
-                                >
-                                    <Trash2 size={15} />
-                                </button>
-                            </>
-                        )}
-                    </div>
-                ),
+                cell: (info) => {
+                    const record = info.row.original;
+                    return (
+                        <div className="flex gap-1">
+                            <button
+                                className="btn-icon"
+                                onClick={() => onView(record)}
+                                onPointerDown={e => e.stopPropagation()}
+                                aria-label="View Details"
+                                title="View Details"
+                            >
+                                <Eye size={15} />
+                            </button>
+                            {activeCollection?.name !== 'users' && (
+                                (record.isDeleted || recoveringIds.has(record._id)) ? (
+                                    <button
+                                        className={`btn-icon ${recoveringIds.has(record._id) ? 'loading' : ''}`}
+                                        onClick={() => onRecover(record._id)}
+                                        onPointerDown={e => e.stopPropagation()}
+                                        aria-label={`Restore record ${record._id}`}
+                                        disabled={recoveringIds.has(record._id)}
+                                        title={getDeletionTooltip(record.deletedAt, now)}
+                                    >
+                                        {recoveringIds.has(record._id) ? (
+                                            <div className="spinner-small"></div>
+                                        ) : (
+                                            <RotateCcw size={15} color="var(--color-primary)" />
+                                        )}
+                                    </button>
+                                ) : (
+                                    <>
+                                        <button
+                                            className="btn-icon"
+                                            onClick={() => onEdit(record)}
+                                            onPointerDown={e => e.stopPropagation()}
+                                            aria-label="Edit Record"
+                                            title="Edit"
+                                        >
+                                            <Pencil size={15} />
+                                        </button>
+                                        <button
+                                            className="btn-icon danger-hover"
+                                            onClick={() => onDelete(record._id)}
+                                            onPointerDown={e => e.stopPropagation()}
+                                            aria-label="Delete Record"
+                                            title="Delete"
+                                        >
+                                            <Trash2 size={15} />
+                                        </button>
+                                    </>
+                                )
+                            )}
+                        </div>
+                    );
+                },
             },
         ];
-    }, [activeCollection, data, onDelete, onView, onEdit]);
+    }, [activeCollection, data, onDelete, onView, onEdit, onRecover, recoveringIds, now]);
 
     // 2. Load Persisted State
     const storageKey = `table-settings-${activeCollection?._id}`;
@@ -521,37 +584,47 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                             ))}
                         </thead>
                         <tbody>
-                            {table.getRowModel().rows.map((row) => (
-                                <tr key={row.id} className="table-row">
-                                    {row.getVisibleCells().map((cell) => {
-                                        /* Handle Sticky Cells */
-                                        const columnId = cell.column.id;
-                                        const isStickyLeft = columnId === 'rowNumber';
-                                        const isStickyRight = columnId === 'actions';
+                            {table.getRowModel().rows.map((row) => {
+                                const record = row.original;
+                                return (
+                                    <tr 
+                                        key={row.id} 
+                                        className={`table-row ${record.isDeleted ? 'row-deleted' : ''}`}
+                                        style={{
+                                            opacity: record.isDeleted ? 0.6 : 1,
+                                            background: record.isDeleted ? 'rgba(239, 68, 68, 0.03)' : 'transparent',
+                                            borderLeft: record.isDeleted ? '2px solid var(--color-danger)' : 'none'
+                                        }}
+                                    >
+                                        {row.getVisibleCells().map((cell) => {
+                                            /* Handle Sticky Cells */
+                                            const columnId = cell.column.id;
+                                            const isStickyLeft = columnId === 'rowNumber';
+                                            const isStickyRight = columnId === 'actions';
 
-                                        const style = {
-                                            width: cell.column.getSize(),
-                                            position: (isStickyLeft || isStickyRight) ? "sticky" : "relative",
-                                            left: isStickyLeft ? 0 : 'auto',
-                                            right: isStickyRight ? 0 : 'auto',
-                                          zIndex: (isStickyLeft || isStickyRight) ? 2 : 1,
+                                            const style = {
+                                                width: cell.column.getSize(),
+                                                position: (isStickyLeft || isStickyRight) ? "sticky" : "relative",
+                                                left: isStickyLeft ? 0 : 'auto',
+                                                right: isStickyRight ? 0 : 'auto',
+                                                zIndex: (isStickyLeft || isStickyRight) ? 2 : 1,
+                                                boxShadow: isStickyRight ? '-5px 0 15px rgba(0,0,0,0.2)' : 'none'
+                                            };
 
-                                            boxShadow: isStickyRight ? '-5px 0 15px rgba(0,0,0,0.2)' : 'none'
-                                        };
-
-                                        return (
-                                            <td key={cell.id} style={style} className={isStickyLeft || isStickyRight ? 'sticky-cell' : ''}>
-                                                <div 
-                                                   className="cell-wrapper" 
-                                                   title={typeof cell.getValue() === 'object' ? JSON.stringify(cell.getValue(), null, 2) : String(cell.getValue() ?? '')}
-                                                >
-                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                </div>
-                                            </td>
-                                        );
-                                    })}
-                                </tr>
-                            ))}
+                                            return (
+                                                <td key={cell.id} style={style} className={isStickyLeft || isStickyRight ? 'sticky-cell' : ''}>
+                                                    <div 
+                                                       className="cell-wrapper" 
+                                                       title={typeof cell.getValue() === 'object' ? JSON.stringify(cell.getValue(), null, 2) : String(cell.getValue() ?? '')}
+                                                    >
+                                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                    </div>
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                     {/* Overlay for smoother drag visualization (optional, but good) */}
@@ -642,18 +715,40 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                     overflow: hidden;
                     text-overflow: ellipsis;
                 }
-                .table-row:hover {
-                    background: rgba(255,255,255,0.03);
-                }
-                .sticky-cell {
-                    background: var(--color-bg-main);
-                    transition: background 0.15s ease;
-                }
-                .table-row:hover .sticky-cell {
-                    background: #111;
-                }
+                 .table-row:hover {
+                     background: rgba(255,255,255,0.03);
+                 }
+                 .sticky-cell {
+                     background: var(--color-bg-main);
+                     transition: background 0.15s ease;
+                 }
+                 .table-row:hover .sticky-cell {
+                     background: #111;
+                 }
+                 .table-row.row-deleted .sticky-cell {
+                     background: rgba(239, 68, 68, 0.03) !important;
+                 }
+                 .table-row.row-deleted:hover .sticky-cell {
+                     background: rgba(239, 68, 68, 0.05) !important;
+                 }
                 .column-toggle-item:hover {
                     background: rgba(255,255,255,0.05);
+                }
+                .spinner-small {
+                    width: 14px;
+                    height: 14px;
+                    border: 2px solid rgba(255, 255, 255, 0.1);
+                    border-top: 2px solid var(--color-primary);
+                    border-radius: 50%;
+                    animation: spin 0.8s linear infinite;
+                }
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                .btn-icon.loading {
+                    pointer-events: none;
+                    opacity: 0.7;
                 }
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 10px;

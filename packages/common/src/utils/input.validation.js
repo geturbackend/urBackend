@@ -36,20 +36,35 @@ module.exports.signupSchema = z.object({
 });
 
 module.exports.changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, "Current password is required"),
-  newPassword: z.string().min(6, "New password must be at least 6 characters"),
+  currentPassword: z
+    .string()
+    .min(1, "Current password is required")
+    .max(100, "Password is too long."),
+  newPassword: z
+    .string()
+    .min(6, "New password must be at least 6 characters")
+    .max(100, "Password is too long."),
 });
 
 module.exports.deleteAccountSchema = z.object({
-  password: z.string().min(1, "Password is required"),
+  password: z
+    .string()
+    .min(1, "Password is required")
+    .max(100, "Password is too long."),
 });
 
 module.exports.onlyEmailSchema = z.object({
-  email: z.string().email("Invalid email format"),
+  email: z
+    .string()
+    .email("Invalid email format")
+    .max(100, "Email is too long."),
 });
 
 module.exports.verifyOtpSchema = z.object({
-  email: z.string().email("Invalid email format"),
+  email: z
+    .string()
+    .email("Invalid email format")
+    .max(100, "Email is too long."),
   otp: z.string().length(6, "OTP must be 6 digits"),
 });
 
@@ -110,6 +125,7 @@ const buildFieldSchemaZod = (depth = 1) => {
       ]),
       required: z.boolean().optional(),
       unique: z.boolean().optional(),
+      default: z.any().optional(),
       ref: z.string().optional(),
       items: z
         .object({
@@ -159,6 +175,29 @@ const buildFieldSchemaZod = (depth = 1) => {
         message:
           "Invalid field configuration, nesting depth exceeded (max 3 levels), or unique is only supported for top-level primitive fields.",
       },
+    )
+    .refine(
+      (field) => {
+        // Reject defaults on required fields
+        if (field.required === true && field.default !== undefined)
+          return false;
+        // Reject defaults for unsupported types
+        if (field.default === undefined) return true;
+        const unsupported = ["Date", "Object", "Array", "Ref"];
+        if (unsupported.includes(field.type)) return false;
+        // Type-match check
+        if (field.type === "String" && typeof field.default !== "string")
+          return false;
+        if (field.type === "Number" && typeof field.default !== "number")
+          return false;
+        if (field.type === "Boolean" && typeof field.default !== "boolean")
+          return false;
+        return true;
+      },
+      {
+        message:
+          "Default value type must match field type, and required fields cannot have defaults",
+      },
     );
 
   return base;
@@ -202,6 +241,7 @@ const buildApiFieldSchemaZod = (depth = 1) => {
       ]),
       required: z.boolean().optional(),
       unique: z.boolean().optional(),
+      default: z.any().optional(),
       ref: z.string().optional(),
       items: z
         .object({
@@ -264,6 +304,35 @@ const buildApiFieldSchemaZod = (depth = 1) => {
         message:
           "Invalid field configuration, nesting depth exceeded (max 3 levels), or unique is only supported for top-level primitive fields.",
       },
+    )
+    .refine(
+      (field) => {
+        // Reject defaults on required fields
+        if (field.required === true && field.default !== undefined)
+          return false;
+        // Reject defaults for unsupported types
+        if (field.default === undefined) return true;
+
+        const normalType =
+          field.type.charAt(0).toUpperCase() +
+          field.type.slice(1).toLowerCase();
+
+        const unsupported = ["Date", "Object", "Array", "Ref"];
+        if (unsupported.includes(normalType)) return false;
+
+        // Type-match check
+        if (normalType === "String" && typeof field.default !== "string")
+          return false;
+        if (normalType === "Number" && typeof field.default !== "number")
+          return false;
+        if (normalType === "Boolean" && typeof field.default !== "boolean")
+          return false;
+        return true;
+      },
+      {
+        message:
+          "Default value type must match field type, and required fields cannot have defaults",
+      },
     );
 
   return base;
@@ -285,15 +354,41 @@ module.exports.aggregateSchema = z.object({
     .min(1, "Pipeline must contain at least one stage."),
 });
 
-module.exports.sanitize = (obj) => {
+const BLOCKED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+const isDangerousKey = (key) =>
+  key.startsWith('$') || BLOCKED_KEYS.has(key);
+
+const sanitizeValue = (value) => {
+  if (Array.isArray(value)) return value.map(sanitizeValue);
+
+  if (value !== null && typeof value === 'object') {
+    return sanitize(value);
+  }
+
+  return value;
+};
+
+const sanitize = (obj) => {
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeValue);
+  }
+
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
   const clean = {};
-  for (const key in obj) {
-    if (!key.startsWith("$")) {
-      clean[key] = obj[key];
+
+  for (const key of Object.keys(obj)) {
+    if (!isDangerousKey(key)) {
+      clean[key] = sanitizeValue(obj[key]);
     }
   }
+
   return clean;
 };
+
+module.exports.sanitize = sanitize;
 
 module.exports.sanitizeObjectId = (value) => {
   if (typeof value !== "string") return null;
@@ -435,6 +530,7 @@ const webhookEventConfigSchema = z.object({
   insert: z.boolean().optional(),
   update: z.boolean().optional(),
   delete: z.boolean().optional(),
+  recover: z.boolean().optional(),
 });
 
 // URL validation: HTTPS required (or http://localhost for dev)
@@ -493,7 +589,10 @@ module.exports.updateWebhookSchema = z.object({
 
 module.exports.sendMailSchema = z
   .object({
-    to: z.string().email("Invalid recipient email format"),
+    to: z.union([
+      z.string().email("Invalid recipient email format"),
+      z.array(z.string().email("Invalid recipient email format")).nonempty("Recipient list cannot be empty")
+    ]),
 
     // Direct-send fields (backward compatible)
     subject: z.preprocess(

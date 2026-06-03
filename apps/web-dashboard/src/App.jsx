@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import MainLayout from './components/Layout/MainLayout';
 import LandingPage from './pages/LandingPage';
+import Pricing from './pages/Pricing';
 import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
 import ProjectDetails from './pages/ProjectDetails';
@@ -25,19 +26,18 @@ import ForgotPassword from './pages/ForgotPassword';
 import Settings from './pages/Settings';
 import ProjectSettings from './pages/ProjectSettings';
 import Webhooks from './pages/Webhooks';
+import MailPlatform from './pages/MailPlatform';
 import RequestPro from './pages/RequestPro';
 import AdminProRequests from './pages/AdminProRequests';
 import Onboarding from './pages/Onboarding';
+import AdminMetrics from './pages/AdminMetrics';
 
 import { LayoutProvider } from './context/LayoutContext';
-import { PlanProvider, usePlan } from './context/PlanContext';
+import { PlanProvider } from './context/PlanContext';
 import { OnboardingProvider } from './context/OnboardingContext';
-import UpgradeModal from './components/UpgradeModal';
 import BillingSuccess from './pages/BillingSuccess';
 
-// Inner component so usePlan can be called inside PlanProvider
 function AppContent() {
-  const { isUpgradeModalOpen, closeUpgradeModal } = usePlan();
   return (
     <LayoutProvider>
       <Toaster position="top-center" reverseOrder={false}
@@ -50,10 +50,9 @@ function AppContent() {
         }}
       />
 
-      <UpgradeModal isOpen={isUpgradeModalOpen} onClose={closeUpgradeModal} />
-
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/pricing" element={<Pricing />} />
 
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
@@ -119,6 +118,8 @@ function AppContent() {
 
         <Route path="/project/:projectId/auth" element={<ProtectedRoute><MainLayout><Auth /></MainLayout></ProtectedRoute>} />
 
+        <Route path="/project/:projectId/mail" element={<ProtectedRoute><MainLayout><MailPlatform /></MainLayout></ProtectedRoute>} />
+
         <Route path="/project/:projectId/webhooks" element={<ProtectedRoute><MainLayout><Webhooks /></MainLayout></ProtectedRoute>} />
 
         <Route path="/settings" element={<ProtectedRoute><MainLayout><Settings /></MainLayout></ProtectedRoute>} />
@@ -152,6 +153,14 @@ function AppContent() {
           <ProtectedRoute>
             <MainLayout>
               <AdminProRequests />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/admin/metrics" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <AdminMetrics />
             </MainLayout>
           </ProtectedRoute>
         } />

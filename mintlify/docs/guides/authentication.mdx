@@ -86,8 +86,8 @@ You can add any extra fields (e.g., `username`, `avatar`, `preferences`). urBack
       }
     });
 
-    const { data } = await res.json();
-    // data contains the current user's profile
+    const profile = await res.json();
+    // profile contains the current user's profile
     ```
   </Step>
 

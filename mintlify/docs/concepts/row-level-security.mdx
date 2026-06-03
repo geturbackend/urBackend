@@ -97,8 +97,7 @@ const loginResponse = await fetch('https://api.ub.bitbros.in/api/userAuth/login'
   body: JSON.stringify({ email: 'alice@example.com', password: 'secret' })
 });
 
-const { data } = await loginResponse.json();
-const token = data.accessToken; // Use accessToken (token is a deprecated alias)
+const { accessToken } = await loginResponse.json();
 // Store the access token in memory or session storage for subsequent requests
 
 // Step 2 — create a post using pk_live + the user's JWT
@@ -107,7 +106,7 @@ const postResponse = await fetch('https://api.ub.bitbros.in/api/data/posts', {
   method: 'POST',
   headers: {
     'x-api-key': 'pk_live_...',
-    'Authorization': `Bearer ${token}`,
+    'Authorization': `Bearer ${accessToken}`,
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
@@ -117,9 +116,9 @@ const postResponse = await fetch('https://api.ub.bitbros.in/api/data/posts', {
 });
 
 const result = await postResponse.json();
-// result.data will include the auto-injected owner field:
+// result will include the auto-injected owner field:
 // { _id: '...', userId: '<alice id>', title: 'Hello World', content: '...' }
-console.log(result.data);
+console.log(result);
 ```
 
 <Tip>

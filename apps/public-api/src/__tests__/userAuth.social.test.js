@@ -51,6 +51,7 @@ jest.mock('@urbackend/common', () => {
         redis: {
             set: jest.fn().mockResolvedValue('OK'),
             get: jest.fn(),
+            getdel: jest.fn(),
             del: jest.fn().mockResolvedValue(1),
         },
         Project: {
@@ -69,6 +70,9 @@ jest.mock('@urbackend/common', () => {
         sanitize: jest.fn((value) => value),
         getConnection: jest.fn().mockResolvedValue({}),
         getCompiledModel: jest.fn(() => mockUsersModel),
+        checkLockout: jest.fn().mockResolvedValue({ locked: false, retryAfterSeconds: 0 }),
+        recordFailedAttempt: jest.fn().mockResolvedValue({ locked: false, retryAfterSeconds: 0, attempts: 1 }),
+        clearLockout: jest.fn().mockResolvedValue(undefined),
         decrypt: jest.fn((encrypted) => {
             if (!encrypted?.encrypted) return null;
             if (encrypted.encrypted === 'github') return 'github_secret';
@@ -438,7 +442,7 @@ describe('public userAuth social auth', () => {
     });
 
     test('exchangeSocialRefreshToken returns refresh token and deletes exchange code', async () => {
-        redis.get.mockResolvedValueOnce(JSON.stringify({
+        redis.getdel.mockResolvedValueOnce(JSON.stringify({
             token: 'issued_access_token',
             refreshToken: 'issued_refresh_token',
         }));
@@ -452,8 +456,7 @@ describe('public userAuth social auth', () => {
 
         await controller.exchangeSocialRefreshToken(req, res);
 
-        expect(redis.get).toHaveBeenCalledWith('project:social-auth:refresh-exchange:code_123');
-        expect(redis.del).toHaveBeenCalledWith('project:social-auth:refresh-exchange:code_123');
+        expect(redis.getdel).toHaveBeenCalledWith('project:social-auth:refresh-exchange:code_123');
         expect(res.status).toHaveBeenCalledWith(200);
         expect(res.json).toHaveBeenCalledWith({
             success: true,
@@ -465,7 +468,7 @@ describe('public userAuth social auth', () => {
     });
 
     test('exchangeSocialRefreshToken rejects invalid or expired code', async () => {
-        redis.get.mockResolvedValueOnce(null);
+        redis.getdel.mockResolvedValueOnce(null);
 
         const req = makeReq();
         req.body = {
@@ -479,12 +482,13 @@ describe('public userAuth social auth', () => {
         expect(res.status).toHaveBeenCalledWith(400);
         expect(res.json).toHaveBeenCalledWith({
             success: false,
+            data: {},
             message: 'Invalid or expired refresh token exchange code',
         });
     });
 
     test('exchangeSocialRefreshToken rejects mismatched token and deletes exchange code', async () => {
-        redis.get.mockResolvedValueOnce(JSON.stringify({
+        redis.getdel.mockResolvedValueOnce(JSON.stringify({
             token: 'expected_access_token',
             refreshToken: 'issued_refresh_token',
         }));
@@ -497,11 +501,10 @@ describe('public userAuth social auth', () => {
         const res = makeRes();
 
         await controller.exchangeSocialRefreshToken(req, res);
-
-        expect(redis.del).toHaveBeenCalledWith('project:social-auth:refresh-exchange:code_456');
         expect(res.status).toHaveBeenCalledWith(403);
         expect(res.json).toHaveBeenCalledWith({
             success: false,
+            data: {},
             message: 'Invalid refresh token exchange payload',
         });
     });
@@ -607,5 +610,84 @@ describe('public userAuth social auth', () => {
         // Should redirect with error because email exists but not verified for linking
         expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('error='));
         expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('not+verified'));
+    });
+
+    test('handleSocialAuthCallback rejects soft-deleted user by provider id', async () => {
+        redis.get.mockResolvedValueOnce(JSON.stringify({
+            projectId: 'project_1',
+            provider: 'github',
+            callbackUrl: 'http://localhost:5173/auth/callback',
+        }));
+        mockProjectFindByIdChain.lean.mockResolvedValueOnce(makeProject());
+
+        // mock soft deleted user
+        mockUsersModel.findOne.mockResolvedValueOnce({
+            _id: 'deleted_user',
+            githubId: '123',
+            isDeleted: true,
+            deletedAt: new Date().toISOString()
+        });
+
+        global.fetch
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ access_token: 'github_access_token' }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ id: 123, login: 'alice', avatar_url: '' }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ([{ email: 'alice@example.com', primary: true, verified: true }]),
+            });
+
+        const req = makeReq({ params: { provider: 'github' }, query: { code: 'code_1', state: 'state_1' } });
+        const res = makeRes();
+
+        await controller.handleSocialAuthCallback(req, res);
+
+        expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('error='));
+        expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('deletion'));
+    });
+
+    test('handleSocialAuthCallback rejects soft-deleted user by verified email', async () => {
+        redis.get.mockResolvedValueOnce(JSON.stringify({
+            projectId: 'project_1',
+            provider: 'github',
+            callbackUrl: 'http://localhost:5173/auth/callback',
+        }));
+        mockProjectFindByIdChain.lean.mockResolvedValueOnce(makeProject());
+
+        mockUsersModel.findOne
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce({
+                _id: 'deleted_user',
+                email: 'alice@example.com',
+                isDeleted: true,
+                deletedAt: new Date().toISOString()
+            });
+
+        global.fetch
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ access_token: 'github_access_token' }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ id: 123, login: 'alice', avatar_url: '' }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ([{ email: 'alice@example.com', verified: true, primary: true }]),
+            });
+
+        const req = makeReq({ params: { provider: 'github' }, query: { code: 'code_1', state: 'state_1' } });
+        const res = makeRes();
+
+        await controller.handleSocialAuthCallback(req, res);
+
+        expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('error='));
+        expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('deletion'));
     });
 });

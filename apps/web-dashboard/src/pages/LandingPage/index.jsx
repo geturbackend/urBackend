@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-
+import BackToTop from '../../components/Layout/BackToTop';
 import {
     Database,
     Shield,
@@ -23,9 +23,12 @@ import {
     ChevronUp,
     Code,
     Check,
-    Plus
+    Plus,
+    Cloud,
+    RefreshCw,
+    Server
 } from 'lucide-react';
-import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence, useScroll, useSpring, useTransform } from 'framer-motion';
 import Footer from '../../components/Layout/Footer';
 import './style.css';
 
@@ -43,6 +46,80 @@ const HERO_CLICK_STEPS = [
     { name: 'role', type: 'String', required: false },
 ];
 
+const INITIAL_FEATURES = [
+    {
+        id: 'database',
+        title: 'Managed NoSQL Database',
+        icon: 'Database',
+        tag: 'DATABASE LAYER',
+        desc: 'High-performance document storage powered by MongoDB. Scale from 10 to 10M records without managing servers.',
+        color: 'teal',
+        accentColor: '#00f5d4',
+        type: 'list',
+        bullets: ['Strict Type Validation', 'Auto-generated API Endpoints', 'Real-time Indexing']
+    },
+    {
+        id: 'auth',
+        title: 'Secure Auth',
+        icon: 'Shield',
+        tag: 'IDENTITY & ACCESS',
+        desc: 'Full authentication flow with JWTs, BCrypt hashing, and session management built-in.',
+        color: 'amber',
+        accentColor: '#FFBD2E',
+        type: 'auth-info',
+        bullets: []
+    },
+    {
+        id: 'storage',
+        title: 'Global Storage',
+        icon: 'HardDrive',
+        tag: 'ASSET DELIVERY',
+        desc: 'Upload and serve media assets via global CDN. Supports images, documents, and videos.',
+        color: 'blue',
+        accentColor: '#409EFF',
+        type: 'simple',
+        bullets: []
+    },
+    {
+        id: 'architecture',
+        title: 'Robust Node.js Architecture',
+        icon: 'Cpu',
+        tag: 'RUNTIME CORE',
+        desc: 'Built on lightweight Express.js. We isolate your project to ensure consistent performance and security.',
+        color: 'red',
+        accentColor: '#FF5F56',
+        type: 'tags',
+        bullets: ['JWT Authentication', 'Lightweight']
+    }
+];
+
+const MOCK_EXTRA_FEATURES = [
+    {
+        id: 'cdn',
+        title: 'Edge Caching & CDN',
+        icon: 'Cloud',
+        tag: 'EDGE NETWORK',
+        desc: 'Ultra-low latency static and dynamic content delivery closer to your users globally.',
+        color: 'purple',
+        accentColor: '#a855f7',
+        type: 'list',
+        bullets: ['Global Edge Network', 'Smart Cache Routing', 'Instant Invalidation']
+    }
+];
+
+const renderFeatureIcon = (iconName) => {
+    switch (iconName) {
+        case 'Database': return <Database strokeWidth={1.5} />;
+        case 'Shield': return <Shield strokeWidth={1.5} />;
+        case 'HardDrive': return <HardDrive strokeWidth={1.5} />;
+        case 'Cpu': return <Cpu strokeWidth={1.5} />;
+        case 'Cloud': return <Cloud strokeWidth={1.5} />;
+        case 'RefreshCw': return <RefreshCw strokeWidth={1.5} />;
+        case 'Server': return <Server strokeWidth={1.5} />;
+        default: return <Database strokeWidth={1.5} />;
+    }
+};
+
 function LandingPage() {
     const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
@@ -59,6 +136,79 @@ function LandingPage() {
     const [showDeploying, setShowDeploying] = useState(false);
     const [showEndpoints, setShowEndpoints] = useState(false);
     const [activeEndpoints, setActiveEndpoints] = useState([]);
+
+    const timelineRef = useRef(null);
+    const { scrollYProgress } = useScroll({
+        target: timelineRef,
+        offset: ["start end", "end end"]
+    });
+
+    const scaleY = useSpring(scrollYProgress, {
+        damping: 30,
+        stiffness: 100,
+        restDelta: 0.001
+    });
+
+    const spineColor = useTransform(
+        scaleY,
+        [0, 0.20, 0.28, 0.53, 0.61, 0.86, 0.94, 1.0],
+        [
+            "#00f5d4", "#00f5d4",
+            "#FFBD2E", "#FFBD2E",
+            "#409EFF", "#409EFF",
+            "#FF5F56", "#FF5F56"
+        ]
+    );
+
+    const spineGlow = useTransform(
+        scaleY,
+        [0, 0.20, 0.28, 0.53, 0.61, 0.86, 0.94, 1.0],
+        [
+            "0 0 15px rgba(0, 245, 212, 0.6)", "0 0 15px rgba(0, 245, 212, 0.6)",
+            "0 0 15px rgba(255, 189, 46, 0.6)", "0 0 15px rgba(255, 189, 46, 0.6)",
+            "0 0 15px rgba(64, 158, 255, 0.6)", "0 0 15px rgba(64, 158, 255, 0.6)",
+            "0 0 15px rgba(255, 95, 86, 0.6)", "0 0 15px rgba(255, 95, 86, 0.6)"
+        ]
+    );
+
+    const [features, setFeatures] = useState(INITIAL_FEATURES);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(false);
+    const [hoveredCardId, setHoveredCardId] = useState(null);
+    const [activeCardId, setActiveCardId] = useState(null);
+
+    const observerTriggerRef = useRef(null);
+
+    useEffect(() => {
+        if (!hasMore) return;
+
+        const observer = new IntersectionObserver((entries) => {
+            const first = entries[0];
+            if (first.isIntersecting && !isLoadingMore) {
+                setIsLoadingMore(true);
+                setTimeout(() => {
+                    setFeatures(prev => [...prev, ...MOCK_EXTRA_FEATURES]);
+                    setIsLoadingMore(false);
+                    setHasMore(false);
+                }, 1200);
+            }
+        }, {
+            root: null,
+            rootMargin: '150px',
+            threshold: 0.1
+        });
+
+        const currentTrigger = observerTriggerRef.current;
+        if (currentTrigger) {
+            observer.observe(currentTrigger);
+        }
+
+        return () => {
+            if (currentTrigger) {
+                observer.unobserve(currentTrigger);
+            }
+        };
+    }, [isLoadingMore, hasMore]);
 
 
 
@@ -167,7 +317,7 @@ function LandingPage() {
                 <a href="#how-it-works" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>How it Works</a>
                 <a href="#features" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>Features</a>
                 <a href="#use-cases" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>Use Cases</a>
-                <a href="#pricing" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>Pricing</a>
+                <Link to="/pricing" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>Pricing</Link>
                 <a href="#faq" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>FAQ</a>
                 <div style={{ height: '1px', width: '60px', background: '#333', margin: '10px 0' }}></div>
                 {isAuthenticated ? (
@@ -197,10 +347,10 @@ function LandingPage() {
                             <Box size={16} />
                             <span>Use Cases</span>
                         </a>
-                        <a href="#pricing" className="nav-link">
+                        <Link to="/pricing" className="nav-link">
                             <Check size={16} />
                             <span>Pricing</span>
-                        </a>
+                        </Link>
                         <a href="https://docs.ub.bitbros.in" target="_blank" rel="noopener noreferrer" className="nav-link">
                             <Terminal size={16} />
                             <span>Docs</span>
@@ -499,65 +649,148 @@ function LandingPage() {
                     <p className="section-desc">Enterprise-grade tools packaged for individual developers.</p>
                 </div>
 
-                <div className="bento-grid">
-                    <div className="bento-item bento-span-8">
-                        <div>
-                            <div className="bento-icon" style={{ background: 'rgba(0, 245, 212, 0.1)', color: '#00f5d4', boxShadow: '0 0 20px rgba(0, 245, 212, 0.2)' }}>
-                                <Database strokeWidth={1.5} />
+                <div ref={timelineRef} className="timeline-container">
+                    <div className="timeline-track">
+                        <Motion.div
+                            className="timeline-track-fill"
+                            style={{
+                                scaleY: scaleY,
+                                transformOrigin: "top",
+                                backgroundColor: spineColor,
+                                boxShadow: spineGlow
+                            }}
+                        />
+                    </div>
+
+                    <div className="timeline-items">
+                        {features.map((feature, index) => {
+                            const isEven = index % 2 === 0;
+                            const isHighlighted = hoveredCardId === feature.id || activeCardId === feature.id;
+                            
+                            return (
+                                <Motion.div
+                                    key={feature.id}
+                                    className={`timeline-item ${isEven ? 'timeline-item-even' : 'timeline-item-odd'} ${isHighlighted ? 'timeline-item-active' : ''}`}
+                                    initial={{ opacity: 0, y: 50 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: false, amount: 0.4 }}
+                                    onViewportEnter={() => setActiveCardId(feature.id)}
+                                    transition={{ duration: 0.6, ease: "easeOut" }}
+                                >
+                                    {/* Central Line Node */}
+                                    <div className="timeline-item-node">
+                                        <div
+                                            className={`timeline-node-dot timeline-node-${feature.color} ${isHighlighted ? 'active' : ''}`}
+                                            style={{
+                                                boxShadow: isHighlighted 
+                                                    ? `0 0 25px ${feature.accentColor}, inset 0 0 10px ${feature.accentColor}`
+                                                    : 'none',
+                                                borderColor: isHighlighted ? feature.accentColor : 'rgba(255, 255, 255, 0.2)',
+                                                background: isHighlighted ? feature.accentColor : '#0a0a0a'
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Card Column wrapper */}
+                                    <div className="timeline-card-wrapper">
+                                        <div
+                                            className={`timeline-card card-accent-${feature.color} ${isHighlighted ? 'hovered' : ''}`}
+                                            onMouseEnter={() => setHoveredCardId(feature.id)}
+                                            onMouseLeave={() => setHoveredCardId(null)}
+                                        >
+                                            <div className="timeline-mobile-tag">{feature.tag}</div>
+                                            <div 
+                                                className="bento-icon" 
+                                                style={{ 
+                                                    background: `rgba(${feature.color === 'teal' ? '0, 245, 212' : 
+                                                                        feature.color === 'amber' ? '255, 189, 46' :
+                                                                        feature.color === 'blue' ? '64, 158, 255' :
+                                                                        feature.color === 'red' ? '255, 95, 86' :
+                                                                        feature.color === 'purple' ? '168, 85, 247' :
+                                                                        feature.color === 'pink' ? '236, 72, 153' :
+                                                                        feature.color === 'green' ? '34, 197, 94' : '249, 115, 22'}, 0.1)`, 
+                                                    color: feature.accentColor, 
+                                                    boxShadow: `0 0 20px rgba(${feature.color === 'teal' ? '0, 245, 212' : 
+                                                                                feature.color === 'amber' ? '255, 189, 46' :
+                                                                                feature.color === 'blue' ? '64, 158, 255' :
+                                                                                feature.color === 'red' ? '255, 95, 86' :
+                                                                                feature.color === 'purple' ? '168, 85, 247' :
+                                                                                feature.color === 'pink' ? '236, 72, 153' :
+                                                                                feature.color === 'green' ? '34, 197, 94' : '249, 115, 22'}, 0.25)` 
+                                                }}
+                                            >
+                                                {renderFeatureIcon(feature.icon)}
+                                            </div>
+                                            <h3 className="bento-title">{feature.title}</h3>
+                                            <p className="bento-desc">{feature.desc}</p>
+                                            
+                                            {/* Render different block elements based on feature card template requirements */}
+                                            {feature.type === 'list' && (
+                                                <ul style={{ marginTop: '1rem', color: '#666', listStyle: 'none', padding: 0, display: 'grid', gap: '8px' }}>
+                                                    {feature.bullets.map((bullet, bIdx) => (
+                                                        <li key={bIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888' }}>
+                                                            <CheckCircle size={14} color={feature.accentColor} /> {bullet}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+
+                                            {feature.type === 'auth-info' && (
+                                                <div style={{ marginTop: '1.5rem', fontSize: '0.9rem', color: '#888' }}>
+                                                    <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px', color: '#a1a1aa' }}>
+                                                        {feature.id === 'webhooks' ? <Zap size={14} color={feature.accentColor} /> : <Lock size={14} />} 
+                                                        {feature.id === 'webhooks' ? 'Event Filtering' : 'Encrypted Passwords'}
+                                                    </div>
+                                                    <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px', color: '#a1a1aa' }}>
+                                                        {feature.id === 'webhooks' ? <Activity size={14} color={feature.accentColor} /> : <Activity size={14} />}
+                                                        {feature.id === 'webhooks' ? '30-second Auto Retries' : 'Role Based Access'}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {feature.type === 'tags' && (
+                                                <div style={{ marginTop: '2rem', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                    {feature.bullets.map((tag, tIdx) => (
+                                                        <span key={tIdx} style={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', color: '#888' }}>{tag}</span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Opposite Column: Tag Metadata / Big Step Label */}
+                                    <div className="timeline-metadata-wrapper">
+                                        <div className={`timeline-metadata timeline-metadata-${feature.color}`}>
+                                            <span className="metadata-tag">{feature.tag}</span>
+                                            <span className="metadata-number">0{index + 1}</span>
+                                        </div>
+                                    </div>
+                                </Motion.div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Infinite Scroll Load Trigger / Simulated Loading indicator */}
+                    <div ref={observerTriggerRef} className="timeline-trigger-container">
+                        {isLoadingMore && (
+                            <Motion.div 
+                                className="timeline-loader"
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                            >
+                                <div className="loader-dots">
+                                    <span className="loader-dot dot-teal"></span>
+                                    <span className="loader-dot dot-blue"></span>
+                                    <span className="loader-dot dot-purple"></span>
+                                </div>
+                                <span className="loader-text">Assembling extra platform architectures...</span>
+                            </Motion.div>
+                        )}
+                        {!hasMore && (
+                            <div className="timeline-end-pill">
+                                <span>Complete Enterprise Features Assembled &bull; MIT Core Live</span>
                             </div>
-                            <h3 className="bento-title">Managed NoSQL Database</h3>
-                            <p className="bento-desc">
-                                High-performance document storage powered by MongoDB.
-                                Scale from 10 to 10M records without managing servers.
-                            </p>
-                            <ul style={{ marginTop: '1rem', color: '#666', listStyle: 'none', padding: 0, display: 'grid', gap: '8px' }}>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={14} color="#00f5d4" /> Strict Type Validation</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={14} color="#00f5d4" /> Auto-generated API Endpoints</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle size={14} color="#00f5d4" /> Real-time Indexing</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div className="bento-item bento-span-4">
-                        <div className="bento-icon" style={{ background: 'rgba(255, 189, 46, 0.1)', color: '#FFBD2E', boxShadow: '0 0 20px rgba(255, 189, 46, 0.2)' }}>
-                            <Shield strokeWidth={1.5} />
-                        </div>
-                        <h3 className="bento-title">Secure Auth</h3>
-                        <p className="bento-desc">
-                            Full authentication flow with JWTs, BCrypt hashing, and session management built-in.
-                        </p>
-                        <div style={{ marginTop: '1.5rem', fontSize: '0.9rem', color: '#888' }}>
-                            <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}><Lock size={14} /> Encrypted Passwords</div>
-                            <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}><Activity size={14} /> Role Based Access</div>
-                        </div>
-                    </div>
-
-                    <div className="bento-item bento-span-4">
-                        <div className="bento-icon" style={{ background: 'rgba(64, 158, 255, 0.1)', color: '#409EFF', boxShadow: '0 0 20px rgba(64, 158, 255, 0.2)' }}>
-                            <HardDrive strokeWidth={1.5} />
-                        </div>
-                        <h3 className="bento-title">Global Storage</h3>
-                        <p className="bento-desc">
-                            Upload and serve media assets via global CDN. Supports images, documents, and videos.
-                        </p>
-                    </div>
-
-                    <div className="bento-item bento-span-8">
-                        <div>
-                            <div className="bento-icon" style={{ background: 'rgba(255, 95, 86, 0.1)', color: '#FF5F56', boxShadow: '0 0 20px rgba(255, 95, 86, 0.2)' }}>
-                                <Cpu strokeWidth={1.5} />
-                            </div>
-                            <h3 className="bento-title">Robust Node.js Architecture</h3>
-                            <p className="bento-desc">
-                                Built on lightweight Express.js. We isolate your project to ensure
-                                consistent performance and security.
-                            </p>
-                        </div>
-                        <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                            <span style={{ background: '#1a1a1a', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', color: '#888' }}>JWT Authentication</span>
-                            <span style={{ background: '#1a1a1a', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', color: '#888' }}>Role-Based Access</span>
-                            <span style={{ background: '#1a1a1a', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', color: '#888' }}>Lightweight</span>
-                        </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -591,50 +824,6 @@ function LandingPage() {
                 </div>
             </div>
 
-            <div id="pricing" style={{ padding: '8rem 0', background: '#030303', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
-                    <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
-                        <h2 className="section-title">Transparent Pricing</h2>
-                        <p className="section-desc">Start building for free. Scale as you grow.</p>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', maxWidth: '900px', margin: '0 auto' }}>
-                        <div className="pricing-card" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', padding: '3rem', borderRadius: '16px', position: 'relative' }}>
-                            <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'rgba(0, 245, 212, 0.1)', color: '#00f5d4', padding: '4px 12px', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 700 }}>ACTIVE</div>
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff', marginBottom: '0.5rem' }}>Developer Beta</h3>
-                            <div style={{ fontSize: '3rem', fontWeight: 800, color: '#fff', marginBottom: '1rem' }}>$0<span style={{ fontSize: '1rem', color: '#666', fontWeight: 400 }}>/mo</span></div>
-                            <p style={{ color: '#888', marginBottom: '2rem', fontSize: '0.95rem' }}>Perfect for side projects, MVPs, and learning.</p>
-                            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2rem 0', display: 'grid', gap: '12px' }}>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> 1 Project & 5 Collections</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> 2,000 API requests / day</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> 200 Auth Users</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> 50MB DB & 10MB Storage</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> Community Support</li>
-                            </ul>
-                            <Link to="/signup" className="btn btn-primary" style={{ width: '100%', textAlign: 'center', padding: '12px', fontWeight: 600 }}>Get Started Now</Link>
-                        </div>
-
-                        <div className="pricing-card" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(0,245,212,0.15)', padding: '3rem', borderRadius: '16px', position: 'relative' }}>
-                            <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'rgba(0, 245, 212, 0.1)', color: '#00f5d4', padding: '4px 12px', borderRadius: '99px', fontSize: '0.75rem', fontWeight: 700, border: '1px solid rgba(0,245,212,0.3)' }}>LIVE</div>
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff', marginBottom: '0.5rem' }}>Pro</h3>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '0.5rem' }}>
-                                <span style={{ fontSize: '3rem', fontWeight: 800, color: '#fff' }}>$0</span>
-                                <span style={{ fontSize: '1rem', color: '#666', fontWeight: 400 }}>/mo (Beta)</span>
-                            </div>
-                            <p style={{ color: '#00f5d4', marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: 600 }}>Get a month free to test out app before launch!</p>
-                            <p style={{ color: '#888', marginBottom: '2rem', fontSize: '0.95rem' }}>For growing teams and production-grade apps.</p>
-                            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2rem 0', display: 'grid', gap: '12px' }}>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> Unlimited Projects & Collections</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> Unlimited API Requests & Users</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> Unlimited Webhooks & BYOK</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> BYO Database & Storage</li>
-                                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ccc' }}><CheckCircle size={16} color="#00f5d4" /> Priority Support & AI Integration</li>
-                            </ul>
-                            <Link to="/request-pro" className="btn btn-primary" style={{ width: '100%', textAlign: 'center', padding: '12px', fontWeight: 600, background: 'linear-gradient(135deg, #00f5d4 0%, #00c9a7 100%)', color: '#000', textDecoration: 'none', borderRadius: '8px', display: 'block' }}>Get 1 month Pro for free</Link>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <div className="oss-strip" style={{ padding: '4rem 0', background: '#030303', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                 <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '1.5rem', opacity: 0.8 }}>
@@ -718,6 +907,7 @@ function LandingPage() {
             </div>
 
             <Footer />
+            <BackToTop />
         </div>
     );
 }

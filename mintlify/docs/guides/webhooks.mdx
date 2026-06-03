@@ -20,9 +20,8 @@ Every webhook event is delivered as a `POST` request with a JSON body in this sh
 
 ```json
 {
-  "event": "insert",
-  "collection": "posts",
-  "payload": {
+  "event": "posts.insert",
+  "data": {
     "_id": "64fd1234abcd5678ef901234",
     "title": "Hello World",
     "body": "Content here..."
@@ -32,9 +31,8 @@ Every webhook event is delivered as a `POST` request with a JSON body in this sh
 
 | Field | Description |
 | --- | --- |
-| `event` | The operation that occurred: `insert`, `update`, or `delete` |
-| `collection` | The name of the collection where the event occurred |
-| `payload` | The full document that was created, updated, or deleted |
+| `event` | The collection and operation that occurred (format: `collection.action`, e.g., `posts.insert`) |
+| `data` | The full document that was created, updated, or deleted |
 
 ## Verifying webhook signatures
 
@@ -76,9 +74,9 @@ app.post('/urbackend-webhook', express.json(), (req, res) => {
   }
 
   // 5. Signature is valid — process the event
-  const { event, collection, payload: data } = req.body;
+  const { event, data } = req.body;
 
-  console.log(`Received ${event} event on ${collection}`);
+  console.log(`Received ${event} event`);
   console.log('Record ID:', data._id);
 
   // Respond quickly to prevent timeouts

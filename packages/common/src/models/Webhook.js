@@ -14,6 +14,7 @@ const eventConfigSchema = new mongoose.Schema(
     insert: { type: Boolean, default: false },
     update: { type: Boolean, default: false },
     delete: { type: Boolean, default: false },
+    recover: { type: Boolean, default: false },
   },
   { _id: false }
 );

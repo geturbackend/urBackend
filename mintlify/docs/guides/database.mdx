@@ -165,9 +165,17 @@ const res = await fetch(`https://api.ub.bitbros.in/api/data/posts/${postId}`, {
 });
 ```
 
-## Delete a document
+## Soft delete and trash
 
-**Endpoint:** `DELETE /api/data/:collectionName/:id`
+When you delete a document using `DELETE /api/data/:collectionName/:id`, your backend moves it to the trash instead of removing it immediately. 
+
+- Documents enter a **30-day grace period** before permanent deletion.
+- You can view trashed documents by appending the `include_deleted=true` query parameter to your read or aggregation requests.
+- A background BullMQ cleanup worker automatically hard-deletes expired documents after 30 days.
+
+<Note>
+  Your `databaseUsed` quota is only reclaimed after the 30-day period when the cleanup worker permanently deletes the expired documents.
+</Note>
 
 ```bash
 curl -X DELETE "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234" \

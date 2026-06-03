@@ -22,14 +22,12 @@ const { capture } = require('@kiroo/sdk');
 const {emailQueue} = require('@urbackend/common');
 const {authEmailQueue} = require('@urbackend/common');
 const {initWebhookWorker} = require('@urbackend/common');
-const {initAuthEmailWorker} = require('@urbackend/common');
+const {initAuthEmailWorker, initPublicEmailWorker} = require('@urbackend/common');
+const {initActivityRollupWorker, scheduleActivityRollup} = require('@urbackend/common');
+const {initReliabilityAlertWorker, scheduleReliabilityAlert} = require('@urbackend/common');
+const {initTrashCleanupWorker} = require('@urbackend/common');
 
-// Initialize webhook worker
-if (process.env.NODE_ENV !== 'test') {
-    initWebhookWorker();
-    initAuthEmailWorker();
-}
-
+app.use('/api/mail/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(standardizeApiResponse);
@@ -127,39 +125,72 @@ if (process.env.NODE_ENV !== 'test') {
     const PORT = process.env.USER_PORT || 1235;
 
     const { connectDB } = require('@urbackend/common');
+    let trashCleanupWorker;
 
-    // Start DB & Server
-    connectDB();
-
-    const server = app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
-
-    // SHUTDOWN
-    const gracefulShutdown = async () => {
-        console.log('🛑 SIGTERM/SIGINT received. Shutting down gracefully...');
-
-        server.close(async () => {
-            console.log('✅ HTTP server closed.');
-            try {
-                await mongoose.connection.close(false);
-                console.log('✅ MongoDB connection closed.');
-                process.exit(0);
-            } catch (err) {
-                console.error('❌ Error closing MongoDB connection:', err);
-                process.exit(1);
-            }
-        });
-
-        // Force close after 10s
-        setTimeout(() => {
-            console.error('Force shutting down...');
-            process.exit(1);
-        }, 10000);
+    const startWorkers = () => {
+        initWebhookWorker();
+        initAuthEmailWorker();
+        initPublicEmailWorker();
+        initActivityRollupWorker();
+        scheduleActivityRollup().catch((err) =>
+            console.error('[ActivityRollup] Failed to schedule cron:', err.message)
+        );
+        initReliabilityAlertWorker();
+        scheduleReliabilityAlert().catch((err) =>
+            console.error('[ReliabilityAlert] Failed to schedule cron:', err.message)
+        );
+        trashCleanupWorker = initTrashCleanupWorker();
     };
 
-    process.on('SIGTERM', gracefulShutdown);
-    process.on('SIGINT', gracefulShutdown);
+    const bootstrap = async () => {
+        await connectDB();
+        startWorkers();
+
+        const server = app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+
+        // SHUTDOWN
+        const gracefulShutdown = async () => {
+            console.log('🛑 SIGTERM/SIGINT received. Shutting down gracefully...');
+
+            // Force close after 10s
+            const forceShutdown = setTimeout(() => {
+                console.error('Force shutting down...');
+                process.exit(1);
+            }, 10000);
+
+            if (trashCleanupWorker) {
+                try {
+                    await trashCleanupWorker.close();
+                    console.log('✅ Trash cleanup worker closed.');
+                } catch (err) {
+                    console.error('❌ Error closing trash cleanup worker:', err);
+                }
+            }
+
+            server.close(async () => {
+                console.log('✅ HTTP server closed.');
+                try {
+                    await mongoose.connection.close(false);
+                    console.log('✅ MongoDB connection closed.');
+                    clearTimeout(forceShutdown);
+                    process.exit(0);
+                } catch (err) {
+                    console.error('❌ Error closing MongoDB connection:', err);
+                    process.exit(1);
+                }
+            });
+        };
+
+        process.on('SIGTERM', gracefulShutdown);
+        process.on('SIGINT', gracefulShutdown);
+    };
+
+    bootstrap().catch((err) => {
+        console.error('❌ Failed to bootstrap public-api:', err);
+        process.exit(1);
+    });
 }
 
 // Export for Testing

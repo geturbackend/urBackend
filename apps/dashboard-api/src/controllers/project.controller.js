@@ -14,14 +14,16 @@ const {
 } = require("@urbackend/common");
 const { generateApiKey, hashApiKey } = require("@urbackend/common");
 const { z } = require("zod");
-const { encrypt } = require("@urbackend/common");
+const { encrypt, decrypt } = require("@urbackend/common");
 const { URL } = require("url");
 const path = require("path");
+const axios = require("axios");
 const { getConnection } = require("@urbackend/common");
 const { getCompiledModel } = require("@urbackend/common");
 const { QueryEngine } = require("@urbackend/common");
 const { storageRegistry } = require("@urbackend/common");
-const { AppError } = require("@urbackend/common");
+const { AppError, webhookQueue, enqueueCollectionCleanup, syncCollectionCleanup } = require("@urbackend/common");
+const { resolveEffectivePlan } = require("@urbackend/common");
 const {
   deleteProjectByApiKeyCache,
   setProjectById,
@@ -33,8 +35,8 @@ const { getPresignedUploadUrl } = require("@urbackend/common");
 const { verifyUploadedFile } = require("@urbackend/common");
 const { getPublicIp } = require("@urbackend/common");
 const { clearCompiledModel } = require("@urbackend/common");
-const { createUniqueIndexes } = require("@urbackend/common");
-
+const { createUniqueIndexes, ApiAnalytics, MailLog } = require("@urbackend/common");
+const { emitEvent } = require('../utils/emitEvent');
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const SAFETY_MAX_BYTES = 100 * 1024 * 1024;
 const CONFIRM_UPLOAD_SIZE_TOLERANCE_BYTES = 64;
@@ -99,6 +101,9 @@ const sanitizeSchemaFields = (schema = []) => {
       if (!normalizedKey) return null;
 
       const next = { ...field, key: normalizedKey };
+      if (field.default !== undefined) {
+        next.default = field.default;
+      }
 
       if (Array.isArray(field.fields)) {
         next.fields = sanitizeSchemaFields(field.fields);
@@ -139,12 +144,6 @@ const getDefaultRlsForCollection = (collectionName, schema = []) => {
 
 const SOCIAL_PROVIDER_KEYS = ["github", "google"];
 
-/**
- * Sanitizes authProviders from a project document for safe API responses.
- * Strips clientSecret fields and replaces them with a boolean hasClientSecret flag.
- * @param {Object} authProviders - Raw authProviders from the project document
- * @returns {Object} Sanitized providers keyed by provider name
- */
 const sanitizeAuthProviders = (authProviders = {}) => {
   return SOCIAL_PROVIDER_KEYS.reduce((acc, provider) => {
     const config = authProviders?.[provider] || {};
@@ -244,26 +243,20 @@ const bestEffortDeleteUploadedObject = async (project, filePath) => {
 };
 
 module.exports.createProject = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    // POST FOR - PROJECT CREATION
+  const executeOperation = async (session) => {
     const { name, description, siteUrl } = createProjectSchema.parse(req.body);
 
-    // Atomic limit enforcement: count and create within transaction
     if (req.projectLimit !== undefined) {
+      const queryOpts = session ? { session } : {};
       const currentCount = await Project.countDocuments(
         { owner: req.user._id },
-        { session },
+        queryOpts,
       );
 
       if (currentCount >= req.projectLimit) {
-        await session.abortTransaction();
-        session.endSession();
-        return res.status(403).json({
-          error: `Project limit reached (${req.projectLimit}). Please upgrade your plan to create more projects.`
-        });
+        const error = new Error(`Project limit reached (${req.projectLimit}). Please upgrade your plan to create more projects.`);
+        error.status = 403;
+        throw error;
       }
     }
 
@@ -284,10 +277,9 @@ module.exports.createProject = async (req, res) => {
       jwtSecret: rawJwtSecret,
       siteUrl: siteUrl || "",
     });
-    await newProject.save({ session });
-
-    await session.commitTransaction();
-    session.endSession();
+    
+    const saveOpts = session ? { session } : {};
+    await newProject.save(saveOpts);
 
     const projectObj = newProject.toObject();
     projectObj.publishableKey = rawPublishableKey;
@@ -295,16 +287,40 @@ module.exports.createProject = async (req, res) => {
     delete projectObj.jwtSecret;
     projectObj.authProviders = sanitizeAuthProviders(projectObj.authProviders);
 
-    res.status(201).json(projectObj);
-  } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
+    return { projectObj, newProject };
+  };
 
-    if (err instanceof z.ZodError) {
-      return res.status(400).json({ error: err.issues });
+  let session = null;
+  try {
+    session = await mongoose.startSession();
+    session.startTransaction();
+    
+    const { projectObj, newProject } = await executeOperation(session);
+    
+    await session.commitTransaction();
+    session.endSession();
+    
+    emitEvent(req.user._id, 'project_created', { projectName: projectObj.name }, newProject._id);
+    return res.status(201).json(projectObj);
+  } catch (err) {
+    if (session) {
+      try { await session.abortTransaction(); } catch (e) {}
+      session.endSession();
+    }
+    
+    if (err.message && (err.message.includes("Transaction numbers are only allowed") || err.message.includes("buffering timed out"))) {
+      try {
+        const { projectObj, newProject } = await executeOperation(null);
+        emitEvent(req.user._id, 'project_created', { projectName: projectObj.name }, newProject._id);
+        return res.status(201).json(projectObj);
+      } catch (retryErr) {
+        if (retryErr instanceof z.ZodError) return res.status(400).json({ error: retryErr.issues });
+        return res.status(retryErr.status || 500).json({ error: retryErr.message });
+      }
     }
 
-    res.status(500).json({ error: err.message });
+    if (err instanceof z.ZodError) return res.status(400).json({ error: err.issues });
+    return res.status(err.status || 500).json({ error: err.message });
   }
 };
 
@@ -314,20 +330,31 @@ module.exports.getAllProject = async (req, res) => {
       .select("name description databaseUsed databaseLimit storageUsed storageLimit updatedAt isAuthEnabled collections")
       .lean();
 
-    // --- HEALTH CALCULATION (SIMULATED / CALCULATED) ---
-    // Fetch recent log status for all projects to determine health
     const projectIds = projects.map(p => p._id);
     const recentLogs = await Log.aggregate([
-      { $match: { projectId: { $in: projectIds } } },
-      { $sort: { timestamp: -1 } },
-      { $limit: 100 }, // Get the last 100 logs globally for user to keep it fast
-      { $group: {
-          _id: "$projectId",
-          errorCount: { $sum: { $cond: [{ $gte: ["$status", 400] }, 1, 0] } },
-          successCount: { $sum: { $cond: [{ $lt: ["$status", 400] }, 1, 0] } }
+  { $match: { projectId: { $in: projectIds } } },
+  { $sort: { timestamp: -1 } },
+  {
+    $group: {
+      _id: "$projectId",
+      logs: { $topN: { n: 100, sortBy: { timestamp: -1 }, output: { status: "$status" } } }
+    }
+  },
+  {
+    $project: {
+      errorCount: {
+        $size: {
+          $filter: { input: "$logs", as: "l", cond: { $gte: ["$$l.status", 400] } }
+        }
+      },
+      successCount: {
+        $size: {
+          $filter: { input: "$logs", as: "l", cond: { $lt: ["$$l.status", 400] } }
         }
       }
-    ]);
+    }
+  }
+]);
 
     const logsMap = recentLogs.reduce((acc, log) => {
       acc[log._id.toString()] = log;
@@ -338,7 +365,6 @@ module.exports.getAllProject = async (req, res) => {
       const stats = logsMap[project._id.toString()];
       let health = 'healthy';
       
-      // Determine health: If > 20% recent errors, mark as warning
       if (stats) {
         const total = stats.errorCount + stats.successCount;
         const errorRate = stats.errorCount / total;
@@ -382,13 +408,11 @@ module.exports.getSingleProject = async (req, res) => {
           "+resendApiKey.iv " +
           "+resendApiKey.tag",
       );
-      if (!project)
-        return res.status(404).json({ error: "Project not found." });
+      if (!project) return res.status(404).json({ success: false, data: {}, message: "Project not found." });
       projectObj = project.toObject();
       await setProjectById(req.params.projectId, projectObj);
     }
 
-    // Ownership Check (Even for Cache)
     if (projectObj.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({ error: "Access denied." });
     }
@@ -401,7 +425,7 @@ module.exports.getSingleProject = async (req, res) => {
 
 module.exports.regenerateApiKey = async (req, res) => {
   try {
-    const { keyType } = req.body; // 'publishable' or 'secret'
+    const { keyType } = req.body;
 
     if (keyType !== "publishable" && keyType !== "secret") {
       return res
@@ -420,7 +444,6 @@ module.exports.regenerateApiKey = async (req, res) => {
     if (!oldApiProj)
       return res.status(404).json({ error: "Project not found." });
 
-    // CLEAR CACHE
     await deleteProjectByApiKeyCache(oldApiProj.publishableKey);
     await deleteProjectByApiKeyCache(oldApiProj.secretKey);
 
@@ -459,7 +482,7 @@ const dropCollectionIfExists = async (connection, collectionName) => {
     }
   }
 };
-// VALIDATE URI
+
 const isSafeUri = (uri) => {
   try {
     const parsed = new URL(uri);
@@ -475,13 +498,11 @@ module.exports.updateExternalConfig = async (req, res) => {
   try {
     const { projectId } = req.params;
 
-    // POST FOR - EXTERNAL CONFIG
     const validatedData = updateExternalConfigSchema.parse(req.body);
     const { dbUri, storageUrl, storageKey, storageProvider } = validatedData;
 
     const updateData = {};
 
-    // DB CONFIG
     if (dbUri) {
       if (!isSafeUri(dbUri))
         return res.status(400).json({
@@ -492,7 +513,6 @@ module.exports.updateExternalConfig = async (req, res) => {
       updateData["resources.db.config"] = encrypt(JSON.stringify({ dbUri }));
       updateData["resources.db.isExternal"] = true;
 
-      // --- VERIFY CONNECTION ---
       console.log("Verifying connection to:", projectId);
       try {
         const tempConn = mongoose.createConnection(dbUri, {
@@ -516,10 +536,8 @@ module.exports.updateExternalConfig = async (req, res) => {
 
         return res.status(400).json({ error: errorMsg });
       }
-      // -------------------------
     }
 
-    // STORAGE CONFIG
     if (storageUrl && storageKey) {
       const storageConfig = {
         storageUrl,
@@ -619,49 +637,35 @@ module.exports.deleteExternalStorageConfig = async (req, res) => {
   }
 };
 
-// POST REQ FOR CREATE COLLECTION
 module.exports.createCollection = async (req, res) => {
-  let project;
-  let connection;
-  let compiledCollectionName;
-  let collectionWasPersisted = false;
-  let collectionNameForRollback;
-  let collectionExistedBefore = false;
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const executeOperation = async (session) => {
+    const { projectId, collectionName, schema } = createCollectionSchema.parse(req.body);
 
-  try {
-    const { projectId, collectionName, schema } = createCollectionSchema.parse(
-      req.body,
-    );
-
-    collectionNameForRollback = collectionName;
-
-    project = await Project.findOne({
+    const projectQuery = Project.findOne({
       _id: projectId,
       owner: req.user._id,
-    }).session(session);
+    });
+    if (session) projectQuery.session(session);
+    
+    const project = await projectQuery;
     if (!project) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ error: "Project not found" });
+      const error = new Error("Project not found");
+      error.status = 404;
+      throw error;
     }
 
     const exists = project.collections.find((c) => c.name === collectionName);
     if (exists) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ error: "Collection already exists" });
+      const error = new Error("Collection already exists");
+      error.status = 400;
+      throw error;
     }
 
-    // Atomic limit enforcement within transaction
     if (req.collectionLimit !== undefined) {
       if (project.collections.length >= req.collectionLimit) {
-        await session.abortTransaction();
-        session.endSession();
-        return res.status(403).json({
-          error: `Collection limit reached (${req.collectionLimit}). Please upgrade your plan to create more collections.`
-        });
+        const error = new Error(`Collection limit reached (${req.collectionLimit}). Please upgrade your plan to create more collections.`);
+        error.status = 403;
+        throw error;
       }
     }
 
@@ -671,16 +675,13 @@ module.exports.createCollection = async (req, res) => {
 
     if (collectionName === "users") {
       if (!validateUsersSchema(schema)) {
-        await session.abortTransaction();
-        session.endSession();
-        return res.status(422).json({
-          error:
-            "The 'users' collection must have required 'email' and 'password' string fields.",
-        });
+        const error = new Error("The 'users' collection must have required 'email' and 'password' string fields.");
+        error.status = 422;
+        throw error;
       }
     }
 
-    compiledCollectionName = project.resources.db.isExternal
+    const compiledCollectionName = project.resources.db.isExternal
       ? collectionName
       : `${project._id}_${collectionName}`;
 
@@ -691,12 +692,13 @@ module.exports.createCollection = async (req, res) => {
     };
 
     project.collections.push(newCollectionConfig);
-    await project.save({ session });
-    collectionWasPersisted = true;
+    
+    const saveOpts = session ? { session } : {};
+    await project.save(saveOpts);
 
-    connection = await getConnection(projectId);
+    const connection = await getConnection(projectId);
 
-    collectionExistedBefore = await connection.db
+    const collectionExistedBefore = await connection.db
       .listCollections({ name: compiledCollectionName }, { nameOnly: true })
       .hasNext();
 
@@ -708,6 +710,16 @@ module.exports.createCollection = async (req, res) => {
     );
 
     await createUniqueIndexes(Model, newCollectionConfig.model);
+
+    return { project, connection, compiledCollectionName, collectionExistedBefore, projectId, collectionName };
+  };
+
+  let session = null;
+  try {
+    session = await mongoose.startSession();
+    session.startTransaction();
+    
+    const { project, projectId, collectionName } = await executeOperation(session);
 
     await session.commitTransaction();
     session.endSession();
@@ -722,68 +734,138 @@ module.exports.createCollection = async (req, res) => {
     delete projectObj.secretKey;
     delete projectObj.jwtSecret;
 
+    emitEvent(req.user._id, 'collection_created', { collectionName, isUsersCollection: collectionName === 'users' }, projectId);
+
     return res.status(201).json(projectObj);
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-    try {
-      if (connection && compiledCollectionName) {
-        clearCompiledModel(connection, compiledCollectionName);
+    if (session) {
+      try { await session.abortTransaction(); } catch (e) {}
+      session.endSession();
+    }
 
-        if (!collectionExistedBefore) {
-          await dropCollectionIfExists(connection, compiledCollectionName);
-        }
+    if (err.message && (err.message.includes("Transaction numbers are only allowed") || err.message.includes("buffering timed out"))) {
+      try {
+        const { project, projectId, collectionName } = await executeOperation(null);
+        await deleteProjectById(projectId);
+        await setProjectById(projectId, project.toObject());
+        await deleteProjectByApiKeyCache(project.publishableKey);
+        await deleteProjectByApiKeyCache(project.secretKey);
+
+        const projectObj = project.toObject();
+        delete projectObj.publishableKey;
+        delete projectObj.secretKey;
+        delete projectObj.jwtSecret;
+
+        emitEvent(req.user._id, 'collection_created', { collectionName, isUsersCollection: collectionName === 'users' }, projectId);
+
+        return res.status(201).json(projectObj);
+      } catch (retryErr) {
+        if (retryErr instanceof z.ZodError) return res.status(400).json({ error: retryErr.issues });
+        return res.status(retryErr.status || 400).json({ error: retryErr.message });
       }
-    } catch (rollbackErr) {
-      console.error("Create collection rollback failed:", rollbackErr);
     }
 
-    if (err instanceof z.ZodError) {
-      return res.status(400).json({ error: err.issues });
-    }
-
-    return res.status(400).json({ error: err.message });
+    if (err instanceof z.ZodError) return res.status(400).json({ error: err.issues });
+    return res.status(err.status || 400).json({ error: err.message });
   }
 };
 
-// GET DOC BY ID
+// GET DOC BY ID — FIXED: added limitFields(), populate(), cursor pagination, count support, structured response
 module.exports.getData = async (req, res) => {
     try {
         const { projectId, collectionName } = req.params;
         const project = await Project.findOne({ _id: projectId, owner: req.user._id });
-        if (!project) return res.status(404).json({ error: "Project not found." });
+       if (!project) return res.status(404).json({ success: false, data: {}, message: "Project not found." });
+
+
 
         const collectionConfig = project.collections.find(c => c.name === collectionName);
         if (!collectionConfig) {
-            return res.status(404).json({
-                error: "Collection not found",
-                collection: collectionName
-            });
+         return res.status(404).json({ success: false, data: {}, message: `Collection ${collectionName} not found.` });
         }
 
         const connection = await getConnection(projectId);
-        const model = getCompiledModel(connection, collectionConfig, projectId, project.resources.db.isExternal);
+        const model = getCompiledModel(
+            connection,
+            collectionConfig,
+            projectId,
+            project.resources.db.isExternal,
+        );
 
-        // const collectionsList = await mongoose.connection.db.listCollections({ name: finalCollectionName }).toArray();
+        const baseQuery = model.find();
 
-        const query = model.find();
+        // Strip password from users collection
         if (collectionName === 'users') {
-            query.select('-password');
+            baseQuery.select('-password');
         }
 
-        const features = new QueryEngine(query, req.query)
+        // Handle ?count=true — return document count only
+        if (req.query.count === 'true') {
+            const countEngine = new QueryEngine(model.find(), req.query);
+            const count = await countEngine.filter().query.countDocuments();
+            return res.status(200).json({
+                success: true,
+                data: { count },
+                message: "Count fetched successfully.",
+            });
+        }
+
+        const features = new QueryEngine(baseQuery, req.query)
             .filter()
             .sort()
-            .paginate();
+            .limitFields()   // fixes: ?fields= and ?meta=false now work
+            .populate();     // fixes: ?populate= and ?expand= now work
+
+        // Get total before paginating
+        const total = await features.count();
+
+        // Cursor-based pagination if ?cursor= is provided, otherwise offset-based
+        const useCursor = !!req.query.cursor;
+        if (useCursor) {
+            features.cursorPaginate();
+        } else {
+            features.paginate();
+        }
 
         const data = await features.query.lean();
 
-        res.json(data);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-}
+        // Cursor: slice to limit and generate next cursor token
+        let items = data;
+        let nextCursor = null;
+        if (useCursor) {
+            const limit = Math.min(parseInt(req.query.limit, 10) || 100, 100);
+            features.generateNextCursor(data, limit);
+            items = data.slice(0, limit);
+            nextCursor = features.nextCursor;
+        }
 
+        const responseMeta = useCursor
+            ? {
+                total,
+                cursor: req.query.cursor || null,
+                nextCursor,
+                limit: Math.max(1, Math.min(parseInt(req.query.limit, 10) || 100, 100)),
+              }
+            : {
+                total,
+                page: parseInt(req.query.page, 10) || 1,
+                limit: Math.max(1, Math.min(parseInt(req.query.limit, 10) || 100, 100)),
+              };
+
+        res.json({
+            success: true,
+            data: {
+                items,
+                ...responseMeta,
+            },
+            message: "Data fetched successfully.",
+        });
+    } catch (err) {
+    if (err?.statusCode === 400 || err?.name === 'QueryFilterError') {
+        return res.status(400).json({ success: false, data: {}, message: err.message || "Invalid query filter." });
+    }
+};
+};
 module.exports.deleteCollection = async (req, res) => {
   try {
     const { projectId, collectionName } = req.params;
@@ -855,10 +937,12 @@ module.exports.insertData = async (req, res) => {
       (c) => c.name === collectionName,
     );
     if (!collectionConfig) {
-      return res
-        .status(404)
-        .json({ error: "Collection configuration not found." });
-    }
+    return res.status(404).json({ success: false, data: {}, message: `Collection ${collectionName} not found.` });
+}
+
+    // Prevent manual injection of soft-delete fields
+    delete incomingData.isDeleted;
+    delete incomingData.deletedAt;
 
     let docSize = 0;
     if (!project.resources.db.isExternal) {
@@ -901,21 +985,30 @@ module.exports.insertData = async (req, res) => {
   }
 };
 
-module.exports.deleteRow = async (req, res) => {
+/**
+ * Soft-deletes a document by setting isDeleted: true and recording the deletion time.
+ * @param {import('express').Request} req - Express request
+ * @param {import('express').Response} res - Express response
+ */
+module.exports.deleteRow = async (req, res, next) => {
   try {
     const { projectId, collectionName, id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return next(new AppError(400, "Invalid document ID format."));
+    }
 
     const project = await Project.findOne({
       _id: projectId,
       owner: req.user._id,
     });
-    if (!project) return res.status(404).json({ error: "Project not found." });
+    if (!project) return next(new AppError(404, "Project not found."));
 
     const collectionConfig = project.collections.find(
       (c) => c.name === collectionName,
     );
     if (!collectionConfig) {
-      return res.status(404).json({ error: "Collection not found." });
+      return next(new AppError(404, "Collection not found."));
     }
 
     const connection = await getConnection(projectId);
@@ -926,24 +1019,113 @@ module.exports.deleteRow = async (req, res) => {
       project.resources.db.isExternal,
     );
 
-    const docToDelete = await Model.findById(id);
-    if (!docToDelete) {
-      return res.status(404).json({ error: "Document not found." });
+    const result = await Model.findOneAndUpdate(
+      { _id: id, isDeleted: { $ne: true } },
+      {
+        $set: {
+          isDeleted: true,
+          deletedAt: new Date()
+        }
+      },
+      { new: false }
+    ).lean();
+
+    if (!result) {
+      return next(new AppError(404, "Document not found."));
     }
 
-    const docSize = Buffer.byteLength(JSON.stringify(docToDelete));
-
-    await Model.deleteOne({ _id: id });
-
-    if (!project.resources.db.isExternal) {
-      project.databaseUsed = Math.max(0, (project.databaseUsed || 0) - docSize);
-      await project.save();
+    // We don't decrement databaseUsed here because the document still occupies space.
+    // It will be decremented during hard delete in the background worker.
+    try {
+      await enqueueCollectionCleanup(projectId, collectionName);
+    } catch (err) {
+      console.error("Failed to enqueue trash cleanup job", { projectId, collectionName, err });
     }
 
-    res.json({ success: true, message: "Document deleted successfully" });
+    res.json({ success: true, data: { id: result._id }, message: "Document moved to trash" });
   } catch (err) {
     console.error("Delete Error:", err);
-    res.status(500).json({ error: err.message });
+    next(new AppError(500, "Failed to delete document"));
+  }
+};
+/**
+ * Recovers a soft-deleted document from trash.
+ * @param {import('express').Request} req - Express request
+ * @param {import('express').Response} res - Express response
+ * @param {import('express').NextFunction} next - Error handler
+ */
+module.exports.recoverRow = async (req, res, next) => {
+  try {
+    const { projectId, collectionName, id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return next(new AppError(400, "Invalid document ID format."));
+    }
+
+    const project = await Project.findOne({
+      _id: projectId,
+      owner: req.user._id,
+    }).lean();
+    if (!project) {
+      return next(new AppError(404, "Project not found."));
+    }
+
+    const collectionConfig = project.collections.find(
+      (c) => c.name === collectionName,
+    );
+    if (!collectionConfig) {
+      return next(new AppError(404, "Collection not found."));
+    }
+
+    const connection = await getConnection(projectId);
+    const Model = getCompiledModel(
+      connection,
+      collectionConfig,
+      projectId,
+      project.resources.db.isExternal,
+    );
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const result = await Model.findOneAndUpdate(
+      { 
+        _id: id, 
+        isDeleted: true,
+        deletedAt: { $gte: thirtyDaysAgo }
+      },
+      { 
+        $set: { 
+          isDeleted: false, 
+          deletedAt: null 
+        } 
+      },
+      { new: true }
+    ).lean();
+
+    if (!result) {
+      return next(new AppError(404, "Document not found or recovery window expired (30 days)."));
+    }
+
+    await webhookQueue.add('trigger-webhook', {
+      projectId: project._id,
+      event: 'document.recovered',
+      collection: collectionName,
+      payload: result
+    }, { removeOnComplete: true });
+
+    try {
+      await syncCollectionCleanup(projectId, collectionName);
+    } catch (err) {
+      console.error("Failed to sync trash cleanup job after recovery", { projectId, collectionName, err });
+    }
+
+    res.json({ success: true, data: result, message: "Document recovered from trash" });
+  } catch (err) {
+    console.error("Recover Error:", err);
+    if (err && err.code === 11000) {
+      return next(new AppError(409, "Cannot restore document: a unique field value conflicts with an existing active document."));
+    }
+    return next(new AppError(500, "Failed to recover document."));
   }
 };
 
@@ -974,16 +1156,19 @@ module.exports.editRow = async (req, res) => {
 
     if (collectionName === "users") {
       delete req.body.password;
-      // Also ensure it's not and nested or sneaky
       Object.keys(req.body).forEach((key) => {
         if (key.toLowerCase().includes("password")) delete req.body[key];
       });
     }
 
-    const docToEdit = await Model.findById(id);
+    const docToEdit = await Model.findOne({ _id: id, isDeleted: { $ne: true } });
     if (!docToEdit) {
       return res.status(404).json({ error: "Document not found." });
     }
+
+    // Prevent manual injection of soft-delete fields
+    delete req.body.isDeleted;
+    delete req.body.deletedAt;
 
     const oldSize = Buffer.byteLength(JSON.stringify(docToEdit.toObject()));
 
@@ -1206,7 +1391,6 @@ module.exports.requestUpload = async (req, res, next) => {
 
     const external = isProjectStorageExternal(project);
 
-    // Pre-check quota only; actual storage usage is charged after confirmUpload verifies object existence and size.
     if (!external) {
       const storageLimit =
         typeof project.storageLimit === "number"
@@ -1266,12 +1450,10 @@ module.exports.confirmUpload = async (req, res, next) => {
     const external = isProjectStorageExternal(project);
     const normalizedPath = normalizeProjectPath(projectId, sanitizedFilePath);
 
-    // make sure client isn't confirming someone else's file
     if (!normalizedPath) {
       return next(new AppError(403, "Access denied."));
     }
 
-    // verify file actually exists on cloud before touching quota
     let actualSize;
     try {
       actualSize = await verifyUploadedFile(project, normalizedPath);
@@ -1300,7 +1482,6 @@ module.exports.confirmUpload = async (req, res, next) => {
       );
     }
 
-    // now it's safe to charge quota
     if (!external) {
       const result = await Project.updateOne(
         {
@@ -1408,12 +1589,18 @@ module.exports.updateProject = async (req, res) => {
       updateFields.siteUrl = siteUrl || "";
     }
     if (resendApiKey !== undefined) {
-      if (typeof resendApiKey !== "string" || !resendApiKey.trim()) {
+      const trimmedKey = typeof resendApiKey === "string" ? resendApiKey.trim() : "";
+      if (!trimmedKey) {
         return res
           .status(400)
           .json({ error: "resendApiKey must be a non-empty string." });
       }
-      updateFields.resendApiKey = encrypt(resendApiKey.trim());
+      
+      if (!/^re_[A-Za-z0-9_]+$/.test(trimmedKey)) {
+        return res.status(400).json({ error: "Invalid Resend API Key format." });
+      }
+
+      updateFields.resendApiKey = encrypt(trimmedKey);
     }
 
     const project = await Project.findOneAndUpdate(
@@ -1453,11 +1640,10 @@ const toSlug = (value) => {
 };
 
 
-module.exports.listMailTemplates = async (req, res) => {
+module.exports.listMailTemplates = async (req, res, next) => {
   try {
     const { projectId } = req.params;
 
-    // Load as document so we can migrate legacy embedded templates if present
     const project = await Project.findOne({ _id: projectId, owner: req.user._id }).select("+mailTemplates");
 
     if (!project) return res.status(404).json({ success: false, data: {}, message: "Project not found." });
@@ -1541,7 +1727,6 @@ module.exports.listMailTemplates = async (req, res) => {
         }
 
         if (migrationSafeToFinalize) {
-          // Clear legacy embedded templates only after migration writes are complete.
           project.mailTemplates = [];
           await project.save();
           await deleteProjectById(project._id.toString()).catch(() => {});
@@ -1568,15 +1753,15 @@ module.exports.listMailTemplates = async (req, res) => {
       message: "Mail templates fetched.",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, data: {}, message: "Failed to fetch mail templates." });
+    if (err instanceof AppError) return next(err);
+    return next(new AppError(500, "Internal server error"));
   }
 };
 
-module.exports.listGlobalMailTemplates = async (req, res) => {
+module.exports.listGlobalMailTemplates = async (req, res, next) => {
   try {
     const { projectId } = req.params;
 
-    // Keep auth consistent: only show to project owners
     const project = await Project.findOne({ _id: projectId, owner: req.user._id })
       .select("_id")
       .lean();
@@ -1603,11 +1788,12 @@ module.exports.listGlobalMailTemplates = async (req, res) => {
       message: "Global mail templates fetched.",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, data: {}, message: err.message });
+    if (err instanceof AppError) return next(err);
+    return next(new AppError(500, "Internal server error"));
   }
 };
 
-module.exports.getMailTemplate = async (req, res) => {
+module.exports.getMailTemplate = async (req, res, next) => {
   try {
     const { projectId, templateId } = req.params;
     if (!mongoose.isValidObjectId(templateId)) {
@@ -1627,7 +1813,6 @@ module.exports.getMailTemplate = async (req, res) => {
       .select("_id key name subject html text updatedAt projectId isSystem")
       .lean();
 
-    // Legacy fallback (should be rare after listMailTemplates migration)
     if (!template) {
       const legacy = Array.isArray(project.mailTemplates) ? project.mailTemplates : [];
       const lt = legacy.find((x) => String(x._id) === String(templateId));
@@ -1666,11 +1851,12 @@ module.exports.getMailTemplate = async (req, res) => {
       message: "Mail template fetched.",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, data: {}, message: "Failed to fetch template." });
+    if (err instanceof AppError) return next(err);
+    return next(new AppError(500, "Internal server error"));
   }
 };
 
-module.exports.createMailTemplate = async (req, res) => {
+module.exports.createMailTemplate = async (req, res, next) => {
   try {
     const { projectId } = req.params;
 
@@ -1731,11 +1917,11 @@ module.exports.createMailTemplate = async (req, res) => {
       return res.status(409).json({ success: false, data: {}, message: "Template name/key already exists." });
     }
 
-    return res.status(500).json({ success: false, data: {}, message: "Failed to create template." });
+    return next(new AppError(500, "Internal server error"));
   }
 };
 
-module.exports.updateMailTemplate = async (req, res) => {
+module.exports.updateMailTemplate = async (req, res, next) => {
   try {
     const { projectId, templateId } = req.params;
     if (!mongoose.isValidObjectId(templateId)) {
@@ -1817,11 +2003,11 @@ module.exports.updateMailTemplate = async (req, res) => {
       return res.status(409).json({ success: false, data: {}, message: "Template name/key already exists." });
     }
 
-    return res.status(500).json({ success: false, data: {}, message: "Failed to update template." });
+    return next(new AppError(500, "Internal server error"));
   }
 };
 
-module.exports.deleteMailTemplate = async (req, res) => {
+module.exports.deleteMailTemplate = async (req, res, next) => {
   try {
     const { projectId, templateId } = req.params;
     if (!mongoose.isValidObjectId(templateId)) {
@@ -1844,7 +2030,8 @@ module.exports.deleteMailTemplate = async (req, res) => {
 
     return res.json({ success: true, data: {}, message: "Mail template deleted." });
   } catch (err) {
-    return res.status(500).json({ success: false, data: {}, message: "Failed to delete template." });
+    if (err instanceof AppError) return next(err);
+    return next(new AppError(500, "Internal server error"));
   }
 };
 
@@ -1909,7 +2096,6 @@ module.exports.deleteProject = async (req, res) => {
         .json({ error: "Project not found or access denied." });
     }
 
-    // DROP COLLECTIONS: Only for internal databases
     if (!project.resources.db.isExternal) {
       for (const col of project.collections) {
         const collectionName = `${project._id}_${col.name}`;
@@ -1923,7 +2109,6 @@ module.exports.deleteProject = async (req, res) => {
       } catch (e) {}
     }
 
-    // DELETE: Only for internal Infraa
     if (!isProjectStorageExternal(project)) {
       const supabase = await getStorage(project);
       const bucket = getBucket(project);
@@ -1959,63 +2144,171 @@ module.exports.deleteProject = async (req, res) => {
   }
 };
 
-module.exports.analytics = async (req, res) => {
+module.exports.analytics = async (req, res, next) => {
   try {
     const { projectId } = req.params;
-    const project = await Project.findOne({
-      _id: projectId,
-      owner: req.user._id,
-    });
-    if (!project)
-      return res
-        .status(404)
-        .json({ error: "Project not found or access denied." });
-    const totalRequests = await Log.countDocuments({ projectId });
-    const logs = await Log.find({ projectId })
-      .sort({ timestamp: -1 })
-      .limit(50);
+    const { range = 'last24h' } = req.query;
 
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const project = await Project.findOne({ _id: projectId, owner: req.user._id });
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        data: {},
+        message: "Project not found or access denied.",
+      });
+    }
 
-    const chartData = await Log.aggregate([
-      {
-        $match: {
-          projectId: new mongoose.Types.ObjectId(projectId),
-          timestamp: { $gte: sevenDaysAgo },
-        },
-      },
+    const VALID_RANGES = new Set(['last1h', 'last24h', 'last7d', 'last30d', 'allTime']);
+    if (!VALID_RANGES.has(range)) {
+      return res.status(400).json({
+        success: false,
+        data: {},
+        message: `Invalid range. Allowed values: ${[...VALID_RANGES].join(', ')}.`,
+      });
+    }
+
+    let startDate = new Date();
+    let format = "%Y-%m-%d";
+    let groupStep = "day";
+
+    switch (range) {
+      case 'last1h': 
+        startDate.setHours(startDate.getHours() - 1); 
+        format = "%H:%M";
+        groupStep = "minute";
+        break;
+      case 'last24h': 
+        startDate.setDate(startDate.getDate() - 1); 
+        format = "%H:00";
+        groupStep = "hour";
+        break;
+      case 'last7d': 
+        startDate.setDate(startDate.getDate() - 7); 
+        break;
+      case 'last30d': 
+        startDate.setDate(startDate.getDate() - 30); 
+        break;
+      case 'allTime': 
+        startDate = new Date(0); 
+        break;
+    }
+
+    const match = {
+      projectId: new mongoose.Types.ObjectId(projectId),
+      timestamp: { $gte: startDate },
+    };
+
+    const timeSeriesData = await ApiAnalytics.aggregate([
+      { $match: match },
       {
         $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$timestamp" } },
-          count: { $sum: 1 },
-        },
+          _id: { $dateToString: { format: format, date: "$timestamp" } },
+          success: { $sum: { $cond: [{ $lt: ["$statusCode", 400] }, 1, 0] } },
+          errors: { $sum: { $cond: [{ $gte: ["$statusCode", 400] }, 1, 0] } },
+          avgLatency: { $avg: "$responseTimeMs" }
+        }
       },
-      { $sort: { _id: 1 } },
+      { $sort: { _id: 1 } }
     ]);
 
-    res.json({
-      storage: { used: project.storageUsed, limit: project.storageLimit },
-      database: { used: project.databaseUsed, limit: project.databaseLimit },
-      totalRequests,
-      logs,
-      chartData,
+    const [breakdownStats, topEndpoints] = await Promise.all([
+      ApiAnalytics.aggregate([
+        { $match: match },
+        {
+          $facet: {
+            statusCodes: [
+              { $group: { _id: { $concat: [{ $substr: ["$statusCode", 0, 1] }, "xx"] }, count: { $sum: 1 } } }
+            ],
+            methods: [
+              { $group: { _id: "$method", count: { $sum: 1 } } }
+            ],
+            global: [
+              {
+                $group: {
+                  _id: null,
+                  avgResponseTimeMs: { $avg: "$responseTimeMs" },
+                  totalRequests: { $sum: 1 },
+                  errors: { $sum: { $cond: [{ $gte: ["$statusCode", 400] }, 1, 0] } }
+                }
+              }
+            ]
+          }
+        }
+      ]),
+      ApiAnalytics.aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: { endpoint: "$endpoint", method: "$method" },
+            count: { $sum: 1 },
+            avgLatency: { $avg: "$responseTimeMs" },
+            errors: { $sum: { $cond: [{ $gte: ["$statusCode", 400] }, 1, 0] } }
+          }
+        },
+        { $sort: { count: -1 } },
+        { $limit: 10 }
+      ])
+    ]);
+
+    const stats = breakdownStats[0].global[0] || { avgResponseTimeMs: 0, totalRequests: 0, errors: 0 };
+    const errorRate = stats.totalRequests > 0 ? (stats.errors / stats.totalRequests) * 100 : 0;
+
+    let p95 = 0;
+    if (stats.totalRequests > 0) {
+      const p95Results = await ApiAnalytics.find(match)
+        .sort({ responseTimeMs: 1 })
+        .skip(Math.max(0, Math.floor(stats.totalRequests * 0.95) - 1))
+        .limit(1)
+        .select('responseTimeMs')
+        .lean();
+      p95 = p95Results[0]?.responseTimeMs || 0;
+    }
+
+    const rawLogs = await ApiAnalytics.find(match).sort({ timestamp: -1 }).limit(50).lean();
+    const logs = rawLogs.map(l => ({ ...l, path: l.endpoint, status: l.statusCode }));
+
+    const allTimeRequests = await Log.countDocuments({ projectId });
+
+    return res.json({
+      success: true,
+      data: {
+        storage: { used: project.storageUsed, limit: project.storageLimit },
+        database: { used: project.databaseUsed, limit: project.databaseLimit },
+        totalRequests: allTimeRequests,
+        rangeStats: {
+          totalRequests: stats.totalRequests,
+          avgResponseTimeMs: stats.avgResponseTimeMs,
+          p95ResponseTimeMs: p95,
+          errorRate: errorRate
+        },
+        timeSeries: timeSeriesData,
+        topEndpoints: topEndpoints.map(e => ({
+          path: e._id.endpoint,
+          method: e._id.method,
+          count: e.count,
+          avgLatency: e.avgLatency,
+          errorRate: (e.errors / e.count) * 100
+        })),
+        distributions: {
+          statusCodes: breakdownStats[0].statusCodes,
+          methods: breakdownStats[0].methods
+        },
+        logs,
+        range
+      },
+      message: 'Analytics fetched successfully.',
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Analytics error:', err);
+    return next(new AppError(500, 'Failed to fetch analytics.'));
   }
 };
 
-// FUNCTION - TOGGLE AUTH
 module.exports.toggleAuth = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { enable } = req.body; // true or false
+    const { enable } = req.body;
 
-    // Ensure user owns project, and load authProviders secrets so sanitizeAuthProviders
-    // can correctly compute hasClientSecret in the response.
-    // NOTE: If new OAuth providers are added to SOCIAL_PROVIDER_KEYS, extend this select list
-    // to include their clientSecret fields as well.
     const project = await Project.findOne({
       _id: projectId,
       owner: req.user._id,
@@ -2067,11 +2360,6 @@ module.exports.toggleAuth = async (req, res) => {
   }
 };
 
-/**
- * Updates GitHub/Google OAuth provider settings for a project.
- * Preserves existing encrypted client secrets when not provided in the update.
- * @route PUT /api/projects/:projectId/auth-providers
- */
 module.exports.updateAuthProviders = async (req, res) => {
   try {
     const { projectId } = req.params;
@@ -2114,7 +2402,6 @@ module.exports.updateAuthProviders = async (req, res) => {
         });
       }
 
-      // P1: Require siteUrl before enabling any OAuth provider
       if (nextEnabled && !project.siteUrl?.trim()) {
         return res.status(422).json({
           error: "siteUrl required",
@@ -2148,8 +2435,6 @@ module.exports.updateAuthProviders = async (req, res) => {
   }
 };
 
-
-// PATCH FOR UPDATING COLLECTION RLS
 module.exports.updateCollectionRls = async (req, res) => {
     try {
         const { projectId, collectionName } = req.params;
@@ -2187,7 +2472,6 @@ module.exports.updateCollectionRls = async (req, res) => {
             });
         }
 
-        // Restrict use of '_id' as ownerField to the 'users' collection only.
         if (nextOwnerField === '_id' && collection.name !== 'users') {
             return res.status(400).json({
                 error: "Invalid owner field",
@@ -2220,4 +2504,249 @@ module.exports.updateCollectionRls = async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
-}
+};
+
+// -------------------- EXPANDED MAIL API PLATFORM PROXIES --------------------
+
+const getResolvedResendKey = (project) => {
+    if (project?.resendApiKey?.encrypted) {
+        try {
+            const key = decrypt(project.resendApiKey);
+            if (key) return { key, isByok: true };
+        } catch (e) {
+            console.error("Failed to decrypt project resend key", e);
+        }
+    }
+    return { key: process.env.RESEND_API_KEY_2 || process.env.RESEND_API_KEY, isByok: false };
+};
+
+module.exports.getMailLogs = async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const project = await Project.findOne({ _id: projectId, owner: req.user._id });
+        if (!project) return res.status(404).json({ success: false, message: "Project not found" });
+
+        const logs = await MailLog.find({ projectId: project._id })
+            .sort({ sentAt: -1 })
+            .limit(50)
+            .lean();
+
+        return res.json({ success: true, data: { logs } });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+module.exports.getResendLiveStatus = async (req, res) => {
+    try {
+        const { projectId, resendId } = req.params;
+        if (!/^[A-Za-z0-9_-]{1,128}$/.test(resendId)) {
+            return res.status(400).json({ success: false, message: "Invalid resendId format." });
+        }
+
+        const project = await Project.findOne({ _id: projectId, owner: req.user._id }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
+        if (!project) return res.status(404).json({ success: false, message: "Project not found" });
+
+        const logEntry = await MailLog.findOne({ resendEmailId: resendId, projectId: project._id }).lean();
+        if (!logEntry) {
+            return res.status(404).json({ success: false, message: "Mail log entry not found for this project." });
+        }
+
+        const { key } = getResolvedResendKey(project);
+        if (!key) return res.status(400).json({ success: false, message: "Resend API Key is missing." });
+
+        const safeResendId = encodeURIComponent(resendId);
+        const response = await axios.get(`https://api.resend.com/emails/${safeResendId}`, {
+            headers: { Authorization: `Bearer ${key}` }
+        });
+
+        return res.json({ success: true, data: response.data });
+    } catch (err) {
+        const { resendId } = req.params;
+        if (err.response?.status === 404) {
+            return res.status(404).json({
+                success: false,
+                data: {
+                    id: resendId,
+                    last_event: "unknown",
+                    providerStatus: "not_found",
+                },
+                message: "Email status not found on Resend for this id."
+            });
+        }
+        const errorMsg = err.response?.data?.message || err.message;
+        return res.status(err.response?.status || 500).json({ success: false, message: errorMsg });
+    }
+};
+
+module.exports.manageAudiences = async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const project = await Project.findOne({ _id: projectId, owner: req.user._id }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
+        if (!project) return res.status(404).json({ success: false, message: "Project not found" });
+
+        const { key, isByok } = getResolvedResendKey(project);
+        if (!isByok || !key) {
+            return res.status(403).json({ success: false, message: "Audiences require a custom Resend API Key (BYOK) configured in Project Settings." });
+        }
+
+        if (req.method === "GET") {
+            const response = await axios.get("https://api.resend.com/audiences", {
+                headers: { Authorization: `Bearer ${key}` }
+            });
+            return res.json({ success: true, data: response.data });
+        }
+
+        if (req.method === "POST") {
+            const { name } = req.body;
+            if (!name) return res.status(400).json({ success: false, message: "Audience name required" });
+
+            const response = await axios.post("https://api.resend.com/audiences", { name }, {
+                headers: { Authorization: `Bearer ${key}` }
+            });
+            return res.json({ success: true, data: response.data });
+        }
+
+        return res.status(405).json({ success: false, message: "Method not allowed" });
+    } catch (err) {
+        const errorMsg = err.response?.data?.message || err.message;
+        return res.status(err.response?.status || 500).json({ success: false, message: errorMsg });
+    }
+};
+
+module.exports.deleteAudience = async (req, res) => {
+    try {
+        const { projectId, audienceId } = req.params;
+        if (!/^[A-Za-z0-9_-]+$/.test(audienceId)) {
+            return res.status(400).json({ success: false, message: "Invalid audienceId format" });
+        }
+        const safeAudienceId = encodeURIComponent(audienceId);
+        const project = await Project.findOne({ _id: projectId, owner: req.user._id }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
+        if (!project) return res.status(404).json({ success: false, message: "Project not found" });
+
+        const { key, isByok } = getResolvedResendKey(project);
+        if (!isByok || !key) {
+            return res.status(403).json({ success: false, message: "Audiences require a custom Resend API Key (BYOK)." });
+        }
+
+        await axios.delete(`https://api.resend.com/audiences/${safeAudienceId}`, {
+            headers: { Authorization: `Bearer ${key}` }
+        });
+
+        return res.json({ success: true, message: "Audience deleted successfully" });
+    } catch (err) {
+        const errorMsg = err.response?.data?.message || err.message;
+        return res.status(err.response?.status || 500).json({ success: false, message: errorMsg });
+    }
+};
+
+module.exports.manageContacts = async (req, res) => {
+    try {
+        const { projectId, audienceId } = req.params;
+        if (!/^[A-Za-z0-9_-]+$/.test(audienceId)) {
+            return res.status(400).json({ success: false, message: "Invalid audienceId format" });
+        }
+        const safeAudienceId = encodeURIComponent(audienceId);
+        const project = await Project.findOne({ _id: projectId, owner: req.user._id }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
+        if (!project) return res.status(404).json({ success: false, message: "Project not found" });
+
+        const { key, isByok } = getResolvedResendKey(project);
+        if (!isByok || !key) {
+            return res.status(403).json({ success: false, message: "Contacts require a custom Resend API Key (BYOK)." });
+        }
+
+        if (req.method === "GET") {
+            const response = await axios.get(`https://api.resend.com/audiences/${safeAudienceId}/contacts`, {
+                headers: { Authorization: `Bearer ${key}` }
+            });
+            return res.json({ success: true, data: response.data });
+        }
+
+        if (req.method === "POST") {
+            const { email, firstName, lastName, unsubscribed } = req.body;
+            if (!email) return res.status(400).json({ success: false, message: "Contact email required" });
+
+            const payload = { email, first_name: firstName, last_name: lastName, unsubscribed };
+            const response = await axios.post(`https://api.resend.com/audiences/${safeAudienceId}/contacts`, payload, {
+                headers: { Authorization: `Bearer ${key}` }
+            });
+            return res.json({ success: true, data: response.data });
+        }
+
+        return res.status(405).json({ success: false, message: "Method not allowed" });
+    } catch (err) {
+        const errorMsg = err.response?.data?.message || err.message;
+        return res.status(err.response?.status || 500).json({ success: false, message: errorMsg });
+    }
+};
+
+module.exports.deleteContact = async (req, res) => {
+    try {
+        const { projectId, audienceId, contactId } = req.params;
+        const project = await Project.findOne({ _id: projectId, owner: req.user._id }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
+        if (!project) return res.status(404).json({ success: false, message: "Project not found" });
+
+        const { key, isByok } = getResolvedResendKey(project);
+        if (!isByok || !key) {
+            return res.status(403).json({ success: false, message: "Contacts require a custom Resend API Key (BYOK)." });
+        }
+
+        const resendIdPattern = /^[A-Za-z0-9_-]+$/;
+        if (!resendIdPattern.test(audienceId) || !resendIdPattern.test(contactId)) {
+            return res.status(400).json({ success: false, message: "Invalid audienceId or contactId format." });
+        }
+
+        const safeAudienceId = encodeURIComponent(audienceId);
+        const safeContactId = encodeURIComponent(contactId);
+
+        await axios.delete(`https://api.resend.com/audiences/${safeAudienceId}/contacts/${safeContactId}`, {
+            headers: { Authorization: `Bearer ${key}` }
+        });
+
+        return res.json({ success: true, message: "Contact removed successfully" });
+    } catch (err) {
+        const errorMsg = err.response?.data?.message || err.message;
+        return res.status(err.response?.status || 500).json({ success: false, message: errorMsg });
+    }
+};
+
+module.exports.sendMarketingBroadcast = async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const { audienceId, subject, html, from } = req.body;
+
+        const project = await Project.findOne({ _id: projectId, owner: req.user._id }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
+        if (!project) return res.status(404).json({ success: false, message: "Project not found" });
+
+        const { key, isByok } = getResolvedResendKey(project);
+        if (!isByok || !key) {
+            return res.status(403).json({ success: false, message: "Marketing Broadcasts require a custom Resend API Key (BYOK)." });
+        }
+
+        const dev = await Developer.findById(req.user._id);
+        const effectivePlan = resolveEffectivePlan(dev);
+        if (effectivePlan !== "pro") {
+            return res.status(403).json({ success: false, message: "Marketing Broadcasts are a premium feature requiring the Pro tier." });
+        }
+
+        if (!audienceId || !subject || !html) {
+            return res.status(400).json({ success: false, message: "Audience ID, subject, and html content are required." });
+        }
+
+        const payload = {
+            audience_id: audienceId,
+            subject,
+            html,
+            from: from || project.resendFromEmail || "onboarding@resend.dev"
+        };
+
+        const response = await axios.post("https://api.resend.com/broadcasts", payload, {
+            headers: { Authorization: `Bearer ${key}` }
+        });
+
+        return res.json({ success: true, data: response.data, message: "Broadcast dispatched successfully!" });
+    } catch (err) {
+        const errorMsg = err.response?.data?.message || err.message;
+        return res.status(err.response?.status || 500).json({ success: false, message: errorMsg });
+    }
+};
