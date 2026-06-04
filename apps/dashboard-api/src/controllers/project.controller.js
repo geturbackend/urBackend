@@ -483,12 +483,53 @@ const dropCollectionIfExists = async (connection, collectionName) => {
   }
 };
 
+/**
+ * Validates that a URI does not point to internal/private infrastructure.
+ * Blocks loopback, private IP ranges (RFC-1918), cloud metadata endpoints, and link-local addresses.
+ * Prevents Server-Side Request Forgery (SSRF) attacks via external database URIs.
+ */
 const isSafeUri = (uri) => {
   try {
     const parsed = new URL(uri);
     const host = parsed.hostname.toLowerCase();
-    const badHosts = ["localhost", "127.0.0.1", "0.0.0.0", "::1"];
-    return !badHosts.includes(host);
+
+    // Blocked hostnames
+    const blockedHosts = [
+      "localhost",
+      "127.0.0.1",
+      "0.0.0.0",
+      "::1",
+      "169.254.169.254", // AWS metadata service
+      "fd00:ec2::254", // IPv6 AWS metadata
+    ];
+
+    if (blockedHosts.includes(host)) {
+      return false;
+    }
+
+    // Parse IP address if hostname is an IP
+    const ipAddress = host;
+
+    // Reject RFC-1918 private address ranges
+    if (
+      /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ipAddress) || // 10.0.0.0/8
+      /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(ipAddress) || // 172.16.0.0/12
+      /^192\.168\.\d{1,3}\.\d{1,3}$/.test(ipAddress) // 192.168.0.0/16
+    ) {
+      return false;
+    }
+
+    // Reject IPv6 link-local addresses (fe80::/10)
+    if (/^fe80:/i.test(ipAddress)) {
+      return false;
+    }
+
+    // Reject IPv6 unique local addresses (fc00::/7)
+    if (/^f[cd][0-9a-f]{2}:/i.test(ipAddress)) {
+      return false;
+    }
+
+    return true;
   } catch (e) {
     return false;
   }
