@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const net = require("net");
+const dns = require("dns").promises;
 const { Project } = require("@urbackend/common");
 const { Developer } = require("@urbackend/common");
 const { Log } = require("@urbackend/common");
@@ -505,7 +506,24 @@ function isRestrictedIPv4(ip) {
   return false;
 }
 
-const isSafeUri = (uri) => {
+function isRestrictedIPv6(ip) {
+  const expanded = ip.replace(/^\[|\]$/g, "").toLowerCase();
+  // IPv6 loopback ::1
+  if (expanded === "::1" || expanded === "0:0:0:0:0:0:0:1") return true;
+  // IPv6 link-local fe80::/10
+  if (expanded.startsWith("fe80:")) return true;
+  // IPv6 ULA (Unique Local Address) fc00::/7
+  if (expanded.startsWith("fc") || expanded.startsWith("fd")) return true;
+  return false;
+}
+
+function isRestrictedIP(ip) {
+  if (net.isIPv4(ip)) return isRestrictedIPv4(ip);
+  if (net.isIPv6(ip)) return isRestrictedIPv6(ip);
+  return false;
+}
+
+const isSafeUri = async (uri) => {
   try {
     const parsed = new URL(uri);
     const host = parsed.hostname.toLowerCase();
@@ -514,13 +532,28 @@ const isSafeUri = (uri) => {
     const blockedHostnames = ["localhost", "metadata.google.internal"];
     if (blockedHostnames.includes(host)) return false;
 
-    // If the host is a bare IPv4 address, check all restricted ranges
-    if (net.isIPv4(host)) return !isRestrictedIPv4(host);
+    // If the host is a bare IPv4 or IPv6 address, check all restricted ranges
+    if (net.isIPv4(host) || net.isIPv6(host)) {
+      return !isRestrictedIP(host);
+    }
 
-    // Block IPv6 loopback (::1 and its full-form equivalents)
-    if (net.isIPv6(host)) {
-      const expanded = host.replace(/^\[|\]$/g, "");
-      if (expanded === "::1" || expanded === "0:0:0:0:0:0:0:1") return false;
+    // For hostnames, perform DNS resolution to check resolved addresses
+    try {
+      const addresses = await dns.resolve4(host);
+      for (const addr of addresses) {
+        if (isRestrictedIPv4(addr)) return false;
+      }
+    } catch (dnsErr) {
+      // If A record lookup fails, try AAAA (IPv6)
+      try {
+        const addresses = await dns.resolve6(host);
+        for (const addr of addresses) {
+          if (isRestrictedIPv6(addr)) return false;
+        }
+      } catch (dnsErr2) {
+        // If both A and AAAA lookups fail, treat as unsafe (SSRF attempt or misconfiguration)
+        return false;
+      }
     }
 
     return true;
@@ -539,7 +572,7 @@ module.exports.updateExternalConfig = async (req, res) => {
     const updateData = {};
 
     if (dbUri) {
-      if (!isSafeUri(dbUri))
+      if (!(await isSafeUri(dbUri)))
         return res.status(400).json({
           error:
             "DB URI is pointing to a restricted host (localhost/internal).",
