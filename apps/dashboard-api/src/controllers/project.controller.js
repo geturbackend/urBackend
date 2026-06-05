@@ -564,11 +564,15 @@ function isRestrictedIP(ip) {
 const isSafeUri = async (uri) => {
   try {
     const parsed = new URL(uri);
-    const host = parsed.hostname.toLowerCase();
+    const host = parsed.hostname.replace(/^\[|\]$/g, "").toLowerCase();
 
     // Block well-known loopback and internal hostnames
     const blockedHostnames = ["localhost", "metadata.google.internal"];
     if (blockedHostnames.includes(host)) return false;
+
+    // Reject mongodb+srv:// URIs as they perform hidden SRV/TXT discovery
+    // We cannot safely validate all targets without resolving SRV records
+    if (uri.toLowerCase().includes("mongodb+srv://")) return false;
 
     // If the host is a bare IPv4 or IPv6 address, check all restricted ranges
     if (net.isIPv4(host) || net.isIPv6(host)) {
@@ -610,8 +614,9 @@ module.exports.updateExternalConfig = async (req, res) => {
     if (dbUri) {
       if (!(await isSafeUri(dbUri)))
         return res.status(400).json({
-          error:
-            "DB URI is pointing to a restricted host (localhost/internal).",
+          success: false,
+          data: {},
+          message: "DB URI is pointing to a restricted host, internal network, or unsupported URI format.",
         });
 
       updateData["resources.db.config"] = encrypt(JSON.stringify({ dbUri }));
@@ -634,11 +639,9 @@ module.exports.updateExternalConfig = async (req, res) => {
         ) {
           const serverIp = await getPublicIp();
           errorMsg = `Access Denied: Please whitelist Server IP [${serverIp}] in MongoDB Atlas.`;
-        } else {
-          errorMsg += " " + connErr.message;
         }
 
-        return res.status(400).json({ error: errorMsg });
+        return res.status(400).json({ success: false, data: {}, message: errorMsg });
       }
     }
 
@@ -661,20 +664,16 @@ module.exports.updateExternalConfig = async (req, res) => {
     );
 
     if (!project)
-      return res
-        .status(404)
-        .json({ error: "Project not found or access denied." });
+      return res.status(404).json({ success: false, data: {}, message: "Project not found or access denied." });
 
-    res
-      .status(200)
-      .json({ message: "External configuration updated successfully." });
+    res.status(200).json({ success: true, data: {}, message: "External configuration updated successfully." });
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return res.status(400).json({ error: err.issues });
+      return res.status(400).json({ success: false, data: {}, message: "Invalid request data." });
     }
 
     console.error("External Config Error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, data: {}, message: "Failed to update external configuration." });
   }
 };
 
