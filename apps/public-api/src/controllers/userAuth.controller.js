@@ -1533,6 +1533,10 @@ module.exports.updateProfile = async (req, res) => {
         delete updateData.email;
         delete updateData._id;
 
+        delete updateData.emailVerified;
+        delete updateData.isVerified;
+        delete updateData.isverified;
+
         if (updateData.username !== undefined) {
             const username = updateData.username;
             if (typeof username !== 'string' || username.length < 3 || username.length > 50) {
