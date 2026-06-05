@@ -129,7 +129,10 @@ module.exports.uploadFile = async (req, res) => {
 
         const supabase = await getStorage(project);
 
-        const safeName = file.originalname.replace(/\s+/g, "_");
+        const safeName = file.originalname
+        .replace(/[^a-zA-Z0-9._-]/g, "_")
+        .replace(/\.{2,}/g, "_")
+        .substring(0, 100);
         const filePath = `${project._id}/${randomUUID()}_${safeName}`;
 
         const { error: uploadError } = await supabase.storage
