@@ -25,8 +25,8 @@ const queryBuilder = async (req, res, next) => {
         if (!safeCollectionName || !safePrompt) {
             throw new AppError(400, "Collection name and prompt are required");
         }
-        if (safePrompt.length > 2000) {
-           throw new AppError(400, "Prompt exceeds the maximum allowed length of 2000 characters");
+        if (safePrompt.length > 1000) {
+           throw new AppError(400, "Prompt exceeds the maximum allowed length of 1000 characters");
        }
 
         if (safeCollectionName === 'users') {
