@@ -485,10 +485,22 @@ const dropCollectionIfExists = async (connection, collectionName) => {
   }
 };
 
+/**
+ * Convert a dotted-decimal IPv4 address string to a 32-bit unsigned integer.
+ * @param {string} ip - IPv4 address in dotted-decimal notation (e.g., '192.168.1.1')
+ * @returns {number} 32-bit unsigned integer representation of the IPv4 address
+ */
 function ipv4ToInt(ip) {
   return ip.split(".").reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
 }
 
+/**
+ * Check if an IPv4 address falls within any restricted or reserved IP range.
+ * Blocks loopback (127.0.0.0/8), RFC-1918 private ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16),
+ * link-local and cloud metadata (169.254.0.0/16), and unspecified (0.0.0.0/8) addresses to prevent SSRF attacks.
+ * @param {string} ip - IPv4 address to validate
+ * @returns {boolean} True if the IP is restricted, false otherwise
+ */
 function isRestrictedIPv4(ip) {
   const n = ipv4ToInt(ip);
   // Loopback 127.0.0.0/8
@@ -506,6 +518,13 @@ function isRestrictedIPv4(ip) {
   return false;
 }
 
+/**
+ * Check if an IPv6 address falls within any restricted or reserved range.
+ * Blocks loopback (::1), unspecified (::), link-local (fe80::/10), IPv6 Unique Local Addresses (fc00::/7),
+ * and IPv4-mapped IPv6 addresses that resolve to restricted IPv4 ranges to prevent SSRF attacks.
+ * @param {string} ip - IPv6 address to validate
+ * @returns {boolean} True if the IP is restricted, false otherwise
+ */
 function isRestrictedIPv6(ip) {
   const expanded = ip.replace(/^\[|\]$/g, "").toLowerCase();
   // IPv6 loopback ::1
@@ -522,12 +541,26 @@ function isRestrictedIPv6(ip) {
   return false;
 }
 
+/**
+ * Check if an IP address (either IPv4 or IPv6) is restricted or falls within a reserved range.
+ * Delegates to isRestrictedIPv4() or isRestrictedIPv6() based on the IP version.
+ * @param {string} ip - IP address to validate
+ * @returns {boolean} True if the IP is restricted, false otherwise
+ */
 function isRestrictedIP(ip) {
   if (net.isIPv4(ip)) return isRestrictedIPv4(ip);
   if (net.isIPv6(ip)) return isRestrictedIPv6(ip);
   return false;
 }
 
+/**
+ * Validate a URI to ensure it does not target restricted hosts or IP ranges (SSRF prevention).
+ * Performs DNS resolution on hostnames to check both A and AAAA records against restricted ranges.
+ * Blocks loopback, RFC-1918 private ranges, cloud metadata endpoints, and other reserved IP ranges.
+ * @async
+ * @param {string} uri - The URI to validate
+ * @returns {Promise<boolean>} True if the URI is safe to connect to, false if it targets a restricted host
+ */
 const isSafeUri = async (uri) => {
   try {
     const parsed = new URL(uri);
