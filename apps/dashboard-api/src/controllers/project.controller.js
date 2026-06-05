@@ -510,8 +510,13 @@ function isRestrictedIPv6(ip) {
   const expanded = ip.replace(/^\[|\]$/g, "").toLowerCase();
   // IPv6 loopback ::1
   if (expanded === "::1" || expanded === "0:0:0:0:0:0:0:1") return true;
-  // IPv6 link-local fe80::/10
-  if (expanded.startsWith("fe80:")) return true;
+  // IPv6 unspecified ::
+  if (expanded === "::" || expanded === "0:0:0:0:0:0:0:0") return true;
+  // IPv4-mapped IPv6 addresses (::ffff:x.x.x.x)
+  const mapped = expanded.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (mapped && isRestrictedIPv4(mapped[1])) return true;
+  // IPv6 link-local fe80::/10 (fe80: through febf:)
+  if (/^fe[89ab]/.test(expanded)) return true;
   // IPv6 ULA (Unique Local Address) fc00::/7
   if (expanded.startsWith("fc") || expanded.startsWith("fd")) return true;
   return false;
@@ -537,24 +542,22 @@ const isSafeUri = async (uri) => {
       return !isRestrictedIP(host);
     }
 
-    // For hostnames, perform DNS resolution to check resolved addresses
-    try {
-      const addresses = await dns.resolve4(host);
-      for (const addr of addresses) {
-        if (isRestrictedIPv4(addr)) return false;
-      }
-    } catch (dnsErr) {
-      // If A record lookup fails, try AAAA (IPv6)
-      try {
-        const addresses = await dns.resolve6(host);
-        for (const addr of addresses) {
-          if (isRestrictedIPv6(addr)) return false;
-        }
-      } catch (dnsErr2) {
-        // If both A and AAAA lookups fail, treat as unsafe (SSRF attempt or misconfiguration)
-        return false;
-      }
-    }
+    // For hostnames, perform DNS resolution to check both A and AAAA records
+    const [ipv4Result, ipv6Result] = await Promise.allSettled([
+      dns.resolve4(host),
+      dns.resolve6(host),
+    ]);
+
+    const resolved = [
+      ...(ipv4Result.status === "fulfilled" ? ipv4Result.value : []),
+      ...(ipv6Result.status === "fulfilled" ? ipv6Result.value : []),
+    ];
+
+    // If no addresses resolved, treat as unsafe
+    if (resolved.length === 0) return false;
+
+    // Check all resolved addresses for restricted ranges
+    if (resolved.some((addr) => isRestrictedIP(addr))) return false;
 
     return true;
   } catch (e) {
