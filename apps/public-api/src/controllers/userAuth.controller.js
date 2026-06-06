@@ -1567,9 +1567,6 @@ module.exports.updateProfile = async (req, res) => {
 
         const sanitizedUpdateData = sanitize(updateData);
 
-        const usersColConfig = project.collections.find(c => c.name === 'users');
-        if (!usersColConfig) return res.status(404).json({ error: "Auth collection not found" });
-
         const connection = await getConnection(project._id);
         const Model = getCompiledModel(connection, usersColConfig, project._id, project.resources.db.isExternal);
 
