@@ -204,6 +204,16 @@ if (process.env.NODE_ENV !== 'test') {
 
     process.on('SIGTERM', gracefulShutdown);
     process.on('SIGINT', gracefulShutdown);
+
+    process.on('unhandledRejection', (reason, promise) => {
+        console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+        // Optionally: graceful shutdown
+    });
+
+    process.on('uncaughtException', (err) => {
+        console.error('Uncaught Exception:', err);
+        process.exit(1); // Required - process state may be corrupt
+    });
 }
 
 // Export for Testing
