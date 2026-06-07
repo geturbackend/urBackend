@@ -143,16 +143,18 @@ if (process.env.NODE_ENV !== 'test') {
     };
 
     const bootstrap = async () => {
-        await connectDB();
-        startWorkers();
-
-        const server = app.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
-        });
-
         // SHUTDOWN
-        const gracefulShutdown = async () => {
-            console.log('🛑 SIGTERM/SIGINT received. Shutting down gracefully...');
+        let shuttingDown = false;
+        let server;
+
+        const gracefulShutdown = async (err = null) => {
+            if (shuttingDown) return;
+            shuttingDown = true;
+            console.log('🛑 SIGTERM/SIGINT/Fatal Error received. Shutting down gracefully...');
+            
+            if (err) {
+                console.error('Fatal Error causing shutdown:', err);
+            }
 
             // Force close after 10s
             const forceShutdown = setTimeout(() => {
@@ -169,31 +171,48 @@ if (process.env.NODE_ENV !== 'test') {
                 }
             }
 
-            server.close(async () => {
-                console.log('✅ HTTP server closed.');
+            if (server) {
+                server.close(async () => {
+                    console.log('✅ HTTP server closed.');
+                    try {
+                        await mongoose.connection.close(false);
+                        console.log('✅ MongoDB connection closed.');
+                        clearTimeout(forceShutdown);
+                        process.exit(err ? 1 : 0);
+                    } catch (dbErr) {
+                        console.error('❌ Error closing MongoDB connection:', dbErr);
+                        process.exit(1);
+                    }
+                });
+            } else {
                 try {
                     await mongoose.connection.close(false);
-                    console.log('✅ MongoDB connection closed.');
                     clearTimeout(forceShutdown);
-                    process.exit(0);
-                } catch (err) {
-                    console.error('❌ Error closing MongoDB connection:', err);
+                    process.exit(err ? 1 : 0);
+                } catch (dbErr) {
                     process.exit(1);
                 }
-            });
+            }
         };
 
-        process.on('SIGTERM', gracefulShutdown);
-        process.on('SIGINT', gracefulShutdown);
+        process.on('SIGTERM', () => gracefulShutdown());
+        process.on('SIGINT', () => gracefulShutdown());
         
         process.on('unhandledRejection', (reason, promise) => {
             console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-            // Optionally: graceful shutdown
+            gracefulShutdown(reason);
         });
 
         process.on('uncaughtException', (err) => {
             console.error('Uncaught Exception:', err);
-            process.exit(1); // Required - process state may be corrupt
+            gracefulShutdown(err);
+        });
+
+        await connectDB();
+        startWorkers();
+
+        server = app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
         });
     };
 
