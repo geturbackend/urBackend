@@ -219,23 +219,75 @@
 }
 
 @media(max-width: 1024px) {
+    body {
+    overflow-x: hidden;
+}
+
     .nav-links {
         display: none;
     }
-    
+
     .mobile-menu-btn {
         display: flex;
     }
-    
+
     .nav-btn-ghost {
         display: none;
     }
-    
+
     .nav-container {
-        padding: 1rem 1.5rem;
+        padding: 1rem;
     }
+
+    .nav-actions {
+        gap: 0.4rem;
+         min-width: 0;
+    }
+
+    .nav-menu {
+    gap: 0.8rem;
 }
 
+.nav-btn-primary {
+    padding: 0.55rem 1rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.nav-actions {
+    gap: 0.5rem;
+}
+
+.hero-heading {
+    max-width: 100%;
+    padding: 0 1rem;
+}
+}
+@media(max-width: 420px) {
+
+    .nav-menu {
+        display: none;
+    }
+
+    .mobile-menu-btn {
+        display: flex;
+    }
+
+    .nav-container {
+        padding: 0.8rem;
+        justify-content: space-between;
+    }
+
+    .nav-actions {
+        gap: 0.4rem;
+    }
+
+    .nav-btn-primary {
+        padding: 0.45rem 0.8rem;
+        font-size: 0.78rem;
+        white-space: nowrap;
+    }
+}
 /* TEXT GRADIENTS & UTILS */
 .text-gradient {
     background: linear-gradient(to bottom right, #ffffff 0%, #a1a1aa 100%);
