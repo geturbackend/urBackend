@@ -9,17 +9,13 @@ const limiter = rateLimit({
     message: { error: "Too many requests, please try again later." },
     standardHeaders: true,
     legacyHeaders: false,
-    validate: {
-        xForwardedForHeader: false,
-        trustProxy: false
-    }
 });
 
 // Logger with API analytics
 const logger = (req, res, next) => {
     // Capture start time for response time measurement
     const startHr = process.hrtime();
-    
+
     // Check for routes included in platform analytics
     if (
         req.originalUrl.startsWith('/api/data') ||
@@ -44,7 +40,7 @@ const logger = (req, res, next) => {
                     if (!req._dailyCountIncremented) {
                         const day = getDayKey();
                         const reqCountKey = `project:usage:req:count:${req.project._id}:${day}`;
-                        incrWithTtlAtomic(redis, reqCountKey, DEFAULT_DAILY_TTL_SECONDS).catch(() => {});
+                        incrWithTtlAtomic(redis, reqCountKey, DEFAULT_DAILY_TTL_SECONDS).catch(() => { });
                     }
 
                     console.log(`📝 Logged: ${req.method} ${req.originalUrl} (${res.statusCode})`);
@@ -52,12 +48,12 @@ const logger = (req, res, next) => {
                     console.error("Logging failed:", e.message);
                 }
             }
-            
+
             // --- API performance analytics ---
             if (req.project) {
                 const diff = process.hrtime(startHr);
                 const responseTimeMs = (diff[0] * 1e3 + diff[1] / 1e6).toFixed(2);
-                
+
                 setImmediate(async () => {
                     try {
                         await ApiAnalytics.create({
@@ -111,7 +107,7 @@ const logger = (req, res, next) => {
             }
         });
     }
-   
+
     next();
 };
 

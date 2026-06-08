@@ -2,7 +2,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 dotenv.config({ path: path.join(__dirname, '../../../.env') });
 
-const {validateEnv} = require('@urbackend/common');
+const { validateEnv } = require('@urbackend/common');
 
 if (process.env.NODE_ENV !== 'test') {
     validateEnv();
@@ -19,13 +19,13 @@ const { capture } = require('@kiroo/sdk');
 
 
 // Initialize Queue Workers
-const {emailQueue} = require('@urbackend/common');
-const {authEmailQueue} = require('@urbackend/common');
-const {initWebhookWorker} = require('@urbackend/common');
-const {initAuthEmailWorker, initPublicEmailWorker} = require('@urbackend/common');
-const {initActivityRollupWorker, scheduleActivityRollup} = require('@urbackend/common');
-const {initReliabilityAlertWorker, scheduleReliabilityAlert} = require('@urbackend/common');
-const {initTrashCleanupWorker} = require('@urbackend/common');
+const { emailQueue } = require('@urbackend/common');
+const { authEmailQueue } = require('@urbackend/common');
+const { initWebhookWorker } = require('@urbackend/common');
+const { initAuthEmailWorker, initPublicEmailWorker } = require('@urbackend/common');
+const { initActivityRollupWorker, scheduleActivityRollup } = require('@urbackend/common');
+const { initReliabilityAlertWorker, scheduleReliabilityAlert } = require('@urbackend/common');
+const { initTrashCleanupWorker } = require('@urbackend/common');
 
 app.use('/api/mail/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
@@ -41,10 +41,10 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 app.use(capture({
-  supabaseUrl: process.env.SUPABASE_URL,
-  supabaseKey: process.env.SUPABASE_KEY,
-  bucket: process.env.SUPABASE_BUCKET,
-  sampleRate: 0
+    supabaseUrl: process.env.SUPABASE_URL,
+    supabaseKey: process.env.SUPABASE_KEY,
+    bucket: process.env.SUPABASE_BUCKET,
+    sampleRate: 0
 }));
 
 
@@ -117,7 +117,7 @@ app.use((err, req, res, next) => {
 
 app.use((req, res) => {
     const id = res.get("X-Kiroo-Replay-ID");
-    res.json({error: "Not Found", replayId: id})   
+    res.json({ error: "Not Found", replayId: id })
 })
 // INITIALIZATION
 if (process.env.NODE_ENV !== 'test') {
