@@ -184,7 +184,6 @@ const isRequiredField = (required) =>
     required === 1 ||
     String(required).trim().toLowerCase() === "true" ||
     String(required).trim() === "1";
-    
 const assertAuthProjectReady = (project) => {
     if (!project?.isAuthEnabled) {
         const err = new Error('Authentication service is disabled');
@@ -200,13 +199,24 @@ const assertAuthProjectReady = (project) => {
         throw err;
     }
 
-    const hasEmail = usersCollection.model.find(
+    const model = usersCollection.model;
+
+    if (!Array.isArray(model)) {
+        const err = new Error('Invalid Users Schema');
+        err.statusCode = 422;
+        err.publicMessage =
+            "The 'users' collection must contain required 'email' and 'password' String fields.";
+        throw err;
+    }
+
+    const hasEmail = model.some(
         (f) =>
             normalizeFieldKey(f.key).toLowerCase() === "email" &&
             normalizeFieldType(f.type) === "string" &&
             isRequiredField(f.required)
     );
-    const hasPassword = usersCollection.model.find(
+
+    const hasPassword = model.some(
         (f) =>
             normalizeFieldKey(f.key).toLowerCase() === "password" &&
             normalizeFieldType(f.type) === "string" &&
