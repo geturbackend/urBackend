@@ -486,9 +486,11 @@ export default function Database() {
                             style={{ width: '100%', height: '40px', fontSize: '0.85rem' }}
                           >
                               <option value="userId">userId (Default)</option>
-                              {activeCollection?.model?.filter(f => f.type === 'STRING').map(f => (
-                                  <option key={f.key} value={f.key}>{f.key}</option>
-                              ))}
+                                {activeCollection?.model
+                                  ?.filter(f => String(f?.type || '').toLowerCase() === 'string' && String(f?.key || '').toLowerCase() !== 'userid')
+                                  .map(f => (
+                                    <option key={f.key} value={f.key}>{f.key}</option>
+                                ))}
                           </select>
                           <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '8px' }}>
                               The field in your document that stores the creator's user ID.

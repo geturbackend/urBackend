@@ -78,7 +78,7 @@ function CreateProject() {
             completeStep('create_project');
             completeStep('get_api_key');
         } catch (err) {
-            const errorMsg = err.response?.data?.error || err.response?.data?.message || "Failed to create project";
+            const errorMsg = err.response?.data?.message || err.response?.data?.error || err.response?.data?.message || "Failed to create project";
             toast.error(typeof errorMsg === 'object' ? "Validation Error" : errorMsg);
         } finally {
             setLoading(false);

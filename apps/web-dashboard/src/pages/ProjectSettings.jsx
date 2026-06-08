@@ -124,7 +124,7 @@ export default function ProjectSettings() {
             if (payload.resendFromEmail !== undefined) updates.resendFromEmail = payload.resendFromEmail;
             setProject((prev) => (prev ? { ...prev, ...updates } : prev));
         } catch (err) {
-            toast.error(err.response?.data?.error || "Failed to save mail settings");
+            toast.error(err.response?.data?.message || err.response?.data?.error || "Failed to save mail settings");
         } finally {
             setResendKeyLoading(false);
         }
@@ -824,7 +824,7 @@ function DatabaseConfigForm({ project, projectId, onProjectUpdate }) {
             setShowForm(false);
             setDbUri("");
         } catch (err) {
-            const errorMsg = err.response?.data?.error || "Failed to update DB config";
+            const errorMsg = err.response?.data?.message || err.response?.data?.error || "Failed to update DB config";
             if (errorMsg.includes("whitelist Server IP")) {
                 toast.error(<div><b>Access Denied!</b><br />{errorMsg}</div>, { duration: 6000 });
             } else {
@@ -842,7 +842,7 @@ function DatabaseConfigForm({ project, projectId, onProjectUpdate }) {
             onProjectUpdate(prev => ({ ...prev, resources: { ...prev.resources, db: { ...prev.resources.db, isExternal: false } } }));
             setShowForm(true);
         } catch (err) {
-            toast.error(err.response?.data?.error || "Failed to remove DB config");
+            toast.error(err.response?.data?.message || err.response?.data?.error || "Failed to remove DB config");
         } finally {
             setLoading(false);
         }
@@ -953,7 +953,7 @@ function StorageConfigForm({ project, projectId, onProjectUpdate }) {
             setShowForm(false);
             setConfig(INITIAL_STORAGE_CONFIG);
         } catch (err) {
-            toast.error(err.response?.data?.error || "Failed to update Storage config");
+            toast.error(err.response?.data?.message || err.response?.data?.error || "Failed to update Storage config");
         } finally {
             setLoading(false);
         }
@@ -968,7 +968,7 @@ function StorageConfigForm({ project, projectId, onProjectUpdate }) {
             setConfig(INITIAL_STORAGE_CONFIG);
             setShowForm(true);
         } catch (err) {
-            toast.error(err.response?.data?.error || "Failed to remove Storage config");
+            toast.error(err.response?.data?.message || err.response?.data?.error || "Failed to remove Storage config");
         } finally {
             setLoading(false);
         }
@@ -1105,7 +1105,7 @@ function AllowedDomainsForm({ project, projectId, onProjectUpdate }) {
             setDomains(updatedDomains);
             onProjectUpdate((prev) => ({ ...prev, allowedDomains: updatedDomains }));
         } catch (err) {
-            toast.error(err.response?.data?.error || "Failed to update allowed domains");
+            toast.error(err.response?.data?.message || err.response?.data?.error || "Failed to update allowed domains");
         } finally {
             setLoading(false);
         }

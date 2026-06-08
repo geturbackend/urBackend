@@ -541,7 +541,7 @@ function CreateCollection() {
             completeStep('create_collection');
             navigate(`/project/${projectId}/database`);
         } catch (err) {
-            const errMsg = err.response?.data?.error;
+            const errMsg = err.response?.data?.message || err.response?.data?.error;
             toast.error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg) || "Failed to create collection");
         } finally {
             setLoading(false);

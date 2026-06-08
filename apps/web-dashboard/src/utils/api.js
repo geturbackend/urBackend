@@ -74,8 +74,7 @@ api.interceptors.response.use(
         // 403: Show upgrade modal if it's a plan limit error
         if (error.response?.status === 403) {
             const message = (
-                error.response?.data?.message ||
-                error.response?.data?.error ||
+                error.response?.data?.message || error.response?.data?.error ||
                 ''
             ).toLowerCase();
 

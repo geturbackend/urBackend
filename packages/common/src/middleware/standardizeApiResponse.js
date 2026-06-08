@@ -64,10 +64,24 @@ module.exports = (req, res, next) => {
         }
 
         if (code >= 400) {
+            let errorTitle = 'Error';
+            let errorMessage = toErrorMessage(body);
+
+            if (body && typeof body === 'object') {
+                if (body.error && typeof body.error === 'string') errorTitle = body.error;
+                if (body.message && typeof body.message === 'string') errorMessage = body.message;
+                
+                // If it only had error and no message, use error as message
+                if (body.error && !body.message) {
+                    errorTitle = 'Error';
+                    errorMessage = typeof body.error === 'string' ? body.error : safeStringify(body.error);
+                }
+            }
+
             return originalJson({
                 success: false,
-                error: toErrorMessage(body),
-                code,
+                error: errorTitle,
+                message: errorMessage
             });
         }
 

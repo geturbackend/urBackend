@@ -28,7 +28,7 @@ export default function Settings() {
             toast.success("Password updated!");
             setPassData({ currentPassword: '', newPassword: '' });
         } catch (err) {
-            toast.error(err.response?.data || "Failed to update password");
+            toast.error(err.response?.data?.message || err.response?.data?.error || "Failed to update password");
         } finally {
             setLoadingPass(false);
         }
@@ -46,7 +46,7 @@ export default function Settings() {
             toast.success("Account deleted. Goodbye!");
             logout(); // Log user out immediately
         } catch (err) {
-            toast.error(err.response?.data || "Failed to delete account");
+            toast.error(err.response?.data?.message || err.response?.data?.error || "Failed to delete account");
             setShowDeleteModal(false); // Close modal on error so user can retry
         } finally {
             setLoadingDelete(false);

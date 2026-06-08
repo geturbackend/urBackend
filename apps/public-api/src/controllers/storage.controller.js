@@ -129,7 +129,10 @@ module.exports.uploadFile = async (req, res) => {
 
         const supabase = await getStorage(project);
 
-        const safeName = file.originalname.replace(/\s+/g, "_");
+        const safeName = file.originalname
+        .replace(/[^a-zA-Z0-9._-]/g, "_")
+        .replace(/\.{2,}/g, "_")
+        .substring(0, 100);
         const filePath = `${project._id}/${randomUUID()}_${safeName}`;
 
         const { error: uploadError } = await supabase.storage
@@ -326,7 +329,10 @@ module.exports.requestUpload = async (req, res) => {
                 return res.status(403).json({ error: "Internal storage limit exceeded." });
         }
 
-        const safeName = filename.replace(/\s+/g, "_");
+        const safeName = filename
+         .replace(/[^a-zA-Z0-9._-]/g, "_")
+         .replace(/\.{2,}/g, "_")
+         .substring(0, 100);
         const filePath = `${project._id}/${randomUUID()}_${safeName}`;
 
         const { signedUrl, token } = await getPresignedUploadUrl(project, filePath, contentType, numericSize);

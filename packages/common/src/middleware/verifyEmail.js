@@ -1,5 +1,7 @@
+const AppError = require('../utils/AppError');
+
 module.exports = function (req, res, next) {
     const { isVerified } = req.user;
-    if (!isVerified) return res.status(401).json({ error: "Email not verified" });
+    if (!isVerified) return next(new AppError(401, "Email not verified"));
     next();
 };

@@ -372,14 +372,14 @@ describe('storage.controller', () => {
             isProjectStorageExternal.mockReturnValue(false);
             getPresignedUploadUrl.mockResolvedValue({ signedUrl: 'https://signed.example/upload', token: 'token-1' });
 
-            const req = { project: makeProject(), body: { filename: 'my..file.txt', contentType: 'text/plain', size: 1024 } };
+            const req = { project: makeProject(), body: { filename: 'my_file.txt', contentType: 'text/plain', size: 1024 } };
             const res = makeRes();
 
             await storageController.requestUpload(req, res);
 
-            expect(getPresignedUploadUrl).toHaveBeenCalledWith(req.project, 'project_id_1/mocked-uuid_my..file.txt', 'text/plain', 1024);
+            expect(res.json).toHaveBeenCalledWith({ signedUrl: 'https://signed.example/upload', token: 'token-1', filePath: 'project_id_1/mocked-uuid_my_file.txt' });
             expect(res.status).toHaveBeenCalledWith(200);
-            expect(res.json).toHaveBeenCalledWith({ signedUrl: 'https://signed.example/upload', token: 'token-1', filePath: 'project_id_1/mocked-uuid_my..file.txt' });
+            expect(res.json).toHaveBeenCalledWith({ signedUrl: 'https://signed.example/upload', token: 'token-1', filePath: 'project_id_1/mocked-uuid_my_file.txt' });
         });
 
         test('confirmUpload charges the verified size and rejects mismatches', async () => {

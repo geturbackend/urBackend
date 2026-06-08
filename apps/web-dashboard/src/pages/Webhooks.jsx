@@ -7,6 +7,14 @@ import {
   XCircle, Clock, RefreshCw, Eye, ChevronDown, ChevronUp, Copy
 } from 'lucide-react';
 
+const normalizeError = (val, defaultMsg) => {
+  const msg = val?.response?.data?.message || val?.response?.data?.error || val?.response?.data?.details?.[0]?.message || defaultMsg;
+  if (typeof msg === 'string') return msg;
+  if (Array.isArray(msg)) return msg.map(m => typeof m === 'string' ? m : JSON.stringify(m)).join(', ');
+  if (msg && typeof msg === 'object') return JSON.stringify(msg);
+  return String(msg);
+};
+
 export default function Webhooks() {
   const { projectId } = useParams();
 
@@ -143,7 +151,7 @@ export default function Webhooks() {
       closeModal();
       fetchData();
     } catch (err) {
-      const msg = err.response?.data?.error || err.response?.data?.details?.[0]?.message || 'Failed to save webhook';
+      const msg = normalizeError(err, 'Failed to save webhook');
       toast.error(msg);
     } finally {
       setIsSaving(false);
@@ -172,7 +180,7 @@ export default function Webhooks() {
       setTestResult({ 
         webhookId: webhook._id, 
         success: false, 
-        error: err.response?.data?.error || 'Test failed' 
+        error: normalizeError(err, 'Test failed')
       });
     } finally {
       setTestingWebhookId(null);

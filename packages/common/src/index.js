@@ -114,6 +114,7 @@ const { validateData, validateUpdateData } = require("./utils/validateData");
 const sessionManager = require("./utils/session.manager");
 const planLimits = require("./utils/planLimits");
 const AppError = require("./utils/AppError");
+const ApiResponse = require("./utils/ApiResponse");
 const { checkLockout, recordFailedAttempt, clearLockout } = require("./utils/loginLockout");
 const { dispatchWebhooks } = require("./utils/webhookDispatcher");
 const { getDayKey, getMonthKey, getEndOfMonthTtlSeconds, incrWithTtlAtomic } = require("./utils/usageCounter");
@@ -200,6 +201,7 @@ module.exports = {
   ...sessionManager,
   ...planLimits,
   AppError,
+  ApiResponse,
   getPresignedUploadUrl,
   verifyUploadedFile,
   PlatformEvent,

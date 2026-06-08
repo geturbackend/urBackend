@@ -53,7 +53,7 @@ export default function AdminCreateRelease() {
             navigate('/releases');
         } catch (err) {
             toast.dismiss(loadToast);
-            toast.error(err.response?.data?.error || "Failed to publish release.");
+            toast.error(err.response?.data?.message || err.response?.data?.error || "Failed to publish release.");
         } finally {
             setLoading(false);
         }

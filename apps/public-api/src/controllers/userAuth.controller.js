@@ -1528,10 +1528,35 @@ module.exports.updateProfile = async (req, res) => {
             return res.status(401).json({ error: "Access Denied: Invalid or expired token" });
         }
 
-        const updateData = { ...req.body };
-        delete updateData.password;
-        delete updateData.email;
-        delete updateData._id;
+        const usersColConfig = project.collections.find(
+            c => c.name === 'users'
+        );
+
+        if (!usersColConfig) {
+            return res.status(404).json({
+                error: "Auth collection not found"
+            });
+        }
+        const restrictedFields = [
+            '_id',
+            'password',
+            'email',
+            'emailVerified',
+            'isVerified',
+            'isverified'
+        ];
+
+        const allowedFields = (usersColConfig?.model || [])
+            .map(field => field?.key)
+            .filter(key => key && !restrictedFields.includes(key));
+
+        const updateData = {};
+
+        for (const field of allowedFields) {
+            if (req.body[field] !== undefined) {
+                updateData[field] = req.body[field];
+            }
+        }
 
         if (updateData.username !== undefined) {
             const username = updateData.username;
@@ -1541,9 +1566,6 @@ module.exports.updateProfile = async (req, res) => {
         }
 
         const sanitizedUpdateData = sanitize(updateData);
-
-        const usersColConfig = project.collections.find(c => c.name === 'users');
-        if (!usersColConfig) return res.status(404).json({ error: "Auth collection not found" });
 
         const connection = await getConnection(project._id);
         const Model = getCompiledModel(connection, usersColConfig, project._id, project.resources.db.isExternal);

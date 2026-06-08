@@ -566,3 +566,185 @@ describe('Email Authentication Flow', () => {
         });
     });
 });
+
+// =============================================================================
+// Issue #181 — Redis resilience tests for checkLockout/recordFailedAttempt
+// =============================================================================
+
+
+describe('Login lockout — Redis resilience (Issue #181)', () => {
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    // ── 1. checkLockout Redis failure ──────────────────────────────────────
+    describe('checkLockout rejects when Redis is down', () => {
+
+        test('returns 503 and does not surface the raw Redis error', async () => {
+            checkLockout.mockRejectedValue(new Error('Redis connection refused'));
+
+            const req = makeReq({ body: { email: 'test@user.com', password: 'password123' } });
+            const res = makeRes();
+
+            await controller.login(req, res);
+
+            // Controller returns 503 service error — not a 500 crash
+            expect(res.status).toHaveBeenCalledWith(503);
+            expect(res.status).not.toHaveBeenCalledWith(500);
+        });
+
+        test('Redis connection error is not exposed in the response body', async () => {
+            checkLockout.mockRejectedValue(new Error('Redis connection refused'));
+
+            const req = makeReq({ body: { email: 'test@user.com', password: 'password123' } });
+            const res = makeRes();
+
+            await controller.login(req, res);
+
+            const jsonArg = res.json.mock.calls[0]?.[0];
+            expect(JSON.stringify(jsonArg)).not.toMatch(/redis/i);
+            expect(JSON.stringify(jsonArg)).not.toMatch(/connection refused/i);
+        });
+
+        test('response message is safe and generic', async () => {
+            checkLockout.mockRejectedValue(new Error('Redis connection refused'));
+
+            const req = makeReq({ body: { email: 'test@user.com', password: 'password123' } });
+            const res = makeRes();
+
+            await controller.login(req, res);
+
+            const jsonArg = res.json.mock.calls[0]?.[0];
+            expect(jsonArg).toHaveProperty('message', 'Login lockout service unavailable');
+        });
+    });
+
+    // ── 2. recordFailedAttempt Redis failure ───────────────────────────────
+    describe('recordFailedAttempt rejects when Redis is down', () => {
+
+        test('returns 503 on wrong password when recordFailedAttempt throws — not 500', async () => {
+            checkLockout.mockResolvedValue({ locked: false, retryAfterSeconds: 0 });
+            recordFailedAttempt.mockRejectedValue(new Error('Redis write failed'));
+
+            const req = makeReq({ body: { email: 'test@user.com', password: 'wrongpassword' } });
+            const res = makeRes();
+
+            mockModel.findOne.mockReturnValueOnce({
+                select: jest.fn().mockResolvedValueOnce({
+                    _id: 'user_123', password: 'hashed_pw', email: 'test@user.com'
+                })
+            });
+            bcrypt.compare.mockResolvedValueOnce(false);
+
+            await controller.login(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(503);
+            expect(res.status).not.toHaveBeenCalledWith(500);
+        });
+
+        test('Redis error from recordFailedAttempt is not surfaced in the response', async () => {
+            checkLockout.mockResolvedValue({ locked: false, retryAfterSeconds: 0 });
+            recordFailedAttempt.mockRejectedValue(new Error('Redis write failed'));
+
+            const req = makeReq({ body: { email: 'test@user.com', password: 'wrongpassword' } });
+            const res = makeRes();
+
+            mockModel.findOne.mockReturnValueOnce({
+                select: jest.fn().mockResolvedValueOnce({
+                    _id: 'user_123', password: 'hashed_pw', email: 'test@user.com'
+                })
+            });
+            bcrypt.compare.mockResolvedValueOnce(false);
+
+            await controller.login(req, res);
+
+            const jsonArg = res.json.mock.calls[0]?.[0];
+            expect(JSON.stringify(jsonArg)).not.toMatch(/redis/i);
+            expect(JSON.stringify(jsonArg)).not.toMatch(/write failed/i);
+        });
+    });
+
+    // ── 3. clearLockout Redis failure (fail-open) ──────────────────────────
+    describe('clearLockout rejects when Redis is down', () => {
+
+        test('login still succeeds and returns token even when clearLockout throws', async () => {
+            checkLockout.mockResolvedValue({ locked: false, retryAfterSeconds: 0 });
+            clearLockout.mockRejectedValue(new Error('Redis unavailable'));
+
+            const req = makeReq({ body: { email: 'test@user.com', password: 'password123' } });
+            const res = makeRes();
+
+            mockModel.findOne.mockReturnValueOnce({
+                select: jest.fn().mockResolvedValueOnce({
+                    _id: 'user_123', password: 'hashed_pw', email: 'test@user.com'
+                })
+            });
+            bcrypt.compare.mockResolvedValueOnce(true);
+
+            await controller.login(req, res);
+
+            // clearLockout is fail-open — login must still succeed
+            expect(res.status).not.toHaveBeenCalledWith(500);
+            expect(res.status).not.toHaveBeenCalledWith(503);
+            expect(res.json).toHaveBeenCalledWith(
+                expect.objectContaining({ token: 'signed_access_token' })
+            );
+        });
+
+        test('Redis error from clearLockout is not exposed to the caller', async () => {
+            checkLockout.mockResolvedValue({ locked: false, retryAfterSeconds: 0 });
+            clearLockout.mockRejectedValue(new Error('Redis unavailable'));
+
+            const req = makeReq({ body: { email: 'test@user.com', password: 'password123' } });
+            const res = makeRes();
+
+            mockModel.findOne.mockReturnValueOnce({
+                select: jest.fn().mockResolvedValueOnce({
+                    _id: 'user_123', password: 'hashed_pw', email: 'test@user.com'
+                })
+            });
+            bcrypt.compare.mockResolvedValueOnce(true);
+
+            await controller.login(req, res);
+
+            const jsonArg = res.json.mock.calls[0]?.[0];
+            expect(JSON.stringify(jsonArg)).not.toMatch(/redis/i);
+            expect(JSON.stringify(jsonArg)).not.toMatch(/unavailable/i);
+        });
+    });
+
+    // ── 4. Normal lockout behavior when Redis is healthy ───────────────────
+    describe('lockout works correctly when Redis is healthy', () => {
+
+        test('returns 423 when account is locked out', async () => {
+            checkLockout.mockResolvedValue({ locked: true, retryAfterSeconds: 600 });
+
+            const req = makeReq({ body: { email: 'test@user.com', password: 'password123' } });
+            const res = makeRes();
+
+            await controller.login(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(423);
+        });
+
+        test('returns 400 on wrong password when Redis is healthy', async () => {
+            checkLockout.mockResolvedValue({ locked: false, retryAfterSeconds: 0 });
+            recordFailedAttempt.mockResolvedValue({ locked: false, retryAfterSeconds: 0, attempts: 1 });
+
+            const req = makeReq({ body: { email: 'test@user.com', password: 'wrongpassword' } });
+            const res = makeRes();
+
+            mockModel.findOne.mockReturnValueOnce({
+                select: jest.fn().mockResolvedValueOnce({
+                    _id: 'user_123', password: 'hashed_pw', email: 'test@user.com'
+                })
+            });
+            bcrypt.compare.mockResolvedValueOnce(false);
+
+            await controller.login(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+        });
+    });
+});
