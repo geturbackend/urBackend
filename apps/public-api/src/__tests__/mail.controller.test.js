@@ -66,6 +66,16 @@ jest.mock('@urbackend/common', () => {
         MailLog: {
             updateOne: jest.fn(),
             insertMany: jest.fn(),
+            find: jest.fn(() => ({
+                sort: jest.fn(() => ({
+                    skip: jest.fn(() => ({
+                        limit: jest.fn(() => ({
+                            lean: jest.fn(async () => []),
+                        })),
+                    })),
+                })),
+            })),
+            countDocuments: jest.fn().mockResolvedValue(0),
         },
     };
 });
@@ -523,5 +533,117 @@ describe('mail.controller', () => {
 
         expect(mockResendClient.broadcasts.create).toHaveBeenCalledWith(expect.objectContaining({ audienceId: 'aud_123' }));
         expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    describe('getMailLogs', () => {
+        test('returns mail logs with default pagination (page 1, limit 50)', async () => {
+            const req = makeReq();
+            req.query = {};
+            const res = makeRes();
+
+            const mockLogs = [{ _id: 'log_1', to: ['u1@ex.com'] }, { _id: 'log_2', to: ['u2@ex.com'] }];
+            MailLog.countDocuments.mockResolvedValueOnce(2);
+            
+            const leanMock = jest.fn().mockResolvedValueOnce(mockLogs);
+            const limitMock = jest.fn().mockReturnValue({ lean: leanMock });
+            const skipMock = jest.fn().mockReturnValue({ limit: limitMock });
+            const sortMock = jest.fn().mockReturnValue({ skip: skipMock });
+            MailLog.find.mockReturnValueOnce({ sort: sortMock });
+
+            await mailController.getMailLogs(req, res);
+
+            expect(MailLog.countDocuments).toHaveBeenCalledWith({ projectId: 'proj_1' });
+            expect(MailLog.find).toHaveBeenCalledWith({ projectId: 'proj_1' });
+            expect(sortMock).toHaveBeenCalledWith({ sentAt: -1 });
+            expect(skipMock).toHaveBeenCalledWith(0);
+            expect(limitMock).toHaveBeenCalledWith(50);
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({
+                success: true,
+                data: {
+                    items: mockLogs,
+                    total: 2,
+                    page: 1,
+                    limit: 50,
+                },
+                message: 'Mail logs retrieved successfully.',
+            });
+        });
+
+        test('honors custom page and limit parameters', async () => {
+            const req = makeReq();
+            req.query = { page: '3', limit: '10' };
+            const res = makeRes();
+
+            const mockLogs = [];
+            MailLog.countDocuments.mockResolvedValueOnce(25);
+
+            const leanMock = jest.fn().mockResolvedValueOnce(mockLogs);
+            const limitMock = jest.fn().mockReturnValue({ lean: leanMock });
+            const skipMock = jest.fn().mockReturnValue({ limit: limitMock });
+            const sortMock = jest.fn().mockReturnValue({ skip: skipMock });
+            MailLog.find.mockReturnValueOnce({ sort: sortMock });
+
+            await mailController.getMailLogs(req, res);
+
+            expect(skipMock).toHaveBeenCalledWith(20);
+            expect(limitMock).toHaveBeenCalledWith(10);
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({
+                success: true,
+                data: {
+                    items: mockLogs,
+                    total: 25,
+                    page: 3,
+                    limit: 10,
+                },
+                message: 'Mail logs retrieved successfully.',
+            });
+        });
+
+        test('caps the limit to 100 and boundaries check page/limit values', async () => {
+            const req = makeReq();
+            req.query = { page: '-5', limit: '500' };
+            const res = makeRes();
+
+            const mockLogs = [];
+            MailLog.countDocuments.mockResolvedValueOnce(5);
+
+            const leanMock = jest.fn().mockResolvedValueOnce(mockLogs);
+            const limitMock = jest.fn().mockReturnValue({ lean: leanMock });
+            const skipMock = jest.fn().mockReturnValue({ limit: limitMock });
+            const sortMock = jest.fn().mockReturnValue({ skip: skipMock });
+            MailLog.find.mockReturnValueOnce({ sort: sortMock });
+
+            await mailController.getMailLogs(req, res);
+
+            expect(skipMock).toHaveBeenCalledWith(0); // page -5 -> math.max(1, -5) -> page 1 -> skip 0
+            expect(limitMock).toHaveBeenCalledWith(100); // limit 500 capped at 100
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({
+                success: true,
+                data: {
+                    items: mockLogs,
+                    total: 5,
+                    page: 1,
+                    limit: 100,
+                },
+                message: 'Mail logs retrieved successfully.',
+            });
+        });
+
+        test('returns 401 when project context is missing', async () => {
+            const req = makeReq();
+            delete req.project;
+            const res = makeRes();
+
+            await mailController.getMailLogs(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(401);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                success: false,
+                message: 'Project context missing.',
+            }));
+        });
     });
 });

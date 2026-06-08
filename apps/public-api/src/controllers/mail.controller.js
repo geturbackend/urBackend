@@ -398,14 +398,27 @@ module.exports.getMailLogs = async (req, res) => {
       return res.status(401).json({ success: false, data: {}, message: "Project context missing." });
     }
 
+    const parsedPage = parseInt(req.query.page, 10);
+    const parsedLimit = parseInt(req.query.limit, 10);
+    const page = Math.max(1, !isNaN(parsedPage) ? parsedPage : 1);
+    const limit = Math.max(1, Math.min(!isNaN(parsedLimit) ? parsedLimit : 50, 100));
+    const skip = (page - 1) * limit;
+
+    const total = await MailLog.countDocuments({ projectId });
     const logs = await MailLog.find({ projectId })
       .sort({ sentAt: -1 })
-      .limit(50)
+      .skip(skip)
+      .limit(limit)
       .lean();
 
     return res.status(200).json({
       success: true,
-      data: logs,
+      data: {
+        items: logs,
+        total,
+        page,
+        limit,
+      },
       message: "Mail logs retrieved successfully."
     });
   } catch (err) {
