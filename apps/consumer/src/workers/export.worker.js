@@ -94,16 +94,23 @@ const initExportWorker = () => {
                 let first = true;
                 let exportedCount = 0;
 
-                for await (const doc of cursor) {
-                    if (exportedCount >= MAX_EXPORT_ROWS) {
-                        // We received the sentinel row; mark truncated and stop writing.
-                        wasTruncated = true;
-                        break;
+                // Wrap cursor iteration in try/finally to guarantee the cursor is
+                // closed even when the loop exits early via break (truncation case).
+                // An unclosed cursor holds a MongoDB server-side cursor open indefinitely.
+                try {
+                    for await (const doc of cursor) {
+                        if (exportedCount >= MAX_EXPORT_ROWS) {
+                            // We received the sentinel row; mark truncated and stop writing.
+                            wasTruncated = true;
+                            break;
+                        }
+                        exportedCount++;
+                        if (!first) await writeChunk(writeStream, ',\n');
+                        await writeChunk(writeStream, `    ${JSON.stringify(doc)}`);
+                        first = false;
                     }
-                    exportedCount++;
-                    if (!first) await writeChunk(writeStream, ',\n');
-                    await writeChunk(writeStream, `    ${JSON.stringify(doc)}`);
-                    first = false;
+                } finally {
+                    await cursor.close();
                 }
 
                 if (wasTruncated) {
@@ -112,17 +119,24 @@ const initExportWorker = () => {
 
                 await writeChunk(writeStream, '\n  ]\n');
                 await writeChunk(writeStream, '}\n');
-                writeStream.end();
 
-                await new Promise((resolve, reject) => {
+                // Register the finish listener BEFORE calling end() to avoid a
+                // race condition where the finish event fires before the promise
+                // listener is attached, causing the promise to never resolve.
+                const finishPromise = new Promise((resolve, reject) => {
                     writeStream.on('finish', resolve);
                     writeStream.on('error', reject);
                 });
+                writeStream.end();
+                await finishPromise;
 
                 console.log(`[ExportWorker] Temp file created, uploading...`);
-                const fileBuffer = fs.readFileSync(tempFilePath);
 
-                const { error } = await client.storage.from(bucket).upload(storagePath, fileBuffer, {
+                // Stream the file directly instead of reading it all into a Buffer.
+                // readFileSync would load the entire export (potentially hundreds of MB)
+                // into memory, negating the purpose of the temp-file strategy.
+                const readStream = fs.createReadStream(tempFilePath);
+                const { error } = await client.storage.from(bucket).upload(storagePath, readStream, {
                     contentType: 'application/json'
                 });
 
@@ -153,15 +167,21 @@ const initExportWorker = () => {
                 let first = true;
                 let exportedCount = 0;
 
-                for await (const doc of cursor) {
-                    if (exportedCount >= MAX_EXPORT_ROWS) {
-                        wasTruncated = true;
-                        break;
+                // Wrap cursor iteration in try/finally to guarantee the cursor is
+                // closed even when the loop exits early via break (truncation case).
+                try {
+                    for await (const doc of cursor) {
+                        if (exportedCount >= MAX_EXPORT_ROWS) {
+                            wasTruncated = true;
+                            break;
+                        }
+                        exportedCount++;
+                        if (!first) await writeChunk(passThrough, ',\n');
+                        await writeChunk(passThrough, `    ${JSON.stringify(doc)}`);
+                        first = false;
                     }
-                    exportedCount++;
-                    if (!first) await writeChunk(passThrough, ',\n');
-                    await writeChunk(passThrough, `    ${JSON.stringify(doc)}`);
-                    first = false;
+                } finally {
+                    await cursor.close();
                 }
 
                 if (wasTruncated) {
