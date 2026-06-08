@@ -38,6 +38,8 @@ const logger = (req, res, next) => {
                         path: req.originalUrl,
                         status: res.statusCode,
                         ip: req.ip
+                    }).catch((e) => {
+                        console.error("Logging failed:", e.message);
                     });
 
                     // Usage counter (Redis): daily API requests per project
@@ -68,7 +70,7 @@ const logger = (req, res, next) => {
                             responseTimeMs: parseFloat(responseTimeMs),
                         });
                     } catch (err) {
-                        console.error('Failed to save API analytics:', err);
+                        console.error('Failed to save API analytics:', err.message || err);
                     }
                 });
             }
