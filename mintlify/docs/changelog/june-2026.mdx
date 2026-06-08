@@ -3,6 +3,25 @@ title: Changelog
 description: What's new in urBackend — new features, improvements, and fixes.
 ---
 
+<Update label="2026-06-08" description="Week of 2026-06-01–2026-06-08" tags={["Fix", "Improvement"]}>
+## Improvements
+
+**Standardized API Response** — Standardized the API Response in Package-Middleware to handle errors consistently (#270)
+**Resilience Tests** — Added 503 resilience tests for Redis rejection paths to improve public API reliability (#267)
+**Quota Validation** — Enforced quota validation and usage accounting for bulk inserts to prevent abuse (#250)
+
+## Bug fixes
+
+- Prevent Auth page crash when loading users (#263)
+- Block verification field updates in profile endpoint (#271)
+- Add 2000 character max-length guard on queryBuilder prompt to prevent excessive input (#274)
+- Update error parsing to handle standardized AppError responses (#273)
+- Sanitize file.originalname before use in storage path to prevent security vulnerabilities (#275)
+- Expand isSafeUri to block RFC-1918 and cloud metadata IP ranges to improve security (#256)
+- Show string schema fields in RLS owner dropdown to improve user experience (#265)
+- Apply authLimiter to OTP and password reset routes to prevent abuse (#264)
+</Update>
+
 <Update label="2026-06-01" description="Week of 2026-05-25–2026-06-01">
   ## 🚀 New Features
 
