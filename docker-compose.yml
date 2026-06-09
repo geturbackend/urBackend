@@ -10,11 +10,14 @@ services:
 
   # ── Redis ─────────────────────────────────────────────────────────────────────
   redis:
-    image: redis:latest
+    image: redis:7-alpine
     container_name: urbackend_redis
     restart: unless-stopped
+    command: redis-server --maxclients 10000 --tcp-keepalive 60
     volumes:
       - redis_data:/data
+    sysctls:
+      - net.core.somaxconn=65535
 
   # ── Dashboard API (Admin Server) ─────────────────────────────────────────────
   dashboard-api:

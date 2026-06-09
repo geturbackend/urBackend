@@ -2,7 +2,10 @@ const rateLimit = require('express-rate-limit');
 const { Log, redis, ApiAnalytics, getDayKey, DEFAULT_DAILY_TTL_SECONDS, incrWithTtlAtomic } = require('@urbackend/common');
 const FIRST_API_SUCCESS_FLAG_TTL_SECONDS = 2 * 365 * 24 * 60 * 60;
 
-// Rate Limiter 
+// --- Redis-backed project rate limiter store ---
+const RedisStore = require('rate-limit-redis');
+
+// Rate Limiter (global IP-based)
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
@@ -13,6 +16,35 @@ const limiter = rateLimit({
         xForwardedForHeader: false,
         trustProxy: false
     }
+});
+
+// Project-specific Redis-backed rate limiter (replaces in-memory projectRateLimiter)
+const projectRateLimiter = rateLimit({
+    store: new RedisStore({
+        sendCommand: (...args) => redis.call(...args),
+        prefix: 'rl:project:',
+    }),
+    windowMs: 15 * 60 * 1000,
+    max: async (req, res) => {
+        if (req.project && req.project.rateLimit) {
+            return req.project.rateLimit;
+        }
+        return 500;
+    },
+    keyGenerator: (req, res) => {
+        if (!req.project || !req.project._id) {
+            return 'unauthorized';
+        }
+        return req.project._id.toString();
+    },
+    handler: (req, res, next, options) => {
+        res.status(options.statusCode).json({
+            error: "Too Many Requests",
+            message: "Project rate limit exceeded. Please try again later."
+        });
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
 });
 
 // Logger with API analytics

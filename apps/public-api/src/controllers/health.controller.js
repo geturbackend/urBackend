@@ -30,6 +30,56 @@ const getHealth = async (req, res) => {
     });
 };
 
+const getRedisHealth = async (req, res) => {
+    if (!redis || redis.status !== 'ready') {
+        return res.status(503).json({
+            status: 'error',
+            timestamp: new Date().toISOString(),
+            redis: { connected: false, error: 'Redis client not ready' },
+        });
+    }
+
+    try {
+        const info = await redis.info('stats');
+        const memory = await redis.info('memory');
+        const clients = await redis.info('clients');
+
+        const parseInfo = (raw, key) => {
+            const match = raw.match(new RegExp(`${key}:(\\d+)`));
+            return match ? parseInt(match[1], 10) : null;
+        };
+
+        const parseInfoStr = (raw, key) => {
+            const match = raw.match(new RegExp(`${key}:(.+)`));
+            return match ? match[1].trim() : null;
+        };
+
+        const connectedClients = parseInfo(clients, 'connected_clients');
+        const usedMemory = parseInfoStr(memory, 'used_memory_human');
+        const totalCommands = parseInfo(info, 'total_commands_processed');
+
+        return res.status(200).json({
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+            redis: {
+                connected: true,
+                status: redis.status,
+                connectedClients,
+                usedMemory,
+                totalCommandsProcessed: totalCommands,
+                reconnectAttempts: redis.options?.retryStrategy ? 'enabled' : 'disabled',
+            },
+        });
+    } catch (err) {
+        return res.status(503).json({
+            status: 'error',
+            timestamp: new Date().toISOString(),
+            redis: { connected: false, error: err.message },
+        });
+    }
+};
+
 module.exports = {
     getHealth,
+    getRedisHealth,
 };

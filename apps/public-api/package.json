@@ -28,6 +28,7 @@
     "express": "5.1.0",
     "express-rate-limit": "8.2.1",
     "ioredis": "5.10.0",
+    "rate-limit-redis": "4.0.2",
     "jsonwebtoken": "9.0.2",
     "mongoose": "8.19.2",
     "multer": "2.0.2",
@@ -37,6 +38,7 @@
     "zod": "4.1.13"
   },
   "devDependencies": {
+    "autocannon": "8.0.0",
     "jest": "30.3.0",
     "supertest": "7.2.2"
   }

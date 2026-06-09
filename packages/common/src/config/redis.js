@@ -11,14 +11,25 @@ if (!process.env.REDIS_URL) {
 
 const redis = new Redis(process.env.REDIS_URL, {
     retryStrategy(times) {
-        const delay = Math.min(times * 50, 2000);
-        if (times > 3) {
+        if (times > 10) {
             console.warn("⚠️ Redis: Max retries reached. Caching will be disabled.");
             return null; // Stop retrying
         }
+        const baseDelay = Math.min(Math.pow(2, times) * 100, 30000);
+        const jitter = Math.floor(Math.random() * 100);
+        const delay = baseDelay + jitter;
+        console.log(`🔁 Redis retry attempt ${times}, next delay ${delay}ms`);
         return delay;
     },
-    maxRetriesPerRequest: null // Allow requests to fail if not connected
+    maxRetriesPerRequest: 3,
+    enableReadyCheck: true,
+    keepAlive: 30000,
+    connectTimeout: 10000,
+    disconnectTimeout: 2000,
+    commandTimeout: 5000,
+    lazyConnect: false,
+    enableOfflineQueue: true,
+    offlineQueue: true,
 });
 
 redis.on('ready', () => {
