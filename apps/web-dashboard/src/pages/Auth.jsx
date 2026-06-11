@@ -83,7 +83,7 @@ export default function Auth() {
                     if (projRes.data.isAuthEnabled) {
                         const requestId = ++latestUsersRequestId.current;
                         const usersRes = await api.get(
-                            `/api/projects/${projectId}/collections/users/data?page=${page}&limit=${limit}`
+                            `/api/projects/${projectId}/admin/users?page=${page}&limit=${limit}`
                         );
 
                         if (!isMounted || requestId !== latestUsersRequestId.current) return;
@@ -169,7 +169,7 @@ export default function Auth() {
     const handleDeleteUser = async (userId) => {
         if (!confirm('Delete this user? This cannot be undone.')) return;
         try {
-            await api.delete(`/api/projects/${projectId}/collections/users/data/${userId}`);
+            await api.delete(`/api/projects/${projectId}/admin/users/${userId}`);
             setUsers(prevUsers => {
                 const nextUsers = normalizeUsersResponse(prevUsers).filter(
                     u => u._id !== userId
@@ -251,7 +251,7 @@ export default function Auth() {
                             toast.success('User created successfully');
                             const requestId = ++latestUsersRequestId.current;
                             const usersRes = await api.get(
-                                `/api/projects/${projectId}/collections/users/data?page=${page}&limit=${limit}`
+                                `/api/projects/${projectId}/admin/users?page=${page}&limit=${limit}`
                             );
 
                             if (requestId !== latestUsersRequestId.current) return;

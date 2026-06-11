@@ -48,7 +48,7 @@ const {
     sendMarketingBroadcast
 } = require("../controllers/project.controller");
 
-const { createAdminUser, resetPassword, getUserDetails, updateAdminUser, listUserSessions, revokeUserSession } = require('../controllers/userAuth.controller');
+const { createAdminUser, resetPassword, getUserDetails, updateAdminUser, listAdminUsers, deleteAdminUser, listUserSessions, revokeUserSession } = require('../controllers/userAuth.controller');
 
 const exportController = require('../controllers/dbExport.controller');
 
@@ -146,8 +146,10 @@ router.patch('/:projectId/collections/:collectionName/rls', authMiddleware, veri
 
 router.post('/:projectId/admin/users', authMiddleware, loadProjectForAdmin, checkAuthEnabled, createAdminUser);
 router.patch('/:projectId/admin/users/:userId/password', authMiddleware, loadProjectForAdmin, checkAuthEnabled, resetPassword);
+router.get('/:projectId/admin/users', authMiddleware, loadProjectForAdmin, checkAuthEnabled, listAdminUsers);
 router.get('/:projectId/admin/users/:userId', authMiddleware, loadProjectForAdmin, checkAuthEnabled, getUserDetails);
 router.put('/:projectId/admin/users/:userId', authMiddleware, loadProjectForAdmin, checkAuthEnabled, updateAdminUser);
+router.delete('/:projectId/admin/users/:userId', authMiddleware, loadProjectForAdmin, checkAuthEnabled, deleteAdminUser);
 
 // SESSION MANAGEMENT (Admin)
 router.get('/:projectId/admin/users/:userId/sessions', authMiddleware, loadProjectForAdmin, checkAuthEnabled, listUserSessions);

@@ -238,6 +238,55 @@ module.exports.createAdminUser = async (req, res) => {
     }
 }
 
+module.exports.listAdminUsers = async (req, res) => {
+    try {
+        const project = req.project;
+        const usersColConfig = project.collections.find(c => c.name === 'users');
+        if (!usersColConfig) return res.status(404).json({ error: "Auth collection not found" });
+
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const limit = Math.max(1, Math.min(parseInt(req.query.limit, 10) || 50, 100));
+        const skip = (page - 1) * limit;
+
+        const connection = await getConnection(project._id);
+        const Model = getCompiledModel(connection, usersColConfig, project._id, project.resources.db.isExternal);
+
+        const [items, total] = await Promise.all([
+            Model.find({}, { password: 0 }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+            Model.countDocuments()
+        ]);
+
+        res.json({
+            items,
+            total,
+            page,
+            limit
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+module.exports.deleteAdminUser = async (req, res) => {
+    try {
+        const project = req.project;
+        const { userId } = req.params;
+
+        const usersColConfig = project.collections.find(c => c.name === 'users');
+        if (!usersColConfig) return res.status(404).json({ error: "Auth collection not found" });
+
+        const connection = await getConnection(project._id);
+        const Model = getCompiledModel(connection, usersColConfig, project._id, project.resources.db.isExternal);
+
+        const result = await Model.deleteOne({ _id: new mongoose.Types.ObjectId(userId) });
+        if (result.deletedCount === 0) return res.status(404).json({ error: "User not found" });
+
+        res.json({ message: "User deleted successfully" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
 // PATCH REQ FOR ADMIN RESET PASSWORD
 module.exports.resetPassword = async (req, res) => {
     try {
