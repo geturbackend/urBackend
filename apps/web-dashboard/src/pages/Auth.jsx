@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
@@ -36,6 +36,7 @@ export default function Auth() {
     const [isSocialAuthModalOpen, setIsSocialAuthModalOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState(null); // user being edited
+    const latestUsersRequestId = useRef(0);
     const [selectedProvider, setSelectedProvider] = useState('github');
     const [authProviders, setAuthProviders] = useState({
         github: { enabled: false, clientId: '', clientSecret: '', hasClientSecret: false },
@@ -80,10 +81,12 @@ export default function Auth() {
                     setProject(projRes.data);
                     if (projRes.data.authProviders) setAuthProviders(projRes.data.authProviders);
                     if (projRes.data.isAuthEnabled) {
+                        const requestId = ++latestUsersRequestId.current;
                         const usersRes = await api.get(
                             `/api/projects/${projectId}/collections/users/data?page=${page}&limit=${limit}`
                         );
 
+                        if (!isMounted || requestId !== latestUsersRequestId.current) return;
                         setUsers(normalizeUsersResponse(usersRes.data));
                         setTotalRecords(
                             usersRes.data?.data?.total ||
@@ -167,7 +170,10 @@ export default function Auth() {
         if (!confirm('Delete this user? This cannot be undone.')) return;
         try {
             await api.delete(`/api/projects/${projectId}/collections/users/data/${userId}`);
-            setUsers(prev => normalizeUsersResponse(prev).filter(u => u._id !== userId));
+            const nextUsers = normalizeUsersResponse(users).filter(u => u._id !== userId);
+            setUsers(nextUsers);
+            setTotalRecords(prev => Math.max(prev - 1, 0));
+            if (nextUsers.length === 0 && page > 1) setPage(page - 1);
             toast.success('User deleted');
         } catch (err) {
             toast.error(err.response?.data?.message || err.response?.data?.error || 'Failed to delete user');
@@ -234,10 +240,12 @@ export default function Auth() {
                         } else {
                             await api.post(`/api/projects/${projectId}/admin/users`, userData);
                             toast.success('User created successfully');
+                            const requestId = ++latestUsersRequestId.current;
                             const usersRes = await api.get(
                                 `/api/projects/${projectId}/collections/users/data?page=${page}&limit=${limit}`
                             );
 
+                            if (requestId !== latestUsersRequestId.current) return;
                             setUsers(normalizeUsersResponse(usersRes.data));
                             setTotalRecords(
                                 usersRes.data?.data?.total ||
