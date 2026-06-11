@@ -28,6 +28,8 @@ jest.mock('../controllers/userAuth.controller', () => ({
   resetPassword: jest.fn((_req, res) => res.json({ ok: true })),
   getUserDetails: jest.fn((_req, res) => res.json({ ok: true })),
   updateAdminUser: jest.fn((_req, res) => res.json({ ok: true })),
+  listAdminUsers: jest.fn((_req, res) => res.json({ ok: true })),
+  deleteAdminUser: jest.fn((_req, res) => res.json({ ok: true })),
   listUserSessions: jest.fn((_req, res) => res.json({ ok: true })),
   revokeUserSession: jest.fn((_req, res) => res.json({ ok: true })),
 }));
