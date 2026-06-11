@@ -78,7 +78,12 @@ describe('api_usage middleware', () => {
             status: 200,
             ip: '127.0.0.1',
         });
-        expect(mockIncrWithTtlAtomic).toHaveBeenCalled();
+        // Assert the exact Redis key pattern and TTL value, not just invocation
+        expect(mockIncrWithTtlAtomic).toHaveBeenCalledWith(
+            expect.anything(), // redis instance
+            'project:usage:req:count:test_project_id:2026-06-08',
+            86400
+        );
 
         // Wait for setImmediate callbacks to execute
         await new Promise((resolve) => setImmediate(resolve));
