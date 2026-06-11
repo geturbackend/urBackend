@@ -8,7 +8,7 @@ const { authEmailQueue } = require('@urbackend/common');
 const { loginSchema, signupSchema, userSignupSchema, resetPasswordSchema, onlyEmailSchema, verifyOtpSchema, changePasswordSchema, sanitize } = require('@urbackend/common');
 const { getConnection } = require('@urbackend/common');
 const { getCompiledModel } = require('@urbackend/common');
-const { getUserActiveSessions, getRefreshSession, revokeSessionChain } = require('@urbackend/common');
+const { AppError, getUserActiveSessions, getRefreshSession, revokeSessionChain } = require('@urbackend/common');
 
 const hasRequiredField = (usersColConfig, fieldKey) => {
     const model = usersColConfig?.model || [];
@@ -238,11 +238,11 @@ module.exports.createAdminUser = async (req, res) => {
     }
 }
 
-module.exports.listAdminUsers = async (req, res) => {
+module.exports.listAdminUsers = async (req, res, next) => {
     try {
         const project = req.project;
         const usersColConfig = project.collections.find(c => c.name === 'users');
-        if (!usersColConfig) return res.status(404).json({ error: "Auth collection not found" });
+        if (!usersColConfig) return next(new AppError(404, "Auth collection not found"));
 
         const page = Math.max(1, parseInt(req.query.page, 10) || 1);
         const limit = Math.max(1, Math.min(parseInt(req.query.limit, 10) || 50, 100));
@@ -257,33 +257,42 @@ module.exports.listAdminUsers = async (req, res) => {
         ]);
 
         res.json({
-            items,
-            total,
-            page,
-            limit
+            success: true,
+            data: { items, total, page, limit },
+            message: ""
         });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(new AppError(500, "Failed to list admin users"));
     }
 };
 
-module.exports.deleteAdminUser = async (req, res) => {
+module.exports.deleteAdminUser = async (req, res, next) => {
     try {
         const project = req.project;
         const { userId } = req.params;
 
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return next(new AppError(400, "Invalid user ID"));
+        }
+
         const usersColConfig = project.collections.find(c => c.name === 'users');
-        if (!usersColConfig) return res.status(404).json({ error: "Auth collection not found" });
+        if (!usersColConfig) return next(new AppError(404, "Auth collection not found"));
 
         const connection = await getConnection(project._id);
         const Model = getCompiledModel(connection, usersColConfig, project._id, project.resources.db.isExternal);
 
         const result = await Model.deleteOne({ _id: new mongoose.Types.ObjectId(userId) });
-        if (result.deletedCount === 0) return res.status(404).json({ error: "User not found" });
+        if (result.deletedCount === 0) {
+            return next(new AppError(404, "User not found"));
+        }
 
-        res.json({ message: "User deleted successfully" });
+        res.json({
+            success: true,
+            data: null,
+            message: "User deleted successfully"
+        });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(new AppError(500, "Failed to delete admin user"));
     }
 };
 
