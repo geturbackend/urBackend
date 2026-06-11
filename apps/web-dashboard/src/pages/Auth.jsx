@@ -170,10 +170,19 @@ export default function Auth() {
         if (!confirm('Delete this user? This cannot be undone.')) return;
         try {
             await api.delete(`/api/projects/${projectId}/collections/users/data/${userId}`);
-            const nextUsers = normalizeUsersResponse(users).filter(u => u._id !== userId);
-            setUsers(nextUsers);
+            setUsers(prevUsers => {
+                const nextUsers = normalizeUsersResponse(prevUsers).filter(
+                    u => u._id !== userId
+                );
+
+                if (nextUsers.length === 0) {
+                    setPage(prevPage => (prevPage > 1 ? prevPage - 1 : prevPage));
+                }
+
+                return nextUsers;
+            });
+
             setTotalRecords(prev => Math.max(prev - 1, 0));
-            if (nextUsers.length === 0 && page > 1) setPage(page - 1);
             toast.success('User deleted');
         } catch (err) {
             toast.error(err.response?.data?.message || err.response?.data?.error || 'Failed to delete user');
