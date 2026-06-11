@@ -8,6 +8,7 @@ import AuthHeader from '../components/Auth/AuthHeader';
 import SocialAuthConfig from '../components/Auth/SocialAuthConfig';
 import SocialAuthModal from '../components/Auth/SocialAuthModal';
 import UserTable from '../components/Auth/UserTable';
+import Pagination from '../components/Database/Pagination';
 import SectionHeader from '../components/Dashboard/SectionHeader';
 import AddRecordDrawer from '../components/AddRecordDrawer';
 import { PUBLIC_API_URL } from '../config';
@@ -24,6 +25,9 @@ export default function Auth() {
     const navigate = useNavigate();
 
     const [users, setUsers] = useState([]);
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(50);
+    const [totalRecords, setTotalRecords] = useState(0);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [project, setProject] = useState(null);
@@ -76,8 +80,16 @@ export default function Auth() {
                     setProject(projRes.data);
                     if (projRes.data.authProviders) setAuthProviders(projRes.data.authProviders);
                     if (projRes.data.isAuthEnabled) {
-                        const usersRes = await api.get(`/api/projects/${projectId}/collections/users/data`);
+                        const usersRes = await api.get(
+                            `/api/projects/${projectId}/collections/users/data?page=${page}&limit=${limit}`
+                        );
+
                         setUsers(normalizeUsersResponse(usersRes.data));
+                        setTotalRecords(
+                            usersRes.data?.data?.total ||
+                            usersRes.data?.total ||
+                            normalizeUsersResponse(usersRes.data).length
+                        );
                     }
                 }
             } catch { toast.error("Failed to load auth details"); }
@@ -85,7 +97,7 @@ export default function Auth() {
         };
         fetchData();
         return () => { isMounted = false; };
-    }, [projectId]);
+    }, [projectId, page, limit]);
 
     const handleEnableAuth = async () => {
         if (!hasUserCollection) return toast.error("Please create a 'users' collection first.");
@@ -222,8 +234,16 @@ export default function Auth() {
                         } else {
                             await api.post(`/api/projects/${projectId}/admin/users`, userData);
                             toast.success('User created successfully');
-                            const usersRes = await api.get(`/api/projects/${projectId}/collections/users/data`);
+                            const usersRes = await api.get(
+                                `/api/projects/${projectId}/collections/users/data?page=${page}&limit=${limit}`
+                            );
+
                             setUsers(normalizeUsersResponse(usersRes.data));
+                            setTotalRecords(
+                                usersRes.data?.data?.total ||
+                                usersRes.data?.total ||
+                                normalizeUsersResponse(usersRes.data).length
+                            );
                         }
                         setIsAddModalOpen(false);
                         setEditingUser(null);
@@ -294,6 +314,16 @@ export default function Auth() {
                                 onEdit={handleEditUser}
                                 onResetPassword={(u) => { setResetPasswordUser(u); setNewPassword(''); }}
                                 onDelete={handleDeleteUser}
+                            />
+                            <Pagination
+                                total={totalRecords}
+                                page={page}
+                                limit={limit}
+                                onPageChange={(p) => setPage(p)}
+                                onLimitChange={(newLimit) => {
+                                    setLimit(newLimit);
+                                    setPage(1);
+                                }}
                             />
                         </div>
                     </div>
