@@ -109,14 +109,14 @@ describe('UrAuth Component', () => {
   });
 
   it('only shows GitHub login when configured via providers object', () => {
-    render(<UrAuth providers={{ github: true }} />);
+    render(<UrAuth providers={{ github: true, emailPassword: false }} />);
     expect(screen.queryByPlaceholderText('Enter your email address')).not.toBeInTheDocument();
     expect(screen.getByText('Continue with GitHub')).toBeInTheDocument();
     expect(screen.queryByText('Continue with Google')).not.toBeInTheDocument();
   });
 
   it('displays message when all authentication methods are disabled', () => {
-    render(<UrAuth providers={{}} />);
+    render(<UrAuth providers={{ google: false, github: false, emailPassword: false }} />);
     expect(screen.getByText('No authentication methods are enabled for this screen.')).toBeInTheDocument();
   });
 
@@ -138,11 +138,11 @@ describe('UrAuth Component', () => {
   });
 
   it('supports logoUrl branding alias', () => {
-    const { container } = render(
+    render(
       <UrAuth branding={{ appName: 'My Custom App', logoUrl: '/assets/logo-url.png' }} />
     );
-    const logoImg = container.querySelector('img');
+    const logoImg = screen.getByRole('img', { name: 'My Custom App' });
     expect(logoImg).toBeInTheDocument();
-    expect(logoImg?.getAttribute('src')).toBe('/assets/logo-url.png');
+    expect(logoImg.getAttribute('src')).toBe('/assets/logo-url.png');
   });
 });

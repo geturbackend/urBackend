@@ -76,10 +76,10 @@ or:
 ### Example: Disable all methods
 
 ```tsx
-<UrAuth providers={{}} />
+<UrAuth providers={{ google: false, github: false, emailPassword: false }} />
 ```
 
-This renders the built-in `"No authentication methods are enabled for this screen."` message.
+This renders the built-in `No authentication methods are enabled for this screen.` message.
 
 ### `enableEmailPassword` interaction
 
