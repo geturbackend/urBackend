@@ -94,6 +94,12 @@ describe('UrAuth Component', () => {
     expect(primaryButton.style.background).toContain('#4F46E5');
   });
 
+  it('applies custom primary color from colors.primaryColor', () => {
+    render(<UrAuth colors={{ primaryColor: '#6366f1' }} />);
+    const primaryButton = screen.getByRole('button', { name: 'Log In' });
+    expect(primaryButton.style.background).toContain('#6366f1');
+  });
+
   it('hides email/password form when disabled via providers object', () => {
     render(<UrAuth providers={{ emailPassword: false, google: true }} />);
     expect(screen.queryByPlaceholderText('Enter your email address')).not.toBeInTheDocument();
@@ -129,5 +135,14 @@ describe('UrAuth Component', () => {
     const logoImg = container.querySelector('img');
     expect(logoImg).toBeInTheDocument();
     expect(logoImg?.getAttribute('src')).toBe('/assets/logo.png');
+  });
+
+  it('supports logoUrl branding alias', () => {
+    const { container } = render(
+      <UrAuth branding={{ appName: 'My Custom App', logoUrl: '/assets/logo-url.png' }} />
+    );
+    const logoImg = container.querySelector('img');
+    expect(logoImg).toBeInTheDocument();
+    expect(logoImg?.getAttribute('src')).toBe('/assets/logo-url.png');
   });
 });

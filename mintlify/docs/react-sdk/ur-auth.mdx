@@ -16,7 +16,8 @@ export default function LoginPage() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center' }}>
       <UrAuth 
-        providers={['google', 'github']} 
+        providers={['google', 'github']}
+        enableEmailPassword={true}
         theme="light" 
       />
     </div>
@@ -28,12 +29,185 @@ export default function LoginPage() {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `theme` | `'light' \| 'dark'` | `'light'` | The visual theme of the component. |
-| `providers` | `Array<'google' \| 'github'>` | `[]` | Social auth providers to display. These must be enabled in your urBackend Dashboard first. |
+| `theme` | `'light' \| 'dark'` | `'light'` | Visual theme mode (`ThemeMode` internally). |
+| `providers` | `('google' \| 'github')[] \| { google?: boolean; github?: boolean; emailPassword?: boolean }` | `['google', 'github']` | Auth methods to show. Supports legacy array form and v0.2.0 object form. |
+| `enableEmailPassword` | `boolean` | `true` | Top-level shorthand to enable/disable email/password auth. |
+| `colors` | `Partial<AuthColors>` | `undefined` | Overrides for auth widget theme colors. |
+| `branding` | `AuthBranding` | `undefined` | Branding/white-label configuration (logo, app name, subtitle, brand color). |
+| `labels` | `Partial<AuthLabels>` | `undefined` | Text/copy overrides for tabs, titles, buttons, and footer prompts. |
+| `onSuccess` | `() => void` | `undefined` | Called after successful sign-in or sign-up flow. |
 
-## Customizing the Design
+> All customization props are optional. If omitted, `<UrAuth>` falls back to the same default behavior/UI style as v0.1.x.
 
-The `<UrAuth>` component uses a modern, square design aesthetic (sharp corners). It adapts well to both light and dark backgrounds depending on the `theme` prop you provide.
+## `providers` and `enableEmailPassword`
+
+`providers` now accepts either:
+
+```ts
+('google' | 'github')[]
+```
+
+or:
+
+```ts
+{
+  google?: boolean;
+  github?: boolean;
+  emailPassword?: boolean;
+}
+```
+
+### Example: Email/password only
+
+```tsx
+<UrAuth
+  providers={{ google: false, github: false, emailPassword: true }}
+/>
+```
+
+### Example: Google only
+
+```tsx
+<UrAuth
+  providers={{ google: true, github: false, emailPassword: false }}
+/>
+```
+
+### Example: Disable all methods
+
+```tsx
+<UrAuth providers={{}} />
+```
+
+This renders the built-in `"No authentication methods are enabled for this screen."` message.
+
+### `enableEmailPassword` interaction
+
+- `enableEmailPassword` is a shorthand global toggle.
+- When `providers` is an object and includes `emailPassword`, that object value takes precedence.
+- If `providers.emailPassword` is omitted, `enableEmailPassword` is used.
+
+## `colors` theme customization
+
+Use `colors` to override theme tokens:
+
+```ts
+type AuthColors = {
+  background: string;
+  surface: string;
+  text: string;
+  textMuted: string;
+  border: string;
+  inputBackground: string;
+  primary: string;
+  primaryColor?: string; // alias for primary button color
+  primaryText: string;
+  footerBackground: string;
+  dividerText: string;
+  socialButtonBackground: string;
+};
+```
+
+Set a custom brand color on the primary sign-in button:
+
+```tsx
+<UrAuth colors={{ primaryColor: '#6366f1' }} />
+```
+
+## `branding` white-label options
+
+```ts
+type AuthBranding = {
+  brandName?: string;
+  appName?: string;
+  title?: string;
+  subtitle?: string;
+  logo?: React.ReactNode | string; // URL string or custom React node
+  logoUrl?: string; // URL alias
+  primaryColor?: string;
+};
+```
+
+Example:
+
+```tsx
+<UrAuth
+  branding={{
+    appName: 'Acme',
+    logoUrl: 'https://acme.com/logo.png',
+    subtitle: 'Secure access for your team',
+  }}
+/>
+```
+
+## `labels` text overrides (with aliases)
+
+Supported label keys:
+
+- Tabs: `loginTab` (`signInTab` alias), `signupTab` (`signUpTab` alias)
+- Titles: `loginTitle` (`signInTitle` alias), `signupTitle` (`signUpTitle` alias), `forgotTitle`, `resetTitle`, `forgotSubtitle`, `resetSubtitle`
+- Buttons: `loginButton` (`signInButton` alias), `signupButton` (`signUpButton` alias), `forgotButton`, `resetButton`, `googleButton`, `githubButton`
+- Field labels/placeholders: `emailLabel`, `emailPlaceholder`, `passwordLabel`, `passwordPlaceholder`, `nameLabel`, `namePlaceholder`, `otpLabel`, `otpPlaceholder`
+- Footer/misc: `forgotPasswordLink`, `socialDivider`, `footerSigninPrompt`, `footerSignupPrompt`, `footerForgotPrompt`, `noAuthMethods`
+
+Example:
+
+```tsx
+<UrAuth
+  labels={{
+    signInTitle: 'Welcome back to Acme',
+    signInButton: 'Continue',
+    footerSigninPrompt: 'Need an account?',
+  }}
+/>
+```
+
+## Full v0.2.0 customization example
+
+```tsx
+import { UrAuth, GuestRoute } from '@urbackend/react';
+
+export default function LoginPage() {
+  return (
+    <GuestRoute fallback={<div>Loading...</div>} onRedirect={() => (window.location.href = '/dashboard')}>
+      <UrAuth
+        providers={{
+          github: true,
+          google: true,
+          emailPassword: true,
+        }}
+        enableEmailPassword={true}
+        theme="light"
+        colors={{
+          primaryColor: '#4F46E5',
+          socialButtonBackground: '#ffffff',
+        }}
+        branding={{
+          appName: 'My Custom App',
+          logoUrl: 'https://vite.dev/logo.svg',
+          subtitle: 'Secure authentication',
+          primaryColor: '#4F46E5',
+        }}
+        labels={{
+          signInTitle: 'Welcome back to Custom App',
+          signInButton: 'Proceed to App',
+          signUpButton: 'Create your account',
+        }}
+        onSuccess={() => {
+          // route after successful auth
+          window.location.href = '/dashboard';
+        }}
+      />
+    </GuestRoute>
+  );
+}
+```
+
+## Migration (v0.1.x → v0.2.0)
+
+- `providers` now also accepts object form: `{ google?, github?, emailPassword? }`
+- Existing array usage (`['google', 'github']`) still works
+- No breaking API changes otherwise
 
 ## Behavior
 

@@ -13,6 +13,7 @@ interface AuthColors {
   border: string;
   inputBackground: string;
   primary: string;
+  primaryColor?: string;
   primaryText: string;
   footerBackground: string;
   dividerText: string;
@@ -25,6 +26,7 @@ interface AuthBranding {
   title?: string;
   subtitle?: string;
   logo?: React.ReactNode | string;
+  logoUrl?: string;
   primaryColor?: string;
 }
 
@@ -200,7 +202,7 @@ export const UrAuth: React.FC<UrAuthProps> = ({
 };
 
   const themeColors = { ...defaultThemeColors[theme], ...colors };
-  const primaryColor = branding?.primaryColor || themeColors.primary;
+  const primaryColor = branding?.primaryColor || colors?.primaryColor || themeColors.primary;
   const secondStopColor = adjustColor(primaryColor, -15);
 
   let isGoogleEnabled = true;
@@ -222,6 +224,7 @@ export const UrAuth: React.FC<UrAuthProps> = ({
   const hasSocialAuth = isGoogleEnabled || isGithubEnabled;
   const brandName = branding?.brandName || branding?.appName || branding?.title || 'urBackend';
   const headerTitle = branding?.title || brandName;
+  const brandingLogo = branding?.logo ?? branding?.logoUrl;
   const headerSubtitle = branding?.subtitle || (mode === 'signin'
     ? text.loginTitle
     : mode === 'signup'
@@ -524,15 +527,15 @@ export const UrAuth: React.FC<UrAuthProps> = ({
       )}
       
       <div style={styles.body}>
-        {(branding?.logo || branding?.brandName || branding?.appName || branding?.title || branding?.subtitle || headerTitle || headerSubtitle) && (
+        {(brandingLogo || branding?.brandName || branding?.appName || branding?.title || branding?.subtitle || headerTitle || headerSubtitle) && (
           <div style={styles.header}>
             <div style={styles.brandRow}>
-              {branding?.logo ? (
+              {brandingLogo ? (
                 <div style={styles.brandLogo}>
-                  {typeof branding.logo === 'string' ? (
-                    <img src={branding.logo} alt={brandName} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  {typeof brandingLogo === 'string' ? (
+                    <img src={brandingLogo} alt={brandName} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                   ) : (
-                    branding.logo
+                    brandingLogo
                   )}
                 </div>
               ) : (
