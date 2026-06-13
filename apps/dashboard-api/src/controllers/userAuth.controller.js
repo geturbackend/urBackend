@@ -8,7 +8,13 @@ const { authEmailQueue } = require('@urbackend/common');
 const { loginSchema, signupSchema, userSignupSchema, resetPasswordSchema, onlyEmailSchema, verifyOtpSchema, changePasswordSchema, sanitize } = require('@urbackend/common');
 const { getConnection } = require('@urbackend/common');
 const { getCompiledModel } = require('@urbackend/common');
-const { AppError, getUserActiveSessions, getRefreshSession, revokeSessionChain } = require('@urbackend/common');
+const {
+    AppError,
+    ApiResponse,
+    getUserActiveSessions,
+    getRefreshSession,
+    revokeSessionChain
+} = require('@urbackend/common');
 
 const hasRequiredField = (usersColConfig, fieldKey) => {
     const model = usersColConfig?.model || [];
@@ -256,11 +262,10 @@ module.exports.listAdminUsers = async (req, res, next) => {
             Model.countDocuments()
         ]);
 
-        res.json({
-            success: true,
-            data: { items, total, page, limit },
-            message: ""
-        });
+        return new ApiResponse(
+            { items, total, page, limit },
+            ""
+        ).send(res);
     } catch (err) {
         next(new AppError(500, "Failed to list admin users"));
     }
@@ -286,11 +291,10 @@ module.exports.deleteAdminUser = async (req, res, next) => {
             return next(new AppError(404, "User not found"));
         }
 
-        res.json({
-            success: true,
-            data: null,
-            message: "User deleted successfully"
-        });
+        return new ApiResponse(
+            null,
+            "User deleted successfully"
+        ).send(res);
     } catch (err) {
         next(new AppError(500, "Failed to delete admin user"));
     }
