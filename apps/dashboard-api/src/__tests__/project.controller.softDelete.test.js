@@ -24,7 +24,8 @@ jest.mock('@urbackend/common', () => ({
             this.statusCode = statusCode;
             this.isOperational = true;
         }
-    }
+    },
+    getProjectAccessQuery: jest.fn((userId) => ({ owner: userId }))
 }));
 
 const { deleteRow, recoverRow } = require('../controllers/project.controller');

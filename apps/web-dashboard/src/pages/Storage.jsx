@@ -15,18 +15,27 @@ export default function Storage() {
     const [uploading, setUploading] = useState(false);
     const [deletingAll, setDeletingAll] = useState(false);
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+    const [project, setProject] = useState(null);
     const fileInputRef = useRef(null);
 
     const fetchFiles = useCallback(async () => {
         try {
-            const res = await api.get(`/api/projects/${projectId}/storage/files`);
-            setFiles(res.data);
+            const [projRes, filesRes] = await Promise.all([
+                api.get(`/api/projects/${projectId}`),
+                api.get(`/api/projects/${projectId}/storage/files`)
+            ]);
+            setProject(projRes.data);
+            setFiles(filesRes.data);
         } catch {
             toast.error("Failed to load files");
         } finally {
             setLoading(false);
         }
     }, [projectId]);
+
+    const myMember = project?.members?.find(m => m.user === user?._id || m.email === user?.email);
+    const myRole = project?.owner === user?._id ? 'owner' : (myMember?.role || 'viewer');
+    const isViewer = myRole === 'viewer';
 
     useEffect(() => {
         let isMounted = true;
@@ -162,7 +171,7 @@ export default function Storage() {
                         </button>
                     </div>
 
-                    {files.length > 0 && (
+                    {files.length > 0 && !isViewer && (
                         <button
                             onClick={handleDeleteAll}
                             className="btn btn-danger"
@@ -173,16 +182,20 @@ export default function Storage() {
                             {deletingAll ? 'Deleting...' : 'Delete All'}
                         </button>
                     )}
-                    <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileSelect} />
-                    <button
-                        onClick={() => fileInputRef.current.click()}
-                        className="btn btn-primary"
-                        disabled={uploading}
-                        style={{ height: '30px', fontSize: '0.75rem', padding: '0 12px', gap: '5px' }}
-                    >
-                        <UploadCloud size={13} />
-                        {uploading ? 'Uploading...' : 'Upload'}
-                    </button>
+                    {!isViewer && (
+                        <>
+                            <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileSelect} />
+                            <button
+                                onClick={() => fileInputRef.current.click()}
+                                className="btn btn-primary"
+                                disabled={uploading}
+                                style={{ height: '30px', fontSize: '0.75rem', padding: '0 12px', gap: '5px' }}
+                            >
+                                <UploadCloud size={13} />
+                                {uploading ? 'Uploading...' : 'Upload'}
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -196,9 +209,15 @@ export default function Storage() {
                     <p style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem', marginBottom: '1.5rem', maxWidth: '320px', margin: '0 auto 1.5rem auto', lineHeight: 1.5 }}>
                         Upload images, documents, or any assets to your storage bucket.
                     </p>
-                    <button onClick={() => fileInputRef.current.click()} className="btn btn-secondary" style={{ fontSize: '0.78rem', height: '30px' }}>
-                        Upload your first file
-                    </button>
+                    {isViewer ? (
+                        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem', marginBottom: '1.5rem' }}>
+                            Storage is empty.
+                        </p>
+                    ) : (
+                        <button onClick={() => fileInputRef.current.click()} className="btn btn-secondary" style={{ fontSize: '0.78rem', height: '30px' }}>
+                            Upload your first file
+                        </button>
+                    )}
                 </div>
             ) : viewMode === 'grid' ? (
                 /* Grid View */
@@ -236,9 +255,11 @@ export default function Storage() {
                                             <a href={file.publicUrl} target="_blank" rel="noreferrer" title="View file" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', cursor: 'pointer', color: 'var(--color-text-muted)', gap: '3px', fontSize: '0.65rem', textDecoration: 'none' }}>
                                                 <ExternalLink size={11} /> View
                                             </a>
-                                            <button onClick={() => handleDelete(file.path)} title="Delete" style={{ padding: '4px 6px', background: 'rgba(234,84,85,0.08)', border: '1px solid rgba(234,84,85,0.2)', borderRadius: '4px', cursor: 'pointer', color: '#ea5455', display: 'flex', alignItems: 'center' }}>
-                                                <Trash2 size={11} />
-                                            </button>
+                                            {!isViewer && (
+                                                <button onClick={() => handleDelete(file.path)} title="Delete" style={{ padding: '4px 6px', background: 'rgba(234,84,85,0.08)', border: '1px solid rgba(234,84,85,0.2)', borderRadius: '4px', cursor: 'pointer', color: '#ea5455', display: 'flex', alignItems: 'center' }}>
+                                                    <Trash2 size={11} />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -293,9 +314,11 @@ export default function Storage() {
                                                     <a href={file.publicUrl} target="_blank" rel="noreferrer" style={{ padding: '4px 7px', background: 'transparent', border: '1px solid var(--color-border)', borderRadius: '4px', cursor: 'pointer', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', textDecoration: 'none' }}>
                                                         <ExternalLink size={11} /> View
                                                     </a>
-                                                    <button onClick={() => handleDelete(file.path)} title="Delete" style={{ padding: '4px 7px', background: 'rgba(234,84,85,0.08)', border: '1px solid rgba(234,84,85,0.2)', borderRadius: '4px', cursor: 'pointer', color: '#ea5455', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem' }}>
-                                                        <Trash2 size={11} /> Delete
-                                                    </button>
+                                                    {!isViewer && (
+                                                        <button onClick={() => handleDelete(file.path)} title="Delete" style={{ padding: '4px 7px', background: 'rgba(234,84,85,0.08)', border: '1px solid rgba(234,84,85,0.2)', borderRadius: '4px', cursor: 'pointer', color: '#ea5455', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem' }}>
+                                                            <Trash2 size={11} /> Delete
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>

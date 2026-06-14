@@ -6,6 +6,7 @@ import {
   Webhook, Plus, Trash2, Edit2, X, Play, CheckCircle, 
   XCircle, Clock, RefreshCw, Eye, ChevronDown, ChevronUp, Copy
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const normalizeError = (val, defaultMsg) => {
   const msg = val?.response?.data?.message || val?.response?.data?.error || val?.response?.data?.details?.[0]?.message || defaultMsg;
@@ -17,10 +18,16 @@ const normalizeError = (val, defaultMsg) => {
 
 export default function Webhooks() {
   const { projectId } = useParams();
+  const { user } = useAuth();
 
   const [webhooks, setWebhooks] = useState([]);
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Compute viewer role
+  const myMember = project?.members?.find(m => m.user === user?._id || m.email === user?.email);
+  const myRole = project?.owner === user?._id ? 'owner' : (myMember?.role || 'viewer');
+  const isViewer = myRole === 'viewer';
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -243,9 +250,11 @@ if (loading) return <WebhooksSkeleton />;
             Send HTTP callbacks when data changes in your collections
           </p>
         </div>
-        <button className="btn btn-primary" onClick={openCreateModal} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Plus size={18} /> Add Webhook
-        </button>
+        {!isViewer && (
+          <button className="btn btn-primary" onClick={openCreateModal} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Plus size={18} /> Add Webhook
+          </button>
+        )}
       </div>
 
       {/* Webhooks List */}
@@ -256,9 +265,11 @@ if (loading) return <WebhooksSkeleton />;
           <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem' }}>
             Create a webhook to receive notifications when data changes
           </p>
-          <button className="btn btn-primary" onClick={openCreateModal}>
-            <Plus size={18} /> Create your first webhook
-          </button>
+          {!isViewer && (
+            <button className="btn btn-primary" onClick={openCreateModal}>
+              <Plus size={18} /> Create your first webhook
+            </button>
+          )}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -318,21 +329,25 @@ if (loading) return <WebhooksSkeleton />;
                 </div>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '140px' }}>
-                  <button className="btn btn-primary" onClick={() => handleTest(webhook)} disabled={testingWebhookId === webhook._id} style={{ width: '100%', justifyContent: 'center' }}>
-                    {testingWebhookId === webhook._id ? <RefreshCw size={16} className="spin" /> : <Play size={16} />} 
-                    Test
-                  </button>
+                  {!isViewer && (
+                    <button className="btn btn-primary" onClick={() => handleTest(webhook)} disabled={testingWebhookId === webhook._id} style={{ width: '100%', justifyContent: 'center' }}>
+                      {testingWebhookId === webhook._id ? <RefreshCw size={16} className="spin" /> : <Play size={16} />} 
+                      Test
+                    </button>
+                  )}
                   <button className="btn btn-secondary" onClick={() => openDeliveries(webhook)} style={{ width: '100%', justifyContent: 'center' }}>
                     <Clock size={16} /> History
                   </button>
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                    <button className="btn btn-secondary" onClick={() => openEditModal(webhook)} style={{ flex: 1, padding: '6px' }} title="Edit">
-                      <Edit2 size={16} />
-                    </button>
-                    <button className="btn btn-danger" onClick={() => setDeleteTarget(webhook)} style={{ flex: 1, padding: '6px' }} title="Delete">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+                  {!isViewer && (
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                      <button className="btn btn-secondary" onClick={() => openEditModal(webhook)} style={{ flex: 1, padding: '6px' }} title="Edit">
+                        <Edit2 size={16} />
+                      </button>
+                      <button className="btn btn-danger" onClick={() => setDeleteTarget(webhook)} style={{ flex: 1, padding: '6px' }} title="Delete">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
               {/* Test Result */}

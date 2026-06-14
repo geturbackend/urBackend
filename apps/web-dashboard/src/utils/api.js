@@ -46,6 +46,8 @@ api.interceptors.request.use(async (config) => {
     return config;
 }, (error) => Promise.reject(error));
 
+import toast from 'react-hot-toast';
+
 // Upgrade-triggering keywords from backend error messages
 const UPGRADE_KEYWORDS = ['upgrade', 'limit reached', 'pro feature', 'pro plan'];
 
@@ -67,24 +69,28 @@ api.interceptors.response.use(
                 await api.post('/api/auth/refresh-token', {});
                 return api(originalRequest);
             } catch (refreshError) {
+                toast.error("Session expired. Please log in again.");
                 return Promise.reject(refreshError);
             }
         }
 
-        // 403: Show upgrade modal if it's a plan limit error
+        // 403: Show upgrade modal if it's a plan limit error, else show generic deny
         if (error.response?.status === 403) {
             const message = (
                 error.response?.data?.message || error.response?.data?.error ||
-                ''
-            ).toLowerCase();
+                'Access denied. You do not have permission for this action.'
+            );
 
-            const isPlanError = UPGRADE_KEYWORDS.some((kw) => message.includes(kw));
+            const isPlanError = UPGRADE_KEYWORDS.some((kw) => message.toLowerCase().includes(kw));
 
             if (isPlanError) {
+                toast.error("Plan limit reached. Please upgrade to continue.");
                 if (window.location.pathname !== '/pricing') {
                     window.location.assign('/pricing');
                 }
                 return Promise.reject(error);
+            } else {
+                toast.error(message);
             }
         }
 

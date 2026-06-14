@@ -360,7 +360,7 @@ urBackend Team`;
         `;
 
         const { data, error } = await resend.emails.send({
-            from: '"urBackend" <onboarding@resend.dev>',
+            from: `"urBackend" <${process.env.EMAIL_FROM}>` || '"urBackend" <onboarding@resend.dev>',
             to: to,
             subject: subject,
             text: textBody,

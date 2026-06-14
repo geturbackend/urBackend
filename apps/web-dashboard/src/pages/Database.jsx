@@ -36,6 +36,10 @@ export default function Database() {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [editingRecord, setEditingRecord] = useState(null);
 
+  const myMember = project?.members?.find(m => m.user === user?._id || m.email === user?.email);
+  const myRole = project?.owner === user?._id ? 'owner' : (myMember?.role || 'viewer');
+  const isViewer = myRole === 'viewer';
+
   const [queryParams, setQueryParams] = useState({
       page: parseInt(searchParams.get('page')) || 1,
       limit: parseInt(searchParams.get('limit')) || 50,
@@ -246,7 +250,6 @@ export default function Database() {
       <DatabaseSidebar
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
-        // Filter out 'users' collection from database sidebar
         collections={collections.filter(c => c.name !== 'users')}
         activeCollection={activeCollection}
         setActiveCollection={setActiveCollection}
@@ -254,6 +257,7 @@ export default function Database() {
         navigate={navigate}
         projectId={projectId}
         onRequestDelete={setCollectionToDelete}
+        isViewer={isViewer}
       />
 
       <main className="db-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', margin: '12px 12px 12px 0', border: '1px solid var(--color-border)', borderRadius: '8px', background: 'var(--color-bg-card)' }}>
@@ -283,6 +287,7 @@ export default function Database() {
               showDeleted={showDeleted}
               setShowDeleted={setShowDeleted}
               onFiltersGenerated={handleFiltersGenerated}
+              isViewer={isViewer}
             />
 
             <div className="db-content" style={{ flex: 1, overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column' }}>
@@ -342,7 +347,9 @@ export default function Database() {
                             )}
                         </div>
                         <div style={{ marginTop: '1.5rem' }}>
-                            <button className="btn btn-primary" onClick={() => setIsAddModalOpen(true)}>Add Record Manually</button>
+                            {!isViewer && (
+                                <button className="btn btn-primary" onClick={() => setIsAddModalOpen(true)}>Add Record Manually</button>
+                            )}
                         </div>
                     </div>
                   </div>
@@ -353,6 +360,7 @@ export default function Database() {
                     onView={setSelectedRecord} 
                     onRecover={handleRecoverRecord}
                     recoveringIds={recoveringIds}
+                    isViewer={isViewer}
                   />
                 ) : viewMode === "table" ? (
                   <CollectionTable 
@@ -363,6 +371,7 @@ export default function Database() {
                     onEdit={(rec) => { if (activeCollection?.name === 'users') return; setEditingRecord(rec); setIsAddModalOpen(true); }} 
                     onRecover={handleRecoverRecord}
                     recoveringIds={recoveringIds}
+                    isViewer={isViewer}
                   />
                 ) : (
                   <div style={{ height: '100%', overflow: 'auto', padding: '1.5rem', background: '#050505', color: 'var(--color-primary)', fontFamily: 'monospace', fontSize: '0.8rem' }}>
@@ -385,11 +394,13 @@ export default function Database() {
             <DbIcon size={64} style={{ opacity: 0.2, marginBottom: '1.5rem' }} color="var(--color-primary)" />
             <h3 style={{ fontSize: '1.4rem', fontWeight: 600, marginBottom: '0.5rem' }}>No collections found</h3>
             <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', marginBottom: '2rem', maxWidth: '400px', textAlign: 'center', lineHeight: '1.5' }}>
-              Collections (or Tables) are where your project's data is stored. Create your first collection to start saving data.
+              Collections (or Tables) are where your project's data is stored. {isViewer ? 'The project owner has not created any collections yet.' : 'Create your first collection to start saving data.'}
             </p>
-            <button className="btn btn-primary" style={{ padding: '12px 24px', fontSize: '1rem' }} onClick={() => navigate(`/project/${projectId}/create-collection`)}>
-              Create Collection
-            </button>
+            {!isViewer && (
+              <button className="btn btn-primary" style={{ padding: '12px 24px', fontSize: '1rem' }} onClick={() => navigate(`/project/${projectId}/create-collection`)}>
+                Create Collection
+              </button>
+            )}
           </div>
         )}
       </main>
@@ -399,7 +410,7 @@ export default function Database() {
         onClose={() => setSelectedRecord(null)}
         record={selectedRecord}
         fields={activeCollection?.model || []}
-        onEdit={(activeCollection?.name === 'users' || selectedRecord?.isDeleted) ? null : (rec) => { setEditingRecord(rec); setIsAddModalOpen(true); }}
+        onEdit={(activeCollection?.name === 'users' || selectedRecord?.isDeleted || isViewer) ? null : (rec) => { setEditingRecord(rec); setIsAddModalOpen(true); }}
       />
       
       {isAddModalOpen && (

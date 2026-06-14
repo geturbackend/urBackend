@@ -11,7 +11,8 @@ jest.mock('@urbackend/common', () => ({
     AppError,
     Project: {
         findOne: jest.fn()
-    }
+    },
+    getProjectAccessQuery: jest.fn((userId) => ({ owner: userId }))
 }));
 
 const { Project } = require('@urbackend/common');

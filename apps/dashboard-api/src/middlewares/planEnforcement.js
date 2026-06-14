@@ -3,12 +3,24 @@ const mongoose = require('mongoose');
 
 console.log('DEBUG: planEnforcement.js exporting attachDeveloper');
 exports.attachDeveloper = async function(req, res, next) {
-    const { Developer, AppError } = require('@urbackend/common');
+    const { Developer, AppError, Project, sanitizeObjectId } = require('@urbackend/common');
     try {
         if (!req.user || !req.user._id) {
             return next(new AppError(401, 'Unauthorized: Developer context missing'));
         }
-        const developer = await Developer.findById(req.user._id);
+
+        let targetDeveloperId = req.user._id;
+
+        const rawProjectId = req.params.projectId || req.body.projectId || req.query.projectId;
+        const cleanProjectId = sanitizeObjectId(rawProjectId);
+        if (cleanProjectId) {
+            const project = await Project.findById(cleanProjectId).select('owner').lean();
+            if (project && project.owner) {
+                targetDeveloperId = project.owner;
+            }
+        }
+
+        const developer = await Developer.findById(targetDeveloperId);
         if (!developer) return next(new AppError(404, 'Developer not found'));
         req.developer = developer;
         next();
@@ -34,14 +46,17 @@ exports.checkProjectLimit = async function(req, res, next) {
 
 console.log('DEBUG: planEnforcement.js exporting checkCollectionLimit');
 exports.checkCollectionLimit = async function(req, res, next) {
-    const { Project, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId } = require('@urbackend/common');
+    const { Project, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId, getProjectAccessQuery } = require('@urbackend/common');
     try {
         if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
         
         const cleanProjectId = sanitizeObjectId(req.body.projectId);
         if (!cleanProjectId) return next(new AppError(400, 'Invalid or missing projectId'));
 
-        const project = await Project.findOne({ _id: cleanProjectId, owner: req.developer._id });
+        const project = await Project.findOne({
+            _id: cleanProjectId,
+            ...getProjectAccessQuery(req.developer._id),
+        });
         if (!project) return next(new AppError(404, 'Project not found'));
 
         const effectivePlan = resolveEffectivePlan(req.developer);
@@ -157,6 +172,40 @@ exports.checkMailTemplatesGate = async function(req, res, next) {
 
         if (!limits.mailTemplatesEnabled) {
             return next(new AppError(403, 'Custom Mail Templates are a Pro feature. Please upgrade to customize your emails.'));
+        }
+
+        next();
+    } catch (err) {
+        next(err);
+    }
+}
+
+console.log('DEBUG: planEnforcement.js exporting checkMemberLimit');
+exports.checkMemberLimit = async function(req, res, next) {
+    const { Project, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId, getProjectAccessQuery } = require('@urbackend/common');
+    try {
+        if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
+
+        const rawProjectId = req.params.projectId;
+        const cleanProjectId = sanitizeObjectId(rawProjectId);
+        if (!cleanProjectId) return next(new AppError(400, 'Invalid or missing projectId'));
+
+        const project = await Project.findOne({
+            _id: cleanProjectId,
+            ...getProjectAccessQuery(req.user._id),
+        }).select('members customLimits owner').lean();
+        if (!project) return next(new AppError(404, 'Project not found'));
+
+        const effectivePlan = resolveEffectivePlan(req.developer);
+        const limits = getPlanLimits({ plan: effectivePlan, customLimits: project.customLimits });
+
+        // maxMembers includes the owner; current count = 1 (owner) + members.length
+        const currentTotal = 1 + (project.members?.length || 0);
+        if (limits.maxMembers !== -1 && currentTotal >= limits.maxMembers) {
+            return next(new AppError(
+                403,
+                `Member limit reached (${limits.maxMembers} total). Please upgrade your plan to add more team members.`
+            ));
         }
 
         next();

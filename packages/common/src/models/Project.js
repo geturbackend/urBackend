@@ -150,10 +150,26 @@ const projectSchema = new mongoose.Schema(
       mailPerMonth: { type: Number, default: null },
       maxCollections: { type: Number, default: null }
     },
+
+    // Team Members
+    members: {
+      type: [
+        new mongoose.Schema(
+          {
+            user: { type: mongoose.Schema.Types.ObjectId, ref: "Developer", required: true },
+            role: { type: String, enum: ["admin", "viewer"], default: "admin" },
+            addedAt: { type: Date, default: Date.now },
+          },
+          { _id: false },
+        ),
+      ],
+      default: [],
+    },
   },
   { timestamps: true },
 );
 
 projectSchema.index({ owner: 1 });
+projectSchema.index({ "members.user": 1 });
 
 module.exports = mongoose.model("Project", projectSchema);

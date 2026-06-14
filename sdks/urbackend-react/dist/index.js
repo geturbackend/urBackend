@@ -48,9 +48,9 @@ var UrProvider = ({ apiKey, baseUrl, children }) => {
     const _client = new import_sdk.UrBackendClient({ apiKey, baseUrl });
     return {
       client: _client,
-      auth: new import_sdk.AuthModule(_client),
-      db: new import_sdk.DatabaseModule(_client),
-      storage: new import_sdk.StorageModule(_client)
+      auth: _client.auth,
+      db: _client.db,
+      storage: _client.storage
     };
   }, [apiKey, baseUrl]);
   (0, import_react.useEffect)(() => {
@@ -517,7 +517,7 @@ var UrAuth = ({
     signupButton: labels?.signUpButton ?? labels?.signupButton ?? defaultLabels.signupButton
   };
   const themeColors = { ...defaultThemeColors[theme], ...colors };
-  const primaryColor = branding?.primaryColor || themeColors.primary;
+  const primaryColor = branding?.primaryColor || colors?.primaryColor || themeColors.primary;
   const secondStopColor = adjustColor(primaryColor, -15);
   let isGoogleEnabled = true;
   let isGithubEnabled = true;
@@ -536,6 +536,7 @@ var UrAuth = ({
   const hasSocialAuth = isGoogleEnabled || isGithubEnabled;
   const brandName = branding?.brandName || branding?.appName || branding?.title || "urBackend";
   const headerTitle = branding?.title || brandName;
+  const brandingLogo = branding?.logo ?? branding?.logoUrl;
   const headerSubtitle = branding?.subtitle || (mode === "signin" ? text.loginTitle : mode === "signup" ? text.signupTitle : mode === "forgot" ? text.forgotTitle : text.resetTitle);
   const showSwitcher = hasPasswordAuth;
   (0, import_react5.useEffect)(() => {
@@ -801,8 +802,8 @@ var UrAuth = ({
       }
     ),
     /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { style: styles.body, children: [
-      (branding?.logo || branding?.brandName || branding?.appName || branding?.title || branding?.subtitle || headerTitle || headerSubtitle) && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { style: styles.header, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: styles.brandRow, children: branding?.logo ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: styles.brandLogo, children: typeof branding.logo === "string" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("img", { src: branding.logo, alt: brandName, style: { width: "100%", height: "100%", objectFit: "contain" } }) : branding.logo }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: styles.brandLogo, "aria-hidden": "true", children: brandName.slice(0, 1).toUpperCase() }) }),
+      (brandingLogo || branding?.brandName || branding?.appName || branding?.title || branding?.subtitle || headerTitle || headerSubtitle) && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { style: styles.header, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: styles.brandRow, children: brandingLogo ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: styles.brandLogo, children: typeof brandingLogo === "string" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("img", { src: brandingLogo, alt: brandName, style: { width: "100%", height: "100%", objectFit: "contain" } }) : brandingLogo }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: styles.brandLogo, "aria-hidden": "true", children: brandName.slice(0, 1).toUpperCase() }) }),
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("h1", { style: styles.brandTitle, children: headerTitle }),
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { style: styles.brandSubtitle, children: headerSubtitle })
       ] }),

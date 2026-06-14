@@ -13,26 +13,26 @@ const {
   testWebhook,
 } = require("../controllers/webhook.controller");
 const { attachDeveloper, checkWebhookGate } = require("../middlewares/planEnforcement");
-
+const authorizeProject = require("../middlewares/authorizeProject");
 // Create webhook
-router.post("/:projectId/webhooks", authMiddleware, verifyEmail, attachDeveloper, checkWebhookGate, createWebhook);
+router.post("/:projectId/webhooks", authMiddleware, verifyEmail, authorizeProject('admin'), attachDeveloper, checkWebhookGate, createWebhook);
 
 // List all webhooks for a project
-router.get("/:projectId/webhooks", authMiddleware, getWebhooks);
+router.get("/:projectId/webhooks", authMiddleware, authorizeProject(), getWebhooks);
 
 // Get single webhook
-router.get("/:projectId/webhooks/:webhookId", authMiddleware, getWebhook);
+router.get("/:projectId/webhooks/:webhookId", authMiddleware, authorizeProject(), getWebhook);
 
 // Update webhook
-router.patch("/:projectId/webhooks/:webhookId", authMiddleware, verifyEmail, attachDeveloper, checkWebhookGate, updateWebhook);
+router.patch("/:projectId/webhooks/:webhookId", authMiddleware, verifyEmail, authorizeProject('admin'), attachDeveloper, checkWebhookGate, updateWebhook);
 
 // Delete webhook
-router.delete("/:projectId/webhooks/:webhookId", authMiddleware, verifyEmail, deleteWebhook);
+router.delete("/:projectId/webhooks/:webhookId", authMiddleware, verifyEmail, authorizeProject('admin'), deleteWebhook);
 
 // Get delivery history
-router.get("/:projectId/webhooks/:webhookId/deliveries", authMiddleware, getDeliveries);
+router.get("/:projectId/webhooks/:webhookId/deliveries", authMiddleware, authorizeProject(), getDeliveries);
 
 // Test webhook
-router.post("/:projectId/webhooks/:webhookId/test", authMiddleware, verifyEmail, attachDeveloper, checkWebhookGate, testWebhook);
+router.post("/:projectId/webhooks/:webhookId/test", authMiddleware, verifyEmail, authorizeProject('admin'), attachDeveloper, checkWebhookGate, testWebhook);
 
 module.exports = router;

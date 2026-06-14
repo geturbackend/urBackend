@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import { Shield, X, AlertCircle, Monitor, LogOut, Key } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 import AuthHeader from '../components/Auth/AuthHeader';
 import SocialAuthConfig from '../components/Auth/SocialAuthConfig';
@@ -23,6 +24,7 @@ export default function Auth() {
 
     const { projectId } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
 
     const [users, setUsers] = useState([]);
     const [page, setPage] = useState(1);
@@ -208,6 +210,10 @@ export default function Auth() {
 
     if (loading) return <div className="container spinner"></div>;
 
+    const myMember = project?.members?.find(m => m.user === user?._id || m.email === user?.email);
+    const myRole = project?.owner === user?._id ? 'owner' : (myMember?.role || 'viewer');
+    const isViewer = myRole === 'viewer';
+
     return (
         <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '4rem' }}>
             <AuthHeader 
@@ -216,7 +222,7 @@ export default function Auth() {
                 isAuthEnabled={project?.isAuthEnabled}
                 hasUserCollection={hasUserCollection}
                 onConfigureFields={() => navigate(`/project/${projectId}/database?collection=users`)}
-                onAddUser={() => setIsAddModalOpen(true)}
+                onAddUser={isViewer ? null : () => setIsAddModalOpen(true)}
             />
 
             {/* Social Auth Modal */}
@@ -327,6 +333,7 @@ export default function Auth() {
                         <div className="glass-card" style={{ borderRadius: '12px', overflow: 'hidden' }}>
                             <UserTable 
                                 users={filteredUsers}
+                                isViewer={isViewer}
                                 onOpenSessions={handleOpenSessions}
                                 onEdit={handleEditUser}
                                 onResetPassword={(u) => { setResetPasswordUser(u); setNewPassword(''); }}

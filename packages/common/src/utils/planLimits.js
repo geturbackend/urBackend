@@ -31,7 +31,8 @@ const PLAN_LIMITS = {
 
     // Features
     analyticsProEnabled: false,
-    teamsEnabled: false,
+    teamsEnabled: true,
+    maxMembers: 2,           // owner + 1 member
   },
 
   pro: {
@@ -66,7 +67,8 @@ const PLAN_LIMITS = {
 
     // Features
     analyticsProEnabled: true,
-    teamsEnabled: false,
+    teamsEnabled: true,
+    maxMembers: 6,           // owner + 5 members
   }
 };
 

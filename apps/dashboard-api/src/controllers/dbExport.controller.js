@@ -1,4 +1,4 @@
-const { AppError, ApiResponse } = require('@urbackend/common');
+const { AppError, ApiResponse, getProjectRole } = require('@urbackend/common');
 const { Developer } = require('@urbackend/common');
 const { Project } = require('@urbackend/common');
 const { exportQueue } = require('@urbackend/common');
@@ -19,8 +19,8 @@ module.exports.dbExportHandler = async (req, res, next) => {
             await setProjectById(projectId, project);
         }
 
-        if (project.owner.toString() !== userId.toString()) {
-            return next(new AppError(403, "Access denied. You are not the owner of this project."));
+        if (!getProjectRole(project, userId)) {
+            return next(new AppError(403, "Access denied. You are not a member of this project."));
         }
         
         if (!project.collections.some(c => c.name === collectionName)) {

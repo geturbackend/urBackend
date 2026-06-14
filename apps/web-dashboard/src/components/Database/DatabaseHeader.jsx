@@ -9,7 +9,7 @@ const DatabaseHeader = ({
   project, activeCollection, dataLength, viewMode, setViewMode, 
   showFilterMenu, setShowFilterMenu, filtersCount, 
   onRefresh, onRlsClick, onAddRecord, onOpenSidebar,
-  showDeleted, setShowDeleted, onFiltersGenerated, onExport, isExporting
+  showDeleted, setShowDeleted, onFiltersGenerated, onExport, isExporting, isViewer
 }) => {
   return (
     <header className="db-header glass-panel" style={{ 
@@ -99,7 +99,7 @@ const DatabaseHeader = ({
           <RefreshCw size={14} />
         </button>
 
-        {activeCollection?.name !== 'users' && (
+        {activeCollection?.name !== 'users' && !isViewer && (
           <button onClick={onRlsClick} className="btn btn-secondary" style={{ padding: '6px 12px', height: '32px', gap: '6px', fontSize: '0.75rem' }}>
             <Shield size={14} /> RLS
           </button>
@@ -115,7 +115,7 @@ const DatabaseHeader = ({
 
         
 
-        {activeCollection?.name !== 'users' && (
+        {activeCollection?.name !== 'users' && !isViewer && (
           <button onClick={onAddRecord} className="btn btn-primary" style={{ padding: '6px 12px', height: '32px', gap: '6px', fontSize: '0.75rem' }}>
             <Plus size={14} /> Add Record
           </button>

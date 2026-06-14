@@ -320,10 +320,10 @@ module.exports.login = async (req, res, next) => {
         const { email, password } = loginSchema.parse(req.body);
 
         const dev = await Developer.findOne({ email: email.toLowerCase().trim() }).select('+password');
-        if (!dev) return next(new AppError(400, "User not found"));
+        if (!dev) return next(new AppError(400, "Invalid email or password"));
 
         const validPass = await bcrypt.compare(password, dev.password);
-        if (!validPass) return next(new AppError(400, "Invalid password"));
+        if (!validPass) return next(new AppError(400, "Invalid email or password"));
 
         await sendTokenResponse(dev, 200, res);
     } catch (err) {

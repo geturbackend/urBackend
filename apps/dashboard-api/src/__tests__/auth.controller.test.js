@@ -242,7 +242,7 @@ describe('auth.controller', () => {
 
             expect(next).toHaveBeenCalledWith(expect.any(AppError));
             expect(next.mock.calls[0][0].statusCode).toBe(400);
-            expect(next.mock.calls[0][0].message).toBe('User not found');
+            expect(next.mock.calls[0][0].message).toBe('Invalid email or password');
         });
 
         test('returns 400 on invalid password', async () => {
@@ -256,7 +256,7 @@ describe('auth.controller', () => {
 
             expect(next).toHaveBeenCalledWith(expect.any(AppError));
             expect(next.mock.calls[0][0].statusCode).toBe(400);
-            expect(next.mock.calls[0][0].message).toBe('Invalid password');
+            expect(next.mock.calls[0][0].message).toBe('Invalid email or password');
         });
 
         test('returns 400 on Zod validation error (missing password)', async () => {

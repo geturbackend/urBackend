@@ -475,7 +475,17 @@ function CreateCollection() {
             }
             try {
                 const res = await api.get(`/api/projects/${projectId}`);
-                if (isMounted) setCollections(res.data.collections || []);
+                if (isMounted) {
+                    const projectData = res.data;
+                    const myMember = projectData.members?.find(m => m.user === user?._id || m.email === user?.email);
+                    const myRole = projectData.owner === user?._id ? 'owner' : (myMember?.role || 'viewer');
+                    if (myRole === 'viewer') {
+                        toast.error("Viewers cannot create collections");
+                        navigate(`/project/${projectId}/database`);
+                        return;
+                    }
+                    setCollections(projectData.collections || []);
+                }
             } catch (err) {
                 console.error('Failed to fetch collections for Ref picker:', err);
                 if (isMounted) {
@@ -488,7 +498,7 @@ function CreateCollection() {
         };
         fetchCollections();
         return () => { isMounted = false; };
-    }, [projectId]);
+    }, [projectId, user, navigate]);
 
     const addField = () => {
         setFields([...fields, createEmptyField()]);

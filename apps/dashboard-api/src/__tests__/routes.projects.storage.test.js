@@ -15,13 +15,17 @@ jest.mock('../middlewares/planEnforcement', () => ({
   checkByodGate: jest.fn((_req, _res, next) => next()),
   checkWebhookGate: jest.fn((_req, _res, next) => next()),
   checkMailTemplatesGate: jest.fn((_req, _res, next) => next()),
+  checkMemberLimit: jest.fn((_req, _res, next) => next()),
 }));
 
 jest.mock('@urbackend/common', () => ({
   verifyEmail: jest.fn((_req, _res, next) => next()),
   checkAuthEnabled: jest.fn((_req, _res, next) => next()),
-  loadProjectForAdmin: jest.fn((_req, _res, next) => next()),
 }));
+
+jest.mock('../middlewares/authorizeProject', () =>
+  jest.fn(() => (req, res, next) => next())
+);
 
 jest.mock('../controllers/userAuth.controller', () => ({
   createAdminUser: jest.fn((_req, res) => res.json({ ok: true })),
@@ -76,6 +80,10 @@ jest.mock('../controllers/project.controller', () => {
     manageContacts: jest.fn(ok),
     deleteContact: jest.fn(ok),
     sendMarketingBroadcast: jest.fn(ok),
+    getMembers: jest.fn(ok),
+    inviteMember: jest.fn(ok),
+    updateMemberRole: jest.fn(ok),
+    removeMember: jest.fn(ok),
   };
 });
 
@@ -84,7 +92,8 @@ const request = require('supertest');
 const projectsRouter = require('../routes/projects');
 const projectController = require('../controllers/project.controller');
 const authMiddleware = require('../middlewares/authMiddleware');
-const { verifyEmail, loadProjectForAdmin } = require('@urbackend/common');
+const { verifyEmail } = require('@urbackend/common');
+const authorizeProject = require('../middlewares/authorizeProject');
 
 let app;
 
@@ -112,7 +121,6 @@ describe('projects storage presigned routes', () => {
     expect(res.status).toBe(200);
     expect(authMiddleware).toHaveBeenCalled();
     expect(verifyEmail).toHaveBeenCalled();
-    expect(loadProjectForAdmin).toHaveBeenCalled();
     expect(projectController.requestUpload).toHaveBeenCalledTimes(1);
   });
 
@@ -124,7 +132,6 @@ describe('projects storage presigned routes', () => {
     expect(res.status).toBe(200);
     expect(authMiddleware).toHaveBeenCalled();
     expect(verifyEmail).toHaveBeenCalled();
-    expect(loadProjectForAdmin).toHaveBeenCalled();
     expect(projectController.confirmUpload).toHaveBeenCalledTimes(1);
   });
 });

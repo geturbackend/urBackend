@@ -23,6 +23,7 @@ import DocLinks from '../components/Dashboard/DocLinks';
 export default function Dashboard() {
   const [projects, setProjects] = useState([]);
   const [activity, setActivity] = useState([]);
+  const [invitations, setInvitations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { user } = useAuth();
@@ -46,13 +47,15 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [projectsRes, activityRes] = await Promise.all([
+        const [projectsRes, activityRes, invitationsRes] = await Promise.all([
           api.get('/api/projects'),
-          api.get('/api/analytics/activity')
+          api.get('/api/analytics/activity'),
+          api.get('/api/invitations').catch(() => ({ data: { success: true, data: [] } }))
         ]);
         
         setProjects(projectsRes.data.success ? projectsRes.data.data : projectsRes.data);
         setActivity(activityRes.data.success ? activityRes.data.data : activityRes.data);
+        setInvitations(invitationsRes.data.success ? invitationsRes.data.data : invitationsRes.data || []);
 
         // fetchPlanData updates PlanContext which UsageQuota reads from
         await fetchPlanData();
@@ -116,9 +119,14 @@ export default function Dashboard() {
     (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Calculate global stats directly from projects array for 100% accuracy
-  const totalDatabaseUsed = projects.reduce((acc, p) => acc + (p.databaseUsed || 0), 0);
-  const totalStorageUsed = projects.reduce((acc, p) => acc + (p.storageUsed || 0), 0);
+  const myOwnedProjects = projects.filter(p => {
+    const ownerId = typeof p.owner === 'object' && p.owner !== null ? p.owner._id || p.owner : p.owner;
+    return ownerId?.toString() === user?._id?.toString();
+  });
+
+  // Calculate global stats directly from owned projects array for 100% accuracy
+  const totalDatabaseUsed = myOwnedProjects.reduce((acc, p) => acc + (p.databaseUsed || 0), 0);
+  const totalStorageUsed = myOwnedProjects.reduce((acc, p) => acc + (p.storageUsed || 0), 0);
 
   const formatSize = (bytes) => {
     if (!bytes) return '0 MB';
@@ -126,10 +134,90 @@ export default function Dashboard() {
     return `${(bytes / 1024).toFixed(1)} KB`;
   };
 
+  const handleAcceptInvite = async (inviteId) => {
+    try {
+      await api.post(`/api/invitations/${inviteId}/accept`);
+      toast.success("Invitation accepted!");
+      // Refresh projects list & pending invites
+      const [projectsRes, invitationsRes] = await Promise.all([
+        api.get('/api/projects'),
+        api.get('/api/invitations').catch(() => ({ data: { success: true, data: [] } }))
+      ]);
+      setProjects(projectsRes.data.success ? projectsRes.data.data : projectsRes.data);
+      setInvitations(invitationsRes.data.success ? invitationsRes.data.data : invitationsRes.data || []);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to accept invitation");
+    }
+  };
+
+  const handleDeclineInvite = async (inviteId) => {
+    try {
+      await api.post(`/api/invitations/${inviteId}/decline`);
+      toast.success("Invitation declined");
+      const invitationsRes = await api.get('/api/invitations').catch(() => ({ data: { success: true, data: [] } }));
+      setInvitations(invitationsRes.data.success ? invitationsRes.data.data : invitationsRes.data || []);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to decline invitation");
+    }
+  };
+
   return (
     <DashboardShell>
       <DocLinks />
       <DashboardHeader onCreateProject={handleCreateProject} />
+
+      {/* Pending Invitations Banner */}
+      {!isLoading && invitations.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+          {invitations.map(invite => (
+            <div key={invite._id} className="glass-card" style={{
+              padding: '1.25rem 1.5rem',
+              borderRadius: '12px',
+              border: '1px solid rgba(99, 102, 241, 0.3)',
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(129, 140, 248, 0.05) 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1rem'
+            }}>
+              <div>
+                <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: '#fff' }}>
+                  📬 You've been invited to join <span style={{ color: 'var(--color-primary)' }}>{invite.project?.name}</span>
+                </h4>
+                <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                  Role: <strong style={{ color: '#fff', textTransform: 'capitalize' }}>{invite.role}</strong> · Invited by: {invite.invitedBy?.email}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  id={`accept-invite-${invite._id}`}
+                  onClick={() => handleAcceptInvite(invite._id)}
+                  className="btn btn-primary"
+                  style={{ padding: '6px 16px', fontSize: '0.8rem', height: 'auto' }}
+                >
+                  Accept
+                </button>
+                <button
+                  id={`decline-invite-${invite._id}`}
+                  onClick={() => handleDeclineInvite(invite._id)}
+                  className="btn btn-secondary"
+                  style={{
+                    padding: '6px 16px',
+                    fontSize: '0.8rem',
+                    height: 'auto',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: '#fff'
+                  }}
+                >
+                  Decline
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Global Usage Overview Belt - More Compact */}
       {!isLoading && (
@@ -147,7 +235,7 @@ export default function Dashboard() {
             <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <LayoutGrid size={12} /> Total Projects
             </span>
-            <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>{projects.length}</span>
+            <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>{myOwnedProjects.length}</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>

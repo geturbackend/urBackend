@@ -106,6 +106,7 @@ const billingRoute = require('./routes/billing');
 const eventsRoute = require('./routes/events');
 const adminMetricsRoute = require('./routes/admin.metrics');
 const aiRoute = require('./routes/ai.routes');
+const invitationsRoute = require('./routes/invitations');
 
 app.use('/api/auth', authRoute); 
 app.use('/api/projects', dashboardLimiter, projectRoute);
@@ -116,6 +117,7 @@ app.use('/api/analytics', dashboardLimiter, analyticsRoute);
 app.use('/api/billing', billingRoute);
 app.use('/api/events', dashboardLimiter, eventsRoute);
 app.use('/api/admin/metrics', dashboardLimiter, adminMetricsRoute);
+app.use('/api/invitations', dashboardLimiter, invitationsRoute);
 
 
 
