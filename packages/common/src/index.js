@@ -133,7 +133,6 @@ module.exports = {
   Webhook,
   WebhookDelivery,
   ProRequest,
-  ApiAnalytics,
   PlatformEvent,
   DeveloperActivity,
   MailLog,

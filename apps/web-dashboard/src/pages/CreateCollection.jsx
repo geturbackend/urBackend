@@ -476,7 +476,7 @@ function CreateCollection() {
             try {
                 const res = await api.get(`/api/projects/${projectId}`);
                 if (isMounted) {
-                    const projectData = res.data;
+                    const projectData = res.data.data || res.data;
                     const myMember = projectData.members?.find(m => m.user === user?._id || m.email === user?.email);
                     const myRole = projectData.owner === user?._id ? 'owner' : (myMember?.role || 'viewer');
                     if (myRole === 'viewer') {

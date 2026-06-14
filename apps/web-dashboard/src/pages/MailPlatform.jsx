@@ -238,8 +238,11 @@ export default function MailPlatform() {
 
     const isByok = !!project?.hasResendApiKey;
     
-    const myMember = project?.members?.find(m => m.user === user?._id || m.email === user?.email);
-    const isViewer = project?.owner !== user?._id && (myMember?.role === 'viewer');
+    const myMember = project?.members?.find(m => {
+        const memberId = typeof m.user === 'object' ? m.user?._id : m.user;
+        return memberId?.toString() === user?._id?.toString() || m.email === user?.email;
+    });
+    const isViewer = project?.owner?.toString() !== user?._id?.toString() && (myMember?.role === 'viewer');
 
     return (
         <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '4rem', padding: '0 1rem' }}>

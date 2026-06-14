@@ -57,7 +57,7 @@ export default function TeamMembers() {
   const [changingRole, setChangingRole] = useState(null);
 
   const myMember = members.find(m => m.email === user?.email);
-  const myRole = myMember ? myMember.role : 'owner';
+  const myRole = myMember ? myMember.role : null;
   const isOwner = myRole === 'owner';
 
   const fetchMembers = useCallback(async () => {

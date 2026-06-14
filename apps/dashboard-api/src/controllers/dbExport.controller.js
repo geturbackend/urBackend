@@ -27,16 +27,21 @@ module.exports.dbExportHandler = async (req, res, next) => {
             return next(new AppError(404, "Collection not found in project."));
         }
 
-        
-        const developer = await Developer.findById(userId).select('email plan').lean();
+
+        const developer = await Developer.findById(userId).select('email').lean();
         if (!developer) {
             return next(new AppError(404, "Authenticated developer not found."));
         }
-        const { email, plan = 'free' } = developer;
+        const { email } = developer;
 
         console.log(`[Dashboard API] Received export request for collection ${collectionName} in project ${projectId} from user ${userId} (${email})`);
 
-
+        // Derive maxExports from project owner's plan
+        const projectOwner = await Developer.findById(project.owner).select('plan').lean();
+        if (!projectOwner) {
+            return next(new AppError(404, "Project owner not found."));
+        }
+        const { plan = 'free' } = projectOwner;
         const maxExports = plan === 'pro' ? 5 : 1;
         const today = new Date().toISOString().split('T')[0];
         const key = `project:${projectId}:export_limit:${today}`;

@@ -12,7 +12,7 @@ jest.mock('@urbackend/common', () => ({
     Project: {
         findOne: jest.fn()
     },
-    getProjectAccessQuery: jest.fn((userId) => ({ owner: userId }))
+    getProjectAccessQuery: jest.fn((userId) => ({ $or: [{ owner: userId }, { "members.user": userId }] }))
 }));
 
 const { Project } = require('@urbackend/common');
@@ -49,7 +49,7 @@ describe('loadProjectForAdmin Middleware', () => {
 
         await loadProjectForAdmin(req, res, next);
 
-        expect(Project.findOne).toHaveBeenCalledWith({ _id: 'proj123', owner: 'user123' });
+        expect(Project.findOne).toHaveBeenCalledWith({ _id: 'proj123', $or: [{ owner: 'user123' }, { "members.user": 'user123' }] });
         expect(next).toHaveBeenCalledTimes(1);
         expect(next).toHaveBeenCalledWith(expect.any(AppError));
         const error = next.mock.calls[0][0];
@@ -64,7 +64,7 @@ describe('loadProjectForAdmin Middleware', () => {
 
         await loadProjectForAdmin(req, res, next);
 
-        expect(Project.findOne).toHaveBeenCalledWith({ _id: 'proj123', owner: 'user123' });
+        expect(Project.findOne).toHaveBeenCalledWith({ _id: 'proj123', $or: [{ owner: 'user123' }, { "members.user": 'user123' }] });
         expect(req.project).toEqual(mockProject);
         expect(next).toHaveBeenCalledTimes(1);
         expect(next).toHaveBeenCalledWith();

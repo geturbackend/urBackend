@@ -48,8 +48,8 @@ invitationSchema.index({ invitee: 1, status: 1 });
 
 // Prevent duplicate pending invitations for the same project+invitee
 invitationSchema.index(
-  { project: 1, invitee: 1, status: 1 },
-  { unique: false },
+  { project: 1, invitee: 1 },
+  { unique: true, partialFilterExpression: { status: 'pending' } },
 );
 
 module.exports = mongoose.model("Invitation", invitationSchema);

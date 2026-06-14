@@ -266,8 +266,8 @@ module.exports.getNorthStar = async (req, res, next) => {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setUTCDate(sevenDaysAgo.getUTCDate() - 7);
 
-    // Projects accessible by this developer (owned or member)
-    const allProjects = await Project.find(getProjectAccessQuery(developerId)).select('_id name').lean();
+    // Projects owned by this developer (North Star should be owner-only)
+    const allProjects = await Project.find({ owner: developerId }).select('_id name').lean();
     const projectIds = allProjects.map((p) => p._id);
     const totalProjects = projectIds.length;
 

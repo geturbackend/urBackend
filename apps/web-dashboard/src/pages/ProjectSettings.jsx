@@ -80,8 +80,11 @@ export default function ProjectSettings() {
             try {
                 const res = await api.get(`/api/projects/${projectId}`);
                 const projectData = res.data;
-                const myMember = projectData?.members?.find(m => m.user === user?._id || m.email === user?.email);
-                const isViewer = projectData?.owner !== user?._id && (myMember?.role === 'viewer');
+                const myMember = projectData?.members?.find(m => {
+                    const memberId = typeof m.user === 'object' ? m.user?._id : m.user;
+                    return memberId?.toString() === user?._id?.toString() || m.email === user?.email;
+                });
+                const isViewer = projectData?.owner?.toString() !== user?._id?.toString() && (myMember?.role === 'viewer');
                 
                 if (isViewer) {
                     toast.error("Viewers cannot access project settings");

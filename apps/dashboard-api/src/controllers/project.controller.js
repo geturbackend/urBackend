@@ -417,7 +417,7 @@ module.exports.getSingleProject = async (req, res) => {
     }
 
     if (!getProjectRole(projectObj, req.user._id)) {
-      return res.status(403).json({ error: "Access denied." });
+      throw new AppError(403, "Access denied.");
     }
 
     res.json(sanitizeProjectResponse(projectObj));
@@ -2960,6 +2960,7 @@ module.exports.inviteMember = async (req, res, next) => {
       project: projectId,
       invitee: invitee._id,
       status: "pending",
+      expiresAt: { $gt: new Date() },
     }).lean();
     if (existingInvite) {
       return next(new AppError(409, "A pending invitation already exists for this developer"));
@@ -3041,6 +3042,15 @@ module.exports.removeMember = async (req, res, next) => {
 
     if (req.user._id.toString() === memberId) {
       return next(new AppError(403, "You cannot remove yourself"));
+    }
+
+    // Verify member exists before attempting removal
+    const projectCheck = await Project.findOne({ _id: projectId, owner: req.user._id }).lean();
+    if (!projectCheck) return next(new AppError(404, "Project not found or access denied"));
+
+    const memberExists = projectCheck.members?.some(m => m.user.toString() === memberId);
+    if (!memberExists) {
+      return next(new AppError(404, "Member not found in this project"));
     }
 
     const project = await Project.findOneAndUpdate(

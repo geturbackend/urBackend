@@ -26,6 +26,7 @@ export default function Dashboard() {
   const [invitations, setInvitations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [processingInvites, setProcessingInvites] = useState({});
   const { user } = useAuth();
   const { setHeaderContent } = useLayout();
   const { fetchPlanData, planData } = usePlan();
@@ -135,7 +136,9 @@ export default function Dashboard() {
   };
 
   const handleAcceptInvite = async (inviteId) => {
+    if (processingInvites[inviteId]) return;
     try {
+      setProcessingInvites(prev => ({ ...prev, [inviteId]: true }));
       await api.post(`/api/invitations/${inviteId}/accept`);
       toast.success("Invitation accepted!");
       // Refresh projects list & pending invites
@@ -147,17 +150,23 @@ export default function Dashboard() {
       setInvitations(invitationsRes.data.success ? invitationsRes.data.data : invitationsRes.data || []);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to accept invitation");
+    } finally {
+      setProcessingInvites(prev => ({ ...prev, [inviteId]: false }));
     }
   };
 
   const handleDeclineInvite = async (inviteId) => {
+    if (processingInvites[inviteId]) return;
     try {
+      setProcessingInvites(prev => ({ ...prev, [inviteId]: true }));
       await api.post(`/api/invitations/${inviteId}/decline`);
       toast.success("Invitation declined");
       const invitationsRes = await api.get('/api/invitations').catch(() => ({ data: { success: true, data: [] } }));
       setInvitations(invitationsRes.data.success ? invitationsRes.data.data : invitationsRes.data || []);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to decline invitation");
+    } finally {
+      setProcessingInvites(prev => ({ ...prev, [inviteId]: false }));
     }
   };
 

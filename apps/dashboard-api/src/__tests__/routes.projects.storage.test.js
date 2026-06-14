@@ -121,6 +121,7 @@ describe('projects storage presigned routes', () => {
     expect(res.status).toBe(200);
     expect(authMiddleware).toHaveBeenCalled();
     expect(verifyEmail).toHaveBeenCalled();
+    expect(authorizeProject).toHaveBeenCalled();
     expect(projectController.requestUpload).toHaveBeenCalledTimes(1);
   });
 
@@ -132,6 +133,7 @@ describe('projects storage presigned routes', () => {
     expect(res.status).toBe(200);
     expect(authMiddleware).toHaveBeenCalled();
     expect(verifyEmail).toHaveBeenCalled();
+    expect(authorizeProject).toHaveBeenCalled();
     expect(projectController.confirmUpload).toHaveBeenCalledTimes(1);
   });
 });

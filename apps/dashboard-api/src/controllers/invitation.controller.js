@@ -15,21 +15,23 @@ module.exports.getMyInvitations = async (req, res, next) => {
       .populate("inviter", "email name")
       .lean();
 
-    const formatted = invitations.map((inv) => ({
-      _id: inv._id,
-      project: {
-        _id: inv.project._id,
-        name: inv.project.name,
-        description: inv.project.description,
-      },
-      invitedBy: {
-        email: inv.inviter.email,
-        name: inv.inviter.name,
-      },
-      role: inv.role,
-      expiresAt: inv.expiresAt,
-      createdAt: inv.createdAt,
-    }));
+    const formatted = invitations
+      .filter((inv) => inv.project && inv.inviter)
+      .map((inv) => ({
+        _id: inv._id,
+        project: {
+          _id: inv.project._id,
+          name: inv.project.name,
+          description: inv.project.description,
+        },
+        invitedBy: {
+          email: inv.inviter.email,
+          name: inv.inviter.name,
+        },
+        role: inv.role,
+        expiresAt: inv.expiresAt,
+        createdAt: inv.createdAt,
+      }));
 
     return new ApiResponse(formatted).send(res);
   } catch (err) {
@@ -74,13 +76,14 @@ module.exports.acceptInvitation = async (req, res, next) => {
     }
 
     const ownerDev = await Developer.findById(project.owner).lean();
-    const limits = getPlanLimits(resolveEffectivePlan(ownerDev.plan, project.customLimits));
+    const limits = getPlanLimits(resolveEffectivePlan(ownerDev, project.customLimits));
     const maxNonOwnerMembersAllowed = limits.maxMembers - 1; // Owner counts as 1
 
     // Add member to project atomically and check limit
     const updatedProject = await Project.findOneAndUpdate(
       {
         _id: invitation.project,
+        "members.user": { $ne: req.user._id },
         $expr: {
           $lt: [
             { $size: { $ifNull: ["$members", []] } },

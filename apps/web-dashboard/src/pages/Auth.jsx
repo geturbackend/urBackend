@@ -210,8 +210,11 @@ export default function Auth() {
 
     if (loading) return <div className="container spinner"></div>;
 
-    const myMember = project?.members?.find(m => m.user === user?._id || m.email === user?.email);
-    const myRole = project?.owner === user?._id ? 'owner' : (myMember?.role || 'viewer');
+    const myMember = project?.members?.find(m => {
+        const memberId = typeof m.user === 'object' ? m.user?._id : m.user;
+        return memberId?.toString() === user?._id?.toString() || m.email === user?.email;
+    });
+    const myRole = project?.owner?.toString() === user?._id?.toString() ? 'owner' : (myMember?.role || 'viewer');
     const isViewer = myRole === 'viewer';
 
     return (
