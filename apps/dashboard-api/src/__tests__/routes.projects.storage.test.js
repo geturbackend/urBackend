@@ -23,9 +23,12 @@ jest.mock('@urbackend/common', () => ({
   checkAuthEnabled: jest.fn((_req, _res, next) => next()),
 }));
 
-jest.mock('../middlewares/authorizeProject', () =>
-  jest.fn(() => (req, res, next) => next())
-);
+const mockAuthZ = jest.fn((req, res, next) => next());
+jest.mock('../middlewares/authorizeProject', () => {
+  const m = jest.fn(() => mockAuthZ);
+  m.middleware = mockAuthZ;
+  return m;
+});
 
 jest.mock('../controllers/userAuth.controller', () => ({
   createAdminUser: jest.fn((_req, res) => res.json({ ok: true })),
@@ -121,7 +124,7 @@ describe('projects storage presigned routes', () => {
     expect(res.status).toBe(200);
     expect(authMiddleware).toHaveBeenCalled();
     expect(verifyEmail).toHaveBeenCalled();
-    expect(authorizeProject).toHaveBeenCalled();
+    expect(authorizeProject.middleware).toHaveBeenCalled();
     expect(projectController.requestUpload).toHaveBeenCalledTimes(1);
   });
 
@@ -133,7 +136,7 @@ describe('projects storage presigned routes', () => {
     expect(res.status).toBe(200);
     expect(authMiddleware).toHaveBeenCalled();
     expect(verifyEmail).toHaveBeenCalled();
-    expect(authorizeProject).toHaveBeenCalled();
+    expect(authorizeProject.middleware).toHaveBeenCalled();
     expect(projectController.confirmUpload).toHaveBeenCalledTimes(1);
   });
 });

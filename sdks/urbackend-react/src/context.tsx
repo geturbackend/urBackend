@@ -96,6 +96,7 @@ export const UrProvider: React.FC<UrProviderProps> = ({ apiKey, baseUrl, childre
           setUser(currentUser);
         }
       } catch (error: any) {
+        console.error("InitAuth Error:", error);
         if (mounted) {
           setUser(null);
           // Don't set global error for initial me() check failure (usually just means not logged in)
