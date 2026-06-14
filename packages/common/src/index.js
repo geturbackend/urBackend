@@ -118,6 +118,7 @@ const ApiResponse = require("./utils/ApiResponse");
 const { checkLockout, recordFailedAttempt, clearLockout } = require("./utils/loginLockout");
 const { dispatchWebhooks } = require("./utils/webhookDispatcher");
 const { getDayKey, getMonthKey, getEndOfMonthTtlSeconds, incrWithTtlAtomic } = require("./utils/usageCounter");
+const { markDeveloperOnboardingStep, normalizeOnboarding } = require("./utils/onboarding");
 
 module.exports = {
   connectDB,
@@ -226,5 +227,7 @@ module.exports = {
   getMonthKey,
   getEndOfMonthTtlSeconds,
   incrWithTtlAtomic,
-  getS3CompatibleStorage
+  getS3CompatibleStorage,
+  markDeveloperOnboardingStep,
+  normalizeOnboarding
 };

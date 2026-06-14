@@ -98,6 +98,7 @@ app.use(capture({
 
 
 const authRoute = require('./routes/auth');
+const userRoute = require('./routes/user');
 const projectRoute = require('./routes/projects');
 const releaseRoute = require('./routes/releases');
 const webhookRoute = require('./routes/webhooks');
@@ -108,6 +109,7 @@ const adminMetricsRoute = require('./routes/admin.metrics');
 const aiRoute = require('./routes/ai.routes');
 
 app.use('/api/auth', authRoute); 
+app.use('/api/user', dashboardLimiter, userRoute);
 app.use('/api/projects', dashboardLimiter, projectRoute);
 app.use('/api/projects/:projectId/ai', dashboardLimiter, aiRoute);
 app.use('/api/projects', dashboardLimiter, webhookRoute);

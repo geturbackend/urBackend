@@ -15,6 +15,7 @@ const {
   sanitizeNonEmptyString,
 } = require("@urbackend/common");
 const { generateApiKey, hashApiKey } = require("@urbackend/common");
+const { markDeveloperOnboardingStep } = require("@urbackend/common");
 const { z } = require("zod");
 const { encrypt, decrypt } = require("@urbackend/common");
 const { URL } = require("url");
@@ -302,6 +303,9 @@ module.exports.createProject = async (req, res) => {
     await session.commitTransaction();
     session.endSession();
     
+    markDeveloperOnboardingStep(req.user._id, 'projectCreated').catch((err) => {
+      console.error('[onboarding] Failed to mark projectCreated:', err.message);
+    });
     emitEvent(req.user._id, 'project_created', { projectName: projectObj.name }, newProject._id);
     return res.status(201).json(projectObj);
   } catch (err) {
@@ -313,6 +317,9 @@ module.exports.createProject = async (req, res) => {
     if (err.message && (err.message.includes("Transaction numbers are only allowed") || err.message.includes("buffering timed out"))) {
       try {
         const { projectObj, newProject } = await executeOperation(null);
+        markDeveloperOnboardingStep(req.user._id, 'projectCreated').catch((err) => {
+          console.error('[onboarding] Failed to mark projectCreated:', err.message);
+        });
         emitEvent(req.user._id, 'project_created', { projectName: projectObj.name }, newProject._id);
         return res.status(201).json(projectObj);
       } catch (retryErr) {
@@ -837,6 +844,9 @@ module.exports.createCollection = async (req, res) => {
     delete projectObj.secretKey;
     delete projectObj.jwtSecret;
 
+    markDeveloperOnboardingStep(req.user._id, 'collectionCreated').catch((err) => {
+      console.error('[onboarding] Failed to mark collectionCreated:', err.message);
+    });
     emitEvent(req.user._id, 'collection_created', { collectionName, isUsersCollection: collectionName === 'users' }, projectId);
 
     return res.status(201).json(projectObj);
@@ -859,6 +869,9 @@ module.exports.createCollection = async (req, res) => {
         delete projectObj.secretKey;
         delete projectObj.jwtSecret;
 
+        markDeveloperOnboardingStep(req.user._id, 'collectionCreated').catch((err) => {
+          console.error('[onboarding] Failed to mark collectionCreated:', err.message);
+        });
         emitEvent(req.user._id, 'collection_created', { collectionName, isUsersCollection: collectionName === 'users' }, projectId);
 
         return res.status(201).json(projectObj);

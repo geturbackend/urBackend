@@ -84,6 +84,7 @@ const ThemeToggle = () => {
       style={{ width: '100%', justifyContent: 'flex-start', marginBottom: '8px' }}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       aria-pressed={isDark}
+      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
     >
       {isDark ? <Moon size={16} /> : <Sun size={16} />}
       <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>

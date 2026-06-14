@@ -90,9 +90,10 @@ const logger = (req, res, next) => {
                             'NX'
                         );
                         if (isFirst) {
-                            const { Project, PlatformEvent } = require('@urbackend/common');
+                            const { Project, PlatformEvent, markDeveloperOnboardingStep } = require('@urbackend/common');
                             const proj = await Project.findById(req.project._id).select('owner').lean();
                             if (proj?.owner) {
+                                await markDeveloperOnboardingStep(proj.owner, 'firstApiCall');
                                 await PlatformEvent.create({
                                     developerId: proj.owner,
                                     projectId: req.project._id,

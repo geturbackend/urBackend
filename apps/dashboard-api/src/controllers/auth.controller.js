@@ -14,7 +14,8 @@ const {
     resetPasswordSchema,
     verifyOtpSchema,
     AppError,
-    ApiResponse
+    ApiResponse,
+    normalizeOnboarding
 } = require("@urbackend/common");
 const { emitEvent } = require('../utils/emitEvent');
 
@@ -618,6 +619,7 @@ module.exports.getMe = async (req, res, next) => {
         const user = await Developer.findById(req.user._id).select("-password -refreshToken");
         if (!user) return next(new AppError(404, "User not found"));
         const userData = typeof user.toObject === 'function' ? user.toObject() : { ...user };
+        userData.onboarding = normalizeOnboarding(userData.onboarding);
         userData.isAdmin = userData.email === process.env.ADMIN_EMAIL;
         return new ApiResponse({ user: userData }).send(res);
     } catch (err) {

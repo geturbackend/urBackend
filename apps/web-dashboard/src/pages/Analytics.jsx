@@ -12,6 +12,7 @@ import {
     ChevronRight, ArrowUpRight, TrendingUp, Filter
 } from 'lucide-react';
 import SectionHeader from '../components/Dashboard/SectionHeader';
+import { getProgressWidth, getUsagePercentage } from '../utils/quota';
 
 const STATUS_COLORS = {
     '2xx': '#10b981',
@@ -188,7 +189,7 @@ export default function Analytics() {
                     value={formatBytes(data?.storage?.used)} 
                     subtext={`of ${formatBytes(data?.storage?.limit)} available`}
                     icon={<HardDrive size={18} />}
-                    progress={(data?.storage?.used / data?.storage?.limit) * 100}
+                    progress={getUsagePercentage(data?.storage?.used, data?.storage?.limit)}
                 />
             </div>
 
@@ -395,7 +396,7 @@ function KPICard({ title, value, subtext, icon, progress }) {
             <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>{subtext}</div>
             {progress !== undefined && (
                 <div style={{ width: '100%', height: '2px', background: 'rgba(255,255,255,0.05)', borderRadius: '1px', marginTop: '12px', overflow: 'hidden' }}>
-                    <div style={{ width: `${Math.min(progress, 100)}%`, height: '100%', background: 'var(--color-text-muted)', borderRadius: '1px' }} />
+                    <div style={{ width: getProgressWidth(progress), height: '100%', background: 'var(--color-text-muted)', borderRadius: '1px' }} />
                 </div>
             )}
         </div>

@@ -4,6 +4,11 @@ const { marked } = require('marked');
 const dotenv = require('dotenv');
 
 dotenv.config();
+console.log("cwd =", process.cwd());
+console.log("__dirname =", __dirname);
+console.log("RESEND_API_KEY =", process.env.RESEND_API_KEY);
+console.log("RESEND_API_KEY_2 =", process.env.RESEND_API_KEY_2);
+
 const resend = new Resend(process.env.RESEND_API_KEY_2 || process.env.RESEND_API_KEY || 're_dummy_key_for_testing');
 
 const FALLBACK_FROM_ADDRESS = 'urBackend <urbackend@apps.bitbros.in>';

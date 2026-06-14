@@ -84,6 +84,18 @@ jest.mock('@urbackend/common', () => {
             }
         },
         sendOtp: jest.fn().mockResolvedValue(undefined),
+        normalizeOnboarding: jest.fn((onboarding = {}) => {
+            const steps = onboarding.steps || {};
+            return {
+                completed: Boolean(onboarding.completed),
+                steps: {
+                    projectCreated: Boolean(steps.projectCreated),
+                    collectionCreated: Boolean(steps.collectionCreated),
+                    firstApiCall: Boolean(steps.firstApiCall),
+                },
+                activationAt: onboarding.activationAt || null,
+            };
+        }),
         // Use real zod shapes so validation logic is exercised.
         loginSchema: z.object({
             email: z.string().email(),
@@ -393,6 +405,37 @@ describe('auth.controller', () => {
             expect(res.json).toHaveBeenCalledWith(
                 expect.objectContaining({ success: true })
             );
+        });
+
+        test('returns default onboarding state for users without stored onboarding', async () => {
+            const mockSelect = jest.fn().mockResolvedValue({
+                _id: 'dev_id_1',
+                email: 'test@example.com',
+            });
+            Developer.findById.mockReturnValue({ select: mockSelect });
+
+            const req = makeReq({}, { _id: 'dev_id_1' });
+            const res = makeRes();
+
+            await authController.getMe(req, res, next);
+
+            expect(res.json).toHaveBeenCalledWith({
+                success: true,
+                data: {
+                    user: expect.objectContaining({
+                        onboarding: {
+                            completed: false,
+                            steps: {
+                                projectCreated: false,
+                                collectionCreated: false,
+                                firstApiCall: false,
+                            },
+                            activationAt: null,
+                        },
+                    }),
+                },
+                message: 'Success',
+            });
         });
 
         test('returns 404 when user does not exist', async () => {
