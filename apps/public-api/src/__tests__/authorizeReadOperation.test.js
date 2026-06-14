@@ -1,7 +1,20 @@
 'use strict';
 
-const authorizeReadOperation = require('../middlewares/authorizeReadOperation');
+jest.mock('@urbackend/common', () => {
+    class MockAppError extends Error {
+        constructor(statusCode, message, error) {
+            super(message);
+            this.statusCode = statusCode;
+            this.error = error;
+            this.isOperational = true;
+        }
+    }
+    return {
+        AppError: MockAppError
+    };
+});
 
+const authorizeReadOperation = require('../middlewares/authorizeReadOperation');
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -80,9 +93,8 @@ describe('authorizeReadOperation middleware', () => {
 
         await authorizeReadOperation(req, res, next);
 
-        expect(res.statusCode).toBe(404);
-        expect(res.body.error).toBe('Collection not found');
-        expect(next).not.toHaveBeenCalled();
+        expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 404, message: 'Collection not found' }));
+        expect(res.status).not.toHaveBeenCalled();
     });
 
     test('rls disabled allows public read', async () => {
@@ -121,9 +133,8 @@ describe('authorizeReadOperation middleware', () => {
 
         await authorizeReadOperation(req, res, next);
 
-        expect(res.statusCode).toBe(401);
-        expect(res.body.error).toBe('Authentication required');
-        expect(next).not.toHaveBeenCalled();
+        expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 401, message: 'Provide a valid user Bearer token for private reads.' }));
+        expect(res.status).not.toHaveBeenCalled();
     });
 
     test('private mode sets owner filter when authed', async () => {

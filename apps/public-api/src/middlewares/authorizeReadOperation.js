@@ -1,3 +1,4 @@
+const { AppError } = require('@urbackend/common');
 module.exports = async (req, res, next) => {
     try {
         if (req.keyRole === 'secret') {
@@ -10,7 +11,7 @@ module.exports = async (req, res, next) => {
         const collectionConfig = project.collections.find(c => c.name === collectionName);
 
         if (!collectionConfig) {
-            return res.status(404).json({ error: 'Collection not found' });
+            return next(new AppError(404, 'Collection not found'));
         }
 
         const rls = collectionConfig.rls || {};
@@ -24,10 +25,7 @@ module.exports = async (req, res, next) => {
 
         if (mode === 'private') {
             if (!req.authUser?.userId) {
-                return res.status(401).json({
-                    error: 'Authentication required',
-                    message: 'Provide a valid user Bearer token for private reads.'
-                });
+                return next(new AppError(401, 'Provide a valid user Bearer token for private reads.', 'Authentication required'));
             }
 
             const ownerField = rls.ownerField || 'userId';
@@ -40,8 +38,9 @@ module.exports = async (req, res, next) => {
             return next();
         }
 
-        return res.status(403).json({ error: 'Unsupported RLS mode' });
+        return next(new AppError(403, 'Unsupported RLS mode'));
     } catch (err) {
-        return res.status(500).json({ error: err.message });
+        console.error('[authorizeReadOperation] Unexpected error:', err);
+        return next(new AppError(500, 'Internal Server Error'));
     }
 };
