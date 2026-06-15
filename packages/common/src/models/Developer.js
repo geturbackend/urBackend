@@ -24,6 +24,20 @@ const onboardingSchema = new mongoose.Schema({
         type: onboardingStepsSchema,
         default: () => ({})
     },
+    currentStep: {
+        type: String,
+        enum: ['project', 'collection', 'api'],
+        default: 'project'
+    },
+    projectId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Project',
+        default: null
+    },
+    collectionId: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null
+    },
     activationAt: {
         type: Date,
         default: null

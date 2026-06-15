@@ -23,8 +23,19 @@ const normalizeOnboarding = (onboarding = {}) => {
       collectionCreated: Boolean(steps.collectionCreated),
       firstApiCall: Boolean(steps.firstApiCall),
     },
+    currentStep: 'project',
+    projectId: onboarding.projectId || null,
+    collectionId: onboarding.collectionId || null,
     activationAt: onboarding.activationAt || null,
   };
+
+  if (!normalized.steps.projectCreated) {
+    normalized.currentStep = 'project';
+  } else if (!normalized.steps.collectionCreated) {
+    normalized.currentStep = 'collection';
+  } else {
+    normalized.currentStep = 'api';
+  }
 
   normalized.completed =
     Boolean(onboarding.completed) ||
@@ -76,12 +87,21 @@ const markDeveloperOnboardingStep = async (developerId, step, options = {}) => {
 
   const current = normalizeOnboarding(developer.onboarding);
   if (current.completed) return current;
+
   if (!current.steps[step]) {
     assertCanSetStep(developer.onboarding, step);
     developer.set(stepPath, true);
   }
 
-  if (step === 'firstApiCall') {
+  // Handle sequential progression and metadata persistence on the backend
+  if (step === 'projectCreated' && options.projectId) {
+    developer.set('onboarding.projectId', options.projectId);
+    developer.set('onboarding.currentStep', 'collection');
+  } else if (step === 'collectionCreated' && options.collectionId) {
+    developer.set('onboarding.collectionId', options.collectionId);
+    developer.set('onboarding.currentStep', 'api');
+  } else if (step === 'firstApiCall') {
+    developer.set('onboarding.currentStep', 'api');
     const currentActivationAt = developer.onboarding?.activationAt || null;
     if (!currentActivationAt) {
       developer.set('onboarding.activationAt', options.activationAt || new Date());

@@ -18,7 +18,10 @@ const getServerProgress = (user) => {
         create_project: Boolean(steps.projectCreated),
         create_collection: Boolean(steps.collectionCreated),
         get_api_key: Boolean(user?.isVerified),
-        make_api_call: Boolean(steps.firstApiCall)
+        make_api_call: Boolean(steps.firstApiCall),
+        currentStep: user?.onboarding?.currentStep || 'project',
+        projectId: user?.onboarding?.projectId || null,
+        collectionId: user?.onboarding?.collectionId || null
     };
 };
 
@@ -56,12 +59,13 @@ export const OnboardingProvider = ({ children }) => {
         else localStorage.removeItem(storageKeys.activeProjectId);
     }, [activeProjectId, storageKeys]);
 
-    const completeStep = useCallback((stepKey) => {
+    const completeStep = useCallback((stepKey, meta = {}) => {
         const serverStep = SERVER_STEP_BY_UI_STEP[stepKey];
         if (!serverStep) return;
 
         api.patch('/api/user/onboarding', {
-            steps: { [serverStep]: true }
+            steps: { [serverStep]: true },
+            ...meta
         })
             .then((response) => {
                 const onboarding = response.data?.data?.onboarding;
@@ -75,6 +79,17 @@ export const OnboardingProvider = ({ children }) => {
             .catch((err) => {
                 console.error('[onboarding] Failed to persist progress:', err.message);
             });
+    }, [updateUser]);
+
+    const refreshUser = useCallback(async () => {
+        try {
+            const response = await api.get('/api/auth/me');
+            if (response.data.success) {
+                updateUser(response.data.data.user);
+            }
+        } catch (err) {
+            console.error("Failed to refresh user:", err.message);
+        }
     }, [updateUser]);
 
     const dismissOnboarding = useCallback(() => {
@@ -111,7 +126,11 @@ export const OnboardingProvider = ({ children }) => {
         isDismissed,
         allCompleted,
         activeProjectId,
-        setActiveProjectId
+        setActiveProjectId,
+        refreshUser,
+        currentStep: progress.currentStep,
+        projectId: progress.projectId,
+        collectionId: progress.collectionId
     };
 
     return (

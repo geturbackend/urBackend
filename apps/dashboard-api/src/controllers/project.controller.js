@@ -263,6 +263,16 @@ module.exports.createProject = async (req, res) => {
   const executeOperation = async (session) => {
     const { name, description, siteUrl } = createProjectSchema.parse(req.body);
 
+    if (!req.user.onboarding?.completed) {
+      const queryOpts = session ? { session } : {};
+      const existing = await Project.findOne({ owner: req.user._id }, null, queryOpts);
+      if (existing) {
+        const projectObj = existing.toObject();
+        prepareCreatedProjectResponse(projectObj, req.user);
+        return { projectObj, newProject: existing };
+      }
+    }
+
     if (req.projectLimit !== undefined) {
       const queryOpts = session ? { session } : {};
       const currentCount = await Project.countDocuments(
@@ -306,6 +316,16 @@ module.exports.createProject = async (req, res) => {
     return { projectObj, newProject };
   };
 
+  if (!req.user.onboarding?.completed) {
+    const existing = await Project.findOne({ owner: req.user._id }).lean();
+    if (existing) {
+      await markDeveloperOnboardingStep(req.user._id, 'projectCreated', { projectId: existing._id });
+      const projectObj = { ...existing };
+      prepareCreatedProjectResponse(projectObj, req.user);
+      return res.status(201).json(projectObj);
+    }
+  }
+
   let session = null;
   try {
     session = await mongoose.startSession();
@@ -316,7 +336,7 @@ module.exports.createProject = async (req, res) => {
     await session.commitTransaction();
     session.endSession();
     
-    markDeveloperOnboardingStep(req.user._id, 'projectCreated').catch((err) => {
+    markDeveloperOnboardingStep(req.user._id, 'projectCreated', { projectId: newProject._id }).catch((err) => {
       console.error('[onboarding] Failed to mark projectCreated:', err.message);
     });
     emitEvent(req.user._id, 'project_created', { projectName: projectObj.name }, newProject._id);
@@ -330,7 +350,7 @@ module.exports.createProject = async (req, res) => {
     if (err.message && (err.message.includes("Transaction numbers are only allowed") || err.message.includes("buffering timed out"))) {
       try {
         const { projectObj, newProject } = await executeOperation(null);
-        markDeveloperOnboardingStep(req.user._id, 'projectCreated').catch((err) => {
+        markDeveloperOnboardingStep(req.user._id, 'projectCreated', { projectId: newProject._id }).catch((err) => {
           console.error('[onboarding] Failed to mark projectCreated:', err.message);
         });
         emitEvent(req.user._id, 'project_created', { projectName: projectObj.name }, newProject._id);
@@ -837,6 +857,22 @@ module.exports.createCollection = async (req, res) => {
     return { project, connection, compiledCollectionName, collectionExistedBefore, projectId, collectionName };
   };
 
+  if (!req.user.onboarding?.completed) {
+    const { projectId } = req.body;
+    const project = await Project.findOne({ _id: projectId, owner: req.user._id });
+    if (project) {
+      const customCol = project.collections.find(c => c.name !== 'users');
+      if (customCol) {
+        await markDeveloperOnboardingStep(req.user._id, 'collectionCreated', { collectionId: customCol._id });
+        const projectObj = project.toObject();
+        delete projectObj.publishableKey;
+        delete projectObj.secretKey;
+        delete projectObj.jwtSecret;
+        return res.status(201).json(projectObj);
+      }
+    }
+  }
+
   let session = null;
   try {
     session = await mongoose.startSession();
@@ -857,7 +893,8 @@ module.exports.createCollection = async (req, res) => {
     delete projectObj.secretKey;
     delete projectObj.jwtSecret;
 
-    markDeveloperOnboardingStep(req.user._id, 'collectionCreated').catch((err) => {
+    const createdCol = project.collections.find((c) => c.name === collectionName);
+    markDeveloperOnboardingStep(req.user._id, 'collectionCreated', { collectionId: createdCol?._id }).catch((err) => {
       console.error('[onboarding] Failed to mark collectionCreated:', err.message);
     });
     emitEvent(req.user._id, 'collection_created', { collectionName, isUsersCollection: collectionName === 'users' }, projectId);
@@ -882,7 +919,8 @@ module.exports.createCollection = async (req, res) => {
         delete projectObj.secretKey;
         delete projectObj.jwtSecret;
 
-        markDeveloperOnboardingStep(req.user._id, 'collectionCreated').catch((err) => {
+        const createdCol = project.collections.find((c) => c.name === collectionName);
+        markDeveloperOnboardingStep(req.user._id, 'collectionCreated', { collectionId: createdCol?._id }).catch((err) => {
           console.error('[onboarding] Failed to mark collectionCreated:', err.message);
         });
         emitEvent(req.user._id, 'collection_created', { collectionName, isUsersCollection: collectionName === 'users' }, projectId);

@@ -4,8 +4,6 @@ import { useAuth } from '../context/AuthContext';
 // This component takes other components as children
 const ProtectedRoute = ({
     children,
-    onboardingOnly = false,
-    allowIncompleteOnboarding = false,
     allowUnverified = true
 }) => {
     const { user, isAuthenticated, isLoading } = useAuth();
@@ -37,15 +35,40 @@ const ProtectedRoute = ({
 
     const onboardingCompleted = !!user?.onboarding?.completed;
 
-    if (onboardingOnly && onboardingCompleted) {
-        return <Navigate to="/dashboard" replace />;
+    if (onboardingCompleted) {
+        if (location.pathname.startsWith('/onboarding')) {
+            return <Navigate to="/dashboard" replace />;
+        }
+    } else {
+        const steps = user?.onboarding?.steps || {};
+        
+        // If accessing a dashboard/post-onboarding page, or exactly /onboarding, redirect to the correct step
+        if (!location.pathname.startsWith('/onboarding') || location.pathname === '/onboarding' || location.pathname === '/onboarding/') {
+            if (!steps.projectCreated) {
+                return <Navigate to="/onboarding/project" replace />;
+            } else if (!steps.collectionCreated) {
+                return <Navigate to="/onboarding/collection" replace />;
+            } else {
+                return <Navigate to="/onboarding/api" replace />;
+            }
+        }
+        
+        // If on /onboarding/*, enforce step prerequisites strictly
+        if (!steps.projectCreated) {
+            if (location.pathname !== '/onboarding/project') {
+                return <Navigate to="/onboarding/project" replace />;
+            }
+        } else if (!steps.collectionCreated) {
+            if (location.pathname !== '/onboarding/collection') {
+                return <Navigate to="/onboarding/collection" replace />;
+            }
+        } else {
+            if (location.pathname !== '/onboarding/api') {
+                return <Navigate to="/onboarding/api" replace />;
+            }
+        }
     }
 
-    if (!onboardingOnly && !allowIncompleteOnboarding && !onboardingCompleted) {
-        return <Navigate to="/onboarding" replace />;
-    }
-
-    // If authenticated, render the child component (e.g., the Dashboard)
     return children;
 };
 
