@@ -4,11 +4,11 @@ import { useOnboarding } from '../../context/OnboardingContext';
 import { Check, ChevronRight, ChevronDown, ChevronUp, X, Rocket, ExternalLink } from 'lucide-react';
 
 const OnboardingChecklist = () => {
-    const { steps, progress, isVisible, dismissOnboarding } = useOnboarding();
+    const { steps, progress, isVisible, dismissOnboarding, allCompleted } = useOnboarding();
     const [isExpanded, setIsExpanded] = useState(true);
     const navigate = useNavigate();
 
-    if (!isVisible) return null;
+    if (!isVisible || allCompleted) return null;
 
     const totalSteps = steps?.length || 0;
     const completedCount = steps?.filter((step) => progress[step.key]).length || 0;

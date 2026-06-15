@@ -165,8 +165,13 @@ const sanitizeAuthProviders = (authProviders = {}) => {
 };
 
 const sanitizeProjectResponse = (projectObj) => {
-  delete projectObj.publishableKey;
+  if (projectObj.publishableKey && projectObj.publishableKey.startsWith('pk_live_')) {
+    // Keep plaintext public key
+  } else {
+    projectObj.publishableKey = 'pk_live_••••••••';
+  }
   delete projectObj.secretKey;
+  delete projectObj.secretKeyEncrypted;
   delete projectObj.jwtSecret;
   const resendConfig = projectObj.resendApiKey;
   projectObj.hasResendApiKey =
@@ -288,10 +293,10 @@ module.exports.createProject = async (req, res) => {
     }
 
     const rawPublishableKey = generateApiKey("pk_live_");
-    const hashedPublishableKey = hashApiKey(rawPublishableKey);
 
     const rawSecretKey = generateApiKey("sk_live_");
     const hashedSecretKey = hashApiKey(rawSecretKey);
+    const encryptedSecretKey = encrypt(rawSecretKey);
 
     const rawJwtSecret = generateApiKey("jwt_");
 
@@ -299,8 +304,10 @@ module.exports.createProject = async (req, res) => {
       name,
       description,
       owner: req.user._id,
-      publishableKey: hashedPublishableKey,
+      publishableKey: rawPublishableKey,
       secretKey: hashedSecretKey,
+      secretKeyEncrypted: encryptedSecretKey,
+      secretKeyRevealed: false,
       jwtSecret: rawJwtSecret,
       siteUrl: siteUrl || "",
     });
@@ -491,8 +498,12 @@ module.exports.regenerateApiKey = async (req, res) => {
 
     const updateField =
       keyType === "publishable"
-        ? { publishableKey: hashed }
-        : { secretKey: hashed };
+        ? { publishableKey: newApiKey }
+        : { 
+            secretKey: hashed,
+            secretKeyEncrypted: encrypt(newApiKey),
+            secretKeyRevealed: false
+          };
 
     const project = await Project.findOneAndUpdate(
       { _id: req.params.projectId, owner: req.user._id },
@@ -501,10 +512,7 @@ module.exports.regenerateApiKey = async (req, res) => {
     );
     if (!project) return res.status(404).json({ error: "Project not found." });
 
-    const projectObj = project.toObject();
-    delete projectObj.publishableKey;
-    delete projectObj.secretKey;
-    delete projectObj.jwtSecret;
+    const projectObj = sanitizeProjectResponse(project.toObject());
     res.json({ apiKey: newApiKey, keyType, project: projectObj });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -2915,4 +2923,39 @@ module.exports.sendMarketingBroadcast = async (req, res) => {
         const errorMsg = err.response?.data?.message || err.message;
         return res.status(err.response?.status || 500).json({ success: false, message: errorMsg });
     }
+};
+
+module.exports.revealSecretKey = async (req, res) => {
+  try {
+    const project = await Project.findOne({
+      _id: req.params.projectId,
+      owner: req.user._id,
+    }).select("+secretKeyEncrypted secretKeyRevealed");
+
+    if (!project) {
+      return res.status(404).json({ success: false, message: "Project not found." });
+    }
+
+    if (!req.user.isVerified) {
+      return res.status(403).json({ success: false, message: "Account verification required to reveal secret key." });
+    }
+
+    if (project.secretKeyRevealed) {
+      return res.status(400).json({ success: false, message: "Secret key has already been revealed once." });
+    }
+
+    if (!project.secretKeyEncrypted || !project.secretKeyEncrypted.encrypted) {
+      return res.status(404).json({ success: false, message: "Secret key cannot be decrypted (it may have been rolled or cleared)." });
+    }
+
+    const decryptedKey = decrypt(project.secretKeyEncrypted);
+
+    project.secretKeyRevealed = true;
+    project.secretKeyEncrypted = null;
+    await project.save();
+
+    res.json({ success: true, data: { secretKey: decryptedKey }, message: "Secret key revealed successfully." });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 };

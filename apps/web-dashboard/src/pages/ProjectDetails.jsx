@@ -27,6 +27,20 @@ function ProjectDetails() {
     const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
     const [newKey, setNewKey] = useState(null);
+    const [revealedSecretKey, setRevealedSecretKey] = useState(null);
+
+    const handleRevealSecretKey = async () => {
+        try {
+            const res = await api.post(`/api/projects/${projectId}/reveal-secret-key`);
+            if (res.data.success) {
+                setRevealedSecretKey(res.data.data.secretKey);
+                setProject(prev => ({ ...prev, secretKeyRevealed: true }));
+                toast.success("Secret key revealed! Copy it now.");
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.message || err.response?.data?.error || "Failed to reveal secret key");
+        }
+    };
 
     useEffect(() => {
         Promise.resolve().then(() => {
@@ -63,6 +77,12 @@ function ProjectDetails() {
         try {
             const res = await api.post(`/api/projects/${projectId}/api-key`, { keyType });
             setNewKey({ key: res.data.apiKey, type: keyType });
+            if (keyType === 'secret') {
+                setRevealedSecretKey(null);
+                setProject(prev => ({ ...prev, secretKeyRevealed: false }));
+            } else {
+                setProject(prev => ({ ...prev, publishableKey: res.data.apiKey }));
+            }
             toast.success("New Key Generated!");
         } catch {
             toast.error("Failed to regenerate key");
@@ -229,29 +249,147 @@ function ProjectDetails() {
                 {/* Right Column */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
                     
+                    {/* Project Status */}
+                    <section>
+                        <SectionHeader title="Project Status" />
+                        <div className="glass-card" style={{ padding: '1.25rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Database Status</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} /> Connected
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Collections</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-primary)', cursor: 'pointer' }} onClick={() => navigate(`/project/${projectId}/database`)}>
+                                    {project.collections?.length || 0} collections
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Activation Status</span>
+                                    <span 
+                                      style={{ cursor: 'help', color: 'var(--color-text-muted)', fontSize: '0.75rem' }} 
+                                      title="Indicates whether your project has received its first successful API call."
+                                    >
+                                      ❓
+                                    </span>
+                                </div>
+                                <span style={{ 
+                                    fontSize: '0.8rem', 
+                                    fontWeight: 600, 
+                                    color: user?.onboarding?.steps?.firstApiCall ? '#10b981' : 'var(--color-text-muted)', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '6px' 
+                                }}>
+                                    <span style={{ 
+                                        width: '8px', 
+                                        height: '8px', 
+                                        borderRadius: '50%', 
+                                        background: user?.onboarding?.steps?.firstApiCall ? '#10b981' : '#6b7280', 
+                                        display: 'inline-block' 
+                                    }} /> 
+                                    {user?.onboarding?.steps?.firstApiCall ? 'Active' : 'Inactive'}
+                                </span>
+                            </div>
+                        </div>
+                    </section>
+
                     {/* API Config / Keys */}
                     <section>
                         <SectionHeader title="API Credentials" />
                         <div className="glass-card" style={{ padding: '1.25rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                             <div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Publishable Key</label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>API Base Endpoint</label>
+                                </div>
+                                <div style={{ display: 'flex', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
+                                    <input readOnly value={`${PUBLIC_API_URL}/api/data`} style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--color-text-main)', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
+                                    <button 
+                                        onClick={async () => {
+                                            await navigator.clipboard.writeText(`${PUBLIC_API_URL}/api/data`);
+                                            toast.success("Endpoint copied!");
+                                        }} 
+                                        style={{ background: 'none', border: 'none', padding: '0 12px', color: 'var(--color-text-muted)', cursor: 'pointer' }}
+                                    >
+                                        <Copy size={13} />
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Publishable Key</label>
+                                        <span 
+                                          style={{ cursor: 'help', color: 'var(--color-text-muted)', fontSize: '0.75rem' }} 
+                                          title="Public key used from browsers or client applications."
+                                        >
+                                          ❓
+                                        </span>
+                                    </div>
                                     <button onClick={() => handleRegenerateKey('publishable')} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: '0.7rem', cursor: 'pointer' }}>Roll</button>
                                 </div>
                                 <div style={{ display: 'flex', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
-                                    <input readOnly value="pk_live_••••••••" type="password" style={{ flex: 1, background: 'transparent', border: 'none', color: '#666', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
-                                    <button onClick={() => toast.error("Roll key to view new value")} style={{ background: 'none', border: 'none', padding: '0 10px', color: '#555' }}><Copy size={12} /></button>
+                                    <input readOnly value={project.publishableKey} style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--color-primary)', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
+                                    <button 
+                                        onClick={async () => {
+                                            await navigator.clipboard.writeText(project.publishableKey);
+                                            toast.success("Publishable key copied!");
+                                        }} 
+                                        style={{ background: 'none', border: 'none', padding: '0 12px', color: 'var(--color-text-muted)', cursor: 'pointer' }}
+                                    >
+                                        <Copy size={13} />
+                                    </button>
                                 </div>
                             </div>
+                            
                             <div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ef4444' }}>Secret Key</label>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ef4444' }}>Secret Key</label>
+                                        <span 
+                                          style={{ cursor: 'help', color: 'var(--color-text-muted)', fontSize: '0.75rem' }} 
+                                          title="Secret key. Never expose this in frontend code. Shown only once."
+                                        >
+                                          ❓
+                                        </span>
+                                    </div>
                                     <button onClick={() => handleRegenerateKey('secret')} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: '0.7rem', cursor: 'pointer' }}>Roll</button>
                                 </div>
-                                <div style={{ display: 'flex', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
-                                    <input readOnly value="sk_live_••••••••" type="password" style={{ flex: 1, background: 'transparent', border: 'none', color: '#666', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
-                                    <button onClick={() => toast.error("Roll key to view new value")} style={{ background: 'none', border: 'none', padding: '0 10px', color: '#555' }}><Copy size={12} /></button>
-                                </div>
+                                
+                                {revealedSecretKey ? (
+                                    <div style={{ display: 'flex', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid #ef4444', borderRadius: '6px', overflow: 'hidden' }}>
+                                        <input readOnly value={revealedSecretKey} style={{ flex: 1, background: 'transparent', border: 'none', color: '#ef4444', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
+                                        <button 
+                                            onClick={async () => {
+                                                await navigator.clipboard.writeText(revealedSecretKey);
+                                                toast.success("Secret key copied!");
+                                            }} 
+                                            style={{ background: 'none', border: 'none', padding: '0 12px', color: 'var(--color-text-muted)', cursor: 'pointer' }}
+                                        >
+                                            <Copy size={13} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
+                                        <input readOnly value="sk_live_************************" type="password" style={{ flex: 1, background: 'transparent', border: 'none', color: '#666', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
+                                        {!project.secretKeyRevealed ? (
+                                            <button 
+                                                onClick={handleRevealSecretKey} 
+                                                className="btn btn-secondary" 
+                                                style={{ height: '32px', margin: '3px', fontSize: '0.7rem', padding: '0 10px', whiteSpace: 'nowrap' }}
+                                            >
+                                                Reveal Once
+                                            </button>
+                                        ) : (
+                                            <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', alignSelf: 'center', paddingRight: '12px' }}>
+                                                Already Revealed
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </section>

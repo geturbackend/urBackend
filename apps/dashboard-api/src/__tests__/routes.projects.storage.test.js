@@ -77,6 +77,7 @@ jest.mock('../controllers/project.controller', () => {
     manageContacts: jest.fn(ok),
     deleteContact: jest.fn(ok),
     sendMarketingBroadcast: jest.fn(ok),
+    revealSecretKey: jest.fn(ok),
   };
 });
 

@@ -11,6 +11,7 @@ const {
     getAllProject,
     getSingleProject,
     regenerateApiKey,
+    revealSecretKey,
     createCollection,
     deleteCollection,
     getData,
@@ -57,6 +58,7 @@ router.post('/', authMiddleware, planEnforcement.attachDeveloper, planEnforcemen
 router.get('/', authMiddleware, getAllProject);
 router.get('/:projectId', authMiddleware, getSingleProject);
 router.post('/:projectId/api-key', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkDeveloperCapability('revealApiKeys'), regenerateApiKey);
+router.post('/:projectId/reveal-secret-key', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkDeveloperCapability('revealApiKeys'), revealSecretKey);
 
 router.post('/:projectId/collections', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkCollectionLimit, planEnforcement.checkDeveloperCapability('createCollection'), createCollection);
 

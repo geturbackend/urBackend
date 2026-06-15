@@ -29,10 +29,18 @@ module.exports = async (req, res, next) => {
         const keyField = isSecret ? 'secretKey' : 'publishableKey';
         const hashedApi = hashApiKey(apiKey);
 
-        let project = await getProjectByApiKeyCache(hashedApi);
+        let project = await getProjectByApiKeyCache(isSecret ? hashedApi : apiKey);
+        if (!project && !isSecret) {
+            project = await getProjectByApiKeyCache(hashedApi);
+        }
 
         if (!project) {
-            project = await Project.findOne({ [keyField]: hashedApi })
+            project = await Project.findOne({
+                $or: [
+                    { [keyField]: isSecret ? hashedApi : apiKey },
+                    { [keyField]: hashedApi }
+                ]
+            })
                 .select(`
                     name
                     owner
@@ -57,7 +65,8 @@ module.exports = async (req, res, next) => {
                 });
             }
 
-            await setProjectByApiKeyCache(hashedApi, project);
+            const cacheKey = isSecret ? hashedApi : (project[keyField] === apiKey ? apiKey : hashedApi);
+            await setProjectByApiKeyCache(cacheKey, project);
         }
 
         if (!project.owner.isVerified) {
