@@ -78,7 +78,9 @@ function Login() {
       const data = error.response?.data;
       let errorMessage = 'Login failed. Check your credentials and try again.';
 
-      if (typeof data?.error === 'string') {
+      if (data?.message && typeof data.message === 'string') {
+        errorMessage = data.message;
+      } else if (typeof data?.error === 'string' && data.error !== 'Error' && data.error !== 'Internal Server Error') {
         errorMessage = data.error;
       } else if (Array.isArray(data?.error)) {
         errorMessage = data.error[0]?.message || 'Validation failed.';

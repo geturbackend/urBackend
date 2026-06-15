@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import api from '../utils/api';
-import { useAuth } from '../context/AuthContext';
 import { useOnboarding } from '../context/OnboardingContext';
 import toast from 'react-hot-toast';
 import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
@@ -432,7 +431,6 @@ function CreateCollection() {
     const { projectId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
-    const { user } = useAuth();
     const { completeStep } = useOnboarding();
 
     const queryParams = new URLSearchParams(location.search);
@@ -507,11 +505,6 @@ function CreateCollection() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (!user?.isVerified) {
-            toast.error("Account Verification Required. Please verify in Settings.");
-            return;
-        }
 
         const normalizedName = name.trim().toLowerCase();
         if (!normalizedName) return toast.error("Collection name is required");

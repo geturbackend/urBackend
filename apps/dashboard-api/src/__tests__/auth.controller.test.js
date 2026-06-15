@@ -120,6 +120,26 @@ jest.mock('@urbackend/common', () => {
             otp: z.string(),
             newPassword: z.string().min(6),
         }),
+        updateOnboardingSchema: z.object({
+            completed: z.boolean().optional(),
+            steps: z.object({
+                projectCreated: z.boolean().optional(),
+                collectionCreated: z.boolean().optional(),
+                firstApiCall: z.boolean().optional(),
+            }).strict().optional(),
+        }).strict().refine(
+            (data) => data.completed !== undefined || data.steps !== undefined,
+            { message: 'At least one onboarding field must be provided.' }
+        ),
+        updateDeveloperOnboarding: jest.fn().mockResolvedValue({
+            completed: false,
+            steps: {
+                projectCreated: true,
+                collectionCreated: false,
+                firstApiCall: false,
+            },
+            activationAt: null,
+        }),
     };
 });
 
@@ -129,7 +149,7 @@ jest.mock('@urbackend/common', () => {
 
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { Developer, Otp, Project, sendOtp, AppError } = require('@urbackend/common');
+const { Developer, Otp, Project, sendOtp, AppError, updateDeveloperOnboarding } = require('@urbackend/common');
 const authController = require('../controllers/auth.controller');
 
 // ---------------------------------------------------------------------------
@@ -171,22 +191,45 @@ describe('auth.controller', () => {
 
     // -----------------------------------------------------------------------
     describe('register', () => {
-        test('returns 201 and success message on valid new-user registration', async () => {
+        test('returns 201 with session payload on valid new-user registration', async () => {
             Developer.findOne.mockResolvedValue(null);
             bcrypt.genSalt.mockResolvedValue('salt');
             bcrypt.hash.mockResolvedValue('hashed_password');
+            jwt.sign.mockReturnValue('signed_token');
 
+            const createdUser = {
+                _id: 'new_dev_1',
+                email: 'new@example.com',
+                isVerified: false,
+                maxProjects: 1,
+                password: 'hashed_password',
+                save: jest.fn().mockResolvedValue(undefined),
+            };
             const mockSave = jest.fn().mockResolvedValue(undefined);
-            Developer.mockImplementation(() => ({ save: mockSave }));
+            Developer.mockImplementation((data) => ({ ...createdUser, ...data, save: mockSave }));
 
             const req = makeReq({ email: 'new@example.com', password: 'password123' });
             const res = makeRes();
 
             await authController.register(req, res, next);
+            if (next.mock.calls.length > 0) {
+                console.log("NEXT CALLED WITH:", next.mock.calls[0][0]);
+            }
 
             expect(Developer.findOne).toHaveBeenCalledWith({ email: 'new@example.com' });
             expect(res.status).toHaveBeenCalledWith(201);
-            expect(res.json).toHaveBeenCalledWith({ success: true, data: {}, message: 'Registered successfully' });
+            expect(res.cookie).toHaveBeenCalledWith('accessToken', expect.any(String), expect.any(Object));
+            expect(res.cookie).toHaveBeenCalledWith('refreshToken', expect.any(String), expect.any(Object));
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                success: true,
+                data: expect.objectContaining({
+                    redirectTo: '/onboarding',
+                    user: expect.objectContaining({
+                        email: 'new@example.com',
+                        isVerified: false,
+                    }),
+                }),
+            }));
         });
 
         test('returns 400 when email already exists', async () => {
@@ -214,7 +257,7 @@ describe('auth.controller', () => {
 
     // -----------------------------------------------------------------------
     describe('login', () => {
-        const mockUser = () => ({
+        const mockUser = (overrides = {}) => ({
             _id: 'dev_id_1',
             email: 'test@example.com',
             isVerified: true,
@@ -222,6 +265,7 @@ describe('auth.controller', () => {
             refreshToken: null,
             password: 'hashed_password',
             save: jest.fn().mockResolvedValue(undefined),
+            ...overrides,
         });
 
         test('returns 200 with cookie tokens on valid credentials', async () => {
@@ -242,6 +286,79 @@ describe('auth.controller', () => {
             expect(res.json).toHaveBeenCalledWith(
                 expect.objectContaining({ success: true })
             );
+        });
+
+        test('returns onboarding redirect for authenticated users with incomplete onboarding', async () => {
+            const user = mockUser();
+            Developer.findOne.mockReturnValue(Developer.__mockQuery(user));
+            bcrypt.compare.mockResolvedValue(true);
+            jwt.sign.mockReturnValue('signed_token');
+
+            const req = makeReq({ email: 'test@example.com', password: 'correctpass' });
+            const res = makeRes();
+
+            await authController.login(req, res, next);
+
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                data: expect.objectContaining({
+                    redirectTo: '/onboarding',
+                    user: expect.objectContaining({
+                        onboarding: expect.objectContaining({ completed: false }),
+                    }),
+                }),
+            }));
+        });
+
+        test('returns onboarding redirect for unverified users', async () => {
+            const user = mockUser({ isVerified: false });
+            Developer.findOne.mockReturnValue(Developer.__mockQuery(user));
+            bcrypt.compare.mockResolvedValue(true);
+            jwt.sign.mockReturnValue('signed_token');
+
+            const req = makeReq({ email: 'test@example.com', password: 'correctpass' });
+            const res = makeRes();
+
+            await authController.login(req, res, next);
+
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                data: expect.objectContaining({
+                    redirectTo: '/onboarding',
+                    user: expect.objectContaining({
+                        isVerified: false,
+                    }),
+                }),
+            }));
+        });
+
+        test('returns dashboard redirect for authenticated users with completed onboarding', async () => {
+            const user = mockUser({
+                onboarding: {
+                    completed: true,
+                    steps: {
+                        projectCreated: true,
+                        collectionCreated: true,
+                        firstApiCall: true,
+                    },
+                    activationAt: new Date('2026-06-08T00:00:00.000Z'),
+                },
+            });
+            Developer.findOne.mockReturnValue(Developer.__mockQuery(user));
+            bcrypt.compare.mockResolvedValue(true);
+            jwt.sign.mockReturnValue('signed_token');
+
+            const req = makeReq({ email: 'test@example.com', password: 'correctpass' });
+            const res = makeRes();
+
+            await authController.login(req, res, next);
+
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                data: expect.objectContaining({
+                    redirectTo: '/dashboard',
+                    user: expect.objectContaining({
+                        onboarding: expect.objectContaining({ completed: true }),
+                    }),
+                }),
+            }));
         });
 
         test('returns 400 when user is not found', async () => {
@@ -451,6 +568,68 @@ describe('auth.controller', () => {
             expect(next).toHaveBeenCalledWith(expect.any(AppError));
             expect(next.mock.calls[0][0].statusCode).toBe(404);
             expect(next.mock.calls[0][0].message).toBe('User not found');
+        });
+    });
+
+    // -----------------------------------------------------------------------
+    describe('updateOnboarding', () => {
+        test('updates only the authenticated developer onboarding state', async () => {
+            const req = makeReq(
+                { completed: false, steps: { projectCreated: true } },
+                { _id: 'dev_id_1' }
+            );
+            const res = makeRes();
+
+            await authController.updateOnboarding(req, res, next);
+
+            expect(updateDeveloperOnboarding).toHaveBeenCalledWith('dev_id_1', {
+                completed: false,
+                steps: { projectCreated: true },
+            });
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({
+                success: true,
+                data: {
+                    onboarding: {
+                        completed: false,
+                        steps: {
+                            projectCreated: true,
+                            collectionCreated: false,
+                            firstApiCall: false,
+                        },
+                        activationAt: null,
+                    },
+                },
+                message: 'Onboarding updated successfully',
+            });
+        });
+
+        test('rejects activationAt updates', async () => {
+            const req = makeReq(
+                { activationAt: '2026-06-08T00:00:00.000Z' },
+                { _id: 'dev_id_1' }
+            );
+            const res = makeRes();
+
+            await authController.updateOnboarding(req, res, next);
+
+            expect(updateDeveloperOnboarding).not.toHaveBeenCalled();
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(400);
+        });
+
+        test('rejects malformed nested step objects', async () => {
+            const req = makeReq(
+                { steps: { firstApiCall: 'yes' } },
+                { _id: 'dev_id_1' }
+            );
+            const res = makeRes();
+
+            await authController.updateOnboarding(req, res, next);
+
+            expect(updateDeveloperOnboarding).not.toHaveBeenCalled();
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(400);
         });
     });
 

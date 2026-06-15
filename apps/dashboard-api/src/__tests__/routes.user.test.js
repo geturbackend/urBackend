@@ -22,6 +22,21 @@ jest.mock('../controllers/auth.controller', () => ({
         },
         message: 'Success',
     })),
+    updateOnboarding: jest.fn((_req, res) => res.json({
+        success: true,
+        data: {
+            onboarding: {
+                completed: false,
+                steps: {
+                    projectCreated: true,
+                    collectionCreated: false,
+                    firstApiCall: false,
+                },
+                activationAt: null,
+            },
+        },
+        message: 'Onboarding updated successfully',
+    })),
 }));
 
 const express = require('express');
@@ -55,5 +70,16 @@ describe('user routes', () => {
             },
             activationAt: null,
         });
+    });
+
+    test('PATCH /api/user/onboarding is wired to authenticated updateOnboarding', async () => {
+        const res = await request(app)
+            .patch('/api/user/onboarding')
+            .send({ steps: { projectCreated: true } });
+
+        expect(res.status).toBe(200);
+        expect(authMiddleware).toHaveBeenCalledTimes(1);
+        expect(authController.updateOnboarding).toHaveBeenCalledTimes(1);
+        expect(res.body.data.onboarding.steps.projectCreated).toBe(true);
     });
 });

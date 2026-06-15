@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
  *   email_verified          — after OTP verified and isVerified set to true
  *   project_created         — after Project.save() in createProject
  *   collection_created      — after project.save() in createCollection
- *   first_api_success       — after first 2xx response logged for a project
+ *   first_api_call          — after first successful real /api/data call for a project
  *   frontend_event          — any event emitted from the dashboard UI (onboarding steps, key copy, etc.)
  *   ai_generation_started   — Phase 4
  *   ai_generation_completed — Phase 4
@@ -28,7 +28,7 @@ const platformEventSchema = new mongoose.Schema(
       ref: 'Project',
       default: null,
     },
-    // e.g. 'signup_completed', 'first_api_success', 'ai_schema_accepted'
+    // e.g. 'signup_completed', 'first_api_call', 'ai_schema_accepted'
     event: {
       type: String,
       required: true,

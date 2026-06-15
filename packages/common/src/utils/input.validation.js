@@ -77,6 +77,28 @@ module.exports.resetPasswordSchema = z.object({
     .max(100, "Password is too long."),
 });
 
+module.exports.updateOnboardingSchema = z
+  .object({
+    completed: z.boolean().optional(),
+    steps: z
+      .object({
+        projectCreated: z.boolean().optional(),
+        collectionCreated: z.boolean().optional(),
+        firstApiCall: z.boolean().optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict()
+  .refine(
+    (data) => !data.steps || Object.values(data.steps).filter((value) => value === true).length <= 1,
+    { message: "Only one onboarding step can be completed at a time." },
+  )
+  .refine(
+    (data) => data.completed !== undefined || data.steps !== undefined,
+    { message: "At least one onboarding field must be provided." },
+  );
+
 module.exports.createProjectSchema = z.object({
   name: z.string().min(1, "Project name is required"),
   description: z.string().optional(),

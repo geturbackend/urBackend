@@ -53,12 +53,12 @@ const { createAdminUser, resetPassword, getUserDetails, updateAdminUser, listAdm
 const exportController = require('../controllers/dbExport.controller');
 
 // POST REQ FOR CREATE PROJECT
-router.post('/', authMiddleware, verifyEmail, planEnforcement.checkProjectLimit, createProject);
+router.post('/', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkProjectLimit, planEnforcement.checkDeveloperCapability('createProject'), createProject);
 router.get('/', authMiddleware, getAllProject);
 router.get('/:projectId', authMiddleware, getSingleProject);
-router.post('/:projectId/api-key', authMiddleware, verifyEmail, regenerateApiKey);
+router.post('/:projectId/api-key', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkDeveloperCapability('revealApiKeys'), regenerateApiKey);
 
-router.post('/:projectId/collections', authMiddleware, verifyEmail, planEnforcement.attachDeveloper, planEnforcement.checkCollectionLimit, createCollection);
+router.post('/:projectId/collections', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkCollectionLimit, planEnforcement.checkDeveloperCapability('createCollection'), createCollection);
 
 // DELETE REQ FOR COLLECTION
 router.delete('/:projectId/collections/:collectionName', authMiddleware, verifyEmail, deleteCollection);
@@ -144,16 +144,16 @@ router.patch('/:projectId/collections/:collectionName/rls', authMiddleware, veri
 // ADMIN AUTH ROUTES
 
 
-router.post('/:projectId/admin/users', authMiddleware, loadProjectForAdmin, checkAuthEnabled, createAdminUser);
-router.patch('/:projectId/admin/users/:userId/password', authMiddleware, loadProjectForAdmin, checkAuthEnabled, resetPassword);
-router.get('/:projectId/admin/users', authMiddleware, loadProjectForAdmin, checkAuthEnabled, listAdminUsers);
-router.get('/:projectId/admin/users/:userId', authMiddleware, loadProjectForAdmin, checkAuthEnabled, getUserDetails);
-router.put('/:projectId/admin/users/:userId', authMiddleware, loadProjectForAdmin, checkAuthEnabled, updateAdminUser);
-router.delete('/:projectId/admin/users/:userId', authMiddleware, loadProjectForAdmin, checkAuthEnabled, deleteAdminUser);
+router.post('/:projectId/admin/users', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkDeveloperCapability('manageProjectUsers'), loadProjectForAdmin, checkAuthEnabled, createAdminUser);
+router.patch('/:projectId/admin/users/:userId/password', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkDeveloperCapability('manageProjectUsers'), loadProjectForAdmin, checkAuthEnabled, resetPassword);
+router.get('/:projectId/admin/users', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkDeveloperCapability('manageProjectUsers'), loadProjectForAdmin, checkAuthEnabled, listAdminUsers);
+router.get('/:projectId/admin/users/:userId', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkDeveloperCapability('manageProjectUsers'), loadProjectForAdmin, checkAuthEnabled, getUserDetails);
+router.put('/:projectId/admin/users/:userId', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkDeveloperCapability('manageProjectUsers'), loadProjectForAdmin, checkAuthEnabled, updateAdminUser);
+router.delete('/:projectId/admin/users/:userId', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkDeveloperCapability('manageProjectUsers'), loadProjectForAdmin, checkAuthEnabled, deleteAdminUser);
 
 // SESSION MANAGEMENT (Admin)
-router.get('/:projectId/admin/users/:userId/sessions', authMiddleware, loadProjectForAdmin, checkAuthEnabled, listUserSessions);
-router.delete('/:projectId/admin/users/:userId/sessions/:tokenId', authMiddleware, loadProjectForAdmin, checkAuthEnabled, revokeUserSession);
+router.get('/:projectId/admin/users/:userId/sessions', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkDeveloperCapability('manageProjectUsers'), loadProjectForAdmin, checkAuthEnabled, listUserSessions);
+router.delete('/:projectId/admin/users/:userId/sessions/:tokenId', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkDeveloperCapability('manageProjectUsers'), loadProjectForAdmin, checkAuthEnabled, revokeUserSession);
 
 // POST req for DB EXPORT
 router.post('/:projectId/collections/:collectionName/export', authMiddleware, exportController.dbExportHandler);

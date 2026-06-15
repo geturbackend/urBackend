@@ -1,54 +1,39 @@
 import { useState } from 'react';
 import api from '../utils/api';
-import { useAuth } from '../context/AuthContext';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Copy, CheckCircle, AlertTriangle, Plus } from 'lucide-react';
+import { ArrowLeft, Copy, CheckCircle, AlertTriangle, Plus, Lock } from 'lucide-react';
 
 
 function CreateProject() {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [provisionAuth, setProvisionAuth] = useState(true);
+    const [provisionAuth, setProvisionAuth] = useState(false);
     const [loading, setLoading] = useState(false);
     const [newProject, setNewProject] = useState(null);
 
-    const { user } = useAuth();
     const { completeStep, setActiveProjectId } = useOnboarding();
+    const { user } = useAuth();
     const navigate = useNavigate();
+    const isVerified = !!user?.isVerified;
+
+    const goToVerification = () => {
+        navigate('/verify-otp', {
+            state: {
+                email: user?.email,
+                from: '/create-project'
+            }
+        });
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!user?.isVerified) {
-            toast.error(
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <span>Account Verification Required</span>
-                    <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>
-                        Please verify your account in Settings first.
-                    </span>
-                    <button
-                        onClick={() => navigate('/settings')}
-                        style={{
-                            marginTop: '5px',
-                            background: '#fff',
-                            color: '#333',
-                            border: 'none',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        Go to Settings
-                    </button>
-                </div>,
-                { duration: 5000 }
-            );
-            return;
-        }
-
+        if (!isVerified) return;
         if (!name) return toast.error("Project Name is required");
+        if (loading) return;
 
         setLoading(true);
         try {
@@ -76,7 +61,7 @@ function CreateProject() {
             setActiveProjectId(projectId);
             toast.success("Project Created!");
             completeStep('create_project');
-            completeStep('get_api_key');
+            if (!res.data?.apiKeysLocked) completeStep('get_api_key');
         } catch (err) {
             const errorMsg = err.response?.data?.message || err.response?.data?.error || err.response?.data?.message || "Failed to create project";
             toast.error(typeof errorMsg === 'object' ? "Validation Error" : errorMsg);
@@ -92,6 +77,10 @@ function CreateProject() {
 
     const downloadEnvFile = () => {
         if (!newProject) return;
+        if (!newProject.publishableKey || !newProject.secretKey) {
+            toast.error("Verify your email to reveal API keys.");
+            return;
+        }
         const envContent = `URBACKEND_PROJECT_ID=${newProject._id}\nURBACKEND_PUBLISHABLE_KEY=${newProject.publishableKey}\nURBACKEND_SECRET_KEY=${newProject.secretKey}\n`;
         const blob = new Blob([envContent], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
@@ -127,39 +116,53 @@ function CreateProject() {
                         <p style={{ color: 'var(--color-text-muted)' }}><strong>{newProject.name}</strong> has been successfully initialized.</p>
                     </div>
 
-                    <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', padding: '1.25rem', marginBottom: '2rem', display: 'flex', gap: '15px' }}>
-                        <AlertTriangle color="#ef4444" size={24} style={{ flexShrink: 0, marginTop: '2px' }} />
-                        <div>
-                            <strong style={{ color: '#ef4444', display: 'block', marginBottom: '4px' }}>Save these API Keys immediately</strong>
-                            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                                For security reasons, these keys will <strong>only be shown once</strong>. If you lose them, you will need to regenerate them.
-                            </p>
+                    {newProject.apiKeysLocked ? (
+                        <div style={{ backgroundColor: 'rgba(62, 207, 142, 0.08)', border: '1px solid rgba(62, 207, 142, 0.25)', borderRadius: '8px', padding: '1.25rem', marginBottom: '2rem', display: 'flex', gap: '15px' }}>
+                            <AlertTriangle color="var(--color-primary)" size={24} style={{ flexShrink: 0, marginTop: '2px' }} />
+                            <div>
+                                <strong style={{ color: 'var(--color-primary)', display: 'block', marginBottom: '4px' }}>Your backend is ready</strong>
+                                <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                                    Create a collection next. API keys unlock after email verification.
+                                </p>
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <>
+                            <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', padding: '1.25rem', marginBottom: '2rem', display: 'flex', gap: '15px' }}>
+                                <AlertTriangle color="#ef4444" size={24} style={{ flexShrink: 0, marginTop: '2px' }} />
+                                <div>
+                                    <strong style={{ color: '#ef4444', display: 'block', marginBottom: '4px' }}>Save these API Keys immediately</strong>
+                                    <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                                        For security reasons, these keys will <strong>only be shown once</strong>. If you lose them, you will need to regenerate them.
+                                    </p>
+                                </div>
+                            </div>
 
-                    <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                        <label className="form-label" style={{ color: 'var(--color-primary)', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Publishable API Key (Frontend safe)</span>
-                        </label>
-                        <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
-                            <div className="input-field" style={{ fontFamily: 'monospace', backgroundColor: '#111', color: 'var(--color-primary)', overflowX: 'auto', whiteSpace: 'nowrap', flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '0.95rem' }}>
-                                {newProject.publishableKey}
+                            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                                <label className="form-label" style={{ color: 'var(--color-primary)', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>Publishable API Key (Frontend safe)</span>
+                                </label>
+                                <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
+                                    <div className="input-field" style={{ fontFamily: 'monospace', backgroundColor: '#111', color: 'var(--color-primary)', overflowX: 'auto', whiteSpace: 'nowrap', flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '0.95rem' }}>
+                                        {newProject.publishableKey}
+                                    </div>
+                                    <button onClick={() => copyToClipboard(newProject.publishableKey)} className="btn btn-secondary" title="Copy Publishable API Key" style={{ height: 'auto', padding: '0 15px' }}><Copy size={18} /></button>
+                                </div>
                             </div>
-                            <button onClick={() => copyToClipboard(newProject.publishableKey)} className="btn btn-secondary" title="Copy Publishable API Key" style={{ height: 'auto', padding: '0 15px' }}><Copy size={18} /></button>
-                        </div>
-                    </div>
-                    
-                    <div className="form-group" style={{ marginBottom: '2rem' }}>
-                        <label className="form-label" style={{ color: '#ef4444', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Secret API Key (Backend only)</span>
-                        </label>
-                        <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
-                            <div className="input-field" style={{ fontFamily: 'monospace', backgroundColor: '#111', color: '#ef4444', overflowX: 'auto', whiteSpace: 'nowrap', flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)', fontSize: '0.95rem' }}>
-                                {newProject.secretKey}
+                            
+                            <div className="form-group" style={{ marginBottom: '2rem' }}>
+                                <label className="form-label" style={{ color: '#ef4444', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>Secret API Key (Backend only)</span>
+                                </label>
+                                <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
+                                    <div className="input-field" style={{ fontFamily: 'monospace', backgroundColor: '#111', color: '#ef4444', overflowX: 'auto', whiteSpace: 'nowrap', flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)', fontSize: '0.95rem' }}>
+                                        {newProject.secretKey}
+                                    </div>
+                                    <button onClick={() => copyToClipboard(newProject.secretKey)} className="btn btn-secondary" style={{ height: 'auto', padding: '0 15px', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)' }} title="Copy Secret API Key"><Copy size={18} /></button>
+                                </div>
                             </div>
-                            <button onClick={() => copyToClipboard(newProject.secretKey)} className="btn btn-secondary" style={{ height: 'auto', padding: '0 15px', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)' }} title="Copy Secret API Key"><Copy size={18} /></button>
-                        </div>
-                    </div>
+                        </>
+                    )}
 
                     <div style={{ display: 'flex', gap: '15px' }}>
                         <button
@@ -170,11 +173,11 @@ function CreateProject() {
                             Download .env
                         </button>
                         <button
-                            onClick={() => navigate('/dashboard')}
+                            onClick={() => navigate(newProject.apiKeysLocked ? `/project/${newProject._id}/create-collection` : '/dashboard')}
                             className="btn btn-primary"
                             style={{ flex: 2, padding: '14px', justifyContent: 'center', fontSize: '0.95rem', fontWeight: 600 }}
                         >
-                            Go to Dashboard
+                            {newProject.apiKeysLocked ? 'Create Collection' : 'Go to Dashboard'}
                         </button>
                     </div>
                 </div>
@@ -256,14 +259,51 @@ function CreateProject() {
                         </label>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                    {!isVerified && (
+                        <div
+                            role="status"
+                            aria-live="polite"
+                            style={{
+                                border: '1px solid rgba(255, 193, 7, 0.25)',
+                                background: 'rgba(255, 193, 7, 0.08)',
+                                borderRadius: '8px',
+                                padding: '1rem',
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: '12px'
+                            }}
+                        >
+                            <Lock size={20} color="#FFC107" style={{ flexShrink: 0, marginTop: '2px' }} />
+                            <div style={{ flex: 1 }}>
+                                <div style={{ color: '#FFC107', fontWeight: 700, marginBottom: '0.25rem' }}>
+                                    Verify your email to unlock project creation.
+                                </div>
+                                <p style={{ color: 'var(--color-text-muted)', fontSize: '0.86rem', lineHeight: 1.5, margin: 0 }}>
+                                    Verification protects the platform from abuse and unlocks projects, API keys, and production API access.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                        {!isVerified && (
+                            <button
+                                type="button"
+                                onClick={goToVerification}
+                                className="btn btn-secondary"
+                                style={{ padding: '12px 18px', fontSize: '0.95rem', fontWeight: 600 }}
+                            >
+                                Verify Email
+                            </button>
+                        )}
                         <button
                             type="submit"
                             className="btn btn-primary"
-                            disabled={loading}
+                            disabled={loading || !isVerified}
+                            aria-disabled={loading || !isVerified}
                             style={{ padding: '12px 24px', fontSize: '1rem', fontWeight: 600 }}
                         >
-                            {loading ? 'Creating...' : 'Create Project'}
+                            {loading ? 'Creating...' : isVerified ? 'Create Project' : 'Create Project Locked'}
                         </button>
                     </div>
                 </form>

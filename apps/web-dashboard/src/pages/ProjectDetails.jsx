@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { useOnboarding } from '../context/OnboardingContext';
@@ -18,8 +18,10 @@ import SectionHeader from '../components/Dashboard/SectionHeader';
 function ProjectDetails() {
     const { projectId } = useParams();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { user } = useAuth();
     const { completeStep, setActiveProjectId } = useOnboarding();
+    const revealAttemptedRef = useRef(false);
 
     const [project, setProject] = useState(null);
     const [analytics, setAnalytics] = useState(null);
@@ -28,10 +30,10 @@ function ProjectDetails() {
 
     useEffect(() => {
         Promise.resolve().then(() => {
-            completeStep('get_api_key');
             setActiveProjectId(projectId);
+            if (user?.isVerified) completeStep('get_api_key');
         });
-    }, [completeStep, setActiveProjectId, projectId]);
+    }, [completeStep, setActiveProjectId, projectId, user?.isVerified]);
 
     useEffect(() => {
         let isMounted = true;
@@ -67,6 +69,36 @@ function ProjectDetails() {
         }
     };
 
+    useEffect(() => {
+        if (revealAttemptedRef.current || loading || !project || !user?.isVerified || searchParams.get('revealKeys') !== '1') {
+            return;
+        }
+
+        revealAttemptedRef.current = true;
+        const revealKeys = async () => {
+            try {
+                const [publishableRes, secretRes] = await Promise.all([
+                    api.post(`/api/projects/${projectId}/api-key`, { keyType: 'publishable' }),
+                    api.post(`/api/projects/${projectId}/api-key`, { keyType: 'secret' })
+                ]);
+                setNewKey({
+                    type: 'API',
+                    keys: [
+                        { label: 'Publishable Key', value: publishableRes.data.apiKey },
+                        { label: 'Secret Key', value: secretRes.data.apiKey }
+                    ]
+                });
+                completeStep('get_api_key');
+                setSearchParams({}, { replace: true });
+                toast.success('API keys revealed. Copy them now.');
+            } catch (err) {
+                toast.error(err.response?.data?.message || err.response?.data?.error || 'Failed to reveal API keys');
+            }
+        };
+
+        revealKeys();
+    }, [completeStep, loading, project, projectId, searchParams, setSearchParams, user?.isVerified]);
+
     if (loading) return (
         <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--color-text-muted)', gap: '10px' }}>
             <div className="spinner"></div>
@@ -86,28 +118,33 @@ function ProjectDetails() {
                     display: 'flex', justifyContent: 'center', alignItems: 'center',
                     backdropFilter: 'blur(8px)'
                 }}>
-                    <div className="glass-card" style={{ maxWidth: '450px', width: '90%', padding: '2rem', borderRadius: '12px', border: `1px solid ${newKey.type === 'secret' ? '#ef4444' : 'var(--color-primary)'}` }}>
+                    <div className="glass-card" style={{ maxWidth: '520px', width: '90%', padding: '2rem', borderRadius: '12px', border: `1px solid ${newKey.type === 'secret' ? '#ef4444' : 'var(--color-primary)'}` }}>
                         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                            <h2 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>New {newKey.type} Key</h2>
+                            <h2 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>New {newKey.type} Key{newKey.keys ? 's' : ''}</h2>
                             <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>Copy this now. It won't be shown again.</p>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', background: '#000', borderRadius: '6px', border: '1px solid var(--color-border)', marginBottom: '1.5rem', overflow: 'hidden' }}>
-                            <code style={{ flex: 1, padding: '12px', fontSize: '0.85rem', wordBreak: 'break-all', color: 'var(--color-primary)', borderRight: '1px solid var(--color-border)' }}>{newKey.key}</code>
-                            <button 
-                                onClick={async () => {
-                                    try {
-                                        await navigator.clipboard.writeText(newKey.key);
-                                        toast.success("Copied to clipboard!");
-                                    } catch {
-                                        toast.error("Failed to copy to clipboard");
-                                    }
-                                }} 
-                                style={{ padding: '0 16px', background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                title="Copy"
-                            >
-                                <Copy size={16} />
-                            </button>
-                        </div>
+                        {(newKey.keys || [{ label: `${newKey.type} Key`, value: newKey.key }]).map((item) => (
+                            <div key={item.label} style={{ marginBottom: '1rem' }}>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '6px' }}>{item.label}</div>
+                                <div style={{ display: 'flex', alignItems: 'center', background: '#000', borderRadius: '6px', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
+                                    <code style={{ flex: 1, padding: '12px', fontSize: '0.85rem', wordBreak: 'break-all', color: item.value?.startsWith('sk_live_') ? '#ef4444' : 'var(--color-primary)', borderRight: '1px solid var(--color-border)' }}>{item.value}</code>
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                await navigator.clipboard.writeText(item.value);
+                                                toast.success("Copied to clipboard!");
+                                            } catch {
+                                                toast.error("Failed to copy to clipboard");
+                                            }
+                                        }}
+                                        style={{ padding: '0 16px', background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        title={`Copy ${item.label}`}
+                                    >
+                                        <Copy size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
                         <button onClick={() => setNewKey(null)} className="btn btn-primary" style={{ width: '100%' }}>I've copied it</button>
                     </div>
                 </div>

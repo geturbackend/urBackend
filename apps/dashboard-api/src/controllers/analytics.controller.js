@@ -127,13 +127,16 @@ module.exports.getActivationFunnel = async (req, res, next) => {
       'email_verified',
       'project_created',
       'collection_created',
-      'first_api_success',
+      'first_api_call',
     ];
+    const EVENT_ALIASES = {
+      first_api_success: 'first_api_call',
+    };
 
     // Fetch one event per step (we only need existence, not count)
     const events = await PlatformEvent.find({
       developerId,
-      event: { $in: FUNNEL_STEPS },
+      event: { $in: [...FUNNEL_STEPS, ...Object.keys(EVENT_ALIASES)] },
     })
       .sort({ timestamp: 1 })
       .select('event timestamp')
@@ -141,7 +144,8 @@ module.exports.getActivationFunnel = async (req, res, next) => {
 
     const completed = {};
     for (const e of events) {
-      if (!completed[e.event]) completed[e.event] = e.timestamp;
+      const step = EVENT_ALIASES[e.event] || e.event;
+      if (!completed[step]) completed[step] = e.timestamp;
     }
 
     const steps = FUNNEL_STEPS.map((step, i) => ({

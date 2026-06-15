@@ -46,8 +46,10 @@ api.interceptors.request.use(async (config) => {
     return config;
 }, (error) => Promise.reject(error));
 
-// Upgrade-triggering keywords from backend error messages
+// Upgrade-triggering keywords from backend error messages.
+// Verification gates are activation gates, not pricing gates.
 const UPGRADE_KEYWORDS = ['upgrade', 'limit reached', 'pro feature', 'pro plan'];
+const VERIFICATION_KEYWORDS = ['verify your email', 'email verification', 'email not verified'];
 
 api.interceptors.response.use(
     (response) => response,
@@ -78,9 +80,10 @@ api.interceptors.response.use(
                 ''
             ).toLowerCase();
 
+            const isVerificationGate = VERIFICATION_KEYWORDS.some((kw) => message.includes(kw));
             const isPlanError = UPGRADE_KEYWORDS.some((kw) => message.includes(kw));
 
-            if (isPlanError) {
+            if (isPlanError && !isVerificationGate) {
                 if (window.location.pathname !== '/pricing') {
                     window.location.assign('/pricing');
                 }

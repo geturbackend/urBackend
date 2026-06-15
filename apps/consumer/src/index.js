@@ -18,7 +18,9 @@ app.get('/', (_req, res) => {
     res.status(200).send('consumer worker running');
 });
 
-const port = Number(process.env.PORT) || 3000;
+const port = process.env.NODE_ENV === 'production'
+    ? (Number(process.env.PORT) || 3000)
+    : (Number(process.env.CONSUMER_PORT) || 1237);
 let worker;
 let server;
 

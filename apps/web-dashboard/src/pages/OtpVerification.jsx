@@ -3,6 +3,21 @@ import api from '../utils/api';
 import toast from 'react-hot-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getPostAuthRedirectPath } from '../utils/authRedirect';
+
+const extractErrorMessage = (err, fallback) => {
+    const data = err.response?.data;
+    if (data?.message && typeof data.message === 'string') {
+        return data.message;
+    }
+    if (typeof data?.error === 'string' && data.error !== 'Error' && data.error !== 'Internal Server Error') {
+        return data.error;
+    }
+    if (Array.isArray(data?.error)) {
+        return data.error[0]?.message || fallback;
+    }
+    return data?.error ? JSON.stringify(data.error) : fallback;
+};
 
 function OtpVerification() {
     const navigate = useNavigate();
@@ -32,6 +47,11 @@ function OtpVerification() {
 
     useEffect(() => {
         if (authLoading) return;
+
+        if (user?.isVerified) {
+            navigate(getPostAuthRedirectPath(user), { replace: true });
+            return;
+        }
         
         if (!email && !user) {
             navigate('/login');
@@ -44,7 +64,7 @@ function OtpVerification() {
             toast.promise(sendOtpPromise, {
                 loading: 'Sending OTP...',
                 success: 'OTP sent to your email!',
-                error: (err) => err.response?.data?.message || err.response?.data?.error || 'Failed to send OTP'
+                error: (err) => extractErrorMessage(err, 'Failed to send OTP')
             });
         }
     }, [email, navigate, user, authLoading]);
@@ -60,10 +80,10 @@ function OtpVerification() {
             if (res.data.success) {
                 login(res.data.data.user);
             }
-            navigate('/dashboard');
+            navigate(location.state?.from || res.data.data.redirectTo || getPostAuthRedirectPath(res.data.data.user));
         } catch (err) {
             toast.dismiss(loadingToast);
-            toast.error(err.response?.data?.message || err.response?.data?.error || 'Verification failed');
+            toast.error(extractErrorMessage(err, 'Verification failed'));
         }
     };
 
@@ -78,14 +98,13 @@ function OtpVerification() {
             setCanResend(false);
         } catch (err) {
             toast.dismiss(loadingToast);
-            toast.error(err.response?.data?.message || err.response?.data?.error || 'Failed to send OTP');
+            toast.error(extractErrorMessage(err, 'Failed to send OTP'));
         }
     };
 
     const handleSkip = () => {
-        navigate('/dashboard');
+        navigate(user ? '/settings?verify=email' : '/login');
     };
-
     const handleChange = (e) => {
         setOtp(e.target.value);
     };
@@ -165,7 +184,9 @@ function OtpVerification() {
                     <button type="submit" style={buttonStyle}>Verify</button>
                 </form>
 
-                <button onClick={handleSkip} style={skipButtonStyle}>Skip for now</button>
+                <button onClick={handleSkip} style={skipButtonStyle}>
+                    {user ? 'Verify later in Settings' : 'Back to login'}
+                </button>
 
                 <div style={{ marginTop: '20px', fontSize: '0.9rem' }}>
                     Didn't receive code?{' '}

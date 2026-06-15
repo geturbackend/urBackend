@@ -197,6 +197,20 @@ const sanitizeProjectResponse = (projectObj) => {
   return projectObj;
 };
 
+const prepareCreatedProjectResponse = (projectObj, user) => {
+  const canRevealKeys = Boolean(user?.isVerified);
+  delete projectObj.jwtSecret;
+  projectObj.authProviders = sanitizeAuthProviders(projectObj.authProviders);
+
+  if (!canRevealKeys) {
+    delete projectObj.publishableKey;
+    delete projectObj.secretKey;
+    projectObj.apiKeysLocked = true;
+  }
+
+  return projectObj;
+};
+
 const parsePositiveSize = (size) => {
   const numericSize = Number(size);
   if (!Number.isFinite(numericSize) || numericSize <= 0) {
@@ -287,8 +301,7 @@ module.exports.createProject = async (req, res) => {
     const projectObj = newProject.toObject();
     projectObj.publishableKey = rawPublishableKey;
     projectObj.secretKey = rawSecretKey;
-    delete projectObj.jwtSecret;
-    projectObj.authProviders = sanitizeAuthProviders(projectObj.authProviders);
+    prepareCreatedProjectResponse(projectObj, req.user);
 
     return { projectObj, newProject };
   };

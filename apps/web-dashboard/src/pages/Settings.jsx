@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Lock, Trash2, AlertTriangle, Save, CheckCircle } from 'lucide-react';
-import { API_URL } from '../config';
 import ConfirmationModal from './ConfirmationModal';
 
 export default function Settings() {
     const { logout, user, isLoading } = useAuth();
+    const location = useLocation();
+    const navigate = useNavigate();
+    const highlightVerification = new URLSearchParams(location.search).get('verify') === 'email';
 
     // Password State
     const [passData, setPassData] = useState({ currentPassword: '', newPassword: '' });
@@ -59,6 +62,10 @@ export default function Settings() {
         setShowDeleteModal(true);
     };
 
+    const goToVerification = () => {
+        navigate('/verify-otp', { state: { email: user?.email } });
+    };
+
 
 
 if (pageLoading) return <SettingsSkeleton />;
@@ -91,7 +98,7 @@ if (pageLoading) return <SettingsSkeleton />;
                         <>
                             <AlertTriangle size={16} /> Unverified
                             <button
-                                onClick={() => window.location.href = '/verify-otp'}
+                                onClick={goToVerification}
                                 style={{
                                     background: 'none',
                                     border: 'none',
@@ -109,6 +116,36 @@ if (pageLoading) return <SettingsSkeleton />;
                     )}
                 </div>
             </div>
+
+            {!user?.isVerified && (
+                <div
+                    className="card"
+                    style={{
+                        marginBottom: '2.5rem',
+                        border: `1px solid ${highlightVerification ? 'rgba(255, 193, 7, 0.45)' : 'rgba(255, 193, 7, 0.2)'}`,
+                        background: 'rgba(255, 193, 7, 0.06)'
+                    }}
+                >
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '1rem' }}>
+                        <div style={{ padding: '10px', background: 'rgba(255, 193, 7, 0.12)', borderRadius: '10px', color: '#FFC107' }}>
+                            <AlertTriangle size={20} />
+                        </div>
+                        <div>
+                            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '2px' }}>Verify your email</h3>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
+                                Verification is required before onboarding, project creation, and API key access.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={goToVerification}
+                        className="btn btn-primary"
+                        style={{ padding: '10px 18px' }}
+                    >
+                        Send Verification Code
+                    </button>
+                </div>
+            )}
 
             {/* Change Password Section */}
             <div className="card" style={{ marginBottom: '2.5rem' }}>

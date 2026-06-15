@@ -11,6 +11,7 @@ jest.mock('../middlewares/planEnforcement', () => ({
   attachDeveloper: jest.fn((_req, _res, next) => next()),
   checkProjectLimit: jest.fn((_req, _res, next) => next()),
   checkCollectionLimit: jest.fn((_req, _res, next) => next()),
+  checkDeveloperCapability: jest.fn(() => (_req, _res, next) => next()),
   checkByokGate: jest.fn((_req, _res, next) => next()),
   checkByodGate: jest.fn((_req, _res, next) => next()),
   checkWebhookGate: jest.fn((_req, _res, next) => next()),
@@ -96,6 +97,28 @@ beforeEach(() => {
 });
 
 describe('projects storage presigned routes', () => {
+  test('project creation uses sandbox capabilities without email verification middleware', async () => {
+    const res = await request(app)
+      .post('/api/projects')
+      .send({ name: 'Sandbox Project' });
+
+    expect(res.status).toBe(200);
+    expect(authMiddleware).toHaveBeenCalled();
+    expect(verifyEmail).not.toHaveBeenCalled();
+    expect(projectController.createProject).toHaveBeenCalledTimes(1);
+  });
+
+  test('collection creation uses sandbox capabilities without email verification middleware', async () => {
+    const res = await request(app)
+      .post('/api/projects/project1/collections')
+      .send({ projectId: 'project1', collectionName: 'posts', schema: [] });
+
+    expect(res.status).toBe(200);
+    expect(authMiddleware).toHaveBeenCalled();
+    expect(verifyEmail).not.toHaveBeenCalled();
+    expect(projectController.createCollection).toHaveBeenCalledTimes(1);
+  });
+
   test('legacy proxy upload route is removed', async () => {
     const res = await request(app)
       .post('/api/projects/project1/storage/upload')

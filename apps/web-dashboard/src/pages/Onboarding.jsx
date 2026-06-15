@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '../context/OnboardingContext';
+import { useAuth } from '../context/AuthContext';
 import {
     Rocket,
     Database,
@@ -10,20 +11,53 @@ import {
     ChevronRight,
     ArrowRight
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
+const getFirstIncompleteIndex = (steps, progress) => {
+    const projectDone = !!progress.create_project;
+    const collectionDone = !!progress.create_collection;
+    const apiKeyDone = !!progress.get_api_key;
+    const apiCallDone = !!progress.make_api_call;
+
+    if (!projectDone) return steps.findIndex((step) => step.key === 'create_project');
+    if (!collectionDone) return steps.findIndex((step) => step.key === 'create_collection');
+    if (!apiKeyDone) return steps.findIndex((step) => step.key === 'get_api_key');
+    if (!apiCallDone) return steps.findIndex((step) => step.key === 'make_api_call');
+
+    return -1;
+};
+
+const canAccessStep = (stepKey, progress) => {
+    if (stepKey === 'create_project') return true;
+    if (stepKey === 'create_collection') return !!progress.create_project;
+    if (stepKey === 'get_api_key') return !!progress.create_project && !!progress.create_collection;
+    if (stepKey === 'make_api_call') return !!progress.create_project && !!progress.create_collection && !!progress.get_api_key;
+    return false;
+};
 
 const Onboarding = () => {
-    const { steps, progress } = useOnboarding();
+    const { steps, progress, activeProjectId } = useOnboarding();
+    const { user } = useAuth();
     const navigate = useNavigate();
 
-    const firstIncompleteIndex = steps.findIndex((step) => !progress[step.key]);
+    const firstIncompleteIndex = useMemo(() => getFirstIncompleteIndex(steps, progress), [steps, progress]);
     const [currentStepIndex, setCurrentStepIndex] = useState(() => (firstIncompleteIndex === -1 ? 0 : firstIncompleteIndex));
 
+    useEffect(() => {
+        if (firstIncompleteIndex !== -1) {
+            queueMicrotask(() => setCurrentStepIndex(firstIncompleteIndex));
+        }
+    }, [firstIncompleteIndex]);
+
     const currentStep = steps[currentStepIndex];
+    const isKeyRevealStep = currentStep?.key === 'get_api_key';
+    const shouldVerifyForKeys = isKeyRevealStep && !user?.isVerified;
+    const canMoveNext = currentStepIndex < steps.length - 1 && currentStep && canAccessStep(steps[currentStepIndex + 1]?.key, progress);
 
     if (!currentStep) return null;
 
     const nextStep = () => {
+        if (!canMoveNext) return;
         if (currentStepIndex < steps.length - 1) {
             setCurrentStepIndex((prev) => prev + 1);
             return;
@@ -55,8 +89,17 @@ const Onboarding = () => {
     const getWhyText = () => {
         if (currentStepIndex === 0) return 'Your project is the base container for collections, auth, and storage.';
         if (currentStepIndex === 1) return 'Collections define how your data is stored and validated.';
-        if (currentStepIndex === 2) return 'API keys let your app securely connect to urBackend APIs.';
+        if (currentStepIndex === 2) return 'Verification keeps live keys and production API traffic protected while still letting you finish setup first.';
         return 'A first API call confirms your project is wired and ready for production flow.';
+    };
+
+    const verifyEmailForKeys = () => {
+        navigate('/verify-otp', {
+            state: {
+                email: user?.email,
+                from: activeProjectId ? `/project/${activeProjectId}?revealKeys=1` : '/onboarding'
+            }
+        });
     };
 
     return (
@@ -95,11 +138,16 @@ const Onboarding = () => {
                                 {steps.map((step, index) => {
                                     const isCompleted = progress[step.key];
                                     const isActive = currentStepIndex === index;
+                                    const isLocked = !canAccessStep(step.key, progress);
 
                                     return (
                                         <button
                                             key={step.key}
-                                            onClick={() => setCurrentStepIndex(index)}
+                                            onClick={() => {
+                                                if (!isLocked) setCurrentStepIndex(index);
+                                            }}
+                                            disabled={isLocked}
+                                            aria-disabled={isLocked}
                                             style={{
                                                 width: '100%',
                                                 borderRadius: '10px',
@@ -108,7 +156,8 @@ const Onboarding = () => {
                                                 color: 'var(--color-text-main)',
                                                 textAlign: 'left',
                                                 padding: '0.65rem 0.75rem',
-                                                cursor: 'pointer',
+                                                cursor: isLocked ? 'not-allowed' : 'pointer',
+                                                opacity: isLocked ? 0.55 : 1,
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 gap: '0.6rem'
@@ -161,9 +210,20 @@ const Onboarding = () => {
                                 </div>
                             </div>
 
-                            <p style={{ marginTop: '0.8rem', fontSize: '0.9rem', color: 'var(--color-text-muted)', lineHeight: 1.55 }}>
-                                {currentStep.description}
-                            </p>
+                            {shouldVerifyForKeys ? (
+                                <div style={{ marginTop: '0.8rem' }}>
+                                    <h3 style={{ fontSize: '1.1rem', fontWeight: 750, marginBottom: '0.45rem' }}>
+                                        Your backend is ready.
+                                    </h3>
+                                    <p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', lineHeight: 1.55 }}>
+                                        To reveal API keys and start making requests, please verify your email.
+                                    </p>
+                                </div>
+                            ) : (
+                                <p style={{ marginTop: '0.8rem', fontSize: '0.9rem', color: 'var(--color-text-muted)', lineHeight: 1.55 }}>
+                                    {currentStep.description}
+                                </p>
+                            )}
 
                             <div
                                 style={{
@@ -226,6 +286,7 @@ const Onboarding = () => {
 
                                     <button
                                         onClick={nextStep}
+                                        disabled={!canMoveNext}
                                         style={{
                                             minWidth: '90px',
                                             height: '38px',
@@ -237,7 +298,8 @@ const Onboarding = () => {
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             gap: '0.35rem',
-                                            cursor: 'pointer'
+                                            cursor: canMoveNext ? 'pointer' : 'not-allowed',
+                                            opacity: canMoveNext ? 1 : 0.55
                                         }}
                                     >
                                         Next <ArrowRight size={15} />
@@ -245,7 +307,7 @@ const Onboarding = () => {
                                 </div>
 
                                 <button
-                                    onClick={() => navigate(currentStep.path)}
+                                    onClick={shouldVerifyForKeys ? verifyEmailForKeys : () => navigate(currentStep.path)}
                                     style={{
                                         height: '38px',
                                         borderRadius: '8px',
@@ -261,7 +323,7 @@ const Onboarding = () => {
                                         cursor: 'pointer'
                                     }}
                                 >
-                                    Go to step <ChevronRight size={16} />
+                                    {shouldVerifyForKeys ? 'Verify Email' : 'Go to step'} <ChevronRight size={16} />
                                 </button>
                             </div>
                         </div>
