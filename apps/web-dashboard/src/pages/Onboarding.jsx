@@ -327,31 +327,10 @@ export default function Onboarding() {
 
             const url = `${PUBLIC_API_URL}/api/data/${colName}`;
             const headers = {
-                'x-api-key': publishableKey,
-                'Content-Type': 'application/json'
+                'x-api-key': publishableKey
             };
-            
-            // Create dummy payload based on the schema fields if they exist, otherwise use a generic object
-            const payload = {};
-            if (fields && fields.length > 0) {
-                fields.forEach(f => {
-                    if (f.type === 'String') payload[f.key] = `Test ${f.key}`;
-                    else if (f.type === 'Number') payload[f.key] = 100;
-                    else if (f.type === 'Boolean') payload[f.key] = true;
-                    else if (f.type === 'Array') payload[f.key] = [];
-                    else if (f.type === 'Object') payload[f.key] = {};
-                    else if (f.type === 'Date') payload[f.key] = new Date().toISOString();
-                    else payload[f.key] = "test";
-                });
-            } else {
-                payload.testMessage = "Hello from urBackend!";
-            }
 
-            const response = await fetch(url, { 
-                method: 'POST',
-                headers,
-                body: JSON.stringify(payload)
-            });
+            const response = await fetch(url, { headers });
             const data = await response.json();
             
             setTestResponse(data);
@@ -364,11 +343,9 @@ export default function Onboarding() {
                 } catch (err) {
                     console.error("Failed to update onboarding step", err);
                 }
-                
-                // Wait for the UI progress to catch up
                 setTimeout(async () => {
                     await refreshUser();
-                }, 2000);
+                }, 1500);
             } else {
                 toast.error(data.message || "API request failed");
             }
@@ -861,8 +838,7 @@ export default function Onboarding() {
                                             {testLoading ? <RefreshCw className="animate-spin" size={16} /> : <Play size={16} />} Test API
                                         </button>
                                         <span style={{ fontSize: '0.8rem', color: '#9ca3af', lineHeight: '1.4' }}>
-                                            Trigger a live query to <code>GET /api/data/{collectionName}</code>.<br/>
-                                            Since your collection is new, this will return an empty list <code>[]</code>.
+                                            Trigger a live <code>GET /api/data/{collectionName}</code> with your publishable key.
                                         </span>
                                     </div>
 
@@ -878,7 +854,7 @@ export default function Onboarding() {
 
                                 {/* Navigation footer */}
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1.5rem' }}>
-                                    {(!progress.make_api_call && !testSuccess) && (
+                                    {!testSuccess && (
                                         <button
                                             type="button"
                                             onClick={handleFinishOnboarding}
@@ -890,7 +866,6 @@ export default function Onboarding() {
                                     <button
                                         type="button"
                                         onClick={handleFinishOnboarding}
-                                        disabled={!progress.make_api_call && !testResponse}
                                         className="btn-primary"
                                     >
                                         Launch Dashboard <Rocket size={18} />
