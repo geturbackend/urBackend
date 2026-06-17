@@ -138,20 +138,30 @@ const updateDeveloperOnboarding = async (developerId, payload = {}) => {
   const trueSteps = getRequestedTrueSteps(payload.steps);
   for (const step of trueSteps) {
     if (!normalizeOnboarding(developer.onboarding).steps[step]) {
-      assertCanSetStep(developer.onboarding, step);
+      if (step === 'firstApiCall') {
+        // For firstApiCall, auto-satisfy missing prerequisites.
+        // If collectionCreated was never persisted (skip/race condition),
+        // we still allow the API test to mark onboarding done.
+        const prerequisites = ONBOARDING_STEP_PREREQUISITES[step] || [];
+        for (const prereq of prerequisites) {
+          if (!normalizeOnboarding(developer.onboarding).steps[prereq]) {
+            developer.set(ONBOARDING_STEP_FIELDS[prereq], true);
+          }
+        }
+      } else {
+        assertCanSetStep(developer.onboarding, step);
+      }
       developer.set(ONBOARDING_STEP_FIELDS[step], true);
     }
   }
 
   const onboarding = normalizeOnboarding(developer.onboarding);
 
-  if (payload.completed === true && !onboarding.completed) {
-    const err = new Error('Complete all onboarding steps before marking onboarding complete.');
-    err.statusCode = 409;
-    throw err;
+  if (payload.completed === true) {
+    developer.onboarding.completed = true;
+  } else {
+    developer.onboarding.completed = onboarding.completed;
   }
-
-  developer.onboarding.completed = onboarding.completed;
   await developer.save();
 
   return onboarding;

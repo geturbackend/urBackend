@@ -71,18 +71,17 @@ describe('common onboarding sequencing', () => {
     expect(developer.save).not.toHaveBeenCalled();
   });
 
-  test('rejects premature completion', async () => {
+  test('allows forced completion (skip flow)', async () => {
     const developer = makeDeveloper({ steps: { projectCreated: true } });
     Developer.findById.mockReturnValue({ select: jest.fn().mockResolvedValue(developer) });
 
-    await expect(updateDeveloperOnboarding('dev_1', {
+    // completed:true is now allowed even if steps are incomplete — user chose to skip
+    const onboarding = await updateDeveloperOnboarding('dev_1', {
       completed: true,
-    })).rejects.toMatchObject({
-      message: 'Complete all onboarding steps before marking onboarding complete.',
-      statusCode: 409,
     });
 
-    expect(developer.save).not.toHaveBeenCalled();
+    expect(onboarding).toBeTruthy();
+    expect(developer.save).toHaveBeenCalled();
   });
 
   test('rejects reset attempts', async () => {
