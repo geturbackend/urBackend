@@ -10,6 +10,7 @@ const {
   createWebhookSchema,
   updateWebhookSchema,
   generateSignature,
+  getProjectAccessQuery,
 } = require("@urbackend/common");
 const crypto = require("crypto");
 
@@ -27,10 +28,10 @@ module.exports.createWebhook = async (req, res, next) => {
       return next(new AppError(400, "Invalid project ID"));
     }
 
-    // Verify project ownership
+    // Verify project access (owner or member)
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     });
     if (!project) {
       return next(new AppError(404, "Project not found"));
@@ -82,10 +83,10 @@ module.exports.getWebhooks = async (req, res, next) => {
       return next(new AppError(400, "Invalid project ID"));
     }
 
-    // Verify project ownership
+    // Verify project access (owner or member)
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     });
     if (!project) {
       return next(new AppError(404, "Project not found"));
@@ -122,10 +123,10 @@ module.exports.getWebhook = async (req, res, next) => {
       return next(new AppError(400, "Invalid ID format"));
     }
 
-    // Verify project ownership
+    // Verify project access (owner or member)
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     });
     if (!project) {
       return next(new AppError(404, "Project not found"));
@@ -166,10 +167,10 @@ module.exports.updateWebhook = async (req, res, next) => {
       return next(new AppError(400, "Invalid ID format"));
     }
 
-    // Verify project ownership
+    // Verify project access (owner or member)
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     });
     if (!project) {
       return next(new AppError(404, "Project not found"));
@@ -230,10 +231,10 @@ module.exports.deleteWebhook = async (req, res, next) => {
       return next(new AppError(400, "Invalid ID format"));
     }
 
-    // Verify project ownership
+    // Verify project access (owner or member)
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     });
     if (!project) {
       return next(new AppError(404, "Project not found"));
@@ -269,10 +270,10 @@ module.exports.getDeliveries = async (req, res, next) => {
       return next(new AppError(400, "Invalid ID format"));
     }
 
-    // Verify project ownership
+    // Verify project access (owner or member)
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     });
     if (!project) {
       return next(new AppError(404, "Project not found"));
@@ -322,10 +323,10 @@ module.exports.testWebhook = async (req, res, next) => {
       return next(new AppError(400, "Invalid ID format"));
     }
 
-    // Verify project ownership
+    // Verify project access (owner or member)
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     });
     if (!project) {
       return next(new AppError(404, "Project not found"));

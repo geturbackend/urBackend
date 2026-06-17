@@ -16,7 +16,8 @@ export default function DatabaseSidebar({
     navigate,
     projectId,
     showUsers = false,
-    onRequestDelete
+    onRequestDelete,
+    isViewer
 }) {
     const visibleCollections = collections.filter(c => c.name !== 'users' || showUsers);
 
@@ -35,14 +36,16 @@ export default function DatabaseSidebar({
                     >
                         <X size={18} />
                     </button>
-                    <button
-                        className="btn-icon add-col-btn"
-                        aria-label="New collection"
-                        onClick={() => navigate(`/project/${projectId}/create-collection`)}
-                        title="New Collection"
-                    >
-                        <Plus size={18} />
-                    </button>
+                    {!isViewer && (
+                        <button
+                            className="btn-icon add-col-btn"
+                            aria-label="New collection"
+                            onClick={() => navigate(`/project/${projectId}/create-collection`)}
+                            title="New Collection"
+                        >
+                            <Plus size={18} />
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -50,15 +53,17 @@ export default function DatabaseSidebar({
                 {visibleCollections.length === 0 ? (
                     <div className="empty-sidebar">
                         <p>No collections yet.</p>
-                        <button
-                            className="btn btn-secondary btn-sm"
-                            aria-label="Create your first collection"
-                            onClick={() =>
-                                navigate(`/project/${projectId}/create-collection`)
-                            }
-                        >
-                            Create One
-                        </button>
+                        {!isViewer && (
+                            <button
+                                className="btn btn-secondary btn-sm"
+                                aria-label="Create your first collection"
+                                onClick={() =>
+                                    navigate(`/project/${projectId}/create-collection`)
+                                }
+                            >
+                                Create One
+                            </button>
+                        )}
                     </div>
                 ) : (
                     visibleCollections.map((c) => (
@@ -73,17 +78,19 @@ export default function DatabaseSidebar({
                                 <span className="col-name truncate" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
                             </div>
                             <div className="flex items-center gap-2 ml-auto" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
-                                <button
-                                    className="btn-icon delete-btn"
-                                    aria-label="Delete Collection"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (onRequestDelete) onRequestDelete(c);
-                                    }}
-                                    title="Delete Collection"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
+                                {!isViewer && (
+                                    <button
+                                        className="btn-icon delete-btn"
+                                        aria-label="Delete Collection"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (onRequestDelete) onRequestDelete(c);
+                                        }}
+                                        title="Delete Collection"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                )}
                                 {activeCollection?._id === c._id && (
                                     <ChevronRight size={14} className="active-indicator shrink-0" />
                                 )}

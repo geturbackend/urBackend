@@ -1,6 +1,6 @@
 const { Project } = require('@urbackend/common/src/models');
 const { forwardToPythonService } = require('../utils/internalPythonClient');
-const { AppError, ApiResponse } = require('@urbackend/common');
+const { AppError, ApiResponse, getProjectAccessQuery } = require('@urbackend/common');
 
 /**
  * Controller to handle AI Query Builder requests.
@@ -35,7 +35,7 @@ const queryBuilder = async (req, res, next) => {
 
         // 1. Fetch the project and specifically the requested collection schema
         const project = await Project.findOne(
-            { _id: projectId, owner: req.user._id, "collections.name": safeCollectionName },
+            { ...getProjectAccessQuery(req.user._id), _id: projectId, "collections.name": safeCollectionName },
             { "collections.$": 1 }
         );
 

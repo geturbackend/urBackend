@@ -35,19 +35,7 @@ export const Toast: React.FC<ToastProps> = ({ message, type, onClose, isDark = f
   const textColor = isDark ? '#fff' : '#000';
 
   return (
-    <>
-      <style>
-        {`
-          @keyframes slideIn {
-            from { transform: translate(-50%, -20px) scale(0.95); opacity: 0; }
-            to { transform: translate(-50%, 0) scale(1); opacity: 1; }
-          }
-          @keyframes slideOut {
-            from { transform: translate(-50%, 0) scale(1); opacity: 1; }
-            to { transform: translate(-50%, -20px) scale(0.95); opacity: 0; }
-          }
-        `}
-      </style>
+
       <div
         style={{
           position: 'fixed',
@@ -55,21 +43,20 @@ export const Toast: React.FC<ToastProps> = ({ message, type, onClose, isDark = f
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 9999,
-          display: 'flex',
+          display: isLeaving ? 'none' : 'flex',
           alignItems: 'center',
           gap: '12px',
           padding: '12px 20px',
-          borderRadius: '0',
+          borderRadius: '12px',
           background: bgColor,
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
           border: `1px solid ${borderColor}`,
           boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
           color: textColor,
-          fontFamily: 'system-ui, -apple-system, sans-serif',
+          fontFamily: 'system-ui, -apple-system, "Helvetica Neue", sans-serif',
           fontSize: '14px',
           fontWeight: 500,
-          animation: isLeaving ? 'slideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards' : 'slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         }}
       >
         {type === 'success' ? (
@@ -86,6 +73,5 @@ export const Toast: React.FC<ToastProps> = ({ message, type, onClose, isDark = f
         )}
         {message}
       </div>
-    </>
   );
 };

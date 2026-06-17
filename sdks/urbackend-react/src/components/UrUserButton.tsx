@@ -70,13 +70,13 @@ export const UrUserButton: React.FC<UrUserButtonProps> = ({
     right: position.includes('right') || position === 'inline' ? '0' : 'auto',
     left: position.includes('left') ? '0' : 'auto',
     background: '#ffffff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '0px',
-    boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+    border: '1px solid #e4e4e7',
+    borderRadius: '12px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
     width: '220px',
     display: isOpen ? 'block' : 'none',
     overflow: 'hidden',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
+    fontFamily: 'system-ui, -apple-system, "Helvetica Neue", sans-serif',
   };
 
   const getInitials = () => {
@@ -91,16 +91,15 @@ export const UrUserButton: React.FC<UrUserButtonProps> = ({
           width: '40px',
           height: '40px',
           padding: 0,
-          border: '1px solid #e2e8f0',
-          background: '#f8fafc',
+          border: '1px solid #e4e4e7',
+          background: '#fafafa',
           borderRadius,
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
-          boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
-          transition: 'transform 0.1s ease',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
         }}
       >
         {user.avatarUrl ? (
@@ -114,11 +113,11 @@ export const UrUserButton: React.FC<UrUserButtonProps> = ({
 
       <div style={dropdownStyles}>
         {/* User Info Header */}
-        <div style={{ padding: '16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
-          <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{ padding: '16px', borderBottom: '1px solid #e4e4e7', background: '#fafafa' }}>
+          <div style={{ fontSize: '14px', fontWeight: 600, color: '#09090b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {user.name || 'User'}
           </div>
-          <div style={{ fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+          <div style={{ fontSize: '12px', color: '#71717a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
             {user.email}
           </div>
         </div>
@@ -138,12 +137,12 @@ export const UrUserButton: React.FC<UrUserButtonProps> = ({
                 background: 'transparent',
                 border: 'none',
                 fontSize: '14px',
-                color: '#334155',
+                color: '#09090b',
                 cursor: 'pointer',
-                borderRadius: '0px',
+                borderRadius: '8px',
                 display: 'block',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+              onMouseEnter={(e) => (e.currentTarget.style.background = '#f4f4f5')}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
             >
               Profile
@@ -163,19 +162,19 @@ export const UrUserButton: React.FC<UrUserButtonProps> = ({
                 background: 'transparent',
                 border: 'none',
                 fontSize: '14px',
-                color: '#334155',
+                color: '#09090b',
                 cursor: 'pointer',
-                borderRadius: '0px',
+                borderRadius: '8px',
                 display: 'block',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+              onMouseEnter={(e) => (e.currentTarget.style.background = '#f4f4f5')}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
             >
               Settings
             </button>
           )}
 
-          <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
+          <div style={{ height: '1px', background: '#e4e4e7', margin: '4px 0' }} />
 
           <button
             onClick={() => {
@@ -192,7 +191,7 @@ export const UrUserButton: React.FC<UrUserButtonProps> = ({
               color: '#ef4444',
               fontWeight: 500,
               cursor: 'pointer',
-              borderRadius: '0px',
+              borderRadius: '8px',
               display: 'block',
             }}
             onMouseEnter={(e) => (e.currentTarget.style.background = '#fef2f2')}

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import {
     Mail, Send, Eye, RefreshCw, Plus, Trash2, Users, UserPlus,
     Radio, ShieldAlert, AlertCircle
@@ -23,6 +24,8 @@ export default function MailPlatform() {
     const [activeTab, setActiveTab] = useState('logs');
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+
+    const { user } = useAuth();
 
     // Project context
     const [project, setProject] = useState(null);
@@ -234,6 +237,12 @@ export default function MailPlatform() {
     );
 
     const isByok = !!project?.hasResendApiKey;
+    
+    const myMember = project?.members?.find(m => {
+        const memberId = typeof m.user === 'object' ? m.user?._id : m.user;
+        return memberId?.toString() === user?._id?.toString() || m.email === user?.email;
+    });
+    const isViewer = project?.owner?.toString() !== user?._id?.toString() && (myMember?.role === 'viewer');
 
     return (
         <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '4rem', padding: '0 1rem' }}>
@@ -267,13 +276,15 @@ export default function MailPlatform() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
-                    <button 
-                        onClick={() => navigate(`/project/${projectId}/settings`)} 
-                        className="btn btn-secondary"
-                        style={{ fontSize: '0.75rem', height: '34px', borderColor: 'rgba(168,85,247,0.3)' }}
-                    >
-                        Configure BYOK Key
-                    </button>
+                    {!isViewer && (
+                        <button 
+                            onClick={() => navigate(`/project/${projectId}/settings`)} 
+                            className="btn btn-secondary"
+                            style={{ fontSize: '0.75rem', height: '34px', borderColor: 'rgba(168,85,247,0.3)' }}
+                        >
+                            Configure BYOK Key
+                        </button>
+                    )}
                     <button 
                         onClick={fetchProjectAndLogs} 
                         disabled={refreshing}
@@ -420,13 +431,15 @@ export default function MailPlatform() {
                                             ID: {aud.id.slice(0, 8)}
                                         </div>
                                     </div>
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); handleDeleteAudience(aud.id); }}
-                                        style={{ background: 'none', border: 'none', color: '#ea5455', cursor: 'pointer', padding: '4px', opacity: selectedAudienceId === aud.id ? 1 : 0.4 }}
-                                        title="Delete Audience"
-                                    >
-                                        <Trash2 size={12} />
-                                    </button>
+                                    {!isViewer && (
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteAudience(aud.id); }}
+                                            style={{ background: 'none', border: 'none', color: '#ea5455', cursor: 'pointer', padding: '4px', opacity: selectedAudienceId === aud.id ? 1 : 0.4 }}
+                                            title="Delete Audience"
+                                        >
+                                            <Trash2 size={12} />
+                                        </button>
+                                    )}
                                 </div>
                             )) : (
                                 <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textAlign: 'center', padding: '1rem 0', margin: 0 }}>No remote audiences found</p>
@@ -434,28 +447,30 @@ export default function MailPlatform() {
                         </div>
 
                         {/* Create new audience form */}
-                        <form onSubmit={handleCreateAudience} style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1.25rem' }}>
-                            <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '6px' }}>
-                                Provision Audience
-                            </label>
-                            <div style={{ display: 'flex', gap: '6px' }}>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. Beta Subscribers"
-                                    value={newAudienceName}
-                                    onChange={(e) => setNewAudienceName(e.target.value)}
-                                    style={{ flex: 1, padding: '6px 10px', fontSize: '0.75rem', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', color: '#fff' }}
-                                />
-                                <button 
-                                    type="submit" 
-                                    disabled={creatingAudience || !newAudienceName.trim()}
-                                    className="btn btn-primary"
-                                    style={{ padding: '0 10px', height: 'auto', borderRadius: '4px' }}
-                                >
-                                    <Plus size={14} />
-                                </button>
-                            </div>
-                        </form>
+                        {!isViewer && (
+                            <form onSubmit={handleCreateAudience} style={{ borderTop: '1px solid var(--color-border)', paddingTop: '1.25rem' }}>
+                                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '6px' }}>
+                                    Provision Audience
+                                </label>
+                                <div style={{ display: 'flex', gap: '6px' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Beta Subscribers"
+                                        value={newAudienceName}
+                                        onChange={(e) => setNewAudienceName(e.target.value)}
+                                        style={{ flex: 1, padding: '6px 10px', fontSize: '0.75rem', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', color: '#fff' }}
+                                    />
+                                    <button 
+                                        type="submit" 
+                                        disabled={creatingAudience || !newAudienceName.trim()}
+                                        className="btn btn-primary"
+                                        style={{ padding: '0 10px', height: 'auto', borderRadius: '4px' }}
+                                    >
+                                        <Plus size={14} />
+                                    </button>
+                                </div>
+                            </form>
+                        )}
                     </div>
 
                     {/* Right pane: Active Contacts inside Audience */}
@@ -473,38 +488,40 @@ export default function MailPlatform() {
                                 </div>
 
                                 {/* Add Contact Quick Form */}
-                                <form onSubmit={handleCreateContact} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '8px', marginBottom: '1.5rem', background: 'rgba(255,255,255,0.015)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                                    <input
-                                        type="email"
-                                        required
-                                        placeholder="user@example.com"
-                                        value={newContactEmail}
-                                        onChange={(e) => setNewContactEmail(e.target.value)}
-                                        style={{ padding: '6px 10px', fontSize: '0.75rem', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', color: '#fff' }}
-                                    />
-                                    <input
-                                        type="text"
-                                        placeholder="First Name"
-                                        value={newContactFirstName}
-                                        onChange={(e) => setNewContactFirstName(e.target.value)}
-                                        style={{ padding: '6px 10px', fontSize: '0.75rem', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', color: '#fff' }}
-                                    />
-                                    <input
-                                        type="text"
-                                        placeholder="Last Name"
-                                        value={newContactLastName}
-                                        onChange={(e) => setNewContactLastName(e.target.value)}
-                                        style={{ padding: '6px 10px', fontSize: '0.75rem', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', color: '#fff' }}
-                                    />
-                                    <button 
-                                        type="submit" 
-                                        disabled={creatingContact || !newContactEmail.trim()}
-                                        className="btn btn-primary"
-                                        style={{ padding: '0 12px', fontSize: '0.75rem', height: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                    >
-                                        <UserPlus size={12} /> {creatingContact ? 'Adding...' : 'Add'}
-                                    </button>
-                                </form>
+                                {!isViewer && (
+                                    <form onSubmit={handleCreateContact} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '8px', marginBottom: '1.5rem', background: 'rgba(255,255,255,0.015)', padding: '12px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                                        <input
+                                            type="email"
+                                            required
+                                            placeholder="user@example.com"
+                                            value={newContactEmail}
+                                            onChange={(e) => setNewContactEmail(e.target.value)}
+                                            style={{ padding: '6px 10px', fontSize: '0.75rem', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', color: '#fff' }}
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="First Name"
+                                            value={newContactFirstName}
+                                            onChange={(e) => setNewContactFirstName(e.target.value)}
+                                            style={{ padding: '6px 10px', fontSize: '0.75rem', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', color: '#fff' }}
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Last Name"
+                                            value={newContactLastName}
+                                            onChange={(e) => setNewContactLastName(e.target.value)}
+                                            style={{ padding: '6px 10px', fontSize: '0.75rem', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', color: '#fff' }}
+                                        />
+                                        <button 
+                                            type="submit" 
+                                            disabled={creatingContact || !newContactEmail.trim()}
+                                            className="btn btn-primary"
+                                            style={{ padding: '0 12px', fontSize: '0.75rem', height: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                        >
+                                            <UserPlus size={12} /> {creatingContact ? 'Adding...' : 'Add'}
+                                        </button>
+                                    </form>
+                                )}
 
                                 {/* Contacts Table */}
                                 <div style={{ border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
@@ -524,13 +541,15 @@ export default function MailPlatform() {
                                                     <td style={{ padding: '10px 14px', color: 'var(--color-text-muted)' }}>{c.first_name || c.last_name ? `${c.first_name || ''} ${c.last_name || ''}` : '—'}</td>
                                                     <td style={{ padding: '10px 14px', color: 'var(--color-text-muted)' }}>{new Date(c.created_at).toLocaleDateString()}</td>
                                                     <td style={{ padding: '10px 14px', textAlign: 'right' }}>
-                                                        <button 
-                                                            onClick={() => handleDeleteContact(c.id)}
-                                                            style={{ background: 'none', border: 'none', color: '#ea5455', cursor: 'pointer', opacity: 0.7 }}
-                                                            title="Delete Contact"
-                                                        >
-                                                            <Trash2 size={12} />
-                                                        </button>
+                                                        {!isViewer && (
+                                                            <button 
+                                                                onClick={() => handleDeleteContact(c.id)}
+                                                                style={{ background: 'none', border: 'none', color: '#ea5455', cursor: 'pointer', opacity: 0.7 }}
+                                                                title="Delete Contact"
+                                                            >
+                                                                <Trash2 size={12} />
+                                                            </button>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             )) : (
@@ -572,58 +591,64 @@ export default function MailPlatform() {
                         </span>
                     </div>
 
-                    <form onSubmit={handleSendBroadcast} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                        <div className="form-group">
-                            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '6px' }}>Target Audience Segment</label>
-                            <select
-                                required
-                                value={broadcastAudienceId}
-                                onChange={(e) => setBroadcastAudienceId(e.target.value)}
-                                style={{ width: '100%', padding: '8px 12px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }}
-                            >
-                                <option value="">-- Choose Target Segment --</option>
-                                {audiences.map(aud => (
-                                    <option key={aud.id} value={aud.id}>{aud.name} ({aud.id})</option>
-                                ))}
-                            </select>
-                        </div>
+                    {!isViewer ? (
+                        <form onSubmit={handleSendBroadcast} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            <div className="form-group">
+                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '6px' }}>Target Audience Segment</label>
+                                <select
+                                    required
+                                    value={broadcastAudienceId}
+                                    onChange={(e) => setBroadcastAudienceId(e.target.value)}
+                                    style={{ width: '100%', padding: '8px 12px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }}
+                                >
+                                    <option value="">-- Choose Target Segment --</option>
+                                    {audiences.map(aud => (
+                                        <option key={aud.id} value={aud.id}>{aud.name} ({aud.id})</option>
+                                    ))}
+                                </select>
+                            </div>
 
-                        <div className="form-group">
-                            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '6px' }}>Campaign Subject Line</label>
-                            <input
-                                type="text"
-                                required
-                                placeholder="🚀 Welcome to the new era of urBackend BaaS Platform!"
-                                value={broadcastSubject}
-                                onChange={(e) => setBroadcastSubject(e.target.value)}
-                                style={{ width: '100%', padding: '8px 12px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }}
-                            />
-                        </div>
+                            <div className="form-group">
+                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '6px' }}>Campaign Subject Line</label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="🚀 Welcome to the new era of urBackend BaaS Platform!"
+                                    value={broadcastSubject}
+                                    onChange={(e) => setBroadcastSubject(e.target.value)}
+                                    style={{ width: '100%', padding: '8px 12px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', color: '#fff', fontSize: '0.8rem' }}
+                                />
+                            </div>
 
-                        <div className="form-group">
-                            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '6px' }}>Rich HTML Content / Payload</label>
-                            <textarea
-                                rows={8}
-                                required
-                                placeholder="<h1>Exciting announcements!</h1><p>Enjoy fully localized RLS boundaries and zero dependency overhead.</p>"
-                                value={broadcastHtml}
-                                onChange={(e) => setBroadcastHtml(e.target.value)}
-                                style={{ width: '100%', padding: '10px 12px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', color: '#fff', fontSize: '0.8rem', fontFamily: 'monospace' }}
-                            />
-                        </div>
+                            <div className="form-group">
+                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '6px' }}>Rich HTML Content / Payload</label>
+                                <textarea
+                                    rows={8}
+                                    required
+                                    placeholder="<h1>Exciting announcements!</h1><p>Enjoy fully localized RLS boundaries and zero dependency overhead.</p>"
+                                    value={broadcastHtml}
+                                    onChange={(e) => setBroadcastHtml(e.target.value)}
+                                    style={{ width: '100%', padding: '10px 12px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px', color: '#fff', fontSize: '0.8rem', fontFamily: 'monospace' }}
+                                />
+                            </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
-                            <button
-                                type="submit"
-                                disabled={sendingBroadcast}
-                                className="btn btn-primary"
-                                style={{ background: '#a855f7', color: '#fff', border: 'none', padding: '0 24px', height: '36px', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
-                            >
-                                <Send size={14} className={sendingBroadcast ? 'spin' : ''} />
-                                {sendingBroadcast ? 'Deploying Broadcast Stream...' : 'Deploy Mass Campaign'}
-                            </button>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+                                <button
+                                    type="submit"
+                                    disabled={sendingBroadcast}
+                                    className="btn btn-primary"
+                                    style={{ background: '#a855f7', color: '#fff', border: 'none', padding: '0 24px', height: '36px', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
+                                >
+                                    <Send size={14} className={sendingBroadcast ? 'spin' : ''} />
+                                    {sendingBroadcast ? 'Deploying Broadcast Stream...' : 'Deploy Mass Campaign'}
+                                </button>
+                            </div>
+                        </form>
+                    ) : (
+                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                            <p>You do not have permission to deploy broadcast campaigns.</p>
                         </div>
-                    </form>
+                    )}
                 </div>
             )}
 

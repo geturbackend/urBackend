@@ -56,32 +56,40 @@ export async function parseApiError(response: Response): Promise<UrBackendError>
     data = await response.json();
     if (typeof data === 'object' && data !== null) {
       const errData = data as Record<string, unknown>;
-      if ('error' in errData) {
-        let candidate = '';
+      let parsedMessage = '';
+      let parsedError = '';
+
+      if ('message' in errData && errData.message) {
+        parsedMessage = typeof errData.message === 'string' ? errData.message : JSON.stringify(errData.message);
+      }
+
+      if ('error' in errData && errData.error) {
         if (typeof errData.error === 'string') {
-          candidate = errData.error;
+          parsedError = errData.error;
         } else if (Array.isArray(errData.error) && errData.error.length > 0) {
-          candidate = errData.error.map((e: unknown) => {
+          parsedError = errData.error.map((e: unknown) => {
             if (typeof e === 'object' && e !== null && 'message' in e) {
               return String((e as Record<string, unknown>).message);
             }
             return String(e);
           }).join(', ');
         } else {
-          candidate = JSON.stringify(errData.error);
+          parsedError = JSON.stringify(errData.error);
         }
-        
-        if (candidate && candidate.trim().length > 0 && candidate !== '[]' && candidate !== 'null') {
-          message = candidate;
-        } else if ('message' in errData) {
-          message = typeof errData.message === 'string' ? errData.message : JSON.stringify(errData.message);
-        }
-      } else if ('message' in errData) {
-        if (typeof errData.message === 'string') {
-          message = errData.message;
-        } else {
-          message = JSON.stringify(errData.message);
-        }
+      }
+
+      // Usually 'message' is more descriptive than 'error' in standard APIs.
+      // E.g., { error: "Error", message: "Your account is deleted" }
+      const isGeneric = (str: string) => !str || str.trim() === '' || str === 'Error' || str === 'Unknown error' || str === '[]' || str === 'null';
+
+      if (!isGeneric(parsedMessage)) {
+        message = parsedMessage;
+      } else if (!isGeneric(parsedError)) {
+        message = parsedError;
+      } else if (parsedMessage) {
+        message = parsedMessage;
+      } else if (parsedError) {
+        message = parsedError;
       }
     }
   } catch {

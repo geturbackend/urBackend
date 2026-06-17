@@ -182,3 +182,35 @@
     gap: 1rem;
   }
 }
+
+.mobile-menu-link {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  text-decoration: none;
+}
+
+.mobile-menu-sub-link {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #aaa;
+  text-decoration: none;
+}
+
+.mobile-menu-divider {
+  height: 1px;
+  width: 60px;
+  background: #333;
+  margin: 10px 0;
+}
+
+.mobile-menu-action {
+  font-weight: 600;
+  width: 200px;
+  padding: 12px;
+}
+
+.mobile-menu-action.btn-primary {
+  text-align: center;
+  padding: 12px 30px;
+}

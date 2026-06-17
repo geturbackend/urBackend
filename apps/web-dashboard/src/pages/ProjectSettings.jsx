@@ -79,11 +79,24 @@ export default function ProjectSettings() {
         const fetchProject = async () => {
             try {
                 const res = await api.get(`/api/projects/${projectId}`);
-                setProject(res.data);
-                setHasResendKey(!!res.data?.hasResendApiKey);
-                setResendFromEmailValue(res.data.resendFromEmail || "");
-                setNewName(res.data.name);
-                setSiteUrl(res.data.siteUrl || "");
+                const projectData = res.data;
+                const myMember = projectData?.members?.find(m => {
+                    const memberId = typeof m.user === 'object' ? m.user?._id : m.user;
+                    return memberId?.toString() === user?._id?.toString() || m.email === user?.email;
+                });
+                const isViewer = projectData?.owner?.toString() !== user?._id?.toString() && (myMember?.role === 'viewer');
+                
+                if (isViewer) {
+                    toast.error("Viewers cannot access project settings");
+                    navigate(`/project/${projectId}/database`);
+                    return;
+                }
+
+                setProject(projectData);
+                setHasResendKey(!!projectData?.hasResendApiKey);
+                setResendFromEmailValue(projectData.resendFromEmail || "");
+                setNewName(projectData.name);
+                setSiteUrl(projectData.siteUrl || "");
             } catch {
                 toast.error("Failed to load project");
             } finally {
@@ -91,7 +104,7 @@ export default function ProjectSettings() {
             }
         };
         fetchProject();
-    }, [projectId, user]);
+    }, [projectId, user, navigate]);
 
     const handleRename = async () => {
         if (!newName.trim()) return toast.error("Project name cannot be empty");
@@ -147,6 +160,12 @@ export default function ProjectSettings() {
         </div>
     );
 
+    const userId = user?._id || user?.id;
+    const isOwner = project?.owner === userId || project?.owner?._id === userId;
+    const memberObj = project?.members?.find(m => m.user === userId || m.user?._id === userId);
+    const role = isOwner ? 'owner' : (memberObj?.role || 'viewer');
+    const isViewer = role === 'viewer';
+
     return (
         <div className="container" style={{ maxWidth: '860px', margin: '0 auto', paddingBottom: '3rem' }}>
 
@@ -177,6 +196,7 @@ export default function ProjectSettings() {
                                     value={newName}
                                     onChange={(e) => setNewName(e.target.value)}
                                     style={inputStyle}
+                                    disabled={isViewer}
                                 />
                             </FormField>
                             <FormField
@@ -190,19 +210,22 @@ export default function ProjectSettings() {
                                     onChange={(e) => setSiteUrl(e.target.value)}
                                     placeholder="https://your-app.com"
                                     style={inputStyle}
+                                    disabled={isViewer}
                                 />
                             </FormField>
                         </div>
-                        <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
-                            <button
-                                onClick={handleRename}
-                                className="btn btn-primary"
-                                disabled={renaming || (newName === project?.name && siteUrl === (project?.siteUrl || ""))}
-                                style={{ height: '30px', fontSize: '0.75rem', padding: '0 14px' }}
-                            >
-                                {renaming ? "Saving..." : "Save Changes"}
-                            </button>
-                        </div>
+                        {!isViewer && (
+                            <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
+                                <button
+                                    onClick={handleRename}
+                                    className="btn btn-primary"
+                                    disabled={renaming || (newName === project?.name && siteUrl === (project?.siteUrl || ""))}
+                                    style={{ height: '30px', fontSize: '0.75rem', padding: '0 14px' }}
+                                >
+                                    {renaming ? "Saving..." : "Save Changes"}
+                                </button>
+                            </div>
+                        )}
                     </SettingsCard>
                 </div>
 
@@ -230,6 +253,7 @@ export default function ProjectSettings() {
                                         value={resendKeyValue}
                                         onChange={(e) => setResendKeyValue(e.target.value)}
                                         style={{ ...inputStyle, fontFamily: 'monospace' }}
+                                        disabled={isViewer}
                                     />
                                 </FormField>
                                 <FormField label="Default From Address" hint={<>Blank defaults to <code>onboarding@resend.dev</code></>}>
@@ -240,22 +264,25 @@ export default function ProjectSettings() {
                                         value={resendFromEmailValue}
                                         onChange={(e) => setResendFromEmailValue(e.target.value)}
                                         style={inputStyle}
+                                        disabled={isViewer}
                                     />
                                 </FormField>
                             </div>
-                            <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
-                                <button
-                                    onClick={handleResendKeySave}
-                                    className="btn btn-primary"
-                                    disabled={resendKeyLoading || (!resendKeyValue.trim() && resendFromEmailValue.trim() === (project?.resendFromEmail || ""))}
-                                    style={{ height: '30px', fontSize: '0.75rem', padding: '0 14px' }}
-                                >
-                                    {resendKeyLoading ? "Saving..." : "Save Mail Settings"}
-                                </button>
-                            </div>
+                            {!isViewer && (
+                                <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
+                                    <button
+                                        onClick={handleResendKeySave}
+                                        className="btn btn-primary"
+                                        disabled={resendKeyLoading || (!resendKeyValue.trim() && resendFromEmailValue.trim() === (project?.resendFromEmail || ""))}
+                                        style={{ height: '30px', fontSize: '0.75rem', padding: '0 14px' }}
+                                    >
+                                        {resendKeyLoading ? "Saving..." : "Save Mail Settings"}
+                                    </button>
+                                </div>
+                            )}
                         </SettingsCard>
 
-                        <MailTemplatesForm projectId={projectId} />
+                        <MailTemplatesForm projectId={projectId} role={role} />
                     </div>
                 </div>
 
@@ -263,45 +290,47 @@ export default function ProjectSettings() {
                 <div>
                     <SectionHeader title="Integrations" />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <AllowedDomainsForm project={project} projectId={projectId} onProjectUpdate={setProject} />
-                        <DatabaseConfigForm project={project} projectId={projectId} onProjectUpdate={setProject} />
-                        <StorageConfigForm project={project} projectId={projectId} onProjectUpdate={setProject} />
+                        <AllowedDomainsForm project={project} projectId={projectId} onProjectUpdate={setProject} role={role} />
+                        <DatabaseConfigForm project={project} projectId={projectId} onProjectUpdate={setProject} role={role} />
+                        <StorageConfigForm project={project} projectId={projectId} onProjectUpdate={setProject} role={role} />
                     </div>
                 </div>
 
                 {/* Danger Zone */}
-                <div>
-                    <SectionHeader title="Danger Zone" />
-                    <div className="glass-card" style={{ borderRadius: '8px', border: '1px solid rgba(234,84,85,0.25)', background: 'rgba(234,84,85,0.02)', padding: '1rem' }}>
-                        <div style={{ display: 'flex', gap: '7px', alignItems: 'center', marginBottom: '0.75rem', color: '#ea5455' }}>
-                            <AlertTriangle size={14} />
-                            <h3 style={{ fontSize: '0.85rem', fontWeight: 600 }}>Delete Project</h3>
-                        </div>
-                        <p style={{ color: 'var(--color-text-muted)', marginBottom: '1rem', fontSize: '0.75rem', lineHeight: 1.5 }}>
-                            This will permanently delete <strong style={{ color: '#fff' }}>{project?.name}</strong> and all associated data including collections, files, and users. This action cannot be undone.
-                        </p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '10px', alignItems: 'end', maxWidth: '480px' }}>
-                            <FormField label={<>Type <strong style={{ textDecoration: 'underline', color: '#ea5455' }}>{project?.name}</strong> to confirm</>}>
-                                <input
-                                    type="text"
-                                    className="input-field"
-                                    placeholder={project?.name}
-                                    value={deleteConfirm}
-                                    onChange={(e) => setDeleteConfirm(e.target.value)}
-                                    style={{ ...inputStyle, border: '1px solid rgba(234,84,85,0.3)' }}
-                                />
-                            </FormField>
-                            <button
-                                onClick={() => setShowModal(true)}
-                                className="btn"
-                                disabled={deleteConfirm !== project?.name}
-                                style={{ height: '30px', fontSize: '0.75rem', padding: '0 12px', background: '#ea5455', color: '#fff', border: 'none', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', marginBottom: '0' }}
-                            >
-                                <Trash2 size={12} /> Delete
-                            </button>
+                {isOwner && (
+                    <div>
+                        <SectionHeader title="Danger Zone" />
+                        <div className="glass-card" style={{ borderRadius: '8px', border: '1px solid rgba(234,84,85,0.25)', background: 'rgba(234,84,85,0.02)', padding: '1rem' }}>
+                            <div style={{ display: 'flex', gap: '7px', alignItems: 'center', marginBottom: '0.75rem', color: '#ea5455' }}>
+                                <AlertTriangle size={14} />
+                                <h3 style={{ fontSize: '0.85rem', fontWeight: 600 }}>Delete Project</h3>
+                            </div>
+                            <p style={{ color: 'var(--color-text-muted)', marginBottom: '1rem', fontSize: '0.75rem', lineHeight: 1.5 }}>
+                                This will permanently delete <strong style={{ color: '#fff' }}>{project?.name}</strong> and all associated data including collections, files, and users. This action cannot be undone.
+                            </p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '10px', alignItems: 'end', maxWidth: '480px' }}>
+                                <FormField label={<>Type <strong style={{ textDecoration: 'underline', color: '#ea5455' }}>{project?.name}</strong> to confirm</>}>
+                                    <input
+                                        type="text"
+                                        className="input-field"
+                                        placeholder={project?.name}
+                                        value={deleteConfirm}
+                                        onChange={(e) => setDeleteConfirm(e.target.value)}
+                                        style={{ ...inputStyle, border: '1px solid rgba(234,84,85,0.3)' }}
+                                    />
+                                </FormField>
+                                <button
+                                    onClick={() => setShowModal(true)}
+                                    className="btn"
+                                    disabled={deleteConfirm !== project?.name}
+                                    style={{ height: '30px', fontSize: '0.75rem', padding: '0 12px', background: '#ea5455', color: '#fff', border: 'none', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', marginBottom: '0' }}
+                                >
+                                    <Trash2 size={12} /> Delete
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
             </div>
 
             {showModal && (
@@ -325,7 +354,8 @@ export default function ProjectSettings() {
 /* ─────────────────────────────────────────────────────────────── */
 /* MailTemplatesForm                                               */
 /* ─────────────────────────────────────────────────────────────── */
-function MailTemplatesForm({ projectId }) {
+function MailTemplatesForm({ projectId, role }) {
+    const isViewer = role === 'viewer';
     const [templates, setTemplates] = useState([]);
     const [globalTemplates, setGlobalTemplates] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -616,9 +646,11 @@ function MailTemplatesForm({ projectId }) {
                         {/* Project templates (editable) */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                             <div style={{ fontSize: '0.78rem', fontWeight: 700 }}>Project templates</div>
-                            <button className="btn btn-primary" onClick={openCreate} style={{ height: '28px', fontSize: '0.72rem', padding: '0 10px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <Plus size={14} /> New
-                            </button>
+                            {!isViewer && (
+                                <button className="btn btn-primary" onClick={openCreate} style={{ height: '28px', fontSize: '0.72rem', padding: '0 10px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Plus size={14} /> New
+                                </button>
+                            )}
                         </div>
 
                         {templates.length === 0 ? (
@@ -645,12 +677,16 @@ function MailTemplatesForm({ projectId }) {
                                             <button className="btn btn-secondary" onClick={() => openPreview(t)} style={{ height: '26px', fontSize: '0.7rem', padding: '0 10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                 <Eye size={12} /> Preview
                                             </button>
-                                            <button className="btn btn-secondary" onClick={() => openEdit(t)} style={{ height: '26px', fontSize: '0.7rem', padding: '0 10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <Pencil size={12} /> Edit
-                                            </button>
-                                            <button className="btn btn-danger" onClick={() => setConfirmDeleteId(t.id)} style={{ height: '26px', fontSize: '0.7rem', padding: '0 10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <Trash2 size={12} /> Delete
-                                            </button>
+                                            {!isViewer && (
+                                                <>
+                                                    <button className="btn btn-secondary" onClick={() => openEdit(t)} style={{ height: '26px', fontSize: '0.7rem', padding: '0 10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <Pencil size={12} /> Edit
+                                                    </button>
+                                                    <button className="btn btn-danger" onClick={() => setConfirmDeleteId(t.id)} style={{ height: '26px', fontSize: '0.7rem', padding: '0 10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <Trash2 size={12} /> Delete
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -789,7 +825,8 @@ function MailTemplatesForm({ projectId }) {
 /* ─────────────────────────────────────────────────────────────── */
 /* DatabaseConfigForm                                              */
 /* ─────────────────────────────────────────────────────────────── */
-function DatabaseConfigForm({ project, projectId, onProjectUpdate }) {
+function DatabaseConfigForm({ project, projectId, onProjectUpdate, role }) {
+    const isViewer = role === 'viewer';
     const [dbUri, setDbUri] = useState("");
     const [loading, setLoading] = useState(false);
     const isConfigured = project?.resources?.db?.isExternal || false;
@@ -866,12 +903,14 @@ function DatabaseConfigForm({ project, projectId, onProjectUpdate }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '7px', color: '#10B981', fontWeight: 600, fontSize: '0.78rem' }}>
                         <CheckCircle size={13} /> Connected to external MongoDB
                     </div>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                        <button className="btn btn-secondary" onClick={() => setShowForm(true)} style={{ height: '26px', fontSize: '0.7rem', padding: '0 10px' }}>Update URI</button>
-                        <button className="btn btn-danger" onClick={() => setShowRemoveModal(true)} disabled={loading} style={{ height: '26px', fontSize: '0.7rem', padding: '0 10px' }}>
-                            {loading ? "Removing..." : "Remove"}
-                        </button>
-                    </div>
+                    {!isViewer && (
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                            <button className="btn btn-secondary" onClick={() => setShowForm(true)} style={{ height: '26px', fontSize: '0.7rem', padding: '0 10px' }}>Update URI</button>
+                            <button className="btn btn-danger" onClick={() => setShowRemoveModal(true)} disabled={loading} style={{ height: '26px', fontSize: '0.7rem', padding: '0 10px' }}>
+                                {loading ? "Removing..." : "Remove"}
+                            </button>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div>
@@ -884,6 +923,7 @@ function DatabaseConfigForm({ project, projectId, onProjectUpdate }) {
                             value={dbUri}
                             onChange={(e) => setDbUri(e.target.value)}
                             style={{ ...inputStyle, fontFamily: 'monospace' }}
+                            disabled={isViewer}
                         />
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid var(--color-border)' }}>
@@ -896,12 +936,14 @@ function DatabaseConfigForm({ project, projectId, onProjectUpdate }) {
                                 </button>
                             )}
                         </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            {isConfigured && <button className="btn btn-secondary" onClick={() => setShowForm(false)} style={{ height: '28px', fontSize: '0.72rem', padding: '0 10px' }}>Cancel</button>}
-                            <button onClick={handleUpdate} className="btn btn-primary" disabled={loading} style={{ height: '28px', fontSize: '0.72rem', padding: '0 12px' }}>
-                                {loading ? "Connecting..." : "Connect Database"}
-                            </button>
-                        </div>
+                        {!isViewer && (
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                {isConfigured && <button className="btn btn-secondary" onClick={() => setShowForm(false)} style={{ height: '28px', fontSize: '0.72rem', padding: '0 10px' }}>Cancel</button>}
+                                <button onClick={handleUpdate} className="btn btn-primary" disabled={loading} style={{ height: '28px', fontSize: '0.72rem', padding: '0 12px' }}>
+                                    {loading ? "Connecting..." : "Connect Database"}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -918,7 +960,8 @@ const INITIAL_STORAGE_CONFIG = {
     s3AccessKeyId: "", s3SecretAccessKey: "", s3Region: "", s3Endpoint: "", s3Bucket: "", publicUrlHost: "",
 };
 
-function StorageConfigForm({ project, projectId, onProjectUpdate }) {
+function StorageConfigForm({ project, projectId, onProjectUpdate, role }) {
+    const isViewer = role === 'viewer';
     const [config, setConfig] = useState(INITIAL_STORAGE_CONFIG);
     const [loading, setLoading] = useState(false);
     const isConfigured = project?.resources?.storage?.isExternal || false;
@@ -992,12 +1035,14 @@ function StorageConfigForm({ project, projectId, onProjectUpdate }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '7px', color: '#10B981', fontWeight: 600, fontSize: '0.78rem' }}>
                         <CheckCircle size={13} /> External storage connected
                     </div>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                        <button className="btn btn-secondary" onClick={() => setShowForm(true)} style={{ height: '26px', fontSize: '0.7rem', padding: '0 10px' }}>Update Config</button>
-                        <button className="btn btn-danger" onClick={() => setShowRemoveModal(true)} disabled={loading} style={{ height: '26px', fontSize: '0.7rem', padding: '0 10px' }}>
-                            {loading ? "Removing..." : "Remove"}
-                        </button>
-                    </div>
+                    {!isViewer && (
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                            <button className="btn btn-secondary" onClick={() => setShowForm(true)} style={{ height: '26px', fontSize: '0.7rem', padding: '0 10px' }}>Update Config</button>
+                            <button className="btn btn-danger" onClick={() => setShowRemoveModal(true)} disabled={loading} style={{ height: '26px', fontSize: '0.7rem', padding: '0 10px' }}>
+                                {loading ? "Removing..." : "Remove"}
+                            </button>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1009,6 +1054,7 @@ function StorageConfigForm({ project, projectId, onProjectUpdate }) {
                             value={config.storageProvider}
                             onChange={handleChange}
                             style={{ ...inputStyle, maxWidth: '220px' }}
+                            disabled={isViewer}
                         >
                             <option value="supabase">Supabase</option>
                             <option value="s3">AWS S3</option>
@@ -1021,11 +1067,11 @@ function StorageConfigForm({ project, projectId, onProjectUpdate }) {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Supabase Project URL</label>
-                                    <input type="text" name="storageUrl" className="input-field" value={config.storageUrl} onChange={handleChange} placeholder="https://abc.supabase.co" style={inputStyle} />
+                                    <input type="text" name="storageUrl" className="input-field" value={config.storageUrl} onChange={handleChange} placeholder="https://abc.supabase.co" style={inputStyle} disabled={isViewer} />
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Service Role Key</label>
-                                    <input type="password" name="storageKey" className="input-field" value={config.storageKey} onChange={handleChange} placeholder="eyJhb..." style={{ ...inputStyle, fontFamily: 'monospace' }} />
+                                    <input type="password" name="storageKey" className="input-field" value={config.storageKey} onChange={handleChange} placeholder="eyJhb..." style={{ ...inputStyle, fontFamily: 'monospace' }} disabled={isViewer} />
                                 </div>
                             </div>
                         )}
@@ -1035,28 +1081,28 @@ function StorageConfigForm({ project, projectId, onProjectUpdate }) {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Bucket Name</label>
-                                        <input type="text" name="s3Bucket" className="input-field" value={config.s3Bucket} onChange={handleChange} placeholder="my-assets" style={inputStyle} />
+                                        <input type="text" name="s3Bucket" className="input-field" value={config.s3Bucket} onChange={handleChange} placeholder="my-assets" style={inputStyle} disabled={isViewer} />
                                     </div>
                                     {config.storageProvider === "s3" ? (
                                         <div>
                                             <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Region</label>
-                                            <input type="text" name="s3Region" className="input-field" value={config.s3Region} onChange={handleChange} placeholder="ap-south-1" style={inputStyle} />
+                                            <input type="text" name="s3Region" className="input-field" value={config.s3Region} onChange={handleChange} placeholder="ap-south-1" style={inputStyle} disabled={isViewer} />
                                         </div>
                                     ) : (
                                         <div>
                                             <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>S3 API Endpoint</label>
-                                            <input type="text" name="s3Endpoint" className="input-field" value={config.s3Endpoint} onChange={handleChange} placeholder="https://<account>.r2.cloudflarestorage.com" style={inputStyle} />
+                                            <input type="text" name="s3Endpoint" className="input-field" value={config.s3Endpoint} onChange={handleChange} placeholder="https://<account>.r2.cloudflarestorage.com" style={inputStyle} disabled={isViewer} />
                                         </div>
                                     )}
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Access Key ID</label>
-                                        <input type="text" name="s3AccessKeyId" className="input-field" value={config.s3AccessKeyId} onChange={handleChange} placeholder="AKIA..." style={{ ...inputStyle, fontFamily: 'monospace' }} />
+                                        <input type="text" name="s3AccessKeyId" className="input-field" value={config.s3AccessKeyId} onChange={handleChange} placeholder="AKIA..." style={{ ...inputStyle, fontFamily: 'monospace' }} disabled={isViewer} />
                                     </div>
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Secret Access Key</label>
-                                        <input type="password" name="s3SecretAccessKey" className="input-field" value={config.s3SecretAccessKey} onChange={handleChange} placeholder="wJalr..." style={{ ...inputStyle, fontFamily: 'monospace' }} />
+                                        <input type="password" name="s3SecretAccessKey" className="input-field" value={config.s3SecretAccessKey} onChange={handleChange} placeholder="wJalr..." style={{ ...inputStyle, fontFamily: 'monospace' }} disabled={isViewer} />
                                     </div>
                                 </div>
                                 <div>
@@ -1064,19 +1110,21 @@ function StorageConfigForm({ project, projectId, onProjectUpdate }) {
                                         Public URL Host / CDN Domain{' '}
                                         <span style={{ color: 'var(--color-text-muted)', fontSize: '0.65rem', opacity: 0.8 }}>{config.storageProvider === "cloudflare_r2" ? "(Required)" : "(Optional)"}</span>
                                     </label>
-                                    <input type="text" name="publicUrlHost" className="input-field" value={config.publicUrlHost} onChange={handleChange} placeholder="https://cdn.my-company.com" style={inputStyle} />
+                                    <input type="text" name="publicUrlHost" className="input-field" value={config.publicUrlHost} onChange={handleChange} placeholder="https://cdn.my-company.com" style={inputStyle} disabled={isViewer} />
                                     <small style={{ display: 'block', marginTop: '4px', fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>Custom domain or CDN (e.g. CloudFront, R2 Dev Domain)</small>
                                 </div>
                             </>
                         )}
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                        {isConfigured && <button className="btn btn-secondary" onClick={() => setShowForm(false)} style={{ height: '28px', fontSize: '0.72rem', padding: '0 10px' }}>Cancel</button>}
-                        <button onClick={handleUpdate} className="btn btn-primary" disabled={loading} style={{ height: '28px', fontSize: '0.72rem', padding: '0 12px' }}>
-                            {loading ? "Saving..." : "Connect Storage"}
-                        </button>
-                    </div>
+                    {!isViewer && (
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                            {isConfigured && <button className="btn btn-secondary" onClick={() => setShowForm(false)} style={{ height: '28px', fontSize: '0.72rem', padding: '0 10px' }}>Cancel</button>}
+                            <button onClick={handleUpdate} className="btn btn-primary" disabled={loading} style={{ height: '28px', fontSize: '0.72rem', padding: '0 12px' }}>
+                                {loading ? "Saving..." : "Connect Storage"}
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </SettingsCard>
@@ -1086,7 +1134,8 @@ function StorageConfigForm({ project, projectId, onProjectUpdate }) {
 /* ─────────────────────────────────────────────────────────────── */
 /* AllowedDomainsForm                                              */
 /* ─────────────────────────────────────────────────────────────── */
-function AllowedDomainsForm({ project, projectId, onProjectUpdate }) {
+function AllowedDomainsForm({ project, projectId, onProjectUpdate, role }) {
+    const isViewer = role === 'viewer';
     const [domains, setDomains] = useState(project?.allowedDomains || []);
     const [newDomain, setNewDomain] = useState("");
     const [loading, setLoading] = useState(false);
@@ -1130,25 +1179,27 @@ function AllowedDomainsForm({ project, projectId, onProjectUpdate }) {
                 Use <code>*</code> to allow all, or specify like <code>https://example.com</code>.
             </p>
 
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-                <input
-                    type="text"
-                    className="input-field"
-                    placeholder="https://mywebsite.com or *.mywebsite.com"
-                    value={newDomain}
-                    onChange={(e) => setNewDomain(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addDomain(); } }}
-                    style={{ ...inputStyle, flex: 1 }}
-                />
-                <button
-                    onClick={addDomain}
-                    className="btn btn-secondary"
-                    disabled={loading || !newDomain.trim()}
-                    style={{ height: '30px', fontSize: '0.75rem', padding: '0 12px', gap: '4px', flexShrink: 0 }}
-                >
-                    <Plus size={12} /> Add
-                </button>
-            </div>
+            {!isViewer && (
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                    <input
+                        type="text"
+                        className="input-field"
+                        placeholder="https://mywebsite.com or *.mywebsite.com"
+                        value={newDomain}
+                        onChange={(e) => setNewDomain(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addDomain(); } }}
+                        style={{ ...inputStyle, flex: 1 }}
+                    />
+                    <button
+                        onClick={addDomain}
+                        className="btn btn-secondary"
+                        disabled={loading || !newDomain.trim()}
+                        style={{ height: '30px', fontSize: '0.75rem', padding: '0 12px', gap: '4px', flexShrink: 0 }}
+                    >
+                        <Plus size={12} /> Add
+                    </button>
+                </div>
+            )}
 
             {domains.length === 0 ? (
                 <div style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.72rem', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px dashed var(--color-border)' }}>
@@ -1167,15 +1218,17 @@ function AllowedDomainsForm({ project, projectId, onProjectUpdate }) {
                                     <span style={{ fontFamily: 'monospace', fontSize: '0.72rem' }}>{domain}</span>
                                 )}
                             </div>
-                            <button
-                                onClick={() => removeDomain(domain)}
-                                disabled={loading}
-                                style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', borderRadius: '3px' }}
-                                onMouseOver={(e) => e.currentTarget.style.color = '#ea5455'}
-                                onMouseOut={(e) => e.currentTarget.style.color = 'var(--color-text-muted)'}
-                            >
-                                <X size={13} />
-                            </button>
+                            {!isViewer && (
+                                <button
+                                    onClick={() => removeDomain(domain)}
+                                    disabled={loading}
+                                    style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', borderRadius: '3px' }}
+                                    onMouseOver={(e) => e.currentTarget.style.color = '#ea5455'}
+                                    onMouseOut={(e) => e.currentTarget.style.color = 'var(--color-text-muted)'}
+                                >
+                                    <X size={13} />
+                                </button>
+                            )}
                         </div>
                     ))}
                 </div>

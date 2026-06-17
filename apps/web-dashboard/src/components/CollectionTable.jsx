@@ -99,7 +99,7 @@ const DraggableColumnHeader = ({ header, children, style: propStyle, className }
     );
 };
 
-export default function CollectionTable({ data, activeCollection, onDelete, onView, onEdit, onRecover, recoveringIds }) {
+export default function CollectionTable({ data, activeCollection, onDelete, onView, onEdit, onRecover, recoveringIds, isViewer }) {
     const [now, setNow] = useState(null);
 
     useEffect(() => {
@@ -231,7 +231,7 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                             >
                                 <Eye size={15} />
                             </button>
-                            {activeCollection?.name !== 'users' && (
+                            {activeCollection?.name !== 'users' && !isViewer && (
                                 (record.isDeleted || recoveringIds.has(record._id)) ? (
                                     <button
                                         className={`btn-icon ${recoveringIds.has(record._id) ? 'loading' : ''}`}
@@ -275,7 +275,7 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                 },
             },
         ];
-    }, [activeCollection, data, onDelete, onView, onEdit, onRecover, recoveringIds, now]);
+    }, [activeCollection, data, onDelete, onView, onEdit, onRecover, recoveringIds, now, isViewer]);
 
     // 2. Load Persisted State
     const storageKey = `table-settings-${activeCollection?._id}`;

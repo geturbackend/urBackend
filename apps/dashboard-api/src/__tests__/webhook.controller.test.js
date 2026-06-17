@@ -51,6 +51,7 @@ jest.mock('@urbackend/common', () => {
             });
         }
     },
+    getProjectAccessQuery: jest.fn((userId) => ({ owner: userId })),
   };
 });
 

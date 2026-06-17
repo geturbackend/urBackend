@@ -5,18 +5,29 @@ const mockSelect = jest.fn().mockReturnThis();
 const mockPopulate = jest.fn().mockReturnThis();
 const mockLean = jest.fn();
 
-jest.mock('@urbackend/common', () => ({
-    Project: {
-        findOne: jest.fn(() => ({
-            select: mockSelect,
-            populate: mockPopulate,
-            lean: mockLean,
-        })),
-    },
-    hashApiKey: jest.fn((key) => `hashed_${key}`),
-    getProjectByApiKeyCache: jest.fn().mockResolvedValue(null),
-    setProjectByApiKeyCache: jest.fn().mockResolvedValue(undefined),
-}));
+jest.mock('@urbackend/common', () => {
+    class MockAppError extends Error {
+        constructor(statusCode, message, error) {
+            super(message);
+            this.statusCode = statusCode;
+            this.error = error;
+            this.isOperational = true;
+        }
+    }
+    return {
+        AppError: MockAppError,
+        Project: {
+            findOne: jest.fn(() => ({
+                select: mockSelect,
+                populate: mockPopulate,
+                lean: mockLean,
+            })),
+        },
+        hashApiKey: jest.fn((key) => `hashed_${key}`),
+        getProjectByApiKeyCache: jest.fn().mockResolvedValue(null),
+        setProjectByApiKeyCache: jest.fn().mockResolvedValue(undefined),
+    };
+});
 
 const { hashApiKey, getProjectByApiKeyCache, Project } = require('@urbackend/common');
 const verifyApiKey = require('../middlewares/verifyApiKey');
@@ -100,9 +111,8 @@ describe('verifyApiKey middleware', () => {
 
         await verifyApiKey(req, res, next);
 
-        expect(next).not.toHaveBeenCalled();
-        expect(res.status).toHaveBeenCalledWith(401);
-        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'API key not found' }));
+        expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 401, message: 'API key not found' }));
+        expect(res.status).not.toHaveBeenCalled();
     });
 
     test('header takes precedence when both x-api-key header and ?key= query param are present', async () => {
@@ -139,9 +149,8 @@ describe('verifyApiKey middleware', () => {
 
         await verifyApiKey(req, res, next);
 
-        expect(next).not.toHaveBeenCalled();
-        expect(res.status).toHaveBeenCalledWith(401);
-        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'API key not found' }));
+        expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 401, message: 'API key not found' }));
+        expect(res.status).not.toHaveBeenCalled();
     });
 
     test('returns 401 when project is not found in DB', async () => {
@@ -151,9 +160,8 @@ describe('verifyApiKey middleware', () => {
 
         await verifyApiKey(req, res, next);
 
-        expect(next).not.toHaveBeenCalled();
-        expect(res.status).toHaveBeenCalledWith(401);
-        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'API key is expired or invalid.' }));
+        expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 401, error: 'API key is expired or invalid.' }));
+        expect(res.status).not.toHaveBeenCalled();
     });
 
     test('returns 401 when owner is not verified', async () => {
@@ -163,9 +171,8 @@ describe('verifyApiKey middleware', () => {
 
         await verifyApiKey(req, res, next);
 
-        expect(next).not.toHaveBeenCalled();
-        expect(res.status).toHaveBeenCalledWith(401);
-        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Owner not verified' }));
+        expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 401, error: 'Owner not verified' }));
+        expect(res.status).not.toHaveBeenCalled();
     });
 
     test('uses cache when available and does not query DB', async () => {

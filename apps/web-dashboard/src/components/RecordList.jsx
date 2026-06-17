@@ -17,7 +17,7 @@ const formatDate = (val) => {
     }).toLowerCase();
 };
 
-export default function RecordList({ data, activeCollection, onView, onRecover, recoveringIds }) {
+export default function RecordList({ data, activeCollection, onView, onRecover, recoveringIds, isViewer }) {
     const [now, setNow] = useState(null);
 
     useEffect(() => {
@@ -100,7 +100,7 @@ export default function RecordList({ data, activeCollection, onView, onRecover, 
                             </div>
 
                             <div className="record-actions">
-                                {(record.isDeleted || recoveringIds.has(record._id)) ? (
+                                {(!isViewer && (record.isDeleted || recoveringIds.has(record._id))) ? (
                                     <button 
                                         className={`btn-icon ${recoveringIds.has(record._id) ? 'loading' : ''}`}
                                         title={getDeletionTooltip(record.deletedAt)}

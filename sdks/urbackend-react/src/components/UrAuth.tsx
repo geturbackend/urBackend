@@ -117,58 +117,31 @@ const defaultThemeColors: Record<ThemeMode, AuthColors> = {
   light: {
     background: '#ffffff',
     surface: '#ffffff',
-    text: '#0f172a',
-    textMuted: '#64748b',
-    border: '#e2e8f0',
-    inputBackground: '#ffffff',
-    primary: '#111111',
+    text: '#09090b',
+    textMuted: '#71717a',
+    border: '#e4e4e7',
+    inputBackground: '#fafafa',
+    primary: '#09090b',
     primaryText: '#ffffff',
-    footerBackground: '#f8fafc',
-    dividerText: '#94a3b8',
+    footerBackground: '#fafafa',
+    dividerText: '#a1a1aa',
     socialButtonBackground: '#ffffff',
   },
   dark: {
-    background: '#1a1a1a',
-    surface: '#1a1a1a',
-    text: '#ffffff',
+    background: '#09090b',
+    surface: '#09090b',
+    text: '#fafafa',
     textMuted: '#a1a1aa',
-    border: '#333333',
-    inputBackground: '#2a2a2a',
-    primary: '#ffffff',
-    primaryText: '#111111',
-    footerBackground: '#222222',
-    dividerText: '#94a3b8',
-    socialButtonBackground: '#2a2a2a',
+    border: '#27272a',
+    inputBackground: '#09090b',
+    primary: '#fafafa',
+    primaryText: '#09090b',
+    footerBackground: '#18181b',
+    dividerText: '#52525b',
+    socialButtonBackground: '#09090b',
   },
 };
 
-// Helper to adjust brightness of hex colors for professional gradient stops
-const adjustColor = (color: string, percent: number) => {
-  try {
-    if (color.startsWith('#')) {
-      let hex = color.replace('#', '');
-      if (hex.length === 3) {
-        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
-      }
-      let r = parseInt(hex.substring(0, 2), 16);
-      let g = parseInt(hex.substring(2, 4), 16);
-      let b = parseInt(hex.substring(4, 6), 16);
-
-      r = Math.min(255, Math.max(0, r + percent));
-      g = Math.min(255, Math.max(0, g + percent));
-      b = Math.min(255, Math.max(0, b + percent));
-
-      const rr = r.toString(16).padStart(2, '0');
-     const gg = g.toString(16).padStart(2, '0');
-      const bb = b.toString(16).padStart(2, '0');
-
-      return `#${rr}${gg}${bb}`;
-    }
-  } catch (e) {
-    // Safe fallback to original color
-  }
-  return color;
-};
 
 
 
@@ -203,7 +176,6 @@ export const UrAuth: React.FC<UrAuthProps> = ({
 
   const themeColors = { ...defaultThemeColors[theme], ...colors };
   const primaryColor = branding?.primaryColor || colors?.primaryColor || themeColors.primary;
-  const secondStopColor = adjustColor(primaryColor, -15);
 
   let isGoogleEnabled = true;
   let isGithubEnabled = true;
@@ -279,48 +251,50 @@ export const UrAuth: React.FC<UrAuthProps> = ({
       width: '100%',
       maxWidth: '420px',
       margin: '0 auto',
-      borderRadius: '0',
+      borderRadius: '16px',
       background: themeColors.background,
-      boxShadow: theme === 'dark' ? '0 20px 40px rgba(0,0,0,0.5)' : '0 20px 40px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.05)',
+      boxShadow: theme === 'dark' ? '0 0 0 1px rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.05), 0 20px 40px -12px rgba(0,0,0,0.1)',
       border: `1px solid ${themeColors.border}`,
       overflow: 'hidden',
-      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
       color: themeColors.text,
     },
     body: {
-      padding: '32px 32px 24px 32px',
+      padding: '40px 32px 32px 32px',
     },
     header: {
       textAlign: 'center' as const,
-      marginBottom: '28px',
+      marginBottom: '32px',
     },
     brandRow: {
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
       gap: '12px',
-      marginBottom: '10px',
+      marginBottom: '16px',
     },
     brandLogo: {
-      width: '44px',
-      height: '44px',
+      width: '48px',
+      height: '48px',
       borderRadius: '12px',
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: theme === 'dark' ? '#2a2a2a' : '#f1f5f9',
+      background: theme === 'dark' ? '#18181b' : '#f4f4f5',
       color: themeColors.text,
       overflow: 'hidden' as const,
+      border: `1px solid ${themeColors.border}`,
     },
     brandTitle: {
       margin: 0,
-      fontSize: '26px',
-      lineHeight: 1.1,
-      fontWeight: 800,
+      fontSize: '24px',
+      lineHeight: 1.2,
+      fontWeight: 700,
       color: themeColors.text,
+      letterSpacing: '-0.02em',
     },
     brandSubtitle: {
-      margin: '0 auto',
+      margin: '8px auto 0',
       maxWidth: '320px',
       fontSize: '14px',
       lineHeight: 1.5,
@@ -333,25 +307,28 @@ export const UrAuth: React.FC<UrAuthProps> = ({
       marginBottom: '32px'
     },
     switcher: {
-      display: 'inline-flex',
-      background: theme === 'dark' ? '#2a2a2a' : '#f1f5f9',
+      display: 'flex',
+      background: theme === 'dark' ? '#18181b' : '#f4f4f5',
       padding: '4px',
-      borderRadius: '0',
+      borderRadius: '10px',
+      border: `1px solid ${theme === 'dark' ? '#27272a' : '#e4e4e7'}`,
+      width: '100%',
     },
     switchBtn: (active: boolean) => ({
       display: 'flex',
       alignItems: 'center',
-      gap: '6px',
-      padding: '8px 20px',
-      borderRadius: '0',
+      justifyContent: 'center',
+      flex: 1,
+      gap: '8px',
+      padding: '8px 0',
+      borderRadius: '6px',
       fontSize: '13px',
-      fontWeight: 600,
+      fontWeight: 500,
       cursor: 'pointer',
       color: active ? themeColors.text : themeColors.textMuted,
-      background: active ? (theme === 'dark' ? '#444444' : '#ffffff') : 'transparent',
-      boxShadow: active ? (theme === 'dark' ? '0 2px 4px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.05)') : 'none',
+      background: active ? (theme === 'dark' ? '#27272a' : '#ffffff') : 'transparent',
+      boxShadow: active ? (theme === 'dark' ? '0 1px 2px rgba(0,0,0,0.2)' : '0 1px 2px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.02)') : 'none',
       border: 'none',
-      transition: 'all 0.2s ease',
     }),
     field: {
       marginBottom: '20px',
@@ -364,13 +341,13 @@ export const UrAuth: React.FC<UrAuthProps> = ({
     },
     label: {
       fontSize: '13px',
-      fontWeight: 600,
-      color: theme === 'dark' ? '#dddddd' : '#334155',
+      fontWeight: 500,
+      color: themeColors.text,
     },
     forgotLink: {
-      fontSize: '12px',
-      fontWeight: 600,
-      color: themeColors.text,
+      fontSize: '13px',
+      fontWeight: 500,
+      color: themeColors.textMuted,
       cursor: 'pointer',
       textDecoration: 'none',
       background: 'none',
@@ -379,38 +356,38 @@ export const UrAuth: React.FC<UrAuthProps> = ({
     },
     input: {
       width: '100%',
-      padding: '12px 16px',
-      borderRadius: '0',
+      padding: '10px 12px',
+      borderRadius: '8px',
       border: `1px solid ${themeColors.border}`,
       background: themeColors.inputBackground,
       color: themeColors.text,
       fontSize: '14px',
       boxSizing: 'border-box' as const,
       outline: 'none',
-      transition: 'border-color 0.2s ease',
+      boxShadow: '0 1px 2px rgba(0,0,0,0.01)',
     },
     primaryBtn: {
       width: '100%',
-      padding: '14px',
-      borderRadius: '0',
-      background: `linear-gradient(180deg, ${primaryColor} 0%, ${secondStopColor} 100%)`,
+      padding: '10px 14px',
+      borderRadius: '8px',
+      background: primaryColor,
       color: themeColors.primaryText,
-      fontSize: '15px',
-      fontWeight: 600,
+      fontSize: '14px',
+      fontWeight: 500,
       border: 'none',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+      boxShadow: theme === 'dark' ? 'inset 0 1px 0 rgba(255,255,255,0.1)' : '0 1px 2px rgba(0,0,0,0.05)',
       cursor: 'pointer',
-      marginTop: '8px',
-      transition: 'transform 0.1s ease',
+      marginTop: '12px',
     },
     divider: {
       display: 'flex',
       alignItems: 'center',
       margin: '24px 0',
       color: themeColors.dividerText,
-      fontSize: '11px',
-      fontWeight: 600,
-      letterSpacing: '1px',
+      fontSize: '12px',
+      fontWeight: 400,
+      textTransform: 'uppercase' as const,
+      letterSpacing: '0.05em',
     },
     dividerLine: {
       flex: 1,
@@ -422,21 +399,20 @@ export const UrAuth: React.FC<UrAuthProps> = ({
     },
     socialBtn: {
       width: '100%',
-      padding: '12px',
-      borderRadius: '0',
+      padding: '10px',
+      borderRadius: '8px',
       border: `1px solid ${themeColors.border}`,
       background: themeColors.socialButtonBackground,
       color: themeColors.text,
       fontSize: '14px',
-      fontWeight: 600,
+      fontWeight: 500,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       gap: '10px',
       marginBottom: '12px',
       cursor: 'pointer',
-      boxShadow: theme === 'dark' ? 'none' : '0 1px 2px rgba(0,0,0,0.02)',
-      transition: 'background 0.2s ease',
+      boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
     },
     footer: {
       background: themeColors.footerBackground,
@@ -448,10 +424,10 @@ export const UrAuth: React.FC<UrAuthProps> = ({
     },
     footerLink: {
       color: themeColors.text,
-      fontWeight: 600,
-      textDecoration: 'underline',
+      fontWeight: 500,
+      textDecoration: 'none',
       cursor: 'pointer',
-      marginLeft: '4px',
+      marginLeft: '6px',
       background: 'none',
       border: 'none',
       padding: 0,
@@ -660,11 +636,7 @@ export const UrAuth: React.FC<UrAuthProps> = ({
               </div>
             )}
 
-            <button style={styles.primaryBtn} type="submit" disabled={isLoading} 
-              onMouseDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
-              onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-            >
+            <button style={styles.primaryBtn} type="submit" disabled={isLoading}>
               {isLoading 
                 ? 'Processing...' 
                 : (mode === 'signin' ? text.loginButton 

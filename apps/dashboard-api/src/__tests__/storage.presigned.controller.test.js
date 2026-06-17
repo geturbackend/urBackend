@@ -51,6 +51,7 @@ jest.mock('@urbackend/common', () => {
       return normalized;
     }),
     AppError,
+    getProjectAccessQuery: jest.fn((userId) => ({ owner: userId })),
     __mockStorageFrom: mockStorageFrom,
   };
 });

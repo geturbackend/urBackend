@@ -48,9 +48,9 @@ var UrProvider = ({ apiKey, baseUrl, children }) => {
     const _client = new import_sdk.UrBackendClient({ apiKey, baseUrl });
     return {
       client: _client,
-      auth: new import_sdk.AuthModule(_client),
-      db: new import_sdk.DatabaseModule(_client),
-      storage: new import_sdk.StorageModule(_client)
+      auth: _client.auth,
+      db: _client.db,
+      storage: _client.storage
     };
   }, [apiKey, baseUrl]);
   (0, import_react.useEffect)(() => {
@@ -98,6 +98,7 @@ var UrProvider = ({ apiKey, baseUrl, children }) => {
           setUser(currentUser);
         }
       } catch (error2) {
+        console.error("InitAuth Error:", error2);
         if (mounted) {
           setUser(null);
         }
@@ -356,56 +357,43 @@ var Toast = ({ message, type, onClose, isDark = false }) => {
   const borderColor = type === "success" ? "rgba(34, 197, 94, 0.5)" : "rgba(239, 68, 68, 0.5)";
   const iconColor = type === "success" ? "#22c55e" : "#ef4444";
   const textColor = isDark ? "#fff" : "#000";
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("style", { children: `
-          @keyframes slideIn {
-            from { transform: translate(-50%, -20px) scale(0.95); opacity: 0; }
-            to { transform: translate(-50%, 0) scale(1); opacity: 1; }
-          }
-          @keyframes slideOut {
-            from { transform: translate(-50%, 0) scale(1); opacity: 1; }
-            to { transform: translate(-50%, -20px) scale(0.95); opacity: 0; }
-          }
-        ` }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
-      "div",
-      {
-        style: {
-          position: "fixed",
-          top: "24px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 9999,
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          padding: "12px 20px",
-          borderRadius: "0",
-          background: bgColor,
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          border: `1px solid ${borderColor}`,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-          color: textColor,
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          fontSize: "14px",
-          fontWeight: 500,
-          animation: isLeaving ? "slideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards" : "slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards"
-        },
-        children: [
-          type === "success" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: iconColor, strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M22 11.08V12a10 10 0 1 1-5.93-9.14" }),
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("polyline", { points: "22 4 12 14.01 9 11.01" })
-          ] }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: iconColor, strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("circle", { cx: "12", cy: "12", r: "10" }),
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("line", { x1: "12", y1: "8", x2: "12", y2: "12" }),
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("line", { x1: "12", y1: "16", x2: "12.01", y2: "16" })
-          ] }),
-          message
-        ]
-      }
-    )
-  ] });
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+    "div",
+    {
+      style: {
+        position: "fixed",
+        top: "24px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 9999,
+        display: isLeaving ? "none" : "flex",
+        alignItems: "center",
+        gap: "12px",
+        padding: "12px 20px",
+        borderRadius: "12px",
+        background: bgColor,
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
+        border: `1px solid ${borderColor}`,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+        color: textColor,
+        fontFamily: 'system-ui, -apple-system, "Helvetica Neue", sans-serif',
+        fontSize: "14px",
+        fontWeight: 500
+      },
+      children: [
+        type === "success" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: iconColor, strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M22 11.08V12a10 10 0 1 1-5.93-9.14" }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("polyline", { points: "22 4 12 14.01 9 11.01" })
+        ] }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: iconColor, strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("circle", { cx: "12", cy: "12", r: "10" }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("line", { x1: "12", y1: "8", x2: "12", y2: "12" }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("line", { x1: "12", y1: "16", x2: "12.01", y2: "16" })
+        ] }),
+        message
+      ]
+    }
+  );
 };
 
 // src/components/UrAuth.tsx
@@ -444,51 +432,29 @@ var defaultThemeColors = {
   light: {
     background: "#ffffff",
     surface: "#ffffff",
-    text: "#0f172a",
-    textMuted: "#64748b",
-    border: "#e2e8f0",
-    inputBackground: "#ffffff",
-    primary: "#111111",
+    text: "#09090b",
+    textMuted: "#71717a",
+    border: "#e4e4e7",
+    inputBackground: "#fafafa",
+    primary: "#09090b",
     primaryText: "#ffffff",
-    footerBackground: "#f8fafc",
-    dividerText: "#94a3b8",
+    footerBackground: "#fafafa",
+    dividerText: "#a1a1aa",
     socialButtonBackground: "#ffffff"
   },
   dark: {
-    background: "#1a1a1a",
-    surface: "#1a1a1a",
-    text: "#ffffff",
+    background: "#09090b",
+    surface: "#09090b",
+    text: "#fafafa",
     textMuted: "#a1a1aa",
-    border: "#333333",
-    inputBackground: "#2a2a2a",
-    primary: "#ffffff",
-    primaryText: "#111111",
-    footerBackground: "#222222",
-    dividerText: "#94a3b8",
-    socialButtonBackground: "#2a2a2a"
+    border: "#27272a",
+    inputBackground: "#09090b",
+    primary: "#fafafa",
+    primaryText: "#09090b",
+    footerBackground: "#18181b",
+    dividerText: "#52525b",
+    socialButtonBackground: "#09090b"
   }
-};
-var adjustColor = (color, percent) => {
-  try {
-    if (color.startsWith("#")) {
-      let hex = color.replace("#", "");
-      if (hex.length === 3) {
-        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
-      }
-      let r = parseInt(hex.substring(0, 2), 16);
-      let g = parseInt(hex.substring(2, 4), 16);
-      let b = parseInt(hex.substring(4, 6), 16);
-      r = Math.min(255, Math.max(0, r + percent));
-      g = Math.min(255, Math.max(0, g + percent));
-      b = Math.min(255, Math.max(0, b + percent));
-      const rr = r.toString(16).padStart(2, "0");
-      const gg = g.toString(16).padStart(2, "0");
-      const bb = b.toString(16).padStart(2, "0");
-      return `#${rr}${gg}${bb}`;
-    }
-  } catch (e) {
-  }
-  return color;
 };
 var UrAuth = ({
   providers = ["google", "github"],
@@ -517,8 +483,7 @@ var UrAuth = ({
     signupButton: labels?.signUpButton ?? labels?.signupButton ?? defaultLabels.signupButton
   };
   const themeColors = { ...defaultThemeColors[theme], ...colors };
-  const primaryColor = branding?.primaryColor || themeColors.primary;
-  const secondStopColor = adjustColor(primaryColor, -15);
+  const primaryColor = branding?.primaryColor || colors?.primaryColor || themeColors.primary;
   let isGoogleEnabled = true;
   let isGithubEnabled = true;
   let isEmailPasswordEnabled = enableEmailPassword;
@@ -536,6 +501,7 @@ var UrAuth = ({
   const hasSocialAuth = isGoogleEnabled || isGithubEnabled;
   const brandName = branding?.brandName || branding?.appName || branding?.title || "urBackend";
   const headerTitle = branding?.title || brandName;
+  const brandingLogo = branding?.logo ?? branding?.logoUrl;
   const headerSubtitle = branding?.subtitle || (mode === "signin" ? text.loginTitle : mode === "signup" ? text.signupTitle : mode === "forgot" ? text.forgotTitle : text.resetTitle);
   const showSwitcher = hasPasswordAuth;
   (0, import_react5.useEffect)(() => {
@@ -579,48 +545,50 @@ var UrAuth = ({
       width: "100%",
       maxWidth: "420px",
       margin: "0 auto",
-      borderRadius: "0",
+      borderRadius: "16px",
       background: themeColors.background,
-      boxShadow: theme === "dark" ? "0 20px 40px rgba(0,0,0,0.5)" : "0 20px 40px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.05)",
+      boxShadow: theme === "dark" ? "0 0 0 1px rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.3)" : "0 1px 3px rgba(0,0,0,0.05), 0 20px 40px -12px rgba(0,0,0,0.1)",
       border: `1px solid ${themeColors.border}`,
       overflow: "hidden",
-      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
       color: themeColors.text
     },
     body: {
-      padding: "32px 32px 24px 32px"
+      padding: "40px 32px 32px 32px"
     },
     header: {
       textAlign: "center",
-      marginBottom: "28px"
+      marginBottom: "32px"
     },
     brandRow: {
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
       gap: "12px",
-      marginBottom: "10px"
+      marginBottom: "16px"
     },
     brandLogo: {
-      width: "44px",
-      height: "44px",
+      width: "48px",
+      height: "48px",
       borderRadius: "12px",
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
-      background: theme === "dark" ? "#2a2a2a" : "#f1f5f9",
+      background: theme === "dark" ? "#18181b" : "#f4f4f5",
       color: themeColors.text,
-      overflow: "hidden"
+      overflow: "hidden",
+      border: `1px solid ${themeColors.border}`
     },
     brandTitle: {
       margin: 0,
-      fontSize: "26px",
-      lineHeight: 1.1,
-      fontWeight: 800,
-      color: themeColors.text
+      fontSize: "24px",
+      lineHeight: 1.2,
+      fontWeight: 700,
+      color: themeColors.text,
+      letterSpacing: "-0.02em"
     },
     brandSubtitle: {
-      margin: "0 auto",
+      margin: "8px auto 0",
       maxWidth: "320px",
       fontSize: "14px",
       lineHeight: 1.5,
@@ -633,25 +601,28 @@ var UrAuth = ({
       marginBottom: "32px"
     },
     switcher: {
-      display: "inline-flex",
-      background: theme === "dark" ? "#2a2a2a" : "#f1f5f9",
+      display: "flex",
+      background: theme === "dark" ? "#18181b" : "#f4f4f5",
       padding: "4px",
-      borderRadius: "0"
+      borderRadius: "10px",
+      border: `1px solid ${theme === "dark" ? "#27272a" : "#e4e4e7"}`,
+      width: "100%"
     },
     switchBtn: (active) => ({
       display: "flex",
       alignItems: "center",
-      gap: "6px",
-      padding: "8px 20px",
-      borderRadius: "0",
+      justifyContent: "center",
+      flex: 1,
+      gap: "8px",
+      padding: "8px 0",
+      borderRadius: "6px",
       fontSize: "13px",
-      fontWeight: 600,
+      fontWeight: 500,
       cursor: "pointer",
       color: active ? themeColors.text : themeColors.textMuted,
-      background: active ? theme === "dark" ? "#444444" : "#ffffff" : "transparent",
-      boxShadow: active ? theme === "dark" ? "0 2px 4px rgba(0,0,0,0.2)" : "0 2px 8px rgba(0,0,0,0.05)" : "none",
-      border: "none",
-      transition: "all 0.2s ease"
+      background: active ? theme === "dark" ? "#27272a" : "#ffffff" : "transparent",
+      boxShadow: active ? theme === "dark" ? "0 1px 2px rgba(0,0,0,0.2)" : "0 1px 2px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.02)" : "none",
+      border: "none"
     }),
     field: {
       marginBottom: "20px"
@@ -664,13 +635,13 @@ var UrAuth = ({
     },
     label: {
       fontSize: "13px",
-      fontWeight: 600,
-      color: theme === "dark" ? "#dddddd" : "#334155"
+      fontWeight: 500,
+      color: themeColors.text
     },
     forgotLink: {
-      fontSize: "12px",
-      fontWeight: 600,
-      color: themeColors.text,
+      fontSize: "13px",
+      fontWeight: 500,
+      color: themeColors.textMuted,
       cursor: "pointer",
       textDecoration: "none",
       background: "none",
@@ -679,38 +650,38 @@ var UrAuth = ({
     },
     input: {
       width: "100%",
-      padding: "12px 16px",
-      borderRadius: "0",
+      padding: "10px 12px",
+      borderRadius: "8px",
       border: `1px solid ${themeColors.border}`,
       background: themeColors.inputBackground,
       color: themeColors.text,
       fontSize: "14px",
       boxSizing: "border-box",
       outline: "none",
-      transition: "border-color 0.2s ease"
+      boxShadow: "0 1px 2px rgba(0,0,0,0.01)"
     },
     primaryBtn: {
       width: "100%",
-      padding: "14px",
-      borderRadius: "0",
-      background: `linear-gradient(180deg, ${primaryColor} 0%, ${secondStopColor} 100%)`,
+      padding: "10px 14px",
+      borderRadius: "8px",
+      background: primaryColor,
       color: themeColors.primaryText,
-      fontSize: "15px",
-      fontWeight: 600,
+      fontSize: "14px",
+      fontWeight: 500,
       border: "none",
-      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+      boxShadow: theme === "dark" ? "inset 0 1px 0 rgba(255,255,255,0.1)" : "0 1px 2px rgba(0,0,0,0.05)",
       cursor: "pointer",
-      marginTop: "8px",
-      transition: "transform 0.1s ease"
+      marginTop: "12px"
     },
     divider: {
       display: "flex",
       alignItems: "center",
       margin: "24px 0",
       color: themeColors.dividerText,
-      fontSize: "11px",
-      fontWeight: 600,
-      letterSpacing: "1px"
+      fontSize: "12px",
+      fontWeight: 400,
+      textTransform: "uppercase",
+      letterSpacing: "0.05em"
     },
     dividerLine: {
       flex: 1,
@@ -722,21 +693,20 @@ var UrAuth = ({
     },
     socialBtn: {
       width: "100%",
-      padding: "12px",
-      borderRadius: "0",
+      padding: "10px",
+      borderRadius: "8px",
       border: `1px solid ${themeColors.border}`,
       background: themeColors.socialButtonBackground,
       color: themeColors.text,
       fontSize: "14px",
-      fontWeight: 600,
+      fontWeight: 500,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       gap: "10px",
       marginBottom: "12px",
       cursor: "pointer",
-      boxShadow: theme === "dark" ? "none" : "0 1px 2px rgba(0,0,0,0.02)",
-      transition: "background 0.2s ease"
+      boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
     },
     footer: {
       background: themeColors.footerBackground,
@@ -748,10 +718,10 @@ var UrAuth = ({
     },
     footerLink: {
       color: themeColors.text,
-      fontWeight: 600,
-      textDecoration: "underline",
+      fontWeight: 500,
+      textDecoration: "none",
       cursor: "pointer",
-      marginLeft: "4px",
+      marginLeft: "6px",
       background: "none",
       border: "none",
       padding: 0
@@ -801,8 +771,8 @@ var UrAuth = ({
       }
     ),
     /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { style: styles.body, children: [
-      (branding?.logo || branding?.brandName || branding?.appName || branding?.title || branding?.subtitle || headerTitle || headerSubtitle) && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { style: styles.header, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: styles.brandRow, children: branding?.logo ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: styles.brandLogo, children: typeof branding.logo === "string" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("img", { src: branding.logo, alt: brandName, style: { width: "100%", height: "100%", objectFit: "contain" } }) : branding.logo }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: styles.brandLogo, "aria-hidden": "true", children: brandName.slice(0, 1).toUpperCase() }) }),
+      (brandingLogo || branding?.brandName || branding?.appName || branding?.title || branding?.subtitle || headerTitle || headerSubtitle) && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { style: styles.header, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: styles.brandRow, children: brandingLogo ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: styles.brandLogo, children: typeof brandingLogo === "string" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("img", { src: brandingLogo, alt: brandName, style: { width: "100%", height: "100%", objectFit: "contain" } }) : brandingLogo }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: styles.brandLogo, "aria-hidden": "true", children: brandName.slice(0, 1).toUpperCase() }) }),
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("h1", { style: styles.brandTitle, children: headerTitle }),
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { style: styles.brandSubtitle, children: headerSubtitle })
       ] }),
@@ -916,18 +886,7 @@ var UrAuth = ({
             }
           )
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
-          "button",
-          {
-            style: styles.primaryBtn,
-            type: "submit",
-            disabled: isLoading,
-            onMouseDown: (e) => e.currentTarget.style.transform = "scale(0.98)",
-            onMouseUp: (e) => e.currentTarget.style.transform = "scale(1)",
-            onMouseLeave: (e) => e.currentTarget.style.transform = "scale(1)",
-            children: isLoading ? "Processing..." : mode === "signin" ? text.loginButton : mode === "signup" ? text.signupButton : mode === "forgot" ? text.forgotButton : text.resetButton
-          }
-        )
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { style: styles.primaryBtn, type: "submit", disabled: isLoading, children: isLoading ? "Processing..." : mode === "signin" ? text.loginButton : mode === "signup" ? text.signupButton : mode === "forgot" ? text.forgotButton : text.resetButton })
       ] }),
       (mode === "signin" || mode === "signup") && renderSocialButtons()
     ] }),
@@ -990,13 +949,13 @@ var UrUserButton = ({
     right: position.includes("right") || position === "inline" ? "0" : "auto",
     left: position.includes("left") ? "0" : "auto",
     background: "#ffffff",
-    border: "1px solid #e2e8f0",
-    borderRadius: "0px",
-    boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+    border: "1px solid #e4e4e7",
+    borderRadius: "12px",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
     width: "220px",
     display: isOpen ? "block" : "none",
     overflow: "hidden",
-    fontFamily: "system-ui, -apple-system, sans-serif"
+    fontFamily: 'system-ui, -apple-system, "Helvetica Neue", sans-serif'
   };
   const getInitials = () => {
     return user.name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U";
@@ -1010,24 +969,23 @@ var UrUserButton = ({
           width: "40px",
           height: "40px",
           padding: 0,
-          border: "1px solid #e2e8f0",
-          background: "#f8fafc",
+          border: "1px solid #e4e4e7",
+          background: "#fafafa",
           borderRadius,
           cursor: "pointer",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           overflow: "hidden",
-          boxShadow: "0 2px 5px rgba(0,0,0,0.05)",
-          transition: "transform 0.1s ease"
+          boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
         },
         children: user.avatarUrl ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("img", { src: user.avatarUrl, alt: "User", style: { width: "100%", height: "100%", objectFit: "cover" } }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { style: { fontSize: "16px", fontWeight: 600, color: "#475569" }, children: getInitials() })
       }
     ),
     /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: dropdownStyles, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: { padding: "16px", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { fontSize: "14px", fontWeight: 600, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: user.name || "User" }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { fontSize: "12px", color: "#64748b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: "2px" }, children: user.email })
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: { padding: "16px", borderBottom: "1px solid #e4e4e7", background: "#fafafa" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { fontSize: "14px", fontWeight: 600, color: "#09090b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: user.name || "User" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { fontSize: "12px", color: "#71717a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: "2px" }, children: user.email })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { style: { padding: "8px" }, children: [
         onProfileClick && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
@@ -1044,12 +1002,12 @@ var UrUserButton = ({
               background: "transparent",
               border: "none",
               fontSize: "14px",
-              color: "#334155",
+              color: "#09090b",
               cursor: "pointer",
-              borderRadius: "0px",
+              borderRadius: "8px",
               display: "block"
             },
-            onMouseEnter: (e) => e.currentTarget.style.background = "#f1f5f9",
+            onMouseEnter: (e) => e.currentTarget.style.background = "#f4f4f5",
             onMouseLeave: (e) => e.currentTarget.style.background = "transparent",
             children: "Profile"
           }
@@ -1068,17 +1026,17 @@ var UrUserButton = ({
               background: "transparent",
               border: "none",
               fontSize: "14px",
-              color: "#334155",
+              color: "#09090b",
               cursor: "pointer",
-              borderRadius: "0px",
+              borderRadius: "8px",
               display: "block"
             },
-            onMouseEnter: (e) => e.currentTarget.style.background = "#f1f5f9",
+            onMouseEnter: (e) => e.currentTarget.style.background = "#f4f4f5",
             onMouseLeave: (e) => e.currentTarget.style.background = "transparent",
             children: "Settings"
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { height: "1px", background: "#e2e8f0", margin: "4px 0" } }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { height: "1px", background: "#e4e4e7", margin: "4px 0" } }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
           "button",
           {
@@ -1096,7 +1054,7 @@ var UrUserButton = ({
               color: "#ef4444",
               fontWeight: 500,
               cursor: "pointer",
-              borderRadius: "0px",
+              borderRadius: "8px",
               display: "block"
             },
             onMouseEnter: (e) => e.currentTarget.style.background = "#fef2f2",

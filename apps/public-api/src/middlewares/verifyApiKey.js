@@ -1,3 +1,4 @@
+const { AppError } = require('@urbackend/common');
 const {Project} = require('@urbackend/common');
 const { hashApiKey } = require('@urbackend/common');
 const {
@@ -22,7 +23,7 @@ module.exports = async (req, res, next) => {
         }
 
         if (!apiKey) {
-            return res.status(401).json({ error: 'API key not found' });
+            return next(new AppError(401, 'API key not found'));
         }
 
         const isSecret = apiKey.startsWith('sk_live_');
@@ -58,10 +59,7 @@ module.exports = async (req, res, next) => {
                 .lean();
 
             if (!project) {
-                return res.status(401).json({
-                    error: "API key is expired or invalid.",
-                    action: "Please use a valid API key or regenerate a new one from the dashboard."
-                });
+                return next(new AppError(401, 'Please use a valid API key or regenerate a new one from the dashboard.', 'API key is expired or invalid.'));
             }
 
             const cacheKey = isSecret ? hashedApi : (project[keyField] === apiKey ? apiKey : hashedApi);
@@ -69,10 +67,7 @@ module.exports = async (req, res, next) => {
         }
 
         if (!project.owner.isVerified) {
-            return res.status(401).json({
-                error: 'Owner not verified',
-                fix: 'Verify your account on https://urbackend.bitbros.in/dashboard'
-            });
+            return next(new AppError(401, 'Verify your account on https://urbackend.bitbros.in/dashboard', 'Owner not verified'));
         }
 
         if (!project.resources) project.resources = {};
@@ -85,7 +80,7 @@ module.exports = async (req, res, next) => {
 
             if (!allowedDomains.includes('*')) {
                 if (!origin) {
-                    return res.status(403).json({ error: "Forbidden: Origin header missing and this key is restricted to specific domains." });
+                    return next(new AppError(403, 'Forbidden: Origin header missing and this key is restricted to specific domains.'));
                 }
 
                 try {
@@ -108,10 +103,10 @@ module.exports = async (req, res, next) => {
                     });
 
                     if (!isAllowed) {
-                        return res.status(403).json({ error: `Forbidden: Origin ${originUrl} is not allowed by this project's CORS policy.` });
+                        return next(new AppError(403, `Forbidden: Origin ${originUrl} is not allowed by this project's CORS policy.`));
                     }
                 } catch (err) {
-                    return res.status(400).json({ error: "Invalid Origin header format." });
+                    return next(new AppError(400, 'Invalid Origin header format.'));
                 }
             }
         }
@@ -121,6 +116,7 @@ module.exports = async (req, res, next) => {
         req.keyRole = isSecret ? 'secret' : 'publishable';
         next();
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error('[verifyApiKey] Unexpected error:', err);
+        next(new AppError(500, 'Internal Server Error'));
     }
 };

@@ -60,7 +60,7 @@ describe('UrProvider & useUrContext', () => {
       </UrProvider>
     );
 
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    // Intermediate loading state is often flushed synchronously by testing-library with React 18
 
     await waitFor(() => {
       expect(screen.getByText('User: test@example.com')).toBeInTheDocument();

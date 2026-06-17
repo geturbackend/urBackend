@@ -1,7 +1,7 @@
 import React from 'react';
 import { User, Mail, Monitor, Edit2, Key, Trash2 } from 'lucide-react';
 
-const UserTable = ({ users, onOpenSessions, onEdit, onResetPassword, onDelete }) => {
+const UserTable = ({ users, isViewer, onOpenSessions, onEdit, onResetPassword, onDelete }) => {
   if (users.length === 0) {
     return (
       <div style={{ padding: '4rem 2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
@@ -43,10 +43,14 @@ const UserTable = ({ users, onOpenSessions, onEdit, onResetPassword, onDelete })
               </td>
               <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px' }}>
-                  <button onClick={() => onOpenSessions(user)} className="btn-icon-sm" title="Sessions"><Monitor size={14} /></button>
-                  <button onClick={() => onEdit(user._id)} className="btn-icon-sm" title="Edit"><Edit2 size={14} /></button>
-                  <button onClick={() => onResetPassword(user)} className="btn-icon-sm" title="Reset Pass" style={{ color: 'var(--color-primary)' }}><Key size={14} /></button>
-                  <button onClick={() => onDelete(user._id)} className="btn-icon-sm" title="Delete" style={{ color: '#ef4444' }}><Trash2 size={14} /></button>
+                  {!isViewer && (
+                    <>
+                      <button onClick={() => onOpenSessions(user)} className="btn-icon-sm" title="Sessions"><Monitor size={14} /></button>
+                      <button onClick={() => onEdit(user._id)} className="btn-icon-sm" title="Edit"><Edit2 size={14} /></button>
+                      <button onClick={() => onResetPassword(user)} className="btn-icon-sm" title="Reset Pass" style={{ color: 'var(--color-primary)' }}><Key size={14} /></button>
+                      <button onClick={() => onDelete(user._id)} className="btn-icon-sm" title="Delete" style={{ color: '#ef4444' }}><Trash2 size={14} /></button>
+                    </>
+                  )}
                 </div>
               </td>
             </tr>

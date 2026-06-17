@@ -39,6 +39,7 @@ const { verifyUploadedFile } = require("@urbackend/common");
 const { getPublicIp } = require("@urbackend/common");
 const { clearCompiledModel } = require("@urbackend/common");
 const { createUniqueIndexes, ApiAnalytics, MailLog } = require("@urbackend/common");
+const { getProjectAccessQuery, getProjectRole, Invitation } = require("@urbackend/common");
 const { emitEvent } = require('../utils/emitEvent');
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const SAFETY_MAX_BYTES = 100 * 1024 * 1024;
@@ -375,8 +376,8 @@ module.exports.createProject = async (req, res) => {
 
 module.exports.getAllProject = async (req, res) => {
   try {
-    const projects = await Project.find({ owner: req.user._id })
-      .select("name description databaseUsed databaseLimit storageUsed storageLimit updatedAt isAuthEnabled collections")
+    const projects = await Project.find(getProjectAccessQuery(req.user._id))
+      .select("name description databaseUsed databaseLimit storageUsed storageLimit updatedAt isAuthEnabled collections owner members")
       .lean();
 
     const projectIds = projects.map(p => p._id);
@@ -444,7 +445,7 @@ module.exports.getSingleProject = async (req, res) => {
     if (!projectObj) {
       const project = await Project.findOne({
         _id: req.params.projectId,
-        owner: req.user._id,
+        ...getProjectAccessQuery(req.user._id),
       }).select(
         "-publishableKey -secretKey -jwtSecret " +
           "+authProviders.github.clientSecret.encrypted " +
@@ -462,8 +463,8 @@ module.exports.getSingleProject = async (req, res) => {
       await setProjectById(req.params.projectId, projectObj);
     }
 
-    if (projectObj.owner.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: "Access denied." });
+    if (!getProjectRole(projectObj, req.user._id)) {
+      throw new AppError(403, "Access denied.");
     }
 
     res.json(sanitizeProjectResponse(projectObj));
@@ -488,7 +489,7 @@ module.exports.regenerateApiKey = async (req, res) => {
 
     const oldApiProj = await Project.findOne({
       _id: req.params.projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     }).select("publishableKey secretKey");
     if (!oldApiProj)
       return res.status(404).json({ error: "Project not found." });
@@ -506,7 +507,7 @@ module.exports.regenerateApiKey = async (req, res) => {
           };
 
     const project = await Project.findOneAndUpdate(
-      { _id: req.params.projectId, owner: req.user._id },
+      { _id: req.params.projectId, ...getProjectAccessQuery(req.user._id) },
       { $set: updateField },
       { new: true },
     );
@@ -706,7 +707,7 @@ module.exports.updateExternalConfig = async (req, res) => {
     }
 
     const project = await Project.findOneAndUpdate(
-      { _id: projectId, owner: req.user._id },
+      { _id: projectId, ...getProjectAccessQuery(req.user._id) },
       { $set: updateData },
       { new: true },
     );
@@ -736,7 +737,7 @@ module.exports.deleteExternalDbConfig = async (req, res) => {
 
     const project = await Project.findOne({
       _id: { $eq: projectId },
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     });
     if (!project)
       return res
@@ -766,7 +767,7 @@ module.exports.deleteExternalStorageConfig = async (req, res) => {
 
     const project = await Project.findOne({
       _id: { $eq: projectId },
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     });
     if (!project)
       return res
@@ -794,7 +795,7 @@ module.exports.createCollection = async (req, res) => {
 
     const projectQuery = Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     });
     if (session) projectQuery.session(session);
     
@@ -949,7 +950,7 @@ module.exports.createCollection = async (req, res) => {
 module.exports.getData = async (req, res) => {
     try {
         const { projectId, collectionName } = req.params;
-        const project = await Project.findOne({ _id: projectId, owner: req.user._id });
+        const project = await Project.findOne({ _id: projectId, ...getProjectAccessQuery(req.user._id) });
        if (!project) return res.status(404).json({ success: false, data: {}, message: "Project not found." });
 
 
@@ -1047,7 +1048,7 @@ module.exports.deleteCollection = async (req, res) => {
 
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     });
     if (!project) {
       return res
@@ -1095,7 +1096,7 @@ module.exports.insertData = async (req, res) => {
     const { projectId, collectionName } = req.params;
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     });
     if (!project) return res.status(404).json({ error: "Project not found." });
 
@@ -1175,7 +1176,7 @@ module.exports.deleteRow = async (req, res, next) => {
 
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     });
     if (!project) return next(new AppError(404, "Project not found."));
 
@@ -1239,7 +1240,7 @@ module.exports.recoverRow = async (req, res, next) => {
 
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     }).lean();
     if (!project) {
       return next(new AppError(404, "Project not found."));
@@ -1309,7 +1310,7 @@ module.exports.editRow = async (req, res) => {
 
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     });
     if (!project) return res.status(404).json({ error: "Project not found." });
 
@@ -1398,7 +1399,7 @@ module.exports.listFiles = async (req, res) => {
 
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     }).select(
       "+resources.storage.config.encrypted +resources.storage.config.iv +resources.storage.config.tag resources.storage.isExternal storageUsed storageLimit",
     );
@@ -1447,7 +1448,7 @@ module.exports.deleteFile = async (req, res) => {
 
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     }).select(
       "+resources.storage.config.encrypted +resources.storage.config.iv +resources.storage.config.tag resources.storage.isExternal storageUsed storageLimit",
     );
@@ -1493,7 +1494,7 @@ module.exports.deleteAllFiles = async (req, res) => {
 
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     }).select(
       "+resources.storage.config.encrypted +resources.storage.config.iv +resources.storage.config.tag resources.storage.isExternal storageUsed storageLimit",
     );
@@ -1556,7 +1557,7 @@ module.exports.requestUpload = async (req, res, next) => {
 
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     }).select(
       "+resources.storage.config.encrypted +resources.storage.config.iv +resources.storage.config.tag resources.storage.isExternal storageUsed storageLimit",
     );
@@ -1614,7 +1615,7 @@ module.exports.confirmUpload = async (req, res, next) => {
 
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     }).select(
       "+resources.storage.config.encrypted +resources.storage.config.iv +resources.storage.config.tag resources.storage.isExternal storageUsed storageLimit",
     );
@@ -1778,7 +1779,7 @@ module.exports.updateProject = async (req, res) => {
     }
 
     const project = await Project.findOneAndUpdate(
-      { _id: req.params.projectId, owner: req.user._id },
+      { _id: req.params.projectId, ...getProjectAccessQuery(req.user._id) },
       { $set: updateFields },
       {
         new: true,
@@ -1818,7 +1819,7 @@ module.exports.listMailTemplates = async (req, res, next) => {
   try {
     const { projectId } = req.params;
 
-    const project = await Project.findOne({ _id: projectId, owner: req.user._id }).select("+mailTemplates");
+    const project = await Project.findOne({ _id: projectId, ...getProjectAccessQuery(req.user._id) }).select("+mailTemplates");
 
     if (!project) return res.status(404).json({ success: false, data: {}, message: "Project not found." });
 
@@ -1936,7 +1937,7 @@ module.exports.listGlobalMailTemplates = async (req, res, next) => {
   try {
     const { projectId } = req.params;
 
-    const project = await Project.findOne({ _id: projectId, owner: req.user._id })
+    const project = await Project.findOne({ _id: projectId, ...getProjectAccessQuery(req.user._id) })
       .select("_id")
       .lean();
 
@@ -1974,7 +1975,7 @@ module.exports.getMailTemplate = async (req, res, next) => {
       return res.status(400).json({ success: false, data: {}, message: "Invalid template id" });
     }
 
-    const project = await Project.findOne({ _id: projectId, owner: req.user._id })
+    const project = await Project.findOne({ _id: projectId, ...getProjectAccessQuery(req.user._id) })
       .select("+mailTemplates")
       .lean();
 
@@ -2051,7 +2052,7 @@ module.exports.createMailTemplate = async (req, res, next) => {
 
     const payload = schema.parse(req.body || {});
 
-    const project = await Project.findOne({ _id: projectId, owner: req.user._id })
+    const project = await Project.findOne({ _id: projectId, ...getProjectAccessQuery(req.user._id) })
       .select("_id")
       .lean();
 
@@ -2114,7 +2115,7 @@ module.exports.updateMailTemplate = async (req, res, next) => {
 
     const payload = schema.parse(req.body || {});
 
-    const project = await Project.findOne({ _id: projectId, owner: req.user._id })
+    const project = await Project.findOne({ _id: projectId, ...getProjectAccessQuery(req.user._id) })
       .select("_id")
       .lean();
 
@@ -2188,7 +2189,7 @@ module.exports.deleteMailTemplate = async (req, res, next) => {
       return res.status(400).json({ success: false, data: {}, message: "Invalid template id" });
     }
 
-    const project = await Project.findOne({ _id: projectId, owner: req.user._id })
+    const project = await Project.findOne({ _id: projectId, ...getProjectAccessQuery(req.user._id) })
       .select("_id")
       .lean();
 
@@ -2228,7 +2229,7 @@ module.exports.updateAllowedDomains = async (req, res) => {
       .filter((d) => d.length > 0);
 
     const project = await Project.findOneAndUpdate(
-      { _id: req.params.projectId, owner: req.user._id },
+      { _id: req.params.projectId, ...getProjectAccessQuery(req.user._id) },
       { $set: { allowedDomains: cleanedDomains } },
       { new: true },
     );
@@ -2323,7 +2324,7 @@ module.exports.analytics = async (req, res, next) => {
     const { projectId } = req.params;
     const { range = 'last24h' } = req.query;
 
-    const project = await Project.findOne({ _id: projectId, owner: req.user._id });
+    const project = await Project.findOne({ _id: projectId, ...getProjectAccessQuery(req.user._id) });
     if (!project) {
       return res.status(404).json({
         success: false,
@@ -2485,7 +2486,7 @@ module.exports.toggleAuth = async (req, res) => {
 
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     }).select(
       "+authProviders.github.clientSecret.encrypted " +
       "+authProviders.github.clientSecret.iv " +
@@ -2541,7 +2542,7 @@ module.exports.updateAuthProviders = async (req, res) => {
 
     const project = await Project.findOne({
       _id: projectId,
-      owner: req.user._id,
+      ...getProjectAccessQuery(req.user._id),
     }).select(
       "+authProviders.github.clientSecret.encrypted " +
         "+authProviders.github.clientSecret.iv " +
@@ -2614,7 +2615,7 @@ module.exports.updateCollectionRls = async (req, res) => {
         const { projectId, collectionName } = req.params;
         const { enabled, mode, ownerField, requireAuthForWrite } = req.body || {};
 
-        const project = await Project.findOne({ _id: projectId, owner: req.user._id });
+        const project = await Project.findOne({ _id: projectId, ...getProjectAccessQuery(req.user._id) });
         if (!project) return res.status(404).json({ error: "Project not found" });
 
         const collection = project.collections.find(c => c.name === collectionName);
@@ -2697,7 +2698,7 @@ const getResolvedResendKey = (project) => {
 module.exports.getMailLogs = async (req, res) => {
     try {
         const { projectId } = req.params;
-        const project = await Project.findOne({ _id: projectId, owner: req.user._id });
+        const project = await Project.findOne({ _id: projectId, ...getProjectAccessQuery(req.user._id) });
         if (!project) return res.status(404).json({ success: false, message: "Project not found" });
 
         const logs = await MailLog.find({ projectId: project._id })
@@ -2718,7 +2719,7 @@ module.exports.getResendLiveStatus = async (req, res) => {
             return res.status(400).json({ success: false, message: "Invalid resendId format." });
         }
 
-        const project = await Project.findOne({ _id: projectId, owner: req.user._id }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
+        const project = await Project.findOne({ _id: projectId, ...getProjectAccessQuery(req.user._id) }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
         if (!project) return res.status(404).json({ success: false, message: "Project not found" });
 
         const logEntry = await MailLog.findOne({ resendEmailId: resendId, projectId: project._id }).lean();
@@ -2756,7 +2757,7 @@ module.exports.getResendLiveStatus = async (req, res) => {
 module.exports.manageAudiences = async (req, res) => {
     try {
         const { projectId } = req.params;
-        const project = await Project.findOne({ _id: projectId, owner: req.user._id }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
+        const project = await Project.findOne({ _id: projectId, ...getProjectAccessQuery(req.user._id) }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
         if (!project) return res.status(404).json({ success: false, message: "Project not found" });
 
         const { key, isByok } = getResolvedResendKey(project);
@@ -2795,7 +2796,7 @@ module.exports.deleteAudience = async (req, res) => {
             return res.status(400).json({ success: false, message: "Invalid audienceId format" });
         }
         const safeAudienceId = encodeURIComponent(audienceId);
-        const project = await Project.findOne({ _id: projectId, owner: req.user._id }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
+        const project = await Project.findOne({ _id: projectId, ...getProjectAccessQuery(req.user._id) }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
         if (!project) return res.status(404).json({ success: false, message: "Project not found" });
 
         const { key, isByok } = getResolvedResendKey(project);
@@ -2821,7 +2822,7 @@ module.exports.manageContacts = async (req, res) => {
             return res.status(400).json({ success: false, message: "Invalid audienceId format" });
         }
         const safeAudienceId = encodeURIComponent(audienceId);
-        const project = await Project.findOne({ _id: projectId, owner: req.user._id }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
+        const project = await Project.findOne({ _id: projectId, ...getProjectAccessQuery(req.user._id) }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
         if (!project) return res.status(404).json({ success: false, message: "Project not found" });
 
         const { key, isByok } = getResolvedResendKey(project);
@@ -2857,7 +2858,7 @@ module.exports.manageContacts = async (req, res) => {
 module.exports.deleteContact = async (req, res) => {
     try {
         const { projectId, audienceId, contactId } = req.params;
-        const project = await Project.findOne({ _id: projectId, owner: req.user._id }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
+        const project = await Project.findOne({ _id: projectId, ...getProjectAccessQuery(req.user._id) }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
         if (!project) return res.status(404).json({ success: false, message: "Project not found" });
 
         const { key, isByok } = getResolvedResendKey(project);
@@ -2889,7 +2890,7 @@ module.exports.sendMarketingBroadcast = async (req, res) => {
         const { projectId } = req.params;
         const { audienceId, subject, html, from } = req.body;
 
-        const project = await Project.findOne({ _id: projectId, owner: req.user._id }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
+        const project = await Project.findOne({ _id: projectId, ...getProjectAccessQuery(req.user._id) }).select("+resendApiKey.encrypted +resendApiKey.iv +resendApiKey.tag");
         if (!project) return res.status(404).json({ success: false, message: "Project not found" });
 
         const { key, isByok } = getResolvedResendKey(project);
@@ -2959,3 +2960,227 @@ module.exports.revealSecretKey = async (req, res) => {
     res.status(500).json({ success: false, data: {}, message: err.message });
   }
 };
+// ─────────────────────────────────────────────────────────────────────────────
+// TEAM MEMBER MANAGEMENT
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /:projectId/members
+ * Returns the member list populated with email and name.
+ * Accessible by owner and all members.
+ */
+module.exports.getMembers = async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+    const project = await Project.findOne({
+      _id: projectId,
+      ...getProjectAccessQuery(req.user._id),
+    })
+      .select("owner members")
+      .populate("owner", "email name")
+      .populate("members.user", "email name")
+      .lean();
+
+    if (!project) return next(new AppError(404, "Project not found or access denied"));
+
+    const ownerEntry = {
+      _id: project.owner._id,
+      email: project.owner.email,
+      name: project.owner.name,
+      role: "owner",
+    };
+
+    const memberEntries = (project.members || []).map((m) => ({
+      _id: m.user._id,
+      email: m.user.email,
+      name: m.user.name,
+      role: m.role,
+      addedAt: m.addedAt,
+    }));
+
+    return res.json({
+      success: true,
+      data: { members: [ownerEntry, ...memberEntries] },
+      message: "",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /:projectId/members/invite
+ * Owner-only. Invites a developer by email (must already have an account).
+ * Creates a pending Invitation and sends an invite email.
+ */
+module.exports.inviteMember = async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+    const { email, role = "admin" } = req.body;
+
+    if (!email || typeof email !== "string") {
+      return next(new AppError(400, "A valid email address is required"));
+    }
+    if (!["admin", "viewer"].includes(role)) {
+      return next(new AppError(400, "Role must be 'admin' or 'viewer'"));
+    }
+
+    // Only owner can invite
+    const project = await Project.findOne({
+      _id: projectId,
+      owner: req.user._id,
+    })
+      .select("owner members name")
+      .lean();
+
+    if (!project) return next(new AppError(404, "Project not found or access denied"));
+
+    const role_ = getProjectRole(project, req.user._id);
+    if (role_ !== "owner") {
+      return next(new AppError(403, "Only the project owner can invite members"));
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Check invitee has an account
+    const invitee = await Developer.findOne({ email: normalizedEmail }).select("_id email name").lean();
+    if (!invitee) {
+      return next(new AppError(404, "No urBackend account found with this email address"));
+    }
+
+    // Cannot invite yourself
+    if (invitee._id.toString() === req.user._id.toString()) {
+      return next(new AppError(400, "You cannot invite yourself"));
+    }
+
+    // Cannot invite someone already a member
+    const alreadyMember = project.members?.some(
+      (m) => m.user.toString() === invitee._id.toString()
+    );
+    if (alreadyMember) {
+      return next(new AppError(409, "This developer is already a member of this project"));
+    }
+
+    // Cannot invite if there's already a pending invite for them
+    const existingInvite = await Invitation.findOne({
+      project: projectId,
+      invitee: invitee._id,
+      status: "pending",
+      expiresAt: { $gt: new Date() },
+    }).lean();
+    if (existingInvite) {
+      return next(new AppError(409, "A pending invitation already exists for this developer"));
+    }
+
+    // Create the invitation (7-day expiry)
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await Invitation.create({
+      project: projectId,
+      inviter: req.user._id,
+      invitee: invitee._id,
+      role,
+      status: "pending",
+      expiresAt,
+    });
+
+    // TODO: Send invite notification email here once email template is ready
+    // await sendInviteEmail({ to: invitee.email, projectName: project.name, role, inviterEmail: req.user.email });
+
+    return res.status(201).json({
+      success: true,
+      data: { email: invitee.email, role, expiresAt },
+      message: `Invitation sent to ${invitee.email}`,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * PATCH /:projectId/members/:memberId/role
+ * Owner-only. Changes a member's role.
+ */
+module.exports.updateMemberRole = async (req, res, next) => {
+  try {
+    const { projectId, memberId } = req.params;
+    const { role } = req.body;
+
+    if (!["admin", "viewer"].includes(role)) {
+      return next(new AppError(400, "Role must be 'admin' or 'viewer'"));
+    }
+
+    if (req.user._id.toString() === memberId) {
+      return next(new AppError(403, "You cannot modify your own role"));
+    }
+
+    const project = await Project.findOne({
+      _id: projectId,
+      owner: req.user._id,
+      "members.user": memberId,
+    });
+
+    if (!project) return next(new AppError(404, "Project or member not found"));
+
+    const member = project.members.find((m) => m.user.toString() === memberId);
+    if (!member) return next(new AppError(404, "Member not found"));
+
+    member.role = role;
+    await project.save();
+    await deleteProjectById(projectId);
+
+    return res.json({
+      success: true,
+      data: { memberId, role },
+      message: "Member role updated",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * DELETE /:projectId/members/:memberId
+ * Admin/Owner-only. Removes a member from the project.
+ */
+module.exports.removeMember = async (req, res, next) => {
+  try {
+    const { projectId, memberId } = req.params;
+
+    if (req.user._id.toString() === memberId) {
+      return next(new AppError(403, "You cannot remove yourself"));
+    }
+
+    // Verify member exists before attempting removal
+    const projectCheck = await Project.findOne({ _id: projectId, owner: req.user._id }).lean();
+    if (!projectCheck) return next(new AppError(404, "Project not found or access denied"));
+
+    const memberExists = projectCheck.members?.some(m => m.user.toString() === memberId);
+    if (!memberExists) {
+      return next(new AppError(404, "Member not found in this project"));
+    }
+
+    const project = await Project.findOneAndUpdate(
+      { _id: projectId, owner: req.user._id },
+      { $pull: { members: { user: memberId } } },
+      { new: true },
+    );
+
+    if (!project) return next(new AppError(404, "Project not found or access denied"));
+
+    // Also clean up any pending invitations for this member
+    await Invitation.deleteMany({ project: projectId, invitee: memberId });
+
+    // Invalidate project cache
+    await deleteProjectById(projectId);
+
+    return res.json({
+      success: true,
+      data: {},
+      message: "Member removed from project",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+

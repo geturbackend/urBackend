@@ -93,6 +93,7 @@ interface AuthColors {
     border: string;
     inputBackground: string;
     primary: string;
+    primaryColor?: string;
     primaryText: string;
     footerBackground: string;
     dividerText: string;
@@ -104,6 +105,7 @@ interface AuthBranding {
     title?: string;
     subtitle?: string;
     logo?: React.ReactNode | string;
+    logoUrl?: string;
     primaryColor?: string;
 }
 interface AuthLabels {

@@ -91,13 +91,13 @@ describe('UrAuth Component', () => {
   it('applies custom primary color to primary button', () => {
     render(<UrAuth branding={{ primaryColor: '#4F46E5' }} />);
     const primaryButton = screen.getByRole('button', { name: 'Log In' });
-    expect(primaryButton.style.background).toContain('#4F46E5');
+    expect(primaryButton.style.background).toContain('rgb(79, 70, 229)');
   });
 
   it('applies custom primary color from colors.primaryColor', () => {
     render(<UrAuth colors={{ primaryColor: '#6366f1' }} />);
     const primaryButton = screen.getByRole('button', { name: 'Log In' });
-    expect(primaryButton.style.background).toContain('#6366f1');
+    expect(primaryButton.style.background).toContain('rgb(99, 102, 241)');
   });
 
   it('hides email/password form when disabled via providers object', () => {

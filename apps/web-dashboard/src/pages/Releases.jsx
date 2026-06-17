@@ -20,7 +20,7 @@ export default function Releases() {
         const fetchReleases = async () => {
             try {
                 const res = await api.get(`/api/releases`);
-                if (isMounted) setReleases(res.data);
+                if (isMounted) setReleases(res.data.success ? res.data.data : res.data);
             } catch (err) {
                 console.error("Failed to fetch releases", err);
             } finally {

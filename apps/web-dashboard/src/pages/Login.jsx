@@ -98,9 +98,9 @@ function Login() {
 
   return (
     <AuthShell
-      modeLabel="Sign in"
-      title=""
-      subtitle=""
+      modeLabel=""
+      title="Welcome back"
+      subtitle="Sign in to your urBackend account"
       alternateText="New to urBackend?"
       alternateLabel="Create an account"
       alternateTo="/signup"

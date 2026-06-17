@@ -19,7 +19,9 @@
     "@tanstack/react-table": "^8.21.3",
     "axios": "^1.13.2",
     "framer-motion": "^12.35.0",
+    "gsap": "^3.15.0",
     "lucide-react": "^0.554.0",
+    "postprocessing": "^6.39.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hot-toast": "^2.6.0",
@@ -27,7 +29,8 @@
     "react-router-dom": "^7.9.6",
     "recharts": "^2.13.0",
     "remark-gfm": "^4.0.1",
-    "tailwindcss": "^4.1.18"
+    "tailwindcss": "^4.1.18",
+    "three": "^0.184.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

@@ -2,7 +2,7 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
     LayoutDashboard, Database, Shield, HardDrive, Settings, BarChart2,
-    ArrowLeft, LogOut, X, Rocket, Webhook
+    ArrowLeft, LogOut, X, Rocket, Webhook, Users
 } from 'lucide-react';
 import ThemeToggle from '../ThemeToggle';
 
@@ -59,6 +59,9 @@ function Sidebar({ logo, isOpen, onClose }) {
                         </Link>
                         <Link to={`/project/${projectId}/analytics`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/analytics`) ? 'active' : ''}`} {...navA11yProps('Analytics')}>
                             <BarChart2 size={16} /> <span>Analytics</span>
+                        </Link>
+                        <Link to={`/project/${projectId}/team`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/team`) ? 'active' : ''}`} {...navA11yProps('Team')}>
+                            <Users size={16} /> <span>Team</span>
                         </Link>
                         <Link to={`/project/${projectId}/settings`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/settings`) ? 'active' : ''}`} {...navA11yProps('Settings')}>
                             <Settings size={16} /> <span>Settings</span>

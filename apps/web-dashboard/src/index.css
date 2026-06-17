@@ -812,11 +812,11 @@ select option {
 
 .auth-form-card {
   width: 100%;
-  padding: 0;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  padding: 2rem;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.02);
+  box-shadow: 0 24px 48px -12px rgba(0,0,0,0.4);
 }
 
 .auth-form-card__brand {

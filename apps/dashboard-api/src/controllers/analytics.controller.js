@@ -1,4 +1,4 @@
-const { Project, Log, Developer, Webhook, getConnection, resolveEffectivePlan, getPlanLimits, PlatformEvent, DeveloperActivity, AppError, ApiResponse } = require("@urbackend/common");
+const { Project, Log, Developer, Webhook, getConnection, resolveEffectivePlan, getPlanLimits, PlatformEvent, DeveloperActivity, AppError, ApiResponse, getProjectAccessQuery } = require("@urbackend/common");
 const mongoose = require("mongoose");
 
 /**
@@ -12,12 +12,7 @@ module.exports.getGlobalStats = async (req, res, next) => {
     const [stats, dev] = await Promise.all([
       Project.aggregate([
         { 
-          $match: { 
-            $or: [
-              { owner: user_id },
-              { owner: userId }
-            ]
-          } 
+          $match: { owner: userId },
         },
         {
           $group: {
@@ -90,7 +85,7 @@ module.exports.getGlobalStats = async (req, res, next) => {
 module.exports.getRecentActivity = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const projectIds = await Project.find({ owner: userId }).distinct("_id");
+    const projectIds = await Project.find(getProjectAccessQuery(userId)).distinct("_id");
 
     const logs = await Log.find({ projectId: { $in: projectIds } })
       .sort({ timestamp: -1 })
@@ -275,7 +270,7 @@ module.exports.getNorthStar = async (req, res, next) => {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setUTCDate(sevenDaysAgo.getUTCDate() - 7);
 
-    // Projects owned by this developer
+    // Projects owned by this developer (North Star should be owner-only)
     const allProjects = await Project.find({ owner: developerId }).select('_id name').lean();
     const projectIds = allProjects.map((p) => p._id);
     const totalProjects = projectIds.length;

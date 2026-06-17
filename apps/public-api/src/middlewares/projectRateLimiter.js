@@ -1,4 +1,5 @@
 const rateLimit = require('express-rate-limit');
+const { AppError } = require('@urbackend/common');
 
 const projectRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
@@ -12,10 +13,7 @@ const projectRateLimiter = rateLimit({
     },
 
     handler: (req, res, next, options) => {
-        res.status(options.statusCode).json({
-            error: "Too Many Requests",
-            message: "Project Rate limit exceeded. Please try again later."
-        });
+        next(new AppError(options.statusCode, "Project Rate limit exceeded. Please try again later.", "Too Many Requests"));
     },
     
     limit: async (req, res) => {

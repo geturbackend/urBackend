@@ -24,7 +24,8 @@ jest.mock('@urbackend/common', () => ({
             this.statusCode = statusCode;
             this.isOperational = true;
         }
-    }
+    },
+    getProjectAccessQuery: jest.fn((userId) => ({ $or: [{ owner: userId }, { "members.user": userId }] }))
 }));
 
 const { deleteRow, recoverRow } = require('../controllers/project.controller');
@@ -142,7 +143,13 @@ describe('Soft Delete in dashboard project.controller', () => {
 
         await recoverRow(req, res, next);
 
-        expect(mockFindOne).toHaveBeenCalledWith({ _id: 'proj_1', owner: 'user_1' });
+        expect(mockFindOne).toHaveBeenCalledWith({ 
+            _id: 'proj_1', 
+            $or: [
+                { owner: 'user_1' },
+                { 'members.user': 'user_1' }
+            ]
+        });
         expect(mockFindOneAndUpdate).toHaveBeenCalledWith(
             expect.objectContaining({ 
                 _id: '507f1f77bcf86cd799439011', 
