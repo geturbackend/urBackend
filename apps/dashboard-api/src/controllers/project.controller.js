@@ -911,9 +911,11 @@ module.exports.createCollection = async (req, res) => {
     delete projectObj.jwtSecret;
 
     const createdCol = project.collections.find((c) => c.name === collectionName);
-    markDeveloperOnboardingStep(req.user._id, 'collectionCreated', { collectionId: createdCol?._id }).catch((err) => {
-      console.error('[onboarding] Failed to mark collectionCreated:', err.message);
-    });
+    if (collectionName !== "users") {
+      markDeveloperOnboardingStep(req.user._id, 'collectionCreated', { collectionId: createdCol?._id }).catch((err) => {
+        console.error('[onboarding] Failed to mark collectionCreated:', err.message);
+      });
+    }
     emitEvent(req.user._id, 'collection_created', { collectionName, isUsersCollection: collectionName === 'users' }, projectId);
 
     return res.status(201).json(projectObj);
@@ -937,9 +939,11 @@ module.exports.createCollection = async (req, res) => {
         delete projectObj.jwtSecret;
 
         const createdCol = project.collections.find((c) => c.name === collectionName);
-        markDeveloperOnboardingStep(req.user._id, 'collectionCreated', { collectionId: createdCol?._id }).catch((err) => {
-          console.error('[onboarding] Failed to mark collectionCreated:', err.message);
-        });
+        if (collectionName !== "users") {
+          markDeveloperOnboardingStep(req.user._id, 'collectionCreated', { collectionId: createdCol?._id }).catch((err) => {
+            console.error('[onboarding] Failed to mark collectionCreated:', err.message);
+          });
+        }
         emitEvent(req.user._id, 'collection_created', { collectionName, isUsersCollection: collectionName === 'users' }, projectId);
 
         return res.status(201).json(projectObj);

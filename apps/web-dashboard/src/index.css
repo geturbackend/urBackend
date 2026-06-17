@@ -347,13 +347,14 @@ a {
 
 .btn-primary {
   background-color: var(--color-primary);
-  color: #000;
+  color: #000 !important;
   border-color: var(--color-primary);
   box-shadow: 0 2px 10px rgba(62, 207, 142, 0.2);
 }
 
 .btn-primary:hover {
   background-color: var(--color-primary-hover);
+  color: #000 !important;
   box-shadow: 0 4px 15px rgba(62, 207, 142, 0.3);
 }
 

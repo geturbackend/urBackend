@@ -25,8 +25,8 @@ import Hyperspeed from '../components/Hyperspeed/Hyperspeed';
 
 const PRIMITIVE_TYPES = ['String', 'Number', 'Boolean', 'Date'];
 
-function createEmptyField(key = '', type = 'String', required = false) {
-    return { key, type, required };
+function createEmptyField(key = '', type = 'String', required = false, unique = false) {
+    return { key, type, required, unique };
 }
 
 export default function Onboarding() {
@@ -244,10 +244,11 @@ export default function Onboarding() {
 
         setCollectionLoading(true);
         try {
-            const cleanFields = fields.map(({ key, type, required }) => ({
+            const cleanFields = fields.map(({ key, type, required, unique }) => ({
                 key: key.trim(),
                 type,
-                required: !!required
+                required: !!required,
+                unique: !!unique
             }));
 
             await api.post(`/api/projects/${progress.projectId}/collections`, {
@@ -705,6 +706,16 @@ export default function Onboarding() {
                                                         style={{ cursor: 'pointer', accentColor: '#10b981' }}
                                                     />
                                                     <label htmlFor={`req-${idx}`} style={{ fontSize: '0.75rem', color: '#9ca3af', cursor: 'pointer', userSelect: 'none' }}>Required</label>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '80px' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        id={`uniq-${idx}`}
+                                                        checked={field.unique}
+                                                        onChange={(e) => handleFieldChange(idx, 'unique', e.target.checked)}
+                                                        style={{ cursor: 'pointer', accentColor: '#10b981' }}
+                                                    />
+                                                    <label htmlFor={`uniq-${idx}`} style={{ fontSize: '0.75rem', color: '#9ca3af', cursor: 'pointer', userSelect: 'none' }}>Unique</label>
                                                 </div>
                                                 <button
                                                     type="button"
