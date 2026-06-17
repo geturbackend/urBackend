@@ -327,17 +327,45 @@ export default function Onboarding() {
 
             const url = `${PUBLIC_API_URL}/api/data/${colName}`;
             const headers = {
-                'x-api-key': publishableKey
+                'x-api-key': publishableKey,
+                'Content-Type': 'application/json'
             };
+            
+            // Create dummy payload based on the schema fields if they exist, otherwise use a generic object
+            const payload = {};
+            if (fields && fields.length > 0) {
+                fields.forEach(f => {
+                    if (f.type === 'String') payload[f.key] = `Test ${f.key}`;
+                    else if (f.type === 'Number') payload[f.key] = 100;
+                    else if (f.type === 'Boolean') payload[f.key] = true;
+                    else if (f.type === 'Array') payload[f.key] = [];
+                    else if (f.type === 'Object') payload[f.key] = {};
+                    else if (f.type === 'Date') payload[f.key] = new Date().toISOString();
+                    else payload[f.key] = "test";
+                });
+            } else {
+                payload.testMessage = "Hello from urBackend!";
+            }
 
-            const response = await fetch(url, { headers });
+            const response = await fetch(url, { 
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
             const data = await response.json();
             
             setTestResponse(data);
             if (response.ok) {
                 setTestSuccess(true);
                 toast.success("API Call Successful!");
-                // Wait for the background usage worker to register the call and update user progress
+                // Explicitly mark firstApiCall in onboarding as completed in the backend
+                try {
+                    await api.patch('/api/user/onboarding', { steps: { firstApiCall: true } });
+                } catch (err) {
+                    console.error("Failed to update onboarding step", err);
+                }
+                
+                // Wait for the UI progress to catch up
                 setTimeout(async () => {
                     await refreshUser();
                 }, 2000);
@@ -369,9 +397,9 @@ export default function Onboarding() {
 
     // Interpolated Code Samples
     const codeSamples = {
-        sdk: `import { URBackend } from '@urbackend/sdk';\n\nconst client = new URBackend({\n    publicKey: "${publishableKey || 'pk_live_••••••••'}"\n});\n\n// Create a record\n/*\nawait client.collection('${collectionName}').create({\n    // your fields here\n});\n*/\n\n// Fetch items\nconst items = await client.collection('${collectionName}').find();\nconsole.log(items);`,
-        fetch: `// Fetch from public API\nfetch('${PUBLIC_API_URL}/api/data/${collectionName}', {\n    headers: {\n        'x-api-key': '${publishableKey || 'pk_live_••••••••'}'\n    }\n})\n.then(res => res.json())\n.then(data => console.log(data));`,
-        curl: `curl -H "x-api-key: ${publishableKey || 'pk_live_••••••••'}" \\\n     ${PUBLIC_API_URL}/api/data/${collectionName}`
+        sdk: `import { URBackend } from '@urbackend/sdk';\n\nconst client = new URBackend({\n    publicKey: "${publishableKey || 'pk_live_••••••••'}"\n});\n\n// Create a record\nawait client.collection('${collectionName}').create({\n    // your fields here\n});\n\n// Fetch items\n/*\nconst items = await client.collection('${collectionName}').find();\nconsole.log(items);\n*/`,
+        fetch: `// Insert into public API\nfetch('${PUBLIC_API_URL}/api/data/${collectionName}', {\n    method: 'POST',\n    headers: {\n        'Content-Type': 'application/json',\n        'x-api-key': '${publishableKey || 'pk_live_••••••••'}'\n    },\n    body: JSON.stringify({ /* your data */ })\n})\n.then(res => res.json())\n.then(data => console.log(data));`,
+        curl: `curl -X POST ${PUBLIC_API_URL}/api/data/${collectionName} \\\n     -H "x-api-key: ${publishableKey || 'pk_live_••••••••'}" \\\n     -H "Content-Type: application/json" \\\n     -d '{"exampleKey": "exampleValue"}'`
     };
 
     return (
