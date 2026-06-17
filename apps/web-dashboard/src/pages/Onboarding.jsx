@@ -603,7 +603,7 @@ export default function Onboarding() {
                 {/* ---------------------------------------------------- */}
                 {isCollectionStep && (
                     <BorderGlow
-                        glowColor="#3b82f6"
+                        glowColor="#10b981"
                         backgroundColor="rgba(10, 10, 10, 0.7)"
                         className="glass-card"
                         style={{ padding: '2.5rem', borderRadius: '16px', backdropFilter: 'blur(16px)', width: '100%' }}
@@ -732,7 +732,7 @@ export default function Onboarding() {
                 {/* ---------------------------------------------------- */}
                 {isApiStep && (
                     <BorderGlow
-                        glowColor="#8b5cf6"
+                        glowColor="#10b981"
                         backgroundColor="rgba(10, 10, 10, 0.7)"
                         className="glass-card"
                         style={{ padding: '2.5rem', borderRadius: '16px', position: 'relative' }}
@@ -763,7 +763,7 @@ export default function Onboarding() {
                                                 <Copy size={12} /> Copy
                                             </button>
                                         </div>
-                                        <div style={{ background: '#090d16', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', fontFamily: 'monospace', fontSize: '0.85rem', color: '#3ecf8e', overflowX: 'auto', whiteSpace: 'nowrap' }}>
+                                        <div style={{ background: 'rgba(0,0,0,0.4)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', fontFamily: 'monospace', fontSize: '0.85rem', color: '#3ecf8e', overflowX: 'auto', whiteSpace: 'nowrap' }}>
                                             {publishableKey || 'pk_live_••••••••'}
                                         </div>
                                     </div>
@@ -778,7 +778,7 @@ export default function Onboarding() {
                                                 </button>
                                             )}
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', background: '#090d16', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
                                             <div style={{ flex: 1, padding: '0.75rem 1rem', fontFamily: 'monospace', fontSize: '0.85rem', color: revealSecret ? '#f43f5e' : '#6b7280', overflowX: 'auto', whiteSpace: 'nowrap' }}>
                                                 {revealSecret ? secretKey : '********************************'}
                                             </div>
@@ -805,7 +805,7 @@ export default function Onboarding() {
                                         <button className={`code-tab ${activeTab === 'fetch' ? 'active' : ''}`} onClick={() => setActiveTab('fetch')}>Fetch</button>
                                         <button className={`code-tab ${activeTab === 'curl' ? 'active' : ''}`} onClick={() => setActiveTab('curl')}>cURL</button>
                                     </div>
-                                    <div style={{ background: '#090d16', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', fontFamily: 'Consolas, monospace', fontSize: '0.8rem', whiteSpace: 'pre', overflowX: 'auto', color: '#e5e7eb', lineHeight: '1.45' }}>
+                                    <div style={{ background: 'rgba(0,0,0,0.4)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', fontFamily: 'Consolas, monospace', fontSize: '0.85rem', whiteSpace: 'pre', overflowX: 'auto', color: '#e5e7eb', lineHeight: '1.5' }}>
                                         {codeSamples[activeTab]}
                                     </div>
                                 </div>
@@ -818,7 +818,6 @@ export default function Onboarding() {
                                             onClick={handleTestApi}
                                             disabled={testLoading}
                                             className="btn-primary"
-                                            style={{ background: '#3b82f6', color: '#fff' }}
                                         >
                                             {testLoading ? <RefreshCw className="animate-spin" size={16} /> : <Play size={16} />} Test API
                                         </button>
@@ -830,7 +829,7 @@ export default function Onboarding() {
                                     {testResponse && (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#9ca3af' }}>API Response</span>
-                                            <div style={{ background: '#090d16', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', fontFamily: 'Consolas, monospace', fontSize: '0.8rem', overflowX: 'auto', color: testSuccess ? '#3ecf8e' : '#f87171' }}>
+                                            <div style={{ background: 'rgba(0,0,0,0.4)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)', fontFamily: 'Consolas, monospace', fontSize: '0.85rem', overflowX: 'auto', color: testSuccess ? '#10b981' : '#f87171' }}>
                                                 <pre style={{ margin: 0 }}>{JSON.stringify(testResponse, null, 2)}</pre>
                                             </div>
                                         </div>
@@ -839,10 +838,19 @@ export default function Onboarding() {
 
                                 {/* Navigation footer */}
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1.5rem' }}>
+                                    {(!progress.make_api_call && !testSuccess) && (
+                                        <button
+                                            type="button"
+                                            onClick={handleFinishOnboarding}
+                                            style={{ background: 'transparent', color: '#9ca3af', border: 'none', cursor: 'pointer', fontSize: '0.9rem', marginRight: 'auto', textDecoration: 'underline' }}
+                                        >
+                                            Skip & Launch Dashboard
+                                        </button>
+                                    )}
                                     <button
                                         type="button"
                                         onClick={handleFinishOnboarding}
-                                        disabled={!progress.make_api_call}
+                                        disabled={!progress.make_api_call && !testResponse}
                                         className="btn-primary"
                                     >
                                         Launch Dashboard <Rocket size={18} />
@@ -928,7 +936,7 @@ export default function Onboarding() {
                                                 await refreshUser();
                                                 toast.success("Status refreshed!");
                                             }}
-                                            style={{ background: 'transparent', border: 'none', color: '#3b82f6', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.825rem', fontWeight: 600 }}
+                                            style={{ background: 'transparent', border: 'none', color: '#10b981', textDecoration: 'underline', cursor: 'pointer', fontSize: '0.825rem', fontWeight: 600 }}
                                         >
                                             Refresh Status
                                         </button>
