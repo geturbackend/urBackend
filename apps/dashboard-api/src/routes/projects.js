@@ -3,7 +3,7 @@ const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
 const planEnforcement = require('../middlewares/planEnforcement');
 const authorizeProject = require('../middlewares/authorizeProject');
-const { verifyEmail, checkAuthEnabled } = require('@urbackend/common');
+const { verifyEmail, checkAuthEnabled, loadProjectForAdmin } = require('@urbackend/common');
 const multer = require('multer');
 const storage = multer.memoryStorage();
 

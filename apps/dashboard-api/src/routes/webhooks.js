@@ -13,6 +13,7 @@ const {
 } = require("../controllers/webhook.controller");
 const { attachDeveloper, checkWebhookGate } = require("../middlewares/planEnforcement");
 const authorizeProject = require("../middlewares/authorizeProject");
+const { verifyEmail } = require('@urbackend/common');
 // Create webhook
 router.post("/:projectId/webhooks", authMiddleware, verifyEmail, authorizeProject('admin'), attachDeveloper, checkWebhookGate, createWebhook);
 
