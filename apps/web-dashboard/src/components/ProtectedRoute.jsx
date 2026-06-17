@@ -54,17 +54,18 @@ const ProtectedRoute = ({
             }
         }
         
-        // If on /onboarding/*, enforce step prerequisites strictly
+        // If on /onboarding/*, enforce step prerequisites strictly but allow revisiting earlier steps
         if (!steps.projectCreated) {
             if (location.pathname !== '/onboarding/project') {
                 return <Navigate to="/onboarding/project" replace />;
             }
         } else if (!steps.collectionCreated) {
-            if (location.pathname !== '/onboarding/collection') {
+            if (location.pathname !== '/onboarding/collection' && location.pathname !== '/onboarding/project') {
                 return <Navigate to="/onboarding/collection" replace />;
             }
         } else {
-            if (location.pathname !== '/onboarding/api') {
+            // All steps completed, allow any onboarding route, but default to /api if root
+            if (location.pathname === '/onboarding' || location.pathname === '/onboarding/') {
                 return <Navigate to="/onboarding/api" replace />;
             }
         }

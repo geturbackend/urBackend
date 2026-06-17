@@ -344,9 +344,17 @@ module.exports.createProject = async (req, res) => {
     await session.commitTransaction();
     session.endSession();
     
-    markDeveloperOnboardingStep(req.user._id, 'projectCreated', { projectId: newProject._id }).catch((err) => {
-      console.error('[onboarding] Failed to mark projectCreated:', err.message);
-    });
+    markDeveloperOnboardingStep(req.user._id, 'projectCreated', { projectId: newProject._id })
+      .then(() => {
+        // Also reset subsequent steps since this is a new project
+        return Promise.all([
+          markDeveloperOnboardingStep(req.user._id, 'collectionCreated', { _reset: true }),
+          markDeveloperOnboardingStep(req.user._id, 'firstApiCall', { _reset: true })
+        ]);
+      })
+      .catch((err) => {
+        console.error('[onboarding] Failed to mark projectCreated:', err.message);
+      });
     emitEvent(req.user._id, 'project_created', { projectName: projectObj.name }, newProject._id);
     return res.status(201).json(projectObj);
   } catch (err) {

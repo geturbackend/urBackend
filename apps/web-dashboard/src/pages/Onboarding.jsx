@@ -106,10 +106,15 @@ export default function Onboarding() {
                     const collections = projectData.collections || [];
                     const col = collections.find(c => c._id === progress.collectionId) || collections.find(c => c.name !== 'users');
                     setExistingCollection(col);
+                    if (col && col.name) setCollectionName(col.name);
                 })
                 .catch(err => console.error("Failed to fetch existing collection:", err));
+        } else if (existingProject) {
+            const col = existingProject.collections?.find(c => c.name !== 'users');
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            if (col && col.name) setCollectionName(col.name);
         }
-    }, [progress.create_collection, progress.projectId, progress.collectionId]);
+    }, [progress.create_collection, progress.projectId, progress.collectionId, existingProject]);
 
     const fetchKeys = async (projId) => {
         if (publishableKey || secretKey) return;
@@ -616,7 +621,7 @@ export default function Onboarding() {
                             </p>
                         </div>
 
-                        {progress.create_collection ? (
+                        {progress.create_collection && existingProject?.collections?.some(c => c.name !== 'users') ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '1rem', borderRadius: '8px' }}>
                                     <CheckCircle color="#10b981" size={24} style={{ flexShrink: 0 }} />
