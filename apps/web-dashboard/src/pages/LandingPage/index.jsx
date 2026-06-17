@@ -233,6 +233,10 @@ function LandingPage() {
             const delta = currentScrollY - lastScrollY.current;
             setScrolled(currentScrollY > 20);
 
+            if (delta > 2) {
+                setIsMobileMenuOpen(false);
+            }
+
             // Show quickly on even slight upward scroll; hide only on clear downward movement.
             if (currentScrollY < 80 || delta < -2) {
                 setIsNavVisible(true);
@@ -243,9 +247,7 @@ function LandingPage() {
             lastScrollY.current = currentScrollY;
         };
 
-        window.addEventListener('scroll', handleScroll);
-
-
+        window.addEventListener('scroll', handleScroll, { passive: true });
 
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
@@ -318,17 +320,15 @@ function LandingPage() {
                 <a href="#features" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>Features</a>
                 <a href="#use-cases" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>Use Cases</a>
                 <Link to="/pricing" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>Pricing</Link>
+                <a href="https://docs.ub.bitbros.in" target="_blank" rel="noopener noreferrer" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>Docs</a>
                 <a href="#faq" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>FAQ</a>
                 <div style={{ height: '1px', width: '60px', background: '#333', margin: '10px 0' }}></div>
                 {isAuthenticated ? (
-                    <button onClick={() => navigate('/dashboard')} className="btn btn-primary" style={{ fontWeight: 600, width: '200px', padding: '12px' }}>
+                    <button onClick={() => { setIsMobileMenuOpen(false); navigate('/dashboard'); }} className="btn btn-primary" style={{ fontWeight: 600, width: '200px', padding: '12px' }}>
                         Go to Console
                     </button>
                 ) : (
-                    <>
-                        <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.2rem', fontWeight: 500, color: '#aaa', textDecoration: 'none' }}>Log in</Link>
-                        <Link to="/signup" onClick={() => setIsMobileMenuOpen(false)} className="btn btn-primary" style={{ fontWeight: 600, padding: '12px 30px', width: '200px', textAlign: 'center' }}>Start for Free</Link>
-                    </>
+                    <Link to="/signup" onClick={() => setIsMobileMenuOpen(false)} className="btn btn-primary" style={{ fontWeight: 600, padding: '12px 30px', width: '200px', textAlign: 'center' }}>Start for Free</Link>
                 )}
             </div>
 

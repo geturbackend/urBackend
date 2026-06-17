@@ -137,13 +137,14 @@
     letter-spacing: -0.02em;
 }
 
-.nav-links {
+.nav-glass .nav-links {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    flex: 0 1 auto;
 }
 
-.nav-link {
+.nav-glass .nav-link {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -156,23 +157,23 @@
     transition: all 0.2s ease;
 }
 
-.nav-link:hover {
+.nav-glass .nav-link:hover {
     color: #fff;
     background: rgba(255, 255, 255, 0.05);
 }
 
-.nav-link svg {
+.nav-glass .nav-link svg {
     opacity: 0.7;
 }
 
-.nav-actions {
+.nav-glass .nav-actions {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     flex-shrink: 0;
 }
 
-.nav-btn-ghost {
+.nav-glass .nav-btn-ghost {
     padding: 0.5rem 1.25rem;
     color: #aaa;
     text-decoration: none;
@@ -182,12 +183,12 @@
     transition: all 0.2s ease;
 }
 
-.nav-btn-ghost:hover {
+.nav-glass .nav-btn-ghost:hover {
     color: #fff;
     background: rgba(255, 255, 255, 0.05);
 }
 
-.nav-btn-primary {
+.nav-glass .nav-btn-primary {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -204,12 +205,12 @@
     box-shadow: 0 2px 8px rgba(0, 245, 212, 0.2);
 }
 
-.nav-btn-primary:hover {
+.nav-glass .nav-btn-primary:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 245, 212, 0.3);
 }
 
-.mobile-menu-btn {
+.nav-glass .mobile-menu-btn {
     display: none;
     background: none;
     border: none;
@@ -218,21 +219,26 @@
     padding: 0.5rem;
 }
 
-@media(max-width: 1024px) {
-    .nav-links {
+@media (max-width: 1024px) {
+    .nav-glass .nav-links {
         display: none;
     }
-    
-    .mobile-menu-btn {
+
+    .nav-glass .mobile-menu-btn {
         display: flex;
+        align-items: center;
+        justify-content: center;
     }
-    
-    .nav-btn-ghost {
-        display: none;
-    }
-    
-    .nav-container {
+
+    .nav-glass .nav-container {
         padding: 1rem 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .nav-glass .nav-container {
+        padding: 0.75rem 1rem;
+        gap: 1rem;
     }
 }
 
@@ -1196,12 +1202,12 @@
         font-size: 2.8rem;
     }
 
-    .nav-links {
+    .nav-glass .nav-links {
         display: none;
     }
 
-    .mobile-menu-btn {
-        display: block;
+    .nav-glass .mobile-menu-btn {
+        display: flex;
     }
 
     .hero-section {
@@ -1427,11 +1433,15 @@
     align-items: center;
     gap: 2rem;
     transform: translateY(-100%);
-    transition: transform 0.3s ease-in-out;
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 0.3s ease-in-out, visibility 0.3s ease-in-out;
 }
 
 .mobile-menu-overlay.open {
     transform: translateY(0);
+    visibility: visible;
+    pointer-events: auto;
 }
 
 /* BYOM Callout Section */
