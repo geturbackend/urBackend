@@ -12,6 +12,9 @@ const {
 
 const setByPath = (target, path, value) => {
   const parts = path.split('.');
+  if (parts.some((part) => part === '__proto__' || part === 'constructor' || part === 'prototype')) {
+    return;
+  }
   let cursor = target;
   for (let i = 0; i < parts.length - 1; i += 1) {
     cursor[parts[i]] = cursor[parts[i]] || {};
