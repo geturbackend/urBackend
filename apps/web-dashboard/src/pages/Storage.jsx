@@ -194,10 +194,7 @@ export default function Storage() {
                         Upload and serve files.
                     </p>
                     <button 
-                        onClick={() => {
-                            toast.success("Storage bucket initialized!");
-                            fileInputRef.current.click();
-                        }} 
+                        onClick={() => fileInputRef.current.click()} 
                         className="btn btn-primary" 
                         style={{ fontSize: '0.9rem', height: '40px', padding: '0 24px', fontWeight: 600 }}
                     >

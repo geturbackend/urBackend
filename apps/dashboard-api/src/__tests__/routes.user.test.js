@@ -1,7 +1,10 @@
 'use strict';
 
 jest.mock('../middlewares/authMiddleware', () =>
-    jest.fn((_req, _res, next) => next())
+    jest.fn((req, _res, next) => {
+        req.user = { _id: 'mock_user_id', email: 'test@example.com' };
+        next();
+    })
 );
 
 jest.mock('../controllers/auth.controller', () => ({

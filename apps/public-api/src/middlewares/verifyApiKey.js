@@ -35,12 +35,11 @@ module.exports = async (req, res, next) => {
         }
 
         if (!project) {
-            project = await Project.findOne({
-                $or: [
-                    { [keyField]: isSecret ? hashedApi : apiKey },
-                    { [keyField]: hashedApi }
-                ]
-            })
+            const queryCondition = isSecret
+                ? { [keyField]: hashedApi }
+                : { $or: [{ [keyField]: apiKey }, { [keyField]: hashedApi }] };
+
+            project = await Project.findOne(queryCondition)
                 .select(`
                     name
                     owner

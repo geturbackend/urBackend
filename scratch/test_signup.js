@@ -23,14 +23,26 @@ async function test() {
 
     const res = {
         cookie: (name, val, options) => {
-            console.log(`cookie set: ${name} = ${val}`);
+            const maskedVal = typeof val === 'string' && val.length > 10 ? val.slice(0, 10) + '...' : val;
+            console.log(`cookie set: ${name} = ${maskedVal}`);
         },
         status: (code) => {
             console.log(`status set: ${code}`);
             return res;
         },
         json: (data) => {
-            console.log("JSON response:", data);
+            const safeData = JSON.parse(JSON.stringify(data));
+            if (safeData?.data?.user?.email) {
+                const [u, d] = safeData.data.user.email.split('@');
+                safeData.data.user.email = u.slice(0, 3) + '***@' + d;
+            }
+            if (safeData?.data?.user?.password) {
+                safeData.data.user.password = '[REDACTED]';
+            }
+            if (safeData?.data?.token) {
+                safeData.data.token = safeData.data.token.slice(0, 10) + '...';
+            }
+            console.log("JSON response:", safeData);
         }
     };
 

@@ -4,7 +4,9 @@ import { useAuth } from '../context/AuthContext';
 // This component takes other components as children
 const ProtectedRoute = ({
     children,
-    allowUnverified = true
+    allowUnverified = false,
+    allowIncompleteOnboarding = false,
+    onboardingOnly = false,
 }) => {
     const { user, isAuthenticated, isLoading } = useAuth();
     const location = useLocation();
@@ -36,14 +38,13 @@ const ProtectedRoute = ({
     const onboardingCompleted = !!user?.onboarding?.completed;
 
     if (onboardingCompleted) {
-        if (location.pathname.startsWith('/onboarding')) {
+        if (onboardingOnly || location.pathname.startsWith('/onboarding')) {
             return <Navigate to="/dashboard" replace />;
         }
-    } else {
+    } else if (!allowIncompleteOnboarding) {
         const steps = user?.onboarding?.steps || {};
         
-        // If accessing a dashboard/post-onboarding page, or exactly /onboarding, redirect to the correct step
-        if (!location.pathname.startsWith('/onboarding') || location.pathname === '/onboarding' || location.pathname === '/onboarding/') {
+        if (!onboardingOnly || location.pathname === '/onboarding' || location.pathname === '/onboarding/') {
             if (!steps.projectCreated) {
                 return <Navigate to="/onboarding/project" replace />;
             } else if (!steps.collectionCreated) {

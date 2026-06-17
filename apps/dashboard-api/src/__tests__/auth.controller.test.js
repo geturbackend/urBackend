@@ -212,9 +212,7 @@ describe('auth.controller', () => {
             const res = makeRes();
 
             await authController.register(req, res, next);
-            if (next.mock.calls.length > 0) {
-                console.log("NEXT CALLED WITH:", next.mock.calls[0][0]);
-            }
+
 
             expect(Developer.findOne).toHaveBeenCalledWith({ email: 'new@example.com' });
             expect(res.status).toHaveBeenCalledWith(201);

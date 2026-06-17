@@ -97,15 +97,12 @@ function ProjectDetails() {
         revealAttemptedRef.current = true;
         const revealKeys = async () => {
             try {
-                const [publishableRes, secretRes] = await Promise.all([
-                    api.post(`/api/projects/${projectId}/api-key`, { keyType: 'publishable' }),
-                    api.post(`/api/projects/${projectId}/api-key`, { keyType: 'secret' })
-                ]);
+                const secretRes = await api.post(`/api/projects/${projectId}/reveal-secret-key`);
                 setNewKey({
                     type: 'API',
                     keys: [
-                        { label: 'Publishable Key', value: publishableRes.data.apiKey },
-                        { label: 'Secret Key', value: secretRes.data.apiKey }
+                        { label: 'Publishable Key', value: project.publishableKey },
+                        { label: 'Secret Key', value: secretRes.data.data.secretKey }
                     ]
                 });
                 completeStep('get_api_key');

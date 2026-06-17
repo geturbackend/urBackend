@@ -91,17 +91,20 @@ const logger = (req, res, next) => {
 
                         const { activated } = await markDeveloperActivated(ownerId);
                         if (activated) {
-                            await PlatformEvent.create({
-                                developerId: ownerId,
-                                projectId: req.project._id,
-                                event: 'first_api_call',
-                                properties: {
-                                    method: req.method,
-                                    path: req.originalUrl,
-                                    statusCode: res.statusCode,
-                                },
-                                timestamp: new Date(),
-                            });
+                            const existingEvent = await PlatformEvent.findOne({ developerId: ownerId, event: 'first_api_call' }).lean();
+                            if (!existingEvent) {
+                                await PlatformEvent.create({
+                                    developerId: ownerId,
+                                    projectId: req.project._id,
+                                    event: 'first_api_call',
+                                    properties: {
+                                        method: req.method,
+                                        path: req.originalUrl,
+                                        statusCode: res.statusCode,
+                                    },
+                                    timestamp: new Date(),
+                                });
+                            }
                         }
                     } catch (err) {
                         console.error('[activation] first_api_call check failed:', err.message);

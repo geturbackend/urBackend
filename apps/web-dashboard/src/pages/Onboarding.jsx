@@ -91,7 +91,7 @@ export default function Onboarding() {
     useEffect(() => {
         if (progress.create_project && progress.projectId) {
             api.get(`/api/projects/${progress.projectId}`)
-                .then(res => setExistingProject(res.data))
+                .then(res => setExistingProject(res.data.data || res.data))
                 .catch(err => console.error("Failed to fetch existing project:", err));
         }
     }, [progress.create_project, progress.projectId]);
@@ -101,7 +101,8 @@ export default function Onboarding() {
         if (progress.create_collection && progress.projectId && progress.collectionId) {
             api.get(`/api/projects/${progress.projectId}`)
                 .then(res => {
-                    const collections = res.data.collections || [];
+                    const projectData = res.data.data || res.data;
+                    const collections = projectData.collections || [];
                     const col = collections.find(c => c._id === progress.collectionId) || collections.find(c => c.name !== 'users');
                     setExistingCollection(col);
                 })
@@ -110,6 +111,7 @@ export default function Onboarding() {
     }, [progress.create_collection, progress.projectId, progress.collectionId]);
 
     const fetchKeys = async (projId) => {
+        if (publishableKey || secretKey) return;
         setKeysLoading(true);
         try {
             // For onboarding we call regenerate / reveal keys endpoints
@@ -171,7 +173,8 @@ export default function Onboarding() {
                 name: projectName,
                 description: projectDesc
             });
-            const createdProjectId = res.data._id;
+            const projectData = res.data.data || res.data;
+            const createdProjectId = projectData._id;
 
             // 2. Attach external database connection if Mongo URI is specified
             if (mongoUri.trim()) {
@@ -306,7 +309,8 @@ export default function Onboarding() {
         // Fetch collection name from project
         try {
             const projRes = await api.get(`/api/projects/${progress.projectId}`);
-            const collections = projRes.data.collections || [];
+            const projectData = projRes.data.data || projRes.data;
+            const collections = projectData.collections || [];
             // Find the non-users collection
             const col = collections.find(c => c._id === progress.collectionId) || collections.find(c => c.name !== 'users') || { name: 'products' };
             const colName = col.name;

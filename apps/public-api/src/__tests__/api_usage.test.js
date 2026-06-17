@@ -6,6 +6,7 @@ const mockIncrWithTtlAtomic = jest.fn();
 const mockRedisSet = jest.fn();
 const mockProjectFindById = jest.fn();
 const mockPlatformEventCreate = jest.fn();
+const mockPlatformEventFindOne = jest.fn();
 const mockMarkDeveloperActivated = jest.fn();
 
 jest.mock('@urbackend/common', () => ({
@@ -20,6 +21,7 @@ jest.mock('@urbackend/common', () => ({
     },
     PlatformEvent: {
         create: (...args) => mockPlatformEventCreate(...args),
+        findOne: (...args) => mockPlatformEventFindOne(...args),
     },
     redis: {
         set: (...args) => mockRedisSet(...args),
@@ -38,8 +40,10 @@ describe('api_usage middleware', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        finishCallback = null;
         mockRedisSet.mockResolvedValue(null);
         mockMarkDeveloperActivated.mockResolvedValue({ activated: false });
+        mockPlatformEventFindOne.mockReturnValue({ lean: jest.fn().mockResolvedValue(null) });
         req = {
             project: { _id: 'test_project_id', owner: 'dev_id_1' },
             method: 'GET',
@@ -164,6 +168,7 @@ describe('api_usage middleware', () => {
         await new Promise((resolve) => setImmediate(resolve));
 
         expect(mockMarkDeveloperActivated).toHaveBeenCalledWith('dev_id_1');
+        expect(mockPlatformEventCreate).toHaveBeenCalledTimes(1);
         expect(mockPlatformEventCreate).toHaveBeenCalledWith(expect.objectContaining({
             developerId: 'dev_id_1',
             projectId: 'test_project_id',

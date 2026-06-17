@@ -5,7 +5,7 @@ export const getUsagePercentage = (used, limit) => {
   if (numericLimit === -1) return 0;
   if (!Number.isFinite(numericLimit) || numericLimit <= 0) return null;
 
-  return Math.min(Math.round((numericUsed / numericLimit) * 100), 100);
+  return Math.max(0, Math.min(Math.round((numericUsed / numericLimit) * 100), 100));
 };
 
 export const getProgressWidth = (percentage) => (

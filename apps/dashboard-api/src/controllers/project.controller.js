@@ -2933,19 +2933,19 @@ module.exports.revealSecretKey = async (req, res) => {
     }).select("+secretKeyEncrypted secretKeyRevealed");
 
     if (!project) {
-      return res.status(404).json({ success: false, message: "Project not found." });
+      return res.status(404).json({ success: false, data: {}, message: "Project not found." });
     }
 
     if (!req.user.isVerified) {
-      return res.status(403).json({ success: false, message: "Account verification required to reveal secret key." });
+      return res.status(403).json({ success: false, data: {}, message: "Account verification required to reveal secret key." });
     }
 
     if (project.secretKeyRevealed) {
-      return res.status(400).json({ success: false, message: "Secret key has already been revealed once." });
+      return res.status(400).json({ success: false, data: {}, message: "Secret key has already been revealed once." });
     }
 
     if (!project.secretKeyEncrypted || !project.secretKeyEncrypted.encrypted) {
-      return res.status(404).json({ success: false, message: "Secret key cannot be decrypted (it may have been rolled or cleared)." });
+      return res.status(404).json({ success: false, data: {}, message: "Secret key cannot be decrypted (it may have been rolled or cleared)." });
     }
 
     const decryptedKey = decrypt(project.secretKeyEncrypted);
@@ -2956,6 +2956,6 @@ module.exports.revealSecretKey = async (req, res) => {
 
     res.json({ success: true, data: { secretKey: decryptedKey }, message: "Secret key revealed successfully." });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, data: {}, message: err.message });
   }
 };

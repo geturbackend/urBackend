@@ -484,7 +484,7 @@ module.exports.sendOtp = async (req, res, next) => {
             if (process.env.NODE_ENV !== 'production' || emailErr.message?.includes('testing emails')) {
                 console.log(`\n==================================================`);
                 console.log(`[DEV MODE] Failed to send email via Resend sandbox.`);
-                console.log(`OTP code for ${email} is: ${otp}`);
+                console.log(`OTP code for ${email} was generated but could not be sent.`);
                 console.log(`==================================================\n`);
             } else {
                 throw emailErr;
@@ -540,7 +540,7 @@ module.exports.forgotPassword = async (req, res, next) => {
             if (process.env.NODE_ENV !== 'production' || emailErr.message?.includes('testing emails')) {
                 console.log(`\n==================================================`);
                 console.log(`[DEV MODE] Failed to send email via Resend sandbox.`);
-                console.log(`Password reset OTP code for ${email} is: ${otp}`);
+                console.log(`Password reset OTP code for ${email} was generated but could not be sent.`);
                 console.log(`==================================================\n`);
             } else {
                 throw emailErr;

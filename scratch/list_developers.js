@@ -6,12 +6,20 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 
 async function list() {
     await connectDB();
-    const developers = await Developer.find({});
-    console.log("All developers in DB:");
-    developers.forEach(d => {
-        console.log(`- Email: ${d.email}, isVerified: ${d.isVerified}`);
-    });
-    await mongoose.connection.close();
+    try {
+        const developers = await Developer.find({});
+        console.log("All developers in DB:");
+        developers.forEach(d => {
+            let maskedEmail = d.email;
+            if (maskedEmail && maskedEmail.includes('@')) {
+                const [user, domain] = maskedEmail.split('@');
+                maskedEmail = user.slice(0, 3) + '***@' + domain;
+            }
+            console.log(`- Email: ${maskedEmail}, isVerified: ${d.isVerified}`);
+        });
+    } finally {
+        await mongoose.connection.close();
+    }
 }
 
 list().catch(console.error);
