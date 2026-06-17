@@ -21,6 +21,7 @@ import {
     Eye,
     EyeOff
 } from 'lucide-react';
+import Hyperspeed from '../components/Hyperspeed/Hyperspeed';
 
 const PRIMITIVE_TYPES = ['String', 'Number', 'Boolean', 'Date'];
 
@@ -369,6 +370,7 @@ export default function Onboarding() {
 
     return (
         <div style={{
+            position: 'relative',
             width: '100%',
             minHeight: '100vh',
             display: 'flex',
@@ -376,12 +378,34 @@ export default function Onboarding() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '2rem 1rem',
+            overflow: 'hidden',
             fontFamily: 'Inter, system-ui, sans-serif',
             color: '#f3f4f6',
-            background: '#0b0f19'
+            background: '#000000'
         }}>
 
+            {/* Hyperspeed animated background (Lightweight for performance) */}
+            <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+                <Hyperspeed effectOptions={{
+                    speedUp: 2,
+                    totalSideLightSticks: 5,     // Light weight
+                    lightPairsPerRoadWay: 15,    // Light weight
+                    colors: {
+                        roadColor: 0x080808,
+                        islandColor: 0x0a0a0a,
+                        background: 0x000000,
+                        shoulderLines: 0x131318,
+                        brokenLines: 0x131318,
+                        leftCars: [0x10b981, 0x34d399, 0x059669], // Green cars to match theme
+                        rightCars: [0x10b981, 0x34d399, 0x059669],
+                        sticks: 0x10b981,
+                    }
+                }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.95) 100%)', zIndex: 1 }} />
+            </div>
 
+            {/* Content wrapper so it sits above background */}
+            <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: '600px', margin: '0 auto' }}>
             {/* Custom styles override */}
             <style>{`
                 .flat-container {
@@ -391,8 +415,8 @@ export default function Onboarding() {
                     width: 100%;
                 }
                 .form-input {
-                    background: rgba(15, 23, 42, 0.6);
-                    border: 1px solid rgba(255, 255, 255, 0.12);
+                    background: #111111;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
                     color: #fff;
                     padding: 0.75rem 1rem;
                     border-radius: 8px;
@@ -918,6 +942,7 @@ export default function Onboarding() {
                     </div>
                 )}
             </div>
+        </div>
         </div>
     );
 }
