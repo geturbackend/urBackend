@@ -875,7 +875,7 @@ module.exports.createCollection = async (req, res) => {
   };
 
   if (!req.user.onboarding?.completed) {
-    const { projectId } = req.body;
+    const projectId = sanitizeObjectId(req.body.projectId);
     const project = await Project.findOne({ _id: projectId, owner: req.user._id });
     if (project) {
       const customCol = project.collections.find(c => c.name !== 'users');
