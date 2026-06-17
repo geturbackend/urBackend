@@ -369,7 +369,7 @@ export default function Onboarding() {
 
     // Interpolated Code Samples
     const codeSamples = {
-        sdk: `import { URBackend } from '@urbackend/sdk';\n\nconst client = new URBackend({\n    publicKey: "${publishableKey || 'pk_live_••••••••'}"\n});\n\n// Fetch items\nconst items = await client.collection('${collectionName}').find();\nconsole.log(items);`,
+        sdk: `import { URBackend } from '@urbackend/sdk';\n\nconst client = new URBackend({\n    publicKey: "${publishableKey || 'pk_live_••••••••'}"\n});\n\n// Create a record\n/*\nawait client.collection('${collectionName}').create({\n    // your fields here\n});\n*/\n\n// Fetch items\nconst items = await client.collection('${collectionName}').find();\nconsole.log(items);`,
         fetch: `// Fetch from public API\nfetch('${PUBLIC_API_URL}/api/data/${collectionName}', {\n    headers: {\n        'x-api-key': '${publishableKey || 'pk_live_••••••••'}'\n    }\n})\n.then(res => res.json())\n.then(data => console.log(data));`,
         curl: `curl -H "x-api-key: ${publishableKey || 'pk_live_••••••••'}" \\\n     ${PUBLIC_API_URL}/api/data/${collectionName}`
     };
@@ -832,8 +832,9 @@ export default function Onboarding() {
                                         >
                                             {testLoading ? <RefreshCw className="animate-spin" size={16} /> : <Play size={16} />} Test API
                                         </button>
-                                        <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
-                                            Trigger a live query to <code>GET /api/data/{collectionName}</code>
+                                        <span style={{ fontSize: '0.8rem', color: '#9ca3af', lineHeight: '1.4' }}>
+                                            Trigger a live query to <code>GET /api/data/{collectionName}</code>.<br/>
+                                            Since your collection is new, this will return an empty list <code>[]</code>.
                                         </span>
                                     </div>
 
