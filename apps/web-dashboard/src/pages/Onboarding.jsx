@@ -21,8 +21,6 @@ import {
     Eye,
     EyeOff
 } from 'lucide-react';
-import Hyperspeed from '../components/Hyperspeed/Hyperspeed';
-import BorderGlow from '../components/BorderGlow/BorderGlow';
 
 const PRIMITIVE_TYPES = ['String', 'Number', 'Boolean', 'Date'];
 
@@ -310,13 +308,15 @@ export default function Onboarding() {
 
         // Fetch collection name from project
         try {
-            const projRes = await api.get(`/api/projects/${progress.projectId}`);
-            const projectData = projRes.data.data || projRes.data;
-            const collections = projectData.collections || [];
-            // Find the non-users collection
-            const nonUsersCollections = collections.filter(c => c.name !== 'users');
-            const col = nonUsersCollections.find(c => c._id === progress.collectionId) || nonUsersCollections[0] || { name: 'products' };
-            const colName = col.name;
+            let colName = collectionName;
+            // If they skipped creating a collection in this session, fall back to what's in the DB
+            if (!colName || colName === 'products') {
+                const projRes = await api.get(`/api/projects/${progress.projectId}`);
+                const projectData = projRes.data.data || projRes.data;
+                const collections = projectData.collections || [];
+                const nonUsersCollections = collections.filter(c => c.name !== 'users');
+                colName = nonUsersCollections.find(c => c._id === progress.collectionId)?.name || nonUsersCollections[nonUsersCollections.length - 1]?.name || 'products';
+            }
 
             const url = `${PUBLIC_API_URL}/api/data/${colName}`;
             const headers = {
@@ -346,7 +346,11 @@ export default function Onboarding() {
     };
 
     const handleFinishOnboarding = async () => {
-        // Direct redirect to dashboard since completed will be true in background
+        try {
+            await api.patch('/api/user/onboarding', { completed: true });
+        } catch (e) {
+            console.error("Failed to mark onboarding as completed", e);
+        }
         await refreshUser();
         navigate('/dashboard');
     };
@@ -365,7 +369,6 @@ export default function Onboarding() {
 
     return (
         <div style={{
-            position: 'relative',
             width: '100%',
             minHeight: '100vh',
             display: 'flex',
@@ -373,36 +376,19 @@ export default function Onboarding() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '2rem 1rem',
-            overflow: 'hidden',
             fontFamily: 'Inter, system-ui, sans-serif',
-            color: '#f3f4f6'
+            color: '#f3f4f6',
+            background: '#0b0f19'
         }}>
-            {/* Hyperspeed animated background */}
-            <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-                <Hyperspeed effectOptions={{
-                    speedUp: 2,
-                    colors: {
-                        roadColor: 0x080808,
-                        islandColor: 0x0a0a0a,
-                        background: 0x000000,
-                        shoulderLines: 0x131318,
-                        brokenLines: 0x131318,
-                        leftCars: [0xd856bf, 0x6750a2, 0xc247ac],
-                        rightCars: [0x03b3c3, 0x0e5ea5, 0x324555],
-                        sticks: 0x03b3c3,
-                    }
-                }} />
-                {/* Overlay to dim background and make text readable */}
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.8) 100%)', zIndex: 1 }} />
-            </div>
+
 
             {/* Custom styles override */}
             <style>{`
-                .glass-card {
-                    background: rgba(17, 24, 39, 0.7);
-                    border: 1px solid rgba(255, 255, 255, 0.08);
-                    backdrop-filter: blur(12px);
-                    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+                .flat-container {
+                    background: transparent;
+                    border: none;
+                    box-shadow: none;
+                    width: 100%;
                 }
                 .form-input {
                     background: rgba(15, 23, 42, 0.6);
@@ -492,12 +478,7 @@ export default function Onboarding() {
                 {/* SCREEN 1: Project Creation */}
                 {/* ---------------------------------------------------- */}
                 {isProjectStep && (
-                    <BorderGlow
-                        glowColor="#10b981"
-                        backgroundColor="rgba(10, 10, 10, 0.7)"
-                        className="glass-card"
-                        style={{ padding: '2.5rem', borderRadius: '16px', backdropFilter: 'blur(16px)', width: '100%' }}
-                    >
+                    <div className="flat-container">
                         <div style={{ marginBottom: '2rem' }}>
                             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Step 1 of 3</span>
                             <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: '0.5rem', letterSpacing: '-0.02em' }}>Create your first backend</h2>
@@ -595,19 +576,14 @@ export default function Onboarding() {
                                 </button>
                             </form>
                         )}
-                    </BorderGlow>
+                    </div>
                 )}
 
                 {/* ---------------------------------------------------- */}
                 {/* SCREEN 2: Collection Builder */}
                 {/* ---------------------------------------------------- */}
                 {isCollectionStep && (
-                    <BorderGlow
-                        glowColor="#10b981"
-                        backgroundColor="rgba(10, 10, 10, 0.7)"
-                        className="glass-card"
-                        style={{ padding: '2.5rem', borderRadius: '16px', backdropFilter: 'blur(16px)', width: '100%' }}
-                    >
+                    <div className="flat-container">
                         <div style={{ marginBottom: '2rem' }}>
                             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Step 2 of 3</span>
                             <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: '0.5rem', letterSpacing: '-0.02em' }}>Create your first collection</h2>
@@ -724,19 +700,14 @@ export default function Onboarding() {
                                 </button>
                             </form>
                         )}
-                    </BorderGlow>
+                    </div>
                 )}
 
                 {/* ---------------------------------------------------- */}
-                {/* SCREEN 3: API testing and completion */}
+                {/* SCREEN 3: Test API */}
                 {/* ---------------------------------------------------- */}
                 {isApiStep && (
-                    <BorderGlow
-                        glowColor="#10b981"
-                        backgroundColor="rgba(10, 10, 10, 0.7)"
-                        className="glass-card"
-                        style={{ padding: '2.5rem', borderRadius: '16px', position: 'relative' }}
-                    >
+                    <div className="flat-container">
                         <div style={{ marginBottom: '2rem' }}>
                             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Step 3 of 3</span>
                             <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: '0.5rem', letterSpacing: '-0.02em' }}>Your backend is ready 🚀</h2>
@@ -944,7 +915,7 @@ export default function Onboarding() {
                                 </div>
                             </div>
                         )}
-                    </BorderGlow>
+                    </div>
                 )}
             </div>
         </div>
