@@ -40,16 +40,17 @@ module.exports.getGlobalStats = async (req, res, next) => {
     const totalRequests = await Log.countDocuments({ projectId: { $in: projectIds } });
     const totalWebhooks = await Webhook.countDocuments({ projectId: { $in: projectIds } });
 
-    let totalUsers = 0;
-    for (const project of projects) {
+    const userCountPromises = projects.map(async (project) => {
       try {
         const conn = await getConnection(project._id.toString());
-        const userCount = await conn.collection('users').countDocuments();
-        totalUsers += userCount;
+        return await conn.collection('users').countDocuments();
       } catch (err) {
         console.error(`Failed to count users for project ${project._id}:`, err.message);
+        return 0;
       }
-    }
+    });
+    const userCounts = await Promise.all(userCountPromises);
+    const totalUsers = userCounts.reduce((sum, count) => sum + count, 0);
 
     const effectivePlan = resolveEffectivePlan(dev);
     const limits = getPlanLimits({
