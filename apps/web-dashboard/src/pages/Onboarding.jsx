@@ -21,6 +21,8 @@ import {
     Eye,
     EyeOff
 } from 'lucide-react';
+import Hyperspeed from '../components/Hyperspeed/Hyperspeed';
+import BorderGlow from '../components/BorderGlow/BorderGlow';
 
 const PRIMITIVE_TYPES = ['String', 'Number', 'Boolean', 'Date'];
 
@@ -312,7 +314,8 @@ export default function Onboarding() {
             const projectData = projRes.data.data || projRes.data;
             const collections = projectData.collections || [];
             // Find the non-users collection
-            const col = collections.find(c => c._id === progress.collectionId) || collections.find(c => c.name !== 'users') || { name: 'products' };
+            const nonUsersCollections = collections.filter(c => c.name !== 'users');
+            const col = nonUsersCollections.find(c => c._id === progress.collectionId) || nonUsersCollections[0] || { name: 'products' };
             const colName = col.name;
 
             const url = `${PUBLIC_API_URL}/api/data/${colName}`;
@@ -362,17 +365,37 @@ export default function Onboarding() {
 
     return (
         <div style={{
+            position: 'relative',
+            width: '100%',
             minHeight: '100vh',
-            background: '#0b0f19',
-            color: '#f3f4f6',
-            fontFamily: 'Inter, system-ui, sans-serif',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'center',
             alignItems: 'center',
+            justifyContent: 'center',
             padding: '2rem 1rem',
-            boxSizing: 'border-box'
+            overflow: 'hidden',
+            fontFamily: 'Inter, system-ui, sans-serif',
+            color: '#f3f4f6'
         }}>
+            {/* Hyperspeed animated background */}
+            <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+                <Hyperspeed effectOptions={{
+                    speedUp: 2,
+                    colors: {
+                        roadColor: 0x080808,
+                        islandColor: 0x0a0a0a,
+                        background: 0x000000,
+                        shoulderLines: 0x131318,
+                        brokenLines: 0x131318,
+                        leftCars: [0xd856bf, 0x6750a2, 0xc247ac],
+                        rightCars: [0x03b3c3, 0x0e5ea5, 0x324555],
+                        sticks: 0x03b3c3,
+                    }
+                }} />
+                {/* Overlay to dim background and make text readable */}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.8) 100%)', zIndex: 1 }} />
+            </div>
+
             {/* Custom styles override */}
             <style>{`
                 .glass-card {
@@ -397,15 +420,15 @@ export default function Onboarding() {
                 }
                 .btn-primary {
                     background: #10b981;
-                    color: #061f14;
-                    font-weight: 700;
+                    color: white;
                     border: none;
                     padding: 0.75rem 1.5rem;
                     border-radius: 8px;
+                    font-weight: 600;
                     cursor: pointer;
                     display: inline-flex;
                     alignItems: center;
-                    justify-content: center;
+                    justifyContent: center;
                     gap: 8px;
                     transition: all 0.2s ease;
                 }
@@ -445,12 +468,12 @@ export default function Onboarding() {
                 }
             `}</style>
 
-            <div style={{ width: '100%', maxWidth: '780px', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <div style={{ width: '100%', maxWidth: '780px', display: 'flex', flexDirection: 'column', gap: '2rem', position: 'relative', zIndex: 10 }}>
                 
                 {/* Header Wizard Indicators */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10b981', tracking: '-0.03em' }}>urBackend</span>
+                        <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10b981', letterSpacing: '-0.03em' }}>urBackend</span>
                         <span style={{ color: '#4b5563', fontSize: '0.9rem' }}>/</span>
                         <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#9ca3af' }}>onboarding</span>
                     </div>
@@ -469,7 +492,12 @@ export default function Onboarding() {
                 {/* SCREEN 1: Project Creation */}
                 {/* ---------------------------------------------------- */}
                 {isProjectStep && (
-                    <div className="glass-card" style={{ padding: '2.5rem', borderRadius: '16px' }}>
+                    <BorderGlow
+                        glowColor="#10b981"
+                        backgroundColor="rgba(10, 10, 10, 0.7)"
+                        className="glass-card"
+                        style={{ padding: '2.5rem', borderRadius: '16px', backdropFilter: 'blur(16px)', width: '100%' }}
+                    >
                         <div style={{ marginBottom: '2rem' }}>
                             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Step 1 of 3</span>
                             <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: '0.5rem', letterSpacing: '-0.02em' }}>Create your first backend</h2>
@@ -567,14 +595,19 @@ export default function Onboarding() {
                                 </button>
                             </form>
                         )}
-                    </div>
+                    </BorderGlow>
                 )}
 
                 {/* ---------------------------------------------------- */}
                 {/* SCREEN 2: Collection Builder */}
                 {/* ---------------------------------------------------- */}
                 {isCollectionStep && (
-                    <div className="glass-card" style={{ padding: '2.5rem', borderRadius: '16px' }}>
+                    <BorderGlow
+                        glowColor="#3b82f6"
+                        backgroundColor="rgba(10, 10, 10, 0.7)"
+                        className="glass-card"
+                        style={{ padding: '2.5rem', borderRadius: '16px', backdropFilter: 'blur(16px)', width: '100%' }}
+                    >
                         <div style={{ marginBottom: '2rem' }}>
                             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Step 2 of 3</span>
                             <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: '0.5rem', letterSpacing: '-0.02em' }}>Create your first collection</h2>
@@ -691,14 +724,19 @@ export default function Onboarding() {
                                 </button>
                             </form>
                         )}
-                    </div>
+                    </BorderGlow>
                 )}
 
                 {/* ---------------------------------------------------- */}
                 {/* SCREEN 3: API testing and completion */}
                 {/* ---------------------------------------------------- */}
                 {isApiStep && (
-                    <div className="glass-card" style={{ padding: '2.5rem', borderRadius: '16px', position: 'relative' }}>
+                    <BorderGlow
+                        glowColor="#8b5cf6"
+                        backgroundColor="rgba(10, 10, 10, 0.7)"
+                        className="glass-card"
+                        style={{ padding: '2.5rem', borderRadius: '16px', position: 'relative' }}
+                    >
                         <div style={{ marginBottom: '2rem' }}>
                             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Step 3 of 3</span>
                             <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginTop: '0.5rem', letterSpacing: '-0.02em' }}>Your backend is ready 🚀</h2>
@@ -898,7 +936,7 @@ export default function Onboarding() {
                                 </div>
                             </div>
                         )}
-                    </div>
+                    </BorderGlow>
                 )}
             </div>
         </div>
