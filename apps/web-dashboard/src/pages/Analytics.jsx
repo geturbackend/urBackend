@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import api from '../utils/api';
 import { 
     AreaChart, Area, LineChart, Line, BarChart, Bar, 
@@ -52,7 +52,7 @@ const RANGE_OPTIONS = [
 
 export default function Analytics() {
     const { projectId } = useParams();
-    const navigate = useNavigate();
+
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -153,13 +153,15 @@ export default function Analytics() {
                     <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '2rem' }}>
                         Track request counts, latency metrics, error rates, and storage usage in real-time.
                     </p>
-                    <button 
-                        onClick={() => navigate('/docs')} 
+                    <a 
+                        href="https://docs.ub.bitbros.in/" 
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="btn btn-primary" 
-                        style={{ fontSize: '0.9rem', height: '40px', padding: '0 24px', fontWeight: 600 }}
+                        style={{ fontSize: '0.9rem', height: '40px', padding: '0 24px', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}
                     >
                         View Documentation
-                    </button>
+                    </a>
                 </div>
             ) : (
                 <>
