@@ -262,34 +262,7 @@ function ProjectDetails() {
                                     {project.collections?.length || 0} collections
                                 </span>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Activation Status</span>
-                                    <span 
-                                      style={{ cursor: 'help', color: 'var(--color-text-muted)', fontSize: '0.75rem' }} 
-                                      title="Indicates whether your project has received its first successful API call."
-                                    >
-                                      ❓
-                                    </span>
-                                </div>
-                                <span style={{ 
-                                    fontSize: '0.8rem', 
-                                    fontWeight: 600, 
-                                    color: user?.onboarding?.steps?.firstApiCall ? '#10b981' : 'var(--color-text-muted)', 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: '6px' 
-                                }}>
-                                    <span style={{ 
-                                        width: '8px', 
-                                        height: '8px', 
-                                        borderRadius: '50%', 
-                                        background: user?.onboarding?.steps?.firstApiCall ? '#10b981' : '#6b7280', 
-                                        display: 'inline-block' 
-                                    }} /> 
-                                    {user?.onboarding?.steps?.firstApiCall ? 'Active' : 'Inactive'}
-                                </span>
-                            </div>
+
                         </div>
                     </section>
 
@@ -382,7 +355,7 @@ function ProjectDetails() {
                                             </button>
                                         ) : (
                                             <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', alignSelf: 'center', paddingRight: '12px' }}>
-                                                Already Revealed
+                                                Regenerate to get a new key
                                             </span>
                                         )}
                                     </div>
