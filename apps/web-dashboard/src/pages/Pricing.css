@@ -1,9 +1,28 @@
 .pricing-page {
-  min-height: 100vh;
+  --nav-height: 70px;
+  min-height: 100svh;
   background: #000;
   color: #fff;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.pricing-page::-webkit-scrollbar {
+  display: none;
+}
+
+html:has(.pricing-page),
+body:has(.pricing-page) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html:has(.pricing-page)::-webkit-scrollbar,
+body:has(.pricing-page)::-webkit-scrollbar {
+  display: none;
 }
 
 .pricing-header {
@@ -56,8 +75,16 @@
   flex: 1;
   max-width: 1100px;
   margin: 0 auto;
-  padding: 4rem 1.5rem 5rem;
   width: 100%;
+  box-sizing: border-box;
+  padding: calc(1.5rem + var(--nav-height) + 2rem) 1.5rem 4rem;
+}
+
+@media (max-width: 900px) {
+  .pricing-main {
+    padding-top: calc(1rem + var(--nav-height) + 1.25rem);
+    padding-bottom: 3rem;
+  }
 }
 
 .pricing-hero {

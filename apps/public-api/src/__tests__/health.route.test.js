@@ -12,6 +12,8 @@ jest.mock('mongoose', () => ({
 }));
 
 jest.mock('@urbackend/common', () => ({
+    AppError: class AppError extends Error { constructor(code, msg, errTitle) { super(msg); this.statusCode=code; this.error=errTitle||'Error'; } },
+    ApiResponse: class ApiResponse { constructor(d, m) { this.data=d; this.message=m; this.success=true; } send(res, code) { return res.status(code).json({ success: this.success, data: this.data, message: this.message }); } },
     redis: mockRedis,
 }));
 
@@ -31,18 +33,22 @@ describe('health route', () => {
 
         app = express();
         app.use('/api/health', healthRoute);
+        app.use((err, req, res, next) => {
+            res.status(err.statusCode || 500).json({ success: false, error: err.error, message: err.message });
+        });
     });
 
     test('returns ok when mongodb and redis are connected', async () => {
         const res = await request(app).get('/api/health');
 
         expect(res.status).toBe(200);
-        expect(res.body.status).toBe('ok');
-        expect(res.body.dependencies).toEqual({
+        expect(res.body.success).toBe(true);
+        expect(res.body.data.status).toBe('ok');
+        expect(res.body.data.dependencies).toEqual({
             mongodb: 'connected',
             redis: 'connected',
         });
-        expect(typeof res.body.timestamp).toBe('string');
+        expect(typeof res.body.data.timestamp).toBe('string');
         expect(mockRedis.ping).toHaveBeenCalledTimes(1);
     });
 
@@ -52,11 +58,8 @@ describe('health route', () => {
         const res = await request(app).get('/api/health');
 
         expect(res.status).toBe(503);
-        expect(res.body.status).toBe('error');
-        expect(res.body.dependencies).toEqual({
-            mongodb: 'disconnected',
-            redis: 'connected',
-        });
+        expect(res.body.success).toBe(false);
+        expect(res.body.message).toBe('Service unavailable');
     });
 
     test('returns error when redis is not responsive', async () => {
@@ -65,10 +68,7 @@ describe('health route', () => {
         const res = await request(app).get('/api/health');
 
         expect(res.status).toBe(503);
-        expect(res.body.status).toBe('error');
-        expect(res.body.dependencies).toEqual({
-            mongodb: 'connected',
-            redis: 'disconnected',
-        });
+        expect(res.body.success).toBe(false);
+        expect(res.body.message).toBe('Service unavailable');
     });
 });

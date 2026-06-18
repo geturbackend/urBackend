@@ -93,8 +93,9 @@ app.get('/', (req, res) => {
 app.use((err, req, res, next) => {
     if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
         return res.status(400).json({
-            error: "Invalid JSON format",
-            message: "Check your request body syntax. Stray characters outside the JSON object are not allowed."
+            success: false,
+            data: {},
+            message: "Invalid JSON format: Check your request body syntax. Stray characters outside the JSON object are not allowed."
         });
     }
 
@@ -103,21 +104,26 @@ app.use((err, req, res, next) => {
     if (err.isOperational && err.statusCode) {
         return res.status(err.statusCode).json({
             success: false,
-            data: {},
+            data: err.error ? { error: err.error } : {},
             message: err.message
         });
     }
 
     console.error("🔥 Unhandled Error:", err.stack);
     res.status(500).json({
-        error: "Something went wrong!",
-        message: err.message
+        success: false,
+        data: {},
+        message: "Something went wrong!"
     });
 });
 
 app.use((req, res) => {
     const id = res.get("X-Kiroo-Replay-ID");
-    res.json({error: "Not Found", replayId: id})   
+    res.status(404).json({
+        success: false,
+        data: { replayId: id },
+        message: "Not Found"
+    });
 })
 // INITIALIZATION
 if (process.env.NODE_ENV !== 'test') {

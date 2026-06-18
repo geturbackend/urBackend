@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import ScrollToTop from './components/Layout/ScrollToTop';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import MainLayout from './components/Layout/MainLayout';
@@ -50,6 +51,8 @@ function AppContent() {
           }
         }}
       />
+
+      <ScrollToTop />
 
       <Routes>
         <Route path="/" element={<LandingPage />} />

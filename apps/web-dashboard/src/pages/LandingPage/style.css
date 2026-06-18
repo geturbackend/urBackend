@@ -1,5 +1,6 @@
 /* --- LANDING SPECIFIC STYLES --- */
 .landing-page {
+    --nav-height: 70px;
     background-color: #030303;
     color: #fcfcfc;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -8,6 +9,23 @@
     letter-spacing: -0.01em;
     line-height: 1.6;
     position: relative;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.landing-page::-webkit-scrollbar {
+    display: none;
+}
+
+html:has(.landing-page),
+body:has(.landing-page) {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+html:has(.landing-page)::-webkit-scrollbar,
+body:has(.landing-page)::-webkit-scrollbar {
+    display: none;
 }
 
 /* Text Selection Color */
@@ -84,7 +102,6 @@
 
 /* NAVBAR */
 .nav-glass {
-    --nav-height: 70px;
     background: rgba(10, 8, 15, 0.5);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -127,6 +144,26 @@
     align-items: center;
     padding: 0.5rem 1.5rem 0.5rem 2rem;
     gap: 1.5rem;
+}
+
+@media (min-width: 1201px) {
+    .nav-container {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+    }
+
+    .nav-logo {
+        justify-self: start;
+    }
+
+    .nav-links {
+        justify-self: center;
+    }
+
+    .nav-actions {
+        justify-self: end;
+    }
 }
 
 .nav-logo {
@@ -264,21 +301,45 @@
     padding: 0.5rem;
 }
 
-@media(max-width: 1024px) {
+@media (max-width: 1200px) {
     .nav-links {
-        display: none;
+        display: none !important;
     }
-    
+
     .mobile-menu-btn {
         display: flex;
+        align-items: center;
+        justify-content: center;
     }
-    
+
     .nav-btn-ghost {
         display: none;
     }
-    
+
     .nav-container {
-        padding: 0.6rem 1.25rem;
+        display: flex;
+        justify-content: space-between;
+        padding: 0.6rem 1rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .nav-actions .nav-btn-primary {
+        display: none;
+    }
+
+    .nav-glass {
+        width: calc(100% - 1.5rem);
+        top: 1rem;
+    }
+
+    .nav-scrolled {
+        width: calc(100% - 1rem);
+        top: 0.5rem;
+    }
+
+    .nav-logo img {
+        height: 32px;
     }
 }
 
@@ -429,20 +490,30 @@
 
 /* HERO SPLIT LAYOUT */
 .hero-section {
+    --hero-nav-offset: calc(1.5rem + var(--nav-height, 70px) + 0.5rem);
     position: relative;
-    padding: 2rem 1.5rem 8rem;
+    min-height: 100svh;
+    box-sizing: border-box;
+    padding: var(--hero-nav-offset) 1.5rem 2.5rem;
     z-index: 1;
-    min-height: calc(100vh - 80px);
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
-    margin-top: var(--nav-height, 80px);
+    margin-top: 0;
 }
 
-@media(max-width: 1024px) {
+@media (max-width: 1200px) {
     .hero-section {
-        min-height: auto;
-        padding: 6rem 1.5rem 4rem;
+        --hero-nav-offset: calc(1rem + var(--nav-height, 70px) + 0.5rem);
+        padding-bottom: 2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero-section {
+        --hero-nav-offset: calc(1rem + var(--nav-height, 70px) + 0.25rem);
+        min-height: calc(100svh - 1rem);
+        padding-bottom: 1.5rem;
     }
 }
 
@@ -1654,6 +1725,10 @@
 }
 
 /* Active connection line when hovered */
+.orbit-item-wrapper:has(.orbit-logo-card:hover) .orbit-connect-line {
+    opacity: 1;
+}
+
 .orbit-item-wrapper.active .orbit-connect-line {
     opacity: 1;
 }
@@ -1749,18 +1824,6 @@
 @media(max-width: 768px) {
     .hero-heading {
         font-size: 2rem;
-    }
-
-    .nav-links {
-        display: none;
-    }
-
-    .mobile-menu-btn {
-        display: block;
-    }
-
-    .hero-section {
-        padding-top: 1rem;
     }
 
     .hero-flow {
@@ -1979,26 +2042,81 @@
 
 .mobile-menu-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(8, 6, 12, 0.85);
+    inset: 0;
+    background: rgba(8, 6, 12, 0.92);
     backdrop-filter: blur(30px);
     -webkit-backdrop-filter: blur(30px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    z-index: 49;
-    padding-top: 100px;
+    z-index: 99;
+    padding: calc(var(--nav-height, 70px) + 2.5rem) 1.5rem 2rem;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2rem;
-    transform: translateY(-100%);
-    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    gap: 1.5rem;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.mobile-menu-overlay::-webkit-scrollbar {
+    display: none;
 }
 
 .mobile-menu-overlay.open {
-    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.mobile-menu-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #fff;
+    text-decoration: none;
+    padding: 0.35rem 0.5rem;
+    border-radius: 8px;
+    transition: color 0.2s ease;
+}
+
+.mobile-menu-link:hover {
+    color: #00f5d4;
+}
+
+.mobile-menu-link svg {
+    color: #00f5d4;
+    flex-shrink: 0;
+}
+
+.mobile-menu-divider {
+    height: 1px;
+    width: 60px;
+    background: #333;
+    margin: 0.5rem 0;
+}
+
+.mobile-menu-auth {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.mobile-menu-login {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #aaa;
+    text-decoration: none;
+}
+
+.mobile-menu-login:hover {
+    color: #fff;
 }
 
 /* BYOM Callout Section */
@@ -3881,4 +3999,23 @@
     background: rgba(39, 201, 63, 0.08);
     padding: 0.1rem 0.35rem;
     border-radius: 4px;
+}
+
+.services-bento-placeholder {
+    min-height: 520px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .orbit-inner-wrapper,
+    .orbit-mid-wrapper,
+    .orbit-outer-wrapper,
+    .orbit-dust,
+    .orbit-sun-glow,
+    .orbit-sun-ring-1,
+    .orbit-sun-ring-2,
+    .orbit-connect-line::after,
+    .hero-glow,
+    .byom-pipe-particle {
+        animation: none !important;
+    }
 }

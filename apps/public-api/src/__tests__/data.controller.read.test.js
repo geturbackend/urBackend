@@ -24,7 +24,9 @@ const mockQueryEngine = jest.fn((query) => {
 });
 
 jest.mock('@urbackend/common', () => ({
-    sanitize: (v) => v,
+    AppError: class AppError extends Error { constructor(code, msg, errTitle) { super(msg); this.statusCode=code; this.error=errTitle||'Error'; } },
+    ApiResponse: class ApiResponse { constructor(d, m) { this.data=d; this.message=m; this.success=true; } send(res, code) { return res.status(code).json({ success: this.success, data: this.data, message: this.message }); } },
+sanitize: (v) => v,
     Project: {},
     getConnection: jest.fn().mockResolvedValue({}),
     getCompiledModel: jest.fn((connection, collectionConfig, projectId, isExternal) => ({
@@ -57,6 +59,7 @@ jest.mock('@urbackend/common', () => ({
     validateUpdateData: jest.fn(),
 }));
 
+const { AppError } = require('@urbackend/common');
 const { getAllData, getSingleDoc } = require('../controllers/data.controller');
 
 function makeReq(overrides = {}) {
@@ -92,16 +95,19 @@ function makeRes() {
 }
 
 describe('data.controller read RLS filters', () => {
+    let next;
+
     beforeEach(() => {
         jest.clearAllMocks();
         mockEnginePopulate.mockClear();
+        next = jest.fn();
     });
 
     test('getAllData applies rlsFilter to find()', async () => {
         const req = makeReq({ rlsFilter: { userId: 'user_1' } });
         const res = makeRes();
 
-        await getAllData(req, res);
+        await getAllData(req, res, next);
 
         expect(mockFind).toHaveBeenCalledWith();
         expect(mockAnd).toHaveBeenCalledWith([{ userId: 'user_1' }]);
@@ -111,8 +117,7 @@ describe('data.controller read RLS filters', () => {
     test('getSingleDoc applies rlsFilter to findOne()', async () => {
         const req = makeReq({ rlsFilter: { userId: 'user_1' } });
         const res = makeRes();
-
-        await getSingleDoc(req, res);
+        await getSingleDoc(req, res, next);
 
         expect(mockFindOne).toHaveBeenCalledWith({
             $and: [
@@ -127,8 +132,7 @@ describe('data.controller read RLS filters', () => {
     test('getAllData calls engine.populate() when populate param is provided', async () => {
         const req = makeReq({ query: { populate: 'author,comments' } });
         const res = makeRes();
-
-        await getAllData(req, res);
+        await getAllData(req, res, next);
 
         expect(mockQueryEngine).toHaveBeenCalled();
         expect(mockEnginePopulate).toHaveBeenCalled();
@@ -137,15 +141,14 @@ describe('data.controller read RLS filters', () => {
     test('getAllData does not forward populate/expand to Mongo filter', async () => {
         const req = makeReq({ query: { populate: 'author', expand: 'category', title: 'hello' } });
         const res = makeRes();
-
-        await getAllData(req, res);
+        await getAllData(req, res, next);
 
         // mockFind is called with the raw Mongoose query (no args for Model.find())
         // The real filter exclusion is tested via the QueryEngine directly,
         // but we confirm find() was invoked and the request did not error out.
         expect(mockFind).toHaveBeenCalledWith();
         expect(res.json).toHaveBeenCalled();
-        expect(res.status).not.toHaveBeenCalledWith(500);
+        expect(next).not.toHaveBeenCalled();
     });
 
     test('getAllData returns 400 when QueryEngine throws query validation error', async () => {
@@ -165,21 +168,17 @@ describe('data.controller read RLS filters', () => {
         const req = makeReq({ query: { name_regex: '[' } });
         const res = makeRes();
 
-        await getAllData(req, res);
+        await getAllData(req, res, next);
 
-        expect(res.status).toHaveBeenCalledWith(400);
-        expect(res.json).toHaveBeenCalledWith({
-            success: false,
-            data: {},
-            message: 'Invalid regex pattern for "name_regex".',
-        });
+        expect(next).toHaveBeenCalledWith(expect.any(AppError));
+        expect(next.mock.calls[0][0].statusCode).toBe(400);
+        expect(next.mock.calls[0][0].message).toContain('Invalid regex pattern for "name_regex".');
     });
 
     test('getSingleDoc calls populate on the query', async () => {
         const req = makeReq({ query: { populate: 'author' } });
         const res = makeRes();
-
-        await getSingleDoc(req, res);
+        await getSingleDoc(req, res, next);
 
         expect(mockPopulate).toHaveBeenCalledWith('author');
         expect(res.json).toHaveBeenCalled();
@@ -188,20 +187,18 @@ describe('data.controller read RLS filters', () => {
     test('getSingleDoc handles array-format populate param without crashing', async () => {
         const req = makeReq({ query: { populate: ['author', 'category'] } });
         const res = makeRes();
-
-        await getSingleDoc(req, res);
+        await getSingleDoc(req, res, next);
 
         expect(mockPopulate).toHaveBeenCalledWith('author');
         expect(mockPopulate).toHaveBeenCalledWith('category');
         expect(res.json).toHaveBeenCalled();
-        expect(res.status).not.toHaveBeenCalledWith(500);
+        expect(next).not.toHaveBeenCalled();
     });
 
     test('getSingleDoc excludes soft-deleted documents by default', async () => {
         const req = makeReq();
         const res = makeRes();
-
-        await getSingleDoc(req, res);
+        await getSingleDoc(req, res, next);
 
         expect(mockFindOne).toHaveBeenCalled();
         const findOneArgs = mockFindOne.mock.calls[0][0];
@@ -219,8 +216,7 @@ describe('data.controller read RLS filters', () => {
             rlsFilter: { ownerId: 'user_123' }
         });
         const res = makeRes();
-
-        await getSingleDoc(req, res);
+        await getSingleDoc(req, res, next);
 
         expect(mockFindOne).toHaveBeenCalled();
         const findOneArgs = mockFindOne.mock.calls[0][0];

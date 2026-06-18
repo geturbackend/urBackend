@@ -57,6 +57,11 @@ export default function Pricing() {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
+    document.body.style.overflow = '';
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
     };

@@ -361,7 +361,7 @@ const Hyperspeed = ({ effectOptions = DEFAULT_EFFECT_OPTIONS }) => {
           alpha: true
         });
         this.renderer.setSize(initW, initH, false);
-        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
         this.composer = new EffectComposer(this.renderer);
         container.append(this.renderer.domElement);
 
@@ -382,6 +382,7 @@ const Hyperspeed = ({ effectOptions = DEFAULT_EFFECT_OPTIONS }) => {
         this.clock = new THREE.Clock();
         this.assets = {};
         this.disposed = false;
+        this.paused = false;
 
         this.road = new Road(this, options);
         this.leftCarLights = new CarLights(
@@ -584,8 +585,20 @@ const Hyperspeed = ({ effectOptions = DEFAULT_EFFECT_OPTIONS }) => {
         this.composer.render(delta);
       }
 
+      pause() {
+        this.paused = true;
+      }
+
+      resume() {
+        if (this.disposed || !this.paused) return;
+        this.paused = false;
+        this.clock.getDelta();
+        requestAnimationFrame(this.tick);
+      }
+
       dispose() {
         this.disposed = true;
+        this.paused = true;
 
         if (this.scene) {
           this.scene.traverse(object => {
@@ -639,7 +652,7 @@ const Hyperspeed = ({ effectOptions = DEFAULT_EFFECT_OPTIONS }) => {
       }
 
       tick() {
-        if (this.disposed) return;
+        if (this.disposed || this.paused) return;
 
         if (!this.hasValidSize) {
           const w = this.container.offsetWidth;
@@ -1182,6 +1195,39 @@ const Hyperspeed = ({ effectOptions = DEFAULT_EFFECT_OPTIONS }) => {
       }
     };
   }, [effectOptions]);
+
+  useEffect(() => {
+    const el = hyperspeed.current;
+    if (!el) return;
+
+    const syncPauseState = (shouldPause) => {
+      if (!appRef.current) return;
+      if (shouldPause) appRef.current.pause();
+      else appRef.current.resume();
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => syncPauseState(!entry.isIntersecting),
+      { rootMargin: '80px', threshold: 0 }
+    );
+    observer.observe(el);
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        syncPauseState(true);
+        return;
+      }
+      const rect = el.getBoundingClientRect();
+      const inView = rect.bottom > 0 && rect.top < window.innerHeight;
+      syncPauseState(!inView);
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, []);
 
   return <div id="lights" ref={hyperspeed}></div>;
 };

@@ -1,4 +1,4 @@
-const { getStorage, getPresignedUploadUrl, verifyUploadedFile, Project, isProjectStorageExternal, getBucket, redis, getMonthKey, getEndOfMonthTtlSeconds, incrWithTtlAtomic } = require("@urbackend/common");
+const { getStorage, getPresignedUploadUrl, verifyUploadedFile, Project, isProjectStorageExternal, getBucket, redis, getMonthKey, getEndOfMonthTtlSeconds, incrWithTtlAtomic, AppError, ApiResponse } = require("@urbackend/common");
 const { randomUUID } = require("crypto");
 const path = require("path");
 
@@ -79,15 +79,15 @@ const bestEffortDeleteUploadedObject = async (project, filePath) => {
 
 // Upload File
 
-module.exports.uploadFile = async (req, res) => {
+module.exports.uploadFile = async (req, res, next) => {
     try {
         const file = req.file;
         if (!file) {
-            return res.status(400).json({ error: "No file uploaded." });
+            return next(new AppError(400, "No file uploaded."));
         }
 
         if (file.size > MAX_FILE_SIZE) {
-            return res.status(413).json({ error: "File size exceeds limit." });
+            return next(new AppError(413, "File size exceeds limit."));
         }
 
         const project = req.project;
@@ -110,7 +110,7 @@ module.exports.uploadFile = async (req, res) => {
                 );
 
                 if (result.matchedCount === 0) {
-                    return res.status(403).json({ error: "Storage limit exceeded. Please upgrade your plan or delete some files." });
+                    return next(new AppError(403, "Storage limit exceeded. Please upgrade your plan or delete some files."));
                 }
             } else {
                 const result = await Project.updateOne(
@@ -122,7 +122,7 @@ module.exports.uploadFile = async (req, res) => {
                 );
 
                 if (result.matchedCount === 0) {
-                    return res.status(403).json({ error: "Storage limit exceeded. Please upgrade your plan or delete some files." });
+                    return next(new AppError(403, "Storage limit exceeded. Please upgrade your plan or delete some files."));
                 }
             }
         }
@@ -159,31 +159,25 @@ module.exports.uploadFile = async (req, res) => {
 
         updateMonthlyUsageCounter(project._id, "storage:uploadedBytes", file.size);
 
-        return res.status(201).json({
-            message: "File uploaded successfully",
+        return new ApiResponse({
             url: publicUrlData.publicUrl,
             path: filePath,
             provider: external ? "external" : "internal"
-        });
+        }, "File uploaded successfully").send(res, 201);
     } catch (err) {
-        return res.status(500).json({
-            error: "File upload failed",
-            details:
-                process.env.NODE_ENV === "development"
-                    ? err.message
-                    : undefined
-        });
+        if (err instanceof AppError) return next(err);
+        return next(new AppError(500, process.env.NODE_ENV === "development" ? (err.message || "File upload failed") : "File upload failed"));
     }
 };
 
 /**
  * Delete File
  */
-module.exports.deleteFile = async (req, res) => {
+module.exports.deleteFile = async (req, res, next) => {
     try {
         const { path } = req.body;
         if (!path) {
-            return res.status(400).json({ error: "File path is required." });
+            return next(new AppError(400, "File path is required."));
         }
 
         const project = req.project;
@@ -192,7 +186,7 @@ module.exports.deleteFile = async (req, res) => {
         const normalizedPath = normalizeProjectPath(project._id, path);
 
         if (!normalizedPath) {
-            return res.status(403).json({ error: "Access denied." });
+            return next(new AppError(403, "Access denied."));
         }
 
         const supabase = await getStorage(project);
@@ -232,23 +226,18 @@ module.exports.deleteFile = async (req, res) => {
 
         updateMonthlyUsageCounter(project._id, "storage:deletedBytes", fileSize);
 
-        return res.json({ message: "File deleted successfully" });
+        return new ApiResponse({}, "File deleted successfully").send(res, 200);
     } catch (err) {
-        return res.status(500).json({
-            error: "File deletion failed",
-            details:
-                process.env.NODE_ENV === "development"
-                    ? err.message
-                    : undefined
-        });
+        if (err instanceof AppError) return next(err);
+        return next(new AppError(500, process.env.NODE_ENV === "development" ? (err.message || "File deletion failed") : "File deletion failed"));
     }
 };
 
-module.exports.deleteAllFiles = async (req, res) => {
+module.exports.deleteAllFiles = async (req, res, next) => {
     try {
         const project = req.project; // assuming middleware attaches project
         if (!project) {
-            return res.status(404).json({ error: "Project not found" });
+            return next(new AppError(404, "Project not found"));
         }
 
         const supabase = await getStorage(project);
@@ -288,35 +277,29 @@ module.exports.deleteAllFiles = async (req, res) => {
             );
         }
 
-        res.json({
-            success: true,
+        return new ApiResponse({
             deleted: deletedCount,
             provider: isProjectStorageExternal(project) ? "external" : "internal"
-        });
+        }).send(res, 200);
 
     } catch (err) {
-        res.status(500).json({
-            error: "Failed to delete files",
-            details:
-                process.env.NODE_ENV === "development"
-                    ? err.message
-                    : undefined
-        });
+        if (err instanceof AppError) return next(err);
+        return next(new AppError(500, process.env.NODE_ENV === "development" ? (err.message || "Failed to delete files") : "Failed to delete files"));
     }
 };
 
 
 // REQUEST UPLOAD - generates presigned URL for direct browser upload
-module.exports.requestUpload = async (req, res) => {
+module.exports.requestUpload = async (req, res, next) => {
     try {
         const { filename, contentType, size } = req.body;
         const numericSize = parsePositiveSize(size);
 
         if (!filename || !contentType || numericSize === null)
-            return res.status(400).json({ error: "filename, contentType, and size are required." });
+            return next(new AppError(400, "filename, contentType, and size are required."));
 
         if (numericSize > MAX_FILE_SIZE)
-            return res.status(413).json({ error: "File size exceeds limit." });
+            return next(new AppError(413, "File size exceeds limit."));
 
         const project = req.project;
         const external = isProjectStorageExternal(project);
@@ -326,7 +309,7 @@ module.exports.requestUpload = async (req, res) => {
         if (!external) {
             const quotaLimit = effectiveLimit === -1 ? SAFETY_MAX_BYTES : effectiveLimit;
             if (project.storageUsed + numericSize > quotaLimit)
-                return res.status(403).json({ error: "Internal storage limit exceeded." });
+                return next(new AppError(403, "Internal storage limit exceeded."));
         }
 
         const safeName = filename
@@ -337,23 +320,21 @@ module.exports.requestUpload = async (req, res) => {
 
         const { signedUrl, token } = await getPresignedUploadUrl(project, filePath, contentType, numericSize);
 
-        return res.status(200).json({ signedUrl, token, filePath });
+        return new ApiResponse({ signedUrl, token, filePath }).send(res, 200);
     } catch (err) {
-        return res.status(500).json({
-            error: "Could not generate upload URL",
-            details: process.env.NODE_ENV === "development" ? err.message : undefined
-        });
+        if (err instanceof AppError) return next(err);
+        return next(new AppError(500, process.env.NODE_ENV === "development" ? (err.message || "Could not generate upload URL") : "Could not generate upload URL"));
     }
 };
 
 // CONFIRM UPLOAD - verifies file landed on cloud, then charges quota
-module.exports.confirmUpload = async (req, res) => {
+module.exports.confirmUpload = async (req, res, next) => {
     try {
         const { filePath, size } = req.body;
         const declaredSize = parsePositiveSize(size);
 
         if (!filePath || declaredSize === null)
-            return res.status(400).json({ error: "filePath and size are required." });
+            return next(new AppError(400, "filePath and size are required."));
 
         const project = req.project;
         const external = isProjectStorageExternal(project);
@@ -361,7 +342,7 @@ module.exports.confirmUpload = async (req, res) => {
 
         // make sure client isn't confirming someone else's file
         if (!normalizedPath)
-            return res.status(403).json({ error: "Access denied." });
+            return next(new AppError(403, "Access denied."));
 
         // verify file actually exists on cloud before touching quota
         let actualSize;
@@ -370,22 +351,19 @@ module.exports.confirmUpload = async (req, res) => {
         } catch (err) {
             if (err?.message === "File not found after upload") {
                 await bestEffortDeleteUploadedObject(project, normalizedPath);
-                return res.status(409).json({
-                    error: "UPLOAD_NOT_READY",
-                    message: "Uploaded file is not visible yet. Please retry confirmation."
-                });
+                return next(new AppError(409, "Uploaded file is not visible yet. Please retry confirmation.", "UPLOAD_NOT_READY"));
             }
             throw err;
         }
 
         if (!Number.isFinite(actualSize) || actualSize <= 0) {
             await bestEffortDeleteUploadedObject(project, normalizedPath);
-            return res.status(500).json({ error: "Upload confirmation failed", details: process.env.NODE_ENV === "development" ? "Uploaded file size could not be determined" : undefined });
+            return next(new AppError(500, process.env.NODE_ENV === "development" ? "Uploaded file size could not be determined" : "Upload confirmation failed"));
         }
 
         if (Math.abs(actualSize - declaredSize) > CONFIRM_UPLOAD_SIZE_TOLERANCE_BYTES) {
             await bestEffortDeleteUploadedObject(project, normalizedPath);
-            return res.status(400).json({ error: "Declared file size does not match uploaded file size." });
+            return next(new AppError(400, "Declared file size does not match uploaded file size."));
         }
 
         // now it's safe to charge quota
@@ -402,7 +380,7 @@ module.exports.confirmUpload = async (req, res) => {
             );
             if (result.matchedCount === 0) {
                 await bestEffortDeleteUploadedObject(project, normalizedPath);
-                return res.status(403).json({ error: "Internal storage limit exceeded." });
+                return next(new AppError(403, "Internal storage limit exceeded."));
             }
         }
 
@@ -425,11 +403,9 @@ module.exports.confirmUpload = async (req, res) => {
             response.warning = publicUrlData?.error || "Upload confirmed, but a public URL is unavailable.";
         }
 
-        return res.status(200).json(response);
+        return new ApiResponse(response, response.message).send(res, 200);
     } catch (err) {
-        return res.status(500).json({
-            error: "Upload confirmation failed",
-            details: process.env.NODE_ENV === "development" ? err.message : undefined
-        });
+        if (err instanceof AppError) return next(err);
+        return next(new AppError(500, process.env.NODE_ENV === "development" ? (err.message || "Upload confirmation failed") : "Upload confirmation failed"));
     }
 };

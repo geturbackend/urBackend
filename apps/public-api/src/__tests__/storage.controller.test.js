@@ -36,6 +36,14 @@ jest.mock('@urbackend/common', () => {
         incrWithTtlAtomic: jest.fn().mockResolvedValue(true),
         redis: { status: 'ready', eval: jest.fn() },
         __mockStorageFrom: mockStorageFrom, // expose for assertions
+        AppError: class AppError extends Error {
+            constructor(statusCode, message, type) {
+                super(message);
+                this.statusCode = statusCode;
+                if (type) this.type = type;
+            }
+        },
+        ApiResponse: class ApiResponse { constructor(d, m) { this.data=d; this.message=m; this.success=true; } send(res, code) { return res.status(code).json({ success: this.success, data: this.data, message: this.message }); } },
     };
 });
 
@@ -43,7 +51,7 @@ jest.mock('@urbackend/common', () => {
 // Import module under test after mocks
 // ---------------------------------------------------------------------------
 
-const { getStorage, Project, isProjectStorageExternal, getBucket, getPresignedUploadUrl, verifyUploadedFile, __mockStorageFrom: mockStorageFrom } = require('@urbackend/common');
+const { getStorage, Project, isProjectStorageExternal, getBucket, getPresignedUploadUrl, verifyUploadedFile, __mockStorageFrom: mockStorageFrom, AppError } = require('@urbackend/common');
 const storageController = require('../controllers/storage.controller');
 
 // ---------------------------------------------------------------------------
@@ -78,9 +86,11 @@ const makeFile = (overrides = {}) => ({
 // ---------------------------------------------------------------------------
 
 describe('storage.controller', () => {
+    let next;
     beforeEach(() => {
         jest.clearAllMocks();
         process.env.NODE_ENV = 'test';
+        next = jest.fn();
     });
 
     describe('uploadFile', () => {
@@ -88,10 +98,11 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), file: null };
             const res = makeRes();
 
-            await storageController.uploadFile(req, res);
+            await storageController.uploadFile(req, res, next);
 
-            expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: 'No file uploaded.' });
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(400);
+            expect(next.mock.calls[0][0].message).toBe('No file uploaded.');
         });
 
         test('returns 413 when file exceeds MAX_FILE_SIZE', async () => {
@@ -101,10 +112,11 @@ describe('storage.controller', () => {
             };
             const res = makeRes();
 
-            await storageController.uploadFile(req, res);
+            await storageController.uploadFile(req, res, next);
 
-            expect(res.status).toHaveBeenCalledWith(413);
-            expect(res.json).toHaveBeenCalledWith({ error: 'File size exceeds limit.' });
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(413);
+            expect(next.mock.calls[0][0].message).toBe('File size exceeds limit.');
         });
 
         test('returns 403 when internal storage quota is exceeded', async () => {
@@ -114,11 +126,12 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), file: makeFile() };
             const res = makeRes();
 
-            await storageController.uploadFile(req, res);
+            await storageController.uploadFile(req, res, next);
 
             expect(Project.updateOne).toHaveBeenCalled();
-            expect(res.status).toHaveBeenCalledWith(403);
-            expect(res.json).toHaveBeenCalledWith({ error: 'Storage limit exceeded. Please upgrade your plan or delete some files.' });
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(403);
+            expect(next.mock.calls[0][0].message).toBe('Storage limit exceeded. Please upgrade your plan or delete some files.');
         });
 
         test('returns 201 and public URL on successful internal upload', async () => {
@@ -130,7 +143,7 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), file: makeFile() };
             const res = makeRes();
 
-            await storageController.uploadFile(req, res);
+            await storageController.uploadFile(req, res, next);
 
             expect(Project.updateOne).toHaveBeenCalledTimes(1); // Quota reservation
             expect(mockStorageFrom.upload).toHaveBeenCalledWith(
@@ -140,10 +153,13 @@ describe('storage.controller', () => {
             );
             expect(res.status).toHaveBeenCalledWith(201);
             expect(res.json).toHaveBeenCalledWith({
+                success: true,
                 message: 'File uploaded successfully',
-                url: 'https://mock.supabase.co/mocked-path',
-                path: 'project_id_1/mocked-uuid_test_file.txt',
-                provider: 'internal'
+                data: {
+                    url: 'https://mock.supabase.co/mocked-path',
+                    path: 'project_id_1/mocked-uuid_test_file.txt',
+                    provider: 'internal'
+                }
             });
         });
 
@@ -155,11 +171,11 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), file: makeFile() };
             const res = makeRes();
 
-            await storageController.uploadFile(req, res);
+            await storageController.uploadFile(req, res, next);
 
             expect(Project.updateOne).not.toHaveBeenCalled(); // No quota reservation
             expect(res.status).toHaveBeenCalledWith(201);
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ provider: 'external' }));
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ provider: 'external' }) }));
         });
 
         test('rolls back quota and returns 500 when upload fails', async () => {
@@ -171,11 +187,11 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), file: makeFile() };
             const res = makeRes();
 
-            await storageController.uploadFile(req, res);
+            await storageController.uploadFile(req, res, next);
 
             expect(Project.updateOne).toHaveBeenCalledTimes(2); // One for reservation, one for rollback
-            expect(res.status).toHaveBeenCalledWith(500);
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'File upload failed' }));
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(500);
         });
     });
 
@@ -184,30 +200,33 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), body: {} };
             const res = makeRes();
 
-            await storageController.deleteFile(req, res);
+            await storageController.deleteFile(req, res, next);
 
-            expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: 'File path is required.' });
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(400);
+            expect(next.mock.calls[0][0].message).toBe('File path is required.');
         });
 
         test('returns 403 when trying to delete file belonging to different project', async () => {
             const req = { project: makeProject(), body: { path: 'wrong_project_id/file.txt' } };
             const res = makeRes();
 
-            await storageController.deleteFile(req, res);
+            await storageController.deleteFile(req, res, next);
 
-            expect(res.status).toHaveBeenCalledWith(403);
-            expect(res.json).toHaveBeenCalledWith({ error: 'Access denied.' });
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(403);
+            expect(next.mock.calls[0][0].message).toBe('Access denied.');
         });
 
         test('returns 403 when trying to delete file using path traversal', async () => {
             const req = { project: makeProject(), body: { path: 'project_id_1/../other_project/file.txt' } };
             const res = makeRes();
 
-            await storageController.deleteFile(req, res);
+            await storageController.deleteFile(req, res, next);
 
-            expect(res.status).toHaveBeenCalledWith(403);
-            expect(res.json).toHaveBeenCalledWith({ error: 'Access denied.' });
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(403);
+            expect(next.mock.calls[0][0].message).toBe('Access denied.');
         });
 
         test('returns 200 on successful internal deletion', async () => {
@@ -218,7 +237,7 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), body: { path: 'project_id_1/file.txt' } };
             const res = makeRes();
 
-            await storageController.deleteFile(req, res);
+            await storageController.deleteFile(req, res, next);
 
             expect(mockStorageFrom.list).toHaveBeenCalledWith('project_id_1', { search: 'file.txt', limit: 1 });
             expect(mockStorageFrom.remove).toHaveBeenCalledWith(['project_id_1/file.txt']);
@@ -226,7 +245,7 @@ describe('storage.controller', () => {
                 { _id: 'project_id_1' },
                 { $inc: { storageUsed: -1024 } }
             );
-            expect(res.json).toHaveBeenCalledWith({ message: 'File deleted successfully' });
+            expect(res.json).toHaveBeenCalledWith({ success: true, message: 'File deleted successfully', data: {} });
         });
 
         test('returns 200 on successful external deletion and skips internal storageUsed update', async () => {
@@ -237,11 +256,11 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), body: { path: 'project_id_1/file.txt' } };
             const res = makeRes();
 
-            await storageController.deleteFile(req, res);
+            await storageController.deleteFile(req, res, next);
 
             expect(mockStorageFrom.list).toHaveBeenCalledWith('project_id_1', { search: 'file.txt', limit: 1 });
             expect(Project.updateOne).not.toHaveBeenCalled();
-            expect(res.json).toHaveBeenCalledWith({ message: 'File deleted successfully' });
+            expect(res.json).toHaveBeenCalledWith({ success: true, message: 'File deleted successfully', data: {} });
         });
 
         test('falls back to zero fileSize when Supabase list fails', async () => {
@@ -252,10 +271,10 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), body: { path: 'project_id_1/file.txt' } };
             const res = makeRes();
 
-            await storageController.deleteFile(req, res);
+            await storageController.deleteFile(req, res, next);
 
             expect(Project.updateOne).not.toHaveBeenCalled();
-            expect(res.json).toHaveBeenCalledWith({ message: 'File deleted successfully' });
+            expect(res.json).toHaveBeenCalledWith({ success: true, message: 'File deleted successfully', data: {} });
         });
 
         test('returns 500 when Supabase remove fails', async () => {
@@ -266,10 +285,11 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), body: { path: 'project_id_1/file.txt' } };
             const res = makeRes();
 
-            await storageController.deleteFile(req, res);
+            await storageController.deleteFile(req, res, next);
 
             expect(Project.updateOne).not.toHaveBeenCalled(); // Storage used shouldn't decrement
-            expect(res.status).toHaveBeenCalledWith(500);
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(500);
         });
     });
 
@@ -278,10 +298,11 @@ describe('storage.controller', () => {
             const req = { project: null };
             const res = makeRes();
 
-            await storageController.deleteAllFiles(req, res);
+            await storageController.deleteAllFiles(req, res, next);
 
-            expect(res.status).toHaveBeenCalledWith(404);
-            expect(res.json).toHaveBeenCalledWith({ error: 'Project not found' });
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(404);
+            expect(next.mock.calls[0][0].message).toBe('Project not found');
         });
 
         test('deletes paginated files and resets internal storage to 0', async () => {
@@ -297,18 +318,20 @@ describe('storage.controller', () => {
             const req = { project: makeProject() };
             const res = makeRes();
 
-            await storageController.deleteAllFiles(req, res);
+            await storageController.deleteAllFiles(req, res, next);
 
             expect(mockStorageFrom.remove).toHaveBeenCalledWith(['project_id_1/file1.txt', 'project_id_1/file2.txt']);
             expect(Project.updateOne).toHaveBeenCalledWith(
                 { _id: 'project_id_1' },
                 { $set: { storageUsed: 0 } }
             );
-            expect(res.json).toHaveBeenCalledWith({
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
                 success: true,
-                deleted: 2,
-                provider: 'internal'
-            });
+                data: {
+                    deleted: 2,
+                    provider: 'internal'
+                }
+            }));
         });
 
         test('skips storageUsed reset for external provider during deleteAllFiles', async () => {
@@ -323,10 +346,10 @@ describe('storage.controller', () => {
             const req = { project: makeProject() };
             const res = makeRes();
 
-            await storageController.deleteAllFiles(req, res);
+            await storageController.deleteAllFiles(req, res, next);
 
             expect(Project.updateOne).not.toHaveBeenCalled();
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ provider: 'external' }));
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ provider: 'external' }) }));
         });
 
         test('returns 500 when Supabase remove fails during deleteAllFiles', async () => {
@@ -337,10 +360,10 @@ describe('storage.controller', () => {
             const req = { project: makeProject() };
             const res = makeRes();
 
-            await storageController.deleteAllFiles(req, res);
+            await storageController.deleteAllFiles(req, res, next);
 
-            expect(res.status).toHaveBeenCalledWith(500);
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Failed to delete files' }));
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(500);
         });
 
         test('returns 500 if pagination fetch fails', async () => {
@@ -350,10 +373,10 @@ describe('storage.controller', () => {
             const req = { project: makeProject() };
             const res = makeRes();
 
-            await storageController.deleteAllFiles(req, res);
+            await storageController.deleteAllFiles(req, res, next);
 
-            expect(res.status).toHaveBeenCalledWith(500);
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Failed to delete files' }));
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(500);
         });
     });
 
@@ -362,10 +385,10 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), body: { filename: 'file.txt', contentType: 'text/plain', size: 'abc' } };
             const res = makeRes();
 
-            await storageController.requestUpload(req, res);
+            await storageController.requestUpload(req, res, next);
 
-            expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: 'filename, contentType, and size are required.' });
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(400);
         });
 
         test('returns signed URL for requestUpload on valid input', async () => {
@@ -375,11 +398,10 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), body: { filename: 'my_file.txt', contentType: 'text/plain', size: 1024 } };
             const res = makeRes();
 
-            await storageController.requestUpload(req, res);
+            await storageController.requestUpload(req, res, next);
 
-            expect(res.json).toHaveBeenCalledWith({ signedUrl: 'https://signed.example/upload', token: 'token-1', filePath: 'project_id_1/mocked-uuid_my_file.txt' });
             expect(res.status).toHaveBeenCalledWith(200);
-            expect(res.json).toHaveBeenCalledWith({ signedUrl: 'https://signed.example/upload', token: 'token-1', filePath: 'project_id_1/mocked-uuid_my_file.txt' });
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { signedUrl: 'https://signed.example/upload', token: 'token-1', filePath: 'project_id_1/mocked-uuid_my_file.txt' } }));
         });
 
         test('confirmUpload charges the verified size and rejects mismatches', async () => {
@@ -391,7 +413,7 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2048 } };
             const res = makeRes();
 
-            await storageController.confirmUpload(req, res);
+            await storageController.confirmUpload(req, res, next);
 
             expect(verifyUploadedFile).toHaveBeenCalledWith(req.project, 'project_id_1/file.txt');
             expect(Project.updateOne).toHaveBeenCalledWith(
@@ -406,7 +428,7 @@ describe('storage.controller', () => {
             );
             expect(mockStorageFrom.getPublicUrl).toHaveBeenCalledWith('project_id_1/file.txt');
             expect(res.status).toHaveBeenCalledWith(200);
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ path: 'project_id_1/file.txt', provider: 'internal' }));
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ path: 'project_id_1/file.txt', provider: 'internal' }) }));
         });
 
         test('confirmUpload succeeds for unlimited storage plans', async () => {
@@ -418,7 +440,7 @@ describe('storage.controller', () => {
             const req = { project: makeProject({ storageLimit: -1 }), body: { filePath: 'project_id_1/file.txt', size: 2048 } };
             const res = makeRes();
 
-            await storageController.confirmUpload(req, res);
+            await storageController.confirmUpload(req, res, next);
 
             expect(Project.updateOne).toHaveBeenCalledWith(
                 {
@@ -433,9 +455,11 @@ describe('storage.controller', () => {
             expect(res.status).toHaveBeenCalledWith(200);
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
                 message: 'Upload confirmed',
-                path: 'project_id_1/file.txt',
-                provider: 'internal',
-                url: 'https://mock.supabase.co/project_id_1/file.txt'
+                data: expect.objectContaining({
+                    path: 'project_id_1/file.txt',
+                    provider: 'internal',
+                    url: 'https://mock.supabase.co/project_id_1/file.txt'
+                })
             }));
         });
 
@@ -447,10 +471,10 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 1024 } };
             const res = makeRes();
 
-            await storageController.confirmUpload(req, res);
+            await storageController.confirmUpload(req, res, next);
 
-            expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith({ error: 'Declared file size does not match uploaded file size.' });
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(400);
             expect(mockStorageFrom.remove).toHaveBeenCalledWith(['project_id_1/file.txt']);
         });
 
@@ -463,7 +487,7 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2100 } };
             const res = makeRes();
 
-            await storageController.confirmUpload(req, res);
+            await storageController.confirmUpload(req, res, next);
 
             expect(Project.updateOne).toHaveBeenCalledWith(
                 {
@@ -476,7 +500,7 @@ describe('storage.controller', () => {
                 { $inc: { storageUsed: 2048 } }
             );
             expect(res.status).toHaveBeenCalledWith(200);
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ path: 'project_id_1/file.txt', provider: 'internal' }));
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ path: 'project_id_1/file.txt', provider: 'internal' }) }));
         });
 
         test('confirmUpload removes uploaded object when quota reservation fails', async () => {
@@ -488,11 +512,11 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2048 } };
             const res = makeRes();
 
-            await storageController.confirmUpload(req, res);
+            await storageController.confirmUpload(req, res, next);
 
             expect(mockStorageFrom.remove).toHaveBeenCalledWith(['project_id_1/file.txt']);
-            expect(res.status).toHaveBeenCalledWith(403);
-            expect(res.json).toHaveBeenCalledWith({ error: 'Internal storage limit exceeded.' });
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(403);
         });
 
         test('confirmUpload removes uploaded object when verification fails', async () => {
@@ -503,11 +527,11 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2048 } };
             const res = makeRes();
 
-            await storageController.confirmUpload(req, res);
+            await storageController.confirmUpload(req, res, next);
 
             expect(mockStorageFrom.remove).toHaveBeenCalledWith(['project_id_1/file.txt']);
-            expect(res.status).toHaveBeenCalledWith(500);
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Upload confirmation failed' }));
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(500);
         });
 
         test('confirmUpload returns a retryable conflict when the uploaded object is not yet visible', async () => {
@@ -518,14 +542,11 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2048 } };
             const res = makeRes();
 
-            await storageController.confirmUpload(req, res);
+            await storageController.confirmUpload(req, res, next);
 
             expect(mockStorageFrom.remove).toHaveBeenCalledWith(['project_id_1/file.txt']);
-            expect(res.status).toHaveBeenCalledWith(409);
-            expect(res.json).toHaveBeenCalledWith({
-                error: 'UPLOAD_NOT_READY',
-                message: 'Uploaded file is not visible yet. Please retry confirmation.'
-            });
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(409);
         });
 
         test('confirmUpload still returns 500 for generic verification errors', async () => {
@@ -535,10 +556,10 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2048 } };
             const res = makeRes();
 
-            await storageController.confirmUpload(req, res);
+            await storageController.confirmUpload(req, res, next);
 
-            expect(res.status).toHaveBeenCalledWith(500);
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Upload confirmation failed' }));
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(500);
         });
 
         test('confirmUpload swallows cleanup failures during compensating delete', async () => {
@@ -550,10 +571,11 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2048 } };
             const res = makeRes();
 
-            await storageController.confirmUpload(req, res);
+            await storageController.confirmUpload(req, res, next);
 
             expect(mockStorageFrom.remove).toHaveBeenCalledWith(['project_id_1/file.txt']);
-            expect(res.status).toHaveBeenCalledWith(403);
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[0][0].statusCode).toBe(403);
         });
 
         test('confirmUpload returns a warning when public URL is unavailable', async () => {
@@ -564,13 +586,15 @@ describe('storage.controller', () => {
             const req = { project: makeProject(), body: { filePath: 'project_id_1/file.txt', size: 2048 } };
             const res = makeRes();
 
-            await storageController.confirmUpload(req, res);
+            await storageController.confirmUpload(req, res, next);
 
             expect(res.status).toHaveBeenCalledWith(200);
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-                url: null,
-                warning: 'Cloudflare R2 requires a Public URL Host.',
-                provider: 'external'
+                data: expect.objectContaining({
+                    url: null,
+                    warning: 'Cloudflare R2 requires a Public URL Host.',
+                    provider: 'external'
+                })
             }));
         });
     });
