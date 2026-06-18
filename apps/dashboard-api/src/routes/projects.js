@@ -65,7 +65,7 @@ router.get('/:projectId', authMiddleware, authorizeProject(), getSingleProject);
 router.post('/:projectId/api-key', authMiddleware, authorizeProject('admin'), verifyEmail, regenerateApiKey);
 router.post('/:projectId/reveal-secret-key', authMiddleware, authorizeProject('admin'), verifyEmail, revealSecretKey);
 
-router.post('/:projectId/collections', authMiddleware, authorizeProject('admin'), verifyEmail, planEnforcement.attachDeveloper, planEnforcement.checkCollectionLimit, createCollection);
+router.post('/:projectId/collections', authMiddleware, authorizeProject('admin'), planEnforcement.attachDeveloper, planEnforcement.checkCollectionLimit, createCollection);
 
 // DELETE REQ FOR COLLECTION
 router.delete('/:projectId/collections/:collectionName', authMiddleware, authorizeProject('admin'), verifyEmail, deleteCollection);

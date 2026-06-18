@@ -22,6 +22,7 @@ jest.mock('../middlewares/planEnforcement', () => ({
 jest.mock('@urbackend/common', () => ({
   verifyEmail: jest.fn((_req, _res, next) => next()),
   checkAuthEnabled: jest.fn((_req, _res, next) => next()),
+  loadProjectForAdmin: jest.fn((_req, _res, next) => next()),
 }));
 
 const mockAuthZ = jest.fn((req, res, next) => next());
