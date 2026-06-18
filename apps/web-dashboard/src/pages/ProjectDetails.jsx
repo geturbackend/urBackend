@@ -27,20 +27,6 @@ function ProjectDetails() {
     const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
     const [newKey, setNewKey] = useState(null);
-    const [revealedSecretKey, setRevealedSecretKey] = useState(null);
-
-    const handleRevealSecretKey = async () => {
-        try {
-            const res = await api.post(`/api/projects/${projectId}/reveal-secret-key`);
-            if (res.data.success) {
-                setRevealedSecretKey(res.data.data.secretKey);
-                setProject(prev => ({ ...prev, secretKeyRevealed: true }));
-                toast.success("Secret key revealed! Copy it now.");
-            }
-        } catch (err) {
-            toast.error(err.response?.data?.message || err.response?.data?.error || "Failed to reveal secret key");
-        }
-    };
 
     useEffect(() => {
         Promise.resolve().then(() => {
@@ -78,7 +64,6 @@ function ProjectDetails() {
             const res = await api.post(`/api/projects/${projectId}/api-key`, { keyType });
             setNewKey({ key: res.data.apiKey, type: keyType });
             if (keyType === 'secret') {
-                setRevealedSecretKey(null);
                 setProject(prev => ({ ...prev, secretKeyRevealed: false }));
             } else {
                 setProject(prev => ({ ...prev, publishableKey: res.data.apiKey }));
@@ -292,26 +277,11 @@ function ProjectDetails() {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                         <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Publishable Key</label>
-                                        <span 
-                                          style={{ cursor: 'help', color: 'var(--color-text-muted)', fontSize: '0.75rem' }} 
-                                          title="Public key used from browsers or client applications."
-                                        >
-                                          ❓
-                                        </span>
                                     </div>
                                     <button onClick={() => handleRegenerateKey('publishable')} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: '0.7rem', cursor: 'pointer' }}>Roll</button>
                                 </div>
                                 <div style={{ display: 'flex', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
                                     <input readOnly value={project.publishableKey} style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--color-primary)', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
-                                    <button 
-                                        onClick={async () => {
-                                            await navigator.clipboard.writeText(project.publishableKey);
-                                            toast.success("Publishable key copied!");
-                                        }} 
-                                        style={{ background: 'none', border: 'none', padding: '0 12px', color: 'var(--color-text-muted)', cursor: 'pointer' }}
-                                    >
-                                        <Copy size={13} />
-                                    </button>
                                 </div>
                             </div>
                             
@@ -319,47 +289,16 @@ function ProjectDetails() {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                         <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ef4444' }}>Secret Key</label>
-                                        <span 
-                                          style={{ cursor: 'help', color: 'var(--color-text-muted)', fontSize: '0.75rem' }} 
-                                          title="Secret key. Never expose this in frontend code. Shown only once."
-                                        >
-                                          ❓
-                                        </span>
                                     </div>
                                     <button onClick={() => handleRegenerateKey('secret')} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: '0.7rem', cursor: 'pointer' }}>Roll</button>
                                 </div>
                                 
-                                {revealedSecretKey ? (
-                                    <div style={{ display: 'flex', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid #ef4444', borderRadius: '6px', overflow: 'hidden' }}>
-                                        <input readOnly value={revealedSecretKey} style={{ flex: 1, background: 'transparent', border: 'none', color: '#ef4444', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
-                                        <button 
-                                            onClick={async () => {
-                                                await navigator.clipboard.writeText(revealedSecretKey);
-                                                toast.success("Secret key copied!");
-                                            }} 
-                                            style={{ background: 'none', border: 'none', padding: '0 12px', color: 'var(--color-text-muted)', cursor: 'pointer' }}
-                                        >
-                                            <Copy size={13} />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div style={{ display: 'flex', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
-                                        <input readOnly value="sk_live_************************" type="password" style={{ flex: 1, background: 'transparent', border: 'none', color: '#666', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
-                                        {!project.secretKeyRevealed ? (
-                                            <button 
-                                                onClick={handleRevealSecretKey} 
-                                                className="btn btn-secondary" 
-                                                style={{ height: '32px', margin: '3px', fontSize: '0.7rem', padding: '0 10px', whiteSpace: 'nowrap' }}
-                                            >
-                                                Reveal Once
-                                            </button>
-                                        ) : (
-                                            <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', alignSelf: 'center', paddingRight: '12px' }}>
-                                                Regenerate to get a new key
-                                            </span>
-                                        )}
-                                    </div>
-                                )}
+                                <div style={{ display: 'flex', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
+                                    <input readOnly value="sk_live_************************" type="password" style={{ flex: 1, background: 'transparent', border: 'none', color: '#666', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
+                                    <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', alignSelf: 'center', paddingRight: '12px', whiteSpace: 'nowrap' }}>
+                                        Regenerate to reveal
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </section>
