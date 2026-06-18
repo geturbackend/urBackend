@@ -76,12 +76,27 @@ api.interceptors.response.use(
             }
         }
 
-        // 403: Show upgrade modal if it's a plan limit error, else show generic deny
+        // 403: Handle CSRF expiry first — refresh token and retry transparently
         if (error.response?.status === 403) {
             const message = (
-                error.response?.data?.message || error.response?.data?.error ||
-                'Access denied. You do not have permission for this action.'
+                error.response?.data?.message || error.response?.data?.error || ''
             );
+
+            const isCsrfError = message.toLowerCase().includes('csrf') || 
+                                message.toLowerCase().includes('form has expired') ||
+                                error.response?.data?.code === 'EBADCSRFTOKEN';
+
+            if (isCsrfError && !originalRequest._csrfRetry) {
+                originalRequest._csrfRetry = true;
+                // Clear stale token and force a fresh fetch
+                csrfToken = null;
+                csrfTokenPromise = fetchCsrfToken();
+                const newToken = await csrfTokenPromise;
+                if (newToken) {
+                    originalRequest.headers['X-CSRF-Token'] = newToken;
+                    return api(originalRequest);
+                }
+            }
 
             const isVerificationGate = VERIFICATION_KEYWORDS.some((kw) => message.toLowerCase().includes(kw));
             const isPlanError = UPGRADE_KEYWORDS.some((kw) => message.toLowerCase().includes(kw));
@@ -93,7 +108,7 @@ api.interceptors.response.use(
                 }
                 return Promise.reject(error);
             } else {
-                toast.error(message);
+                toast.error(message || 'Access denied. You do not have permission for this action.');
             }
         }
 

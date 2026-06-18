@@ -70,7 +70,8 @@ const csrfProtection = csurf({
     cookie: {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax'
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 // 24 hours — persistent cookie, survives idle/focus loss
     } 
 });
 
