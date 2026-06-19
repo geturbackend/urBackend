@@ -3,6 +3,11 @@
 const mockLogCreate = jest.fn();
 const mockApiAnalyticsCreate = jest.fn();
 const mockIncrWithTtlAtomic = jest.fn();
+const mockRedisSet = jest.fn();
+const mockProjectFindById = jest.fn();
+const mockPlatformEventCreate = jest.fn();
+const mockPlatformEventFindOne = jest.fn();
+const mockMarkDeveloperActivated = jest.fn();
 
 jest.mock('@urbackend/common', () => ({
     Log: {
@@ -11,12 +16,20 @@ jest.mock('@urbackend/common', () => ({
     ApiAnalytics: {
         create: (...args) => mockApiAnalyticsCreate(...args),
     },
+    Project: {
+        findById: (...args) => mockProjectFindById(...args),
+    },
+    PlatformEvent: {
+        create: (...args) => mockPlatformEventCreate(...args),
+        findOne: (...args) => mockPlatformEventFindOne(...args),
+    },
     redis: {
-        set: jest.fn().mockResolvedValue(null),
+        set: (...args) => mockRedisSet(...args),
     },
     getDayKey: () => '2026-06-08',
     DEFAULT_DAILY_TTL_SECONDS: 86400,
     incrWithTtlAtomic: (...args) => mockIncrWithTtlAtomic(...args),
+    markDeveloperActivated: (...args) => mockMarkDeveloperActivated(...args),
 }));
 
 const { logger } = require('../middlewares/api_usage');
@@ -27,8 +40,12 @@ describe('api_usage middleware', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        finishCallback = null;
+        mockRedisSet.mockResolvedValue(null);
+        mockMarkDeveloperActivated.mockResolvedValue({ activated: false });
+        mockPlatformEventFindOne.mockReturnValue({ lean: jest.fn().mockResolvedValue(null) });
         req = {
-            project: { _id: 'test_project_id' },
+            project: { _id: 'test_project_id', owner: 'dev_id_1' },
             method: 'GET',
             originalUrl: '/api/data/test-endpoint',
             ip: '127.0.0.1',
@@ -138,5 +155,50 @@ describe('api_usage middleware', () => {
         expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to save API analytics:', analyticsError.message);
 
         consoleErrorSpy.mockRestore();
+    });
+
+    test('marks onboarding on first successful data API response', async () => {
+        mockLogCreate.mockResolvedValue({ _id: 'log_id' });
+        mockApiAnalyticsCreate.mockResolvedValue({ _id: 'analytics_id' });
+        mockMarkDeveloperActivated.mockResolvedValue({ activated: true });
+        mockPlatformEventCreate.mockResolvedValue({ _id: 'event_id' });
+
+        logger(req, res, next);
+        await finishCallback();
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(mockMarkDeveloperActivated).toHaveBeenCalledWith('dev_id_1');
+        expect(mockPlatformEventCreate).toHaveBeenCalledTimes(1);
+        expect(mockPlatformEventCreate).toHaveBeenCalledWith(expect.objectContaining({
+            developerId: 'dev_id_1',
+            projectId: 'test_project_id',
+            event: 'first_api_call',
+        }));
+    });
+
+    test('does not mark onboarding for successful non-data API responses', async () => {
+        req.originalUrl = '/api/userAuth/me';
+        mockLogCreate.mockResolvedValue({ _id: 'log_id' });
+        mockApiAnalyticsCreate.mockResolvedValue({ _id: 'analytics_id' });
+
+        logger(req, res, next);
+        await finishCallback();
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(mockMarkDeveloperActivated).not.toHaveBeenCalled();
+        expect(mockPlatformEventCreate).not.toHaveBeenCalled();
+    });
+
+    test('does not emit first_api_call when developer was already activated', async () => {
+        mockLogCreate.mockResolvedValue({ _id: 'log_id' });
+        mockApiAnalyticsCreate.mockResolvedValue({ _id: 'analytics_id' });
+        mockMarkDeveloperActivated.mockResolvedValue({ activated: false });
+
+        logger(req, res, next);
+        await finishCallback();
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(mockMarkDeveloperActivated).toHaveBeenCalledWith('dev_id_1');
+        expect(mockPlatformEventCreate).not.toHaveBeenCalled();
     });
 });

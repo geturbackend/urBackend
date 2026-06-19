@@ -63,14 +63,29 @@ module.exports.getActivationFunnel = async (req, res, next) => {
       'email_verified',
       'project_created',
       'collection_created',
-      'first_api_success',
+      'first_api_call',
     ];
+    const EVENT_ALIASES = {
+      first_api_success: 'first_api_call',
+    };
 
     const counts = await PlatformEvent.aggregate([
-      { $match: { event: { $in: FUNNEL_STEPS } } },
+      { $match: { event: { $in: [...FUNNEL_STEPS, ...Object.keys(EVENT_ALIASES)] } } },
+      {
+        $addFields: {
+          funnelEvent: {
+            $switch: {
+              branches: [
+                { case: { $eq: ['$event', 'first_api_success'] }, then: 'first_api_call' },
+              ],
+              default: '$event',
+            },
+          },
+        },
+      },
       {
         $group: {
-          _id: { event: '$event', developerId: '$developerId' },
+          _id: { event: '$funnelEvent', developerId: '$developerId' },
         },
       },
       {

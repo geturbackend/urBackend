@@ -329,69 +329,73 @@ export default function MailPlatform() {
                         <SectionHeader title="Outbound History" style={{ marginBottom: 0 }} />
                         <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>Showing last 50 background queue dispatches</span>
                     </div>
-
-                    <div className="glass-card" style={{ borderRadius: '8px', overflow: 'hidden', padding: 0 }}>
-                        <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
-                                <thead style={{ background: 'rgba(255,255,255,0.02)', color: 'var(--color-text-muted)' }}>
-                                    <tr>
-                                        <th style={{ padding: '14px 20px', fontWeight: 600 }}>Status</th>
-                                        <th style={{ padding: '14px 20px', fontWeight: 600 }}>Subject</th>
-                                        <th style={{ padding: '14px 20px', fontWeight: 600 }}>Recipient</th>
-                                        <th style={{ padding: '14px 20px', fontWeight: 600 }}>Provider ID</th>
-                                        <th style={{ padding: '14px 20px', fontWeight: 600, textAlign: 'right' }}>Sent At</th>
-                                        <th style={{ padding: '14px 20px', fontWeight: 600, textAlign: 'center' }}>Inspect</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {logs.length > 0 ? logs.map(log => (
-                                        <tr key={log._id} style={{ borderTop: '1px solid var(--color-border)' }} className="log-row">
-                                            <td style={{ padding: '12px 20px' }}>
-                                                <span style={{
-                                                    color: STATUS_COLORS[log.status] || '#94a3b8',
-                                                    background: `${STATUS_COLORS[log.status] || '#94a3b8'}15`,
-                                                    padding: '2px 8px', borderRadius: '4px', fontWeight: 700, fontSize: '0.65rem',
-                                                    textTransform: 'uppercase', border: `1px solid ${STATUS_COLORS[log.status] || '#94a3b8'}30`
-                                                }}>
-                                                    {log.status || 'sent'}
-                                                </span>
-                                            </td>
-                                            <td style={{ padding: '12px 20px', fontWeight: 600, color: '#fff', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {log.subject || '—'}
-                                            </td>
-                                            <td style={{ padding: '12px 20px', fontFamily: 'monospace', color: 'var(--color-text-muted)' }}>
-                                                {log.to?.join(', ') || '—'}
-                                            </td>
-                                            <td style={{ padding: '12px 20px', fontFamily: 'monospace', fontSize: '0.75rem', opacity: 0.8 }}>
-                                                {log.resendEmailId ? `${log.resendEmailId.slice(0, 12)}...` : 'N/A'}
-                                            </td>
-                                            <td style={{ padding: '12px 20px', textAlign: 'right', color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>
-                                                {new Date(log.sentAt).toLocaleString()}
-                                            </td>
-                                            <td style={{ padding: '12px 20px', textAlign: 'center' }}>
-                                                <button
-                                                    onClick={() => handleViewLiveStatus(log)}
-                                                    disabled={!log.resendEmailId}
-                                                    className="btn btn-ghost"
-                                                    style={{ padding: '4px 8px', height: 'auto', color: 'var(--color-primary)' }}
-                                                    title="Query active status from Resend edge"
-                                                >
-                                                    <Eye size={14} />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    )) : (
-                                        <tr>
-                                            <td colSpan="6" style={{ padding: '4rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                                                No sent emails logged yet. Trigger mail pipelines via <code>/api/mail/send</code> or SDK events.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                    {logs.length === 0 ? (
+                        <div className="glass-card" style={{ textAlign: 'center', padding: '5rem 2rem', borderStyle: 'dashed', borderRadius: '12px', borderColor: 'var(--color-border)', maxWidth: '600px', margin: '2rem auto' }}>
+                            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontWeight: 700 }}>Mail</h2>
+                            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '2rem' }}>
+                                Send transactional emails.
+                            </p>
+                            <button onClick={() => navigate(`/project/${projectId}/settings?tab=mail`)} className="btn btn-primary" style={{ fontSize: '0.9rem', height: '40px', padding: '0 24px', fontWeight: 600 }}>
+                                Configure Mail
+                            </button>
                         </div>
-                    </div>
-                </div>
+                    ) : (
+                        <div className="glass-card" style={{ borderRadius: '8px', overflow: 'hidden', padding: 0 }}>
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
+                                    <thead style={{ background: 'rgba(255,255,255,0.02)', color: 'var(--color-text-muted)' }}>
+                                        <tr>
+                                            <th style={{ padding: '14px 20px', fontWeight: 600 }}>Status</th>
+                                            <th style={{ padding: '14px 20px', fontWeight: 600 }}>Subject</th>
+                                            <th style={{ padding: '14px 20px', fontWeight: 600 }}>Recipient</th>
+                                            <th style={{ padding: '14px 20px', fontWeight: 600 }}>Provider ID</th>
+                                            <th style={{ padding: '14px 20px', fontWeight: 600, textAlign: 'right' }}>Sent At</th>
+                                            <th style={{ padding: '14px 20px', fontWeight: 600, textAlign: 'center' }}>Inspect</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {logs.map(log => (
+                                            <tr key={log._id} style={{ borderTop: '1px solid var(--color-border)' }} className="log-row">
+                                                <td style={{ padding: '12px 20px' }}>
+                                                    <span style={{
+                                                        color: STATUS_COLORS[log.status] || '#94a3b8',
+                                                        background: `${STATUS_COLORS[log.status] || '#94a3b8'}15`,
+                                                        padding: '2px 8px', borderRadius: '4px', fontWeight: 700, fontSize: '0.65rem',
+                                                        textTransform: 'uppercase', border: `1px solid ${STATUS_COLORS[log.status] || '#94a3b8'}30`
+                                                    }}>
+                                                        {log.status || 'sent'}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '12px 20px', fontWeight: 600, color: '#fff', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {log.subject || '—'}
+                                                </td>
+                                                <td style={{ padding: '12px 20px', color: 'var(--color-text-muted)' }}>
+                                                    {log.to || '—'}
+                                                </td>
+                                                <td style={{ padding: '12px 20px', fontFamily: 'monospace', fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
+                                                    {log.resendEmailId || 'local_queue'}
+                                                </td>
+                                                <td style={{ padding: '12px 20px', textAlign: 'right', color: 'var(--color-text-muted)' }}>
+                                                    {new Date(log.sentAt || log.timestamp).toLocaleString()}
+                                                </td>
+                                                <td style={{ padding: '12px 20px', textAlign: 'center' }}>
+                                                    <button
+                                                        onClick={() => handleViewLiveStatus(log)}
+                                                        disabled={!log.resendEmailId}
+                                                        className="btn btn-ghost"
+                                                        style={{ padding: '4px 8px', height: 'auto', color: 'var(--color-primary)' }}
+                                                        title="Query active status from Resend edge"
+                                                    >
+                                                        <Eye size={14} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}</div>
             )}
 
             {/* TAB 2: AUDIENCES & CONTACTS */}

@@ -5,6 +5,7 @@
 class AppError extends Error {
   constructor(statusCode, message, error = null) {
     super(message);
+    this.name = this.constructor.name;
     this.statusCode = statusCode;
     this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
     this.error = error || (statusCode >= 500 ? "Internal Server Error" : "Error");

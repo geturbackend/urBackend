@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import ScrollToTop from './components/Layout/ScrollToTop';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import MainLayout from './components/Layout/MainLayout';
@@ -51,6 +52,8 @@ function AppContent() {
         }}
       />
 
+      <ScrollToTop />
+
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/pricing" element={<Pricing />} />
@@ -61,8 +64,8 @@ function AppContent() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/request-pro" element={<RequestPro />} />
-        <Route path="/onboarding" element={
-          <ProtectedRoute>
+        <Route path="/onboarding/*" element={
+          <ProtectedRoute onboardingOnly>
             <Onboarding />
           </ProtectedRoute>
         } />
@@ -78,7 +81,7 @@ function AppContent() {
         } />
 
         <Route path="/create-project" element={
-          <ProtectedRoute>
+          <ProtectedRoute allowIncompleteOnboarding>
             <MainLayout>
               <CreateProject />
             </MainLayout>
@@ -86,7 +89,7 @@ function AppContent() {
         } />
 
         <Route path="/project/:projectId" element={
-          <ProtectedRoute>
+          <ProtectedRoute allowIncompleteOnboarding>
             <MainLayout>
               <ProjectDetails />
             </MainLayout>
@@ -94,7 +97,7 @@ function AppContent() {
         } />
 
         <Route path="/project/:projectId/database" element={
-          <ProtectedRoute>
+          <ProtectedRoute allowIncompleteOnboarding>
             <MainLayout>
               <Database />
             </MainLayout>
@@ -123,7 +126,7 @@ function AppContent() {
 
         <Route path="/project/:projectId/webhooks" element={<ProtectedRoute><MainLayout><Webhooks /></MainLayout></ProtectedRoute>} />
 
-        <Route path="/settings" element={<ProtectedRoute><MainLayout><Settings /></MainLayout></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute allowIncompleteOnboarding allowUnverified><MainLayout><Settings /></MainLayout></ProtectedRoute>} />
 
         <Route path="/project/:projectId/settings" element={<ProtectedRoute><MainLayout><ProjectSettings /></MainLayout></ProtectedRoute>} />
 
@@ -131,7 +134,7 @@ function AppContent() {
 
 
         <Route path="/project/:projectId/create-collection" element={
-          <ProtectedRoute>
+          <ProtectedRoute allowIncompleteOnboarding>
             <MainLayout>
               <CreateCollection />
             </MainLayout>

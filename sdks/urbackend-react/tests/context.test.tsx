@@ -6,19 +6,22 @@ import { AuthModule } from '@urbackend/sdk';
 
 // Mock the SDK modules
 vi.mock('@urbackend/sdk', () => {
-  const MockAuthModule = vi.fn().mockImplementation(() => ({
+  const mockAuthInstance = {
     setToken: vi.fn(),
     refreshToken: vi.fn().mockResolvedValue(undefined),
-    me: vi.fn().mockResolvedValue({ id: 'user123', email: 'test@example.com' }),
+    me: vi.fn().mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ id: 'user123', email: 'test@example.com' }), 0))),
     socialExchange: vi.fn().mockResolvedValue({ refreshToken: 'fake-rt' }),
+  };
+
+  const MockAuthModule = vi.fn().mockImplementation(() => mockAuthInstance);
+  const MockClient = vi.fn().mockImplementation(() => ({
+    auth: mockAuthInstance,
+    db: {},
+    storage: {},
   }));
 
   return {
-    UrBackendClient: vi.fn().mockImplementation(() => ({
-      auth: new MockAuthModule(),
-      db: {},
-      storage: {}
-    })),
+    UrBackendClient: MockClient,
     AuthModule: MockAuthModule,
     DatabaseModule: vi.fn(),
     StorageModule: vi.fn(),

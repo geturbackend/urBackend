@@ -17,11 +17,16 @@ function Sidebar({ logo, isOpen, onClose }) {
         if (window.innerWidth <= 768) onClose();
     };
 
+    const navA11yProps = (label) => ({
+        'aria-label': label,
+        title: label,
+    });
+
     return (
         <aside className={`sidebar ${isOpen ? 'mobile-open' : ''}`}>
             <div className="sidebar-header">
                 {projectId ? (
-                    <Link to="/dashboard" onClick={handleNavClick} className="nav-item" style={{ padding: 0, color: 'var(--color-text-main)', border: 'none' }}>
+                    <Link to="/dashboard" onClick={handleNavClick} className="nav-item" style={{ padding: 0, color: 'var(--color-text-main)', border: 'none' }} {...navA11yProps('Back to Projects')}>
                         <ArrowLeft size={16} />
                         <span style={{ marginLeft: '10px', fontWeight: 600 }}>Back to Projects</span>
                     </Link>
@@ -37,41 +42,41 @@ function Sidebar({ logo, isOpen, onClose }) {
                 {projectId ? (
                     <>
                         <div className="nav-section-label">Project</div>
-                        <Link to={`/project/${projectId}`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}`) ? 'active' : ''}`}>
+                        <Link to={`/project/${projectId}`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}`) ? 'active' : ''}`} {...navA11yProps('Overview')}>
                             <LayoutDashboard size={16} /> <span>Overview</span>
                         </Link>
-                        <Link to={`/project/${projectId}/database`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/database`) ? 'active' : ''}`}>
+                        <Link to={`/project/${projectId}/database`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/database`) ? 'active' : ''}`} {...navA11yProps('Database')}>
                             <Database size={16} /> <span>Database</span>
                         </Link>
-                        <Link to={`/project/${projectId}/auth`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/auth`) ? 'active' : ''}`}>
+                        <Link to={`/project/${projectId}/auth`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/auth`) ? 'active' : ''}`} {...navA11yProps('Authentication')}>
                             <Shield size={16} /> <span>Authentication</span>
                         </Link>
-                        <Link to={`/project/${projectId}/storage`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/storage`) ? 'active' : ''}`}>
+                        <Link to={`/project/${projectId}/storage`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/storage`) ? 'active' : ''}`} {...navA11yProps('Storage')}>
                             <HardDrive size={16} /> <span>Storage</span>
                         </Link>
-                        <Link to={`/project/${projectId}/webhooks`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/webhooks`) ? 'active' : ''}`}>
+                        <Link to={`/project/${projectId}/webhooks`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/webhooks`) ? 'active' : ''}`} {...navA11yProps('Webhooks')}>
                             <Webhook size={16} /> <span>Webhooks</span>
                         </Link>
-                        <Link to={`/project/${projectId}/analytics`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/analytics`) ? 'active' : ''}`}>
+                        <Link to={`/project/${projectId}/analytics`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/analytics`) ? 'active' : ''}`} {...navA11yProps('Analytics')}>
                             <BarChart2 size={16} /> <span>Analytics</span>
                         </Link>
-                        <Link to={`/project/${projectId}/team`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/team`) ? 'active' : ''}`}>
+                        <Link to={`/project/${projectId}/team`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/team`) ? 'active' : ''}`} {...navA11yProps('Team')}>
                             <Users size={16} /> <span>Team</span>
                         </Link>
-                        <Link to={`/project/${projectId}/settings`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/settings`) ? 'active' : ''}`}>
+                        <Link to={`/project/${projectId}/settings`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/settings`) ? 'active' : ''}`} {...navA11yProps('Settings')}>
                             <Settings size={16} /> <span>Settings</span>
                         </Link>
                     </>
                 ) : (
                     <>
                         <div className="nav-section-label">General</div>
-                        <Link to="/dashboard" onClick={handleNavClick} className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`}>
+                        <Link to="/dashboard" onClick={handleNavClick} className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`} {...navA11yProps('Dashboard')}>
                             <LayoutDashboard size={16} /> <span>Dashboard</span>
                         </Link>
-                        <Link to="/releases" onClick={handleNavClick} className={`nav-item ${isActive('/releases') ? 'active' : ''}`}>
+                        <Link to="/releases" onClick={handleNavClick} className={`nav-item ${isActive('/releases') ? 'active' : ''}`} {...navA11yProps("What's New")}>
                             <Rocket size={16} /> <span>What's New</span>
                         </Link>
-                        <Link to="/settings" onClick={handleNavClick} className={`nav-item ${isActive('/settings') ? 'active' : ''}`}>
+                        <Link to="/settings" onClick={handleNavClick} className={`nav-item ${isActive('/settings') ? 'active' : ''}`} {...navA11yProps('Settings')}>
                             <Settings size={16} /> <span>Settings</span>
                         </Link>
                     </>
@@ -80,7 +85,7 @@ function Sidebar({ logo, isOpen, onClose }) {
 
             <div style={{ padding: '0.5rem', borderTop: '1px solid var(--color-border)' }}>
                 <ThemeToggle />
-                <button onClick={logout} className="nav-item" style={{ width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', justifyContent: 'flex-start' }}>
+                <button onClick={logout} className="nav-item" style={{ width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', justifyContent: 'flex-start' }} {...navA11yProps('Logout')}>
                     <LogOut size={16} /> <span>Logout</span>
                 </button>
             </div>

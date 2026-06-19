@@ -35,6 +35,7 @@ function FunnelBar({ step, count, max }) {
     project_created: 'Project Created',
     collection_created: 'Collection Created',
     first_api_success: 'First API Success',
+    first_api_call: 'First API Call',
   };
   return (
     <div className="admin-funnel-row">

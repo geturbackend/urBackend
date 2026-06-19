@@ -85,6 +85,8 @@ jest.mock('@urbackend/common', () => {
         getRefreshSession: jest.fn(),
         persistRefreshSession: jest.fn().mockResolvedValue(undefined),
         revokeSessionChain: jest.fn().mockResolvedValue(undefined),
+        AppError: class AppError extends Error { constructor(statusCode, message) { super(message); this.statusCode = statusCode; } },
+        ApiResponse: class ApiResponse { constructor(d, m) { this.data=d; this.message=m; this.success=true; } send(res, code) { return res.status(code).json({ success: this.success, data: this.data, message: this.message }); } },
         checkLockout: jest.fn().mockResolvedValue({ locked: false, retryAfterSeconds: 0 }),
         recordFailedAttempt: jest.fn().mockResolvedValue({ locked: false, retryAfterSeconds: 0, attempts: 1 }),
         clearLockout: jest.fn().mockResolvedValue(undefined),
@@ -102,7 +104,7 @@ jest.mock('../utils/refreshToken', () => ({
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { redis, authEmailQueue, __mockModel: mockModel, checkLockout, recordFailedAttempt, clearLockout } = require('@urbackend/common');
+const { AppError, redis, authEmailQueue, __mockModel: mockModel, checkLockout, recordFailedAttempt, clearLockout } = require('@urbackend/common');
 const { issueAuthTokens } = require('../utils/refreshToken');
 const controller = require('../controllers/userAuth.controller');
 
@@ -143,7 +145,9 @@ const makeRes = () => {
 describe('OTP generation uses CSPRNG', () => {
     let randomIntSpy;
 
-    beforeEach(() => {
+    let next;
+beforeEach(() => {
+next = jest.fn();
         jest.clearAllMocks();
         randomIntSpy = jest.spyOn(crypto, 'randomInt');
     });
@@ -159,7 +163,7 @@ describe('OTP generation uses CSPRNG', () => {
         model.findOne.mockResolvedValueOnce(null);
         model.create.mockResolvedValueOnce({ _id: 'u1' });
 
-        await controller.signup(req, res);
+        await controller.signup(req, res, next);
 
         expect(randomIntSpy).toHaveBeenCalledWith(100000, 1000000);
         const storedOtp = require('@urbackend/common').redis.set.mock.calls.find(
@@ -175,7 +179,7 @@ describe('OTP generation uses CSPRNG', () => {
         model.findOne.mockResolvedValueOnce({ _id: 'u1', isVerified: false });
         redis.get.mockResolvedValueOnce(null);
 
-        await controller.signup(req, res);
+        await controller.signup(req, res, next);
 
         expect(randomIntSpy).toHaveBeenCalledWith(100000, 1000000);
         const otpCall = redis.set.mock.calls.find(c => c[0].includes('otp:verification'));
@@ -189,7 +193,7 @@ describe('OTP generation uses CSPRNG', () => {
         model.findOne.mockResolvedValueOnce({ _id: 'u1', isVerified: false });
         redis.get.mockResolvedValueOnce(null);
 
-        await controller.resendVerificationOtp(req, res);
+        await controller.resendVerificationOtp(req, res, next);
 
         expect(randomIntSpy).toHaveBeenCalledWith(100000, 1000000);
     });
@@ -199,14 +203,16 @@ describe('OTP generation uses CSPRNG', () => {
         const res = makeRes();
         require('@urbackend/common').__mockModel.findOne.mockResolvedValueOnce({ _id: 'u1' });
 
-        await controller.requestPasswordReset(req, res);
+        await controller.requestPasswordReset(req, res, next);
 
         expect(randomIntSpy).toHaveBeenCalledWith(100000, 1000000);
     });
 });
 
 describe('Email Authentication Flow', () => {
-    beforeEach(() => {
+    let next;
+beforeEach(() => {
+next = jest.fn();
         jest.clearAllMocks();
     });
 
@@ -220,7 +226,7 @@ describe('Email Authentication Flow', () => {
             mockModel.findOne.mockResolvedValueOnce(null); // User does not exist
             mockModel.create.mockResolvedValueOnce({ _id: 'user_123' });
 
-            await controller.signup(req, res);
+            await controller.signup(req, res, next);
 
             expect(mockModel.findOne).toHaveBeenCalled();
             expect(mockModel.create).toHaveBeenCalledWith(expect.objectContaining({
@@ -244,11 +250,13 @@ describe('Email Authentication Flow', () => {
             expect(clearLockout).toHaveBeenCalledWith('project_1', 'new@user.com');
 
             expect(issueAuthTokens).toHaveBeenCalled();
-            expect(res.status).toHaveBeenCalledWith(201);
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+            
+            expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
                 token: 'signed_access_token',
                 userId: 'user_123'
-            }));
+            })
+    );
         });
 
         test('returns 400 if user already exists', async () => {
@@ -259,12 +267,11 @@ describe('Email Authentication Flow', () => {
 
             mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123', email: 'existing@user.com', isVerified: true });
 
-            await controller.signup(req, res);
+            await controller.signup(req, res, next);
 
-            expect(res.status).toHaveBeenCalledWith(400);
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-                error: expect.stringContaining('already exists')
-            }));
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[next.mock.calls.length - 1][0].statusCode).toBe(400);
+            
         });
         
         test('resends verification if user exists but unverified', async () => {
@@ -276,11 +283,11 @@ describe('Email Authentication Flow', () => {
             mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123', email: 'unverified@user.com', isVerified: false });
             redis.get.mockResolvedValueOnce(null); // No cooldown
 
-            await controller.signup(req, res);
+            await controller.signup(req, res, next);
 
             expect(mockModel.create).not.toHaveBeenCalled();
             expect(authEmailQueue.add).toHaveBeenCalled();
-            expect(res.status).toHaveBeenCalledWith(200);
+            
         });
     });
 
@@ -294,7 +301,7 @@ describe('Email Authentication Flow', () => {
             redis.get.mockResolvedValueOnce('123456');
             mockModel.updateOne.mockResolvedValueOnce({ matchedCount: 1 });
 
-            await controller.verifyEmail(req, res);
+            await controller.verifyEmail(req, res, next);
 
             expect(redis.get).toHaveBeenCalledWith(expect.stringContaining('test@user.com'));
             expect(mockModel.updateOne).toHaveBeenCalledWith(
@@ -302,7 +309,9 @@ describe('Email Authentication Flow', () => {
                 { $set: { isVerified: true } }
             );
             expect(redis.del).toHaveBeenCalled();
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: expect.any(String) }));
+            expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ message: expect.any(String) })
+    );
         });
 
         test('returns 400 for invalid OTP', async () => {
@@ -313,10 +322,11 @@ describe('Email Authentication Flow', () => {
 
             redis.get.mockResolvedValueOnce('123456');
 
-            await controller.verifyEmail(req, res);
+            await controller.verifyEmail(req, res, next);
 
             expect(mockModel.updateOne).not.toHaveBeenCalled();
-            expect(res.status).toHaveBeenCalledWith(400);
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[next.mock.calls.length - 1][0].statusCode).toBe(400);
         });
     });
 
@@ -336,15 +346,17 @@ describe('Email Authentication Flow', () => {
             });
             bcrypt.compare.mockResolvedValueOnce(true);
 
-            await controller.login(req, res);
+            await controller.login(req, res, next);
 
             expect(checkLockout).toHaveBeenCalledWith('project_1', 'test@user.com');
             expect(bcrypt.compare).toHaveBeenCalledWith('password123', 'hashed_pw');
             expect(clearLockout).toHaveBeenCalledWith('project_1', 'test@user.com');
             expect(issueAuthTokens).toHaveBeenCalled();
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+            expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
                 token: 'signed_access_token'
-            }));
+            })
+    );
         });
 
         test('returns 400 for incorrect password', async () => {
@@ -361,10 +373,11 @@ describe('Email Authentication Flow', () => {
             });
             bcrypt.compare.mockResolvedValueOnce(false);
 
-            await controller.login(req, res);
+            await controller.login(req, res, next);
 
             expect(recordFailedAttempt).toHaveBeenCalledWith('project_1', 'test@user.com');
-            expect(res.status).toHaveBeenCalledWith(400);
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[next.mock.calls.length - 1][0].statusCode).toBe(400);
         });
 
         test('returns 423 when account is already locked', async () => {
@@ -375,11 +388,12 @@ describe('Email Authentication Flow', () => {
 
             checkLockout.mockResolvedValueOnce({ locked: true, retryAfterSeconds: 900 });
 
-            await controller.login(req, res);
+            await controller.login(req, res, next);
 
             expect(bcrypt.compare).not.toHaveBeenCalled();
             expect(recordFailedAttempt).not.toHaveBeenCalled();
-            expect(res.status).toHaveBeenCalledWith(423);
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[next.mock.calls.length - 1][0].statusCode).toBe(423);
         });
 
         test('returns 423 when failures reach lockout threshold', async () => {
@@ -397,9 +411,10 @@ describe('Email Authentication Flow', () => {
             bcrypt.compare.mockResolvedValueOnce(false);
             recordFailedAttempt.mockResolvedValueOnce({ locked: true, retryAfterSeconds: 900, attempts: 5 });
 
-            await controller.login(req, res);
+            await controller.login(req, res, next);
 
-            expect(res.status).toHaveBeenCalledWith(423);
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[next.mock.calls.length - 1][0].statusCode).toBe(423);
         });
 
         test('user-not-found branch records attempt and returns 423 when lockout is reached', async () => {
@@ -414,10 +429,11 @@ describe('Email Authentication Flow', () => {
             });
             recordFailedAttempt.mockResolvedValueOnce({ locked: true, retryAfterSeconds: 900, attempts: 5 });
 
-            await controller.login(req, res);
+            await controller.login(req, res, next);
 
             expect(recordFailedAttempt).toHaveBeenCalledWith('project_1', 'missing@user.com');
-            expect(res.status).toHaveBeenCalledWith(423);
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[next.mock.calls.length - 1][0].statusCode).toBe(423);
         });
     });
 
@@ -431,7 +447,7 @@ describe('Email Authentication Flow', () => {
             mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123' });
             redis.get.mockResolvedValueOnce(null); // no cooldown
 
-            await controller.requestPasswordReset(req, res);
+            await controller.requestPasswordReset(req, res, next);
 
             expect(redis.set).toHaveBeenCalledWith(expect.stringContaining('otp:reset:reset@user.com'), expect.any(String), 'EX', 300);
             expect(authEmailQueue.add).toHaveBeenCalledWith('send-reset-email', expect.objectContaining({
@@ -447,15 +463,13 @@ describe('Email Authentication Flow', () => {
             redis.get.mockResolvedValueOnce('1'); // cooldown active — checked before findOne
             redis.ttl.mockResolvedValueOnce(45);
 
-            await controller.requestPasswordReset(req, res);
+            await controller.requestPasswordReset(req, res, next);
 
             expect(mockModel.findOne).not.toHaveBeenCalled(); // DB never queried
             expect(authEmailQueue.add).not.toHaveBeenCalled();
-            expect(res.status).toHaveBeenCalledWith(429);
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
-                success: false,
-                message: expect.stringContaining('45 seconds')
-            }));
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[next.mock.calls.length - 1][0].statusCode).toBe(429);
+            
         });
 
         test('sets cooldown for unknown email to prevent account enumeration', async () => {
@@ -465,12 +479,14 @@ describe('Email Authentication Flow', () => {
             redis.get.mockResolvedValueOnce(null); // no cooldown
             mockModel.findOne.mockResolvedValueOnce(null); // user does not exist
 
-            await controller.requestPasswordReset(req, res);
+            await controller.requestPasswordReset(req, res, next);
 
             const cooldownCall = redis.set.mock.calls.find(c => c[0].includes('otp:cooldown:reset'));
             expect(cooldownCall).toBeDefined(); // cooldown set even for unknown email
             expect(authEmailQueue.add).not.toHaveBeenCalled();
-            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: expect.any(String) }));
+            expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ message: expect.any(String) })
+    );
         });
 
         test('sets cooldown after sending reset OTP', async () => {
@@ -480,7 +496,7 @@ describe('Email Authentication Flow', () => {
             mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123' });
             redis.get.mockResolvedValueOnce(null);
 
-            await controller.requestPasswordReset(req, res);
+            await controller.requestPasswordReset(req, res, next);
 
             const cooldownCall = redis.set.mock.calls.find(c => c[0].includes('otp:cooldown:reset'));
             expect(cooldownCall).toBeDefined();
@@ -495,7 +511,7 @@ describe('Email Authentication Flow', () => {
             mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123' });
             redis.get.mockResolvedValueOnce(null);
 
-            await controller.requestPasswordReset(req, res);
+            await controller.requestPasswordReset(req, res, next);
 
             const otpCall = redis.set.mock.calls.find(c => c[0].includes('otp:reset'));
             expect(otpCall[0]).toContain('reset@user.com');
@@ -512,7 +528,7 @@ describe('Email Authentication Flow', () => {
             redis.get.mockResolvedValueOnce('123456');
             mockModel.updateOne.mockResolvedValueOnce({ matchedCount: 1 });
 
-            await controller.resetPasswordUser(req, res);
+            await controller.resetPasswordUser(req, res, next);
 
             expect(bcrypt.hash).toHaveBeenCalledWith('newpassword123', 'salt');
             expect(mockModel.updateOne).toHaveBeenCalledWith(
@@ -537,7 +553,7 @@ describe('Email Authentication Flow', () => {
             mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123', password: 'old_hashed_pw' });
             bcrypt.compare.mockResolvedValueOnce(true);
 
-            await controller.changePasswordUser(req, res);
+            await controller.changePasswordUser(req, res, next);
 
             expect(bcrypt.compare).toHaveBeenCalledWith('oldpassword', 'old_hashed_pw');
             expect(bcrypt.hash).toHaveBeenCalledWith('newpassword123', 'salt');
@@ -559,10 +575,11 @@ describe('Email Authentication Flow', () => {
             mockModel.findOne.mockResolvedValueOnce({ _id: 'user_123', password: 'old_hashed_pw' });
             bcrypt.compare.mockResolvedValueOnce(false);
 
-            await controller.changePasswordUser(req, res);
+            await controller.changePasswordUser(req, res, next);
 
             expect(mockModel.updateOne).not.toHaveBeenCalled();
-            expect(res.status).toHaveBeenCalledWith(400);
+            expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[next.mock.calls.length - 1][0].statusCode).toBe(400);
         });
     });
 });

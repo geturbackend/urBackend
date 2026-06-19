@@ -313,19 +313,18 @@ export default function Auth() {
                     ) : null}
 
                     {/* Main Enable Card */}
-                    <div className="glass-card" style={{ padding: '3rem 2rem', textAlign: 'center', borderRadius: '12px' }}>
-                        <Shield size={40} color="var(--color-primary)" style={{ marginBottom: '1.25rem', opacity: 0.5 }} />
-                        <h2 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', fontWeight: 700 }}>Ready to Enable?</h2>
-                        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-                            Activating Auth will allow you to manage user sessions and securely authenticate requests via your API.
+                    <div className="glass-card" style={{ padding: '4rem 2rem', textAlign: 'center', borderRadius: '12px', borderStyle: 'dashed' }}>
+                        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontWeight: 700 }}>Authentication</h2>
+                        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '2rem' }}>
+                            Manage users and login providers.
                         </p>
                         <button 
                             className="btn btn-primary" 
                             onClick={handleEnableAuth} 
                             disabled={isEnabling || !hasRequiredUsersSchema}
-                            style={{ height: '36px', padding: '0 20px', fontSize: '0.85rem', opacity: !hasRequiredUsersSchema ? 0.5 : 1 }}
+                            style={{ height: '40px', padding: '0 24px', fontSize: '0.9rem', fontWeight: 600, opacity: !hasRequiredUsersSchema ? 0.5 : 1 }}
                         >
-                            {isEnabling ? 'Enabling...' : 'Enable Authentication'}
+                            {isEnabling ? 'Enabling...' : 'Configure Authentication'}
                         </button>
                     </div>
                 </div>

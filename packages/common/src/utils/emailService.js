@@ -1,9 +1,14 @@
 const { Resend } = require('resend');
 const { marked } = require('marked');
+const AppError = require('./AppError');
 
 const dotenv = require('dotenv');
 
 dotenv.config();
+console.log("cwd =", process.cwd());
+console.log("__dirname =", __dirname);
+
+
 const resend = new Resend(process.env.RESEND_API_KEY_2 || process.env.RESEND_API_KEY || 're_dummy_key_for_testing');
 
 const FALLBACK_FROM_ADDRESS = 'urBackend <urbackend@apps.bitbros.in>';
@@ -71,7 +76,7 @@ async function sendOtp(email, otp, { subject = "Verify your urBackend account", 
 
         if (error) {
             console.error("[Resend Error]", error);
-            throw new Error(error.message || "Failed to send email");
+            throw new AppError(502, error.message || "Failed to send email");
         }
         return { data };
     } catch (error) {
@@ -148,7 +153,7 @@ async function sendReleaseEmail(email, { version, title, content, changelogUrl }
 
         if (error) {
             console.error("[Resend Error]", error);
-            throw new Error(error.message || "Failed to send release email");
+            throw new AppError(502, error.message || "Failed to send release email");
         }
         return { data };
     } catch (error) {
@@ -242,7 +247,7 @@ async function sendAuthOtpEmail(email, { otp, type, pname, byokKey, byokFrom }) 
 
         if (error) {
             console.error("[Resend Error]", error);
-            throw new Error(error.message || "Failed to send email");
+            throw new AppError(502, error.message || "Failed to send email");
         }
         return { data };
     } catch (error) {
@@ -293,7 +298,7 @@ async function sendProRequestConfirmationEmail(email) {
 
         if (error) {
             console.error("[Resend Error - Pro Request]", error);
-            throw new Error(error.message || "Failed to send email");
+            throw new AppError(502, error.message || "Failed to send email");
         }
         return { data };
     } catch (error) {
@@ -370,7 +375,7 @@ urBackend Team`;
 
         if (error) {
             console.error("[Resend Error - Export Ready]", error);
-            throw new Error(error.message || "Failed to send export ready email");
+            throw new AppError(502, error.message || "Failed to send export ready email");
         }
         return { data };
     } catch (error) {

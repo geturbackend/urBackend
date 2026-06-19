@@ -1,9 +1,15 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 // This component takes other components as children
-const ProtectedRoute = ({ children }) => {
-    const { isAuthenticated, isLoading } = useAuth();
+const ProtectedRoute = ({
+    children,
+    allowUnverified = false,
+    allowIncompleteOnboarding = false,
+    onboardingOnly = false,
+}) => {
+    const { user, isAuthenticated, isLoading } = useAuth();
+    const location = useLocation();
 
     if (isLoading) {
         return (
@@ -25,7 +31,46 @@ const ProtectedRoute = ({ children }) => {
         return <Navigate to="/login" replace />;
     }
 
-    // If authenticated, render the child component (e.g., the Dashboard)
+    if (!allowUnverified && !user?.isVerified) {
+        return <Navigate to="/verify-otp" replace state={{ email: user?.email, from: location.pathname }} />;
+    }
+
+    const onboardingCompleted = !!user?.onboarding?.completed;
+
+    if (onboardingCompleted) {
+        if (onboardingOnly || location.pathname.startsWith('/onboarding')) {
+            return <Navigate to="/dashboard" replace />;
+        }
+    } else if (!allowIncompleteOnboarding) {
+        const steps = user?.onboarding?.steps || {};
+        
+        if (!onboardingOnly || location.pathname === '/onboarding' || location.pathname === '/onboarding/') {
+            if (!steps.projectCreated) {
+                return <Navigate to="/onboarding/project" replace />;
+            } else if (!steps.collectionCreated) {
+                return <Navigate to="/onboarding/collection" replace />;
+            } else {
+                return <Navigate to="/onboarding/api" replace />;
+            }
+        }
+        
+        // If on /onboarding/*, enforce step prerequisites strictly but allow revisiting earlier steps
+        if (!steps.projectCreated) {
+            if (location.pathname !== '/onboarding/project') {
+                return <Navigate to="/onboarding/project" replace />;
+            }
+        } else if (!steps.collectionCreated) {
+            if (location.pathname !== '/onboarding/collection' && location.pathname !== '/onboarding/project') {
+                return <Navigate to="/onboarding/collection" replace />;
+            }
+        } else {
+            // All steps completed, allow any onboarding route, but default to /api if root
+            if (location.pathname === '/onboarding' || location.pathname === '/onboarding/') {
+                return <Navigate to="/onboarding/api" replace />;
+            }
+        }
+    }
+
     return children;
 };
 

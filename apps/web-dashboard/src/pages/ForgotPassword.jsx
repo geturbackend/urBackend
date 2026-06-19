@@ -64,7 +64,9 @@ function ForgotPassword() {
       const data = error.response?.data;
       let message = 'Failed to send reset code.';
 
-      if (typeof data?.error === 'string') {
+      if (data?.message && typeof data.message === 'string') {
+        message = data.message;
+      } else if (typeof data?.error === 'string' && data.error !== 'Error' && data.error !== 'Internal Server Error') {
         message = data.error;
       } else if (Array.isArray(data?.error)) {
         message = data.error[0]?.message || message;
@@ -113,7 +115,9 @@ function ForgotPassword() {
       const data = error.response?.data;
       let message = 'Password reset failed.';
 
-      if (typeof data?.error === 'string') {
+      if (data?.message && typeof data.message === 'string') {
+        message = data.message;
+      } else if (typeof data?.error === 'string' && data.error !== 'Error' && data.error !== 'Internal Server Error') {
         message = data.error;
       } else if (Array.isArray(data?.error)) {
         message = data.error[0]?.message || message;

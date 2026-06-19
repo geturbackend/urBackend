@@ -1,7 +1,12 @@
-console.log('DEBUG: planEnforcement.js loading...');
 const mongoose = require('mongoose');
 
-console.log('DEBUG: planEnforcement.js exporting attachDeveloper');
+const UNVERIFIED_PROJECT_LIMIT = 1;
+const UNVERIFIED_COLLECTION_LIMIT = 3;
+
+const isAdminRequest = (req) => {
+    return req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase();
+};
+
 exports.attachDeveloper = async function(req, res, next) {
     const { Developer, AppError, Project, sanitizeObjectId } = require('@urbackend/common');
     try {
@@ -29,11 +34,12 @@ exports.attachDeveloper = async function(req, res, next) {
     }
 }
 
-console.log('DEBUG: planEnforcement.js exporting checkProjectLimit');
 exports.checkProjectLimit = async function(req, res, next) {
     const { resolveEffectivePlan, getPlanLimits } = require('@urbackend/common');
     try {
-        if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
+        if (isAdminRequest(req)) return next();
+        if (!req.developer?.isVerified) return next();
+
         const effectivePlan = resolveEffectivePlan(req.developer);
         const limits = getPlanLimits({ plan: effectivePlan });
         if (limits.maxProjects === -1) return next();
@@ -44,11 +50,58 @@ exports.checkProjectLimit = async function(req, res, next) {
     }
 }
 
-console.log('DEBUG: planEnforcement.js exporting checkCollectionLimit');
+exports.checkDeveloperCapability = function(capability) {
+    return async function(req, res, next) {
+        const { Project, AppError, sanitizeObjectId } = require('@urbackend/common');
+        try {
+            if (isAdminRequest(req)) {
+                return next();
+            }
+
+            const isVerified = !!(req.developer?.isVerified ?? req.user?.isVerified);
+
+            if (isVerified) {
+                return next();
+            }
+
+            if (capability === 'createProject') {
+                const currentCount = await Project.countDocuments({ owner: req.user._id });
+                if (currentCount >= UNVERIFIED_PROJECT_LIMIT) {
+                    return next(new AppError(403, 'Verify your email to create additional projects.'));
+                }
+                req.projectLimit = Math.min(req.projectLimit ?? UNVERIFIED_PROJECT_LIMIT, UNVERIFIED_PROJECT_LIMIT);
+                return next();
+            }
+
+            if (capability === 'createCollection') {
+                const cleanProjectId = sanitizeObjectId(req.body.projectId || req.params.projectId);
+                if (!cleanProjectId) return next(new AppError(400, 'Invalid or missing projectId'));
+
+                const project = await Project.findOne({ _id: cleanProjectId, owner: req.user._id })
+                    .select('collections')
+                    .lean();
+                if (!project) return next(new AppError(404, 'Project not found'));
+
+                if ((project.collections || []).length >= UNVERIFIED_COLLECTION_LIMIT) {
+                    return next(new AppError(403, 'Verify your email to create more than 3 collections.'));
+                }
+
+                req.collectionLimit = Math.min(req.collectionLimit ?? UNVERIFIED_COLLECTION_LIMIT, UNVERIFIED_COLLECTION_LIMIT);
+                return next();
+            }
+
+            return next(new AppError(403, 'Email verification is required for this action.'));
+        } catch (err) {
+            next(err);
+        }
+    };
+}
+
 exports.checkCollectionLimit = async function(req, res, next) {
     const { Project, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId, getProjectAccessQuery } = require('@urbackend/common');
     try {
-        if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
+        if (isAdminRequest(req)) return next();
+        if (!req.developer?.isVerified) return next();
         
         const cleanProjectId = sanitizeObjectId(req.body.projectId);
         if (!cleanProjectId) return next(new AppError(400, 'Invalid or missing projectId'));
@@ -69,11 +122,10 @@ exports.checkCollectionLimit = async function(req, res, next) {
     }
 }
 
-console.log('DEBUG: planEnforcement.js exporting checkByodGate');
 exports.checkByodGate = async function(req, res, next) {
     const { Project, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId } = require('@urbackend/common');
     try {
-        if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
+        if (isAdminRequest(req)) return next();
         const { dbUri, storageUrl, storageKey } = req.body;
         if (!dbUri && !storageUrl && !storageKey) return next();
 
@@ -97,11 +149,10 @@ exports.checkByodGate = async function(req, res, next) {
     }
 }
 
-console.log('DEBUG: planEnforcement.js exporting checkByokGate');
 exports.checkByokGate = async function(req, res, next) {
     const { Project, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId } = require('@urbackend/common');
     try {
-        if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
+        if (isAdminRequest(req)) return next();
         const { resendApiKey, github, google } = req.body;
         if (!resendApiKey && !github?.clientSecret && !google?.clientSecret) return next();
 
@@ -124,11 +175,15 @@ exports.checkByokGate = async function(req, res, next) {
     }
 }
 
-console.log('DEBUG: planEnforcement.js exporting checkWebhookGate');
 exports.checkWebhookGate = async function(req, res, next) {
     const { Project, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId } = require('@urbackend/common');
     try {
-        if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
+        if (isAdminRequest(req)) return next();
+
+        const isVerified = !!(req.developer?.isVerified ?? req.user?.isVerified);
+        if (!isVerified) {
+            return next(new AppError(403, 'Verify your email to create or test webhooks.'));
+        }
 
         const rawProjectId = req.params.projectId || req.body.projectId || req.query.projectId;
         const cleanProjectId = sanitizeObjectId(rawProjectId);
@@ -152,11 +207,10 @@ exports.checkWebhookGate = async function(req, res, next) {
     }
 }
 
-console.log('DEBUG: planEnforcement.js exporting checkMailTemplatesGate');
 exports.checkMailTemplatesGate = async function(req, res, next) {
     const { Project, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId } = require('@urbackend/common');
     try {
-        if (req.user?.isAdmin || req.user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase()) return next();
+        if (isAdminRequest(req)) return next();
 
         const rawProjectId = req.params.projectId || req.body.projectId || req.query.projectId;
         const cleanProjectId = sanitizeObjectId(rawProjectId);

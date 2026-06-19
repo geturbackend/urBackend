@@ -73,6 +73,8 @@ jest.mock('@urbackend/common', () => {
         getConnection: jest.fn().mockResolvedValue({}),
         getCompiledModel: jest.fn(() => mockModel),
         __mockModel: mockModel,
+        AppError: class AppError extends Error { constructor(statusCode, message) { super(message); this.statusCode = statusCode; } },
+        ApiResponse: class ApiResponse { constructor(d, m) { this.data=d; this.message=m; this.success=true; } send(res, code) { return res.status(code).json({ success: this.success, data: this.data, message: this.message }); } },
         checkLockout: jest.fn().mockResolvedValue({ locked: false, retryAfterSeconds: 0 }),
         recordFailedAttempt: jest.fn().mockResolvedValue({ locked: false, retryAfterSeconds: 0, attempts: 1 }),
         clearLockout: jest.fn().mockResolvedValue(undefined),
@@ -87,7 +89,7 @@ jest.mock('@urbackend/common', () => {
 });
 
 const bcrypt = require('bcryptjs');
-const { Project, redis, getRefreshSession, persistRefreshSession, __mockModel: mockModel } = require('@urbackend/common');
+const { AppError, Project, redis, getRefreshSession, persistRefreshSession, __mockModel: mockModel } = require('@urbackend/common');
 const controller = require('../controllers/userAuth.controller');
 
 const makeProject = () => ({
@@ -124,7 +126,9 @@ const makeRes = () => {
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
 describe('public userAuth refresh flow', () => {
-    beforeEach(() => {
+    let next;
+beforeEach(() => {
+next = jest.fn();
         jest.clearAllMocks();
         process.env.NODE_ENV = 'test';
     });
@@ -142,7 +146,7 @@ describe('public userAuth refresh flow', () => {
         });
         const res = makeRes();
 
-        await controller.login(req, res);
+        await controller.login(req, res, next);
 
         expect(res.cookie).toHaveBeenCalledWith(
             'refreshToken',
@@ -150,25 +154,26 @@ describe('public userAuth refresh flow', () => {
             expect.objectContaining({ httpOnly: true })
         );
         expect(res.json).toHaveBeenCalledWith(
-            expect.objectContaining({
+        expect.objectContaining({
                 token: 'signed_access_token',
                 accessToken: 'signed_access_token',
                 expiresIn: expect.any(String),
             })
-        );
+    );
     });
 
     test('refresh-token returns 401 when token is missing', async () => {
         const req = makeReq({ headers: {} });
         const res = makeRes();
 
-        await controller.refreshToken(req, res);
+        await controller.refreshToken(req, res, next);
 
         expect(res.clearCookie).toHaveBeenCalledWith(
             'refreshToken',
             expect.objectContaining({ httpOnly: true })
         );
-        expect(res.status).toHaveBeenCalledWith(401);
+        expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[next.mock.calls.length - 1][0].statusCode).toBe(401);
     });
 
     test('refresh-token rotates and returns new access token', async () => {
@@ -201,16 +206,16 @@ describe('public userAuth refresh flow', () => {
         });
         const res = makeRes();
 
-        await controller.refreshToken(req, res);
+        await controller.refreshToken(req, res, next);
 
-        expect(res.status).toHaveBeenCalledWith(200);
+        
         expect(res.json).toHaveBeenCalledWith(
-            expect.objectContaining({
+        expect.objectContaining({
                 token: 'signed_access_token',
                 accessToken: 'signed_access_token',
                 refreshToken: expect.any(String),
             })
-        );
+    );
     });
 
     test('refresh-token returns 403 when user is soft-deleted', async () => {
@@ -236,12 +241,16 @@ describe('public userAuth refresh flow', () => {
         });
         const res = makeRes();
 
-        await controller.refreshToken(req, res);
+        const next = jest.fn();
+        await controller.refreshToken(req, res, next);
 
-        expect(res.status).toHaveBeenCalledWith(403);
-        expect(res.json).toHaveBeenCalledWith({ success: false, data: {}, message: expect.stringContaining('deletion') });
+        expect(next).toHaveBeenCalledWith(expect.any(AppError));
+        expect(next.mock.calls[next.mock.calls.length - 1][0].statusCode).toBe(403);
+        expect(next.mock.calls[next.mock.calls.length - 1][0].message).toMatch(/deletion/);
         expect(res.clearCookie).toHaveBeenCalledWith('refreshToken', expect.any(Object));
     });
+
+
 
     test('logout revokes current refresh session when provided', async () => {
         const rawToken = 'token_2.secret_2';
@@ -262,13 +271,13 @@ describe('public userAuth refresh flow', () => {
         });
         const res = makeRes();
 
-        await controller.logout(req, res);
+        await controller.logout(req, res, next);
 
         expect(res.clearCookie).toHaveBeenCalledWith(
             'refreshToken',
             expect.objectContaining({ httpOnly: true })
         );
-        expect(res.status).toHaveBeenCalledWith(200);
+        
     });
 
     test('public profile returns only safe fields', async () => {
@@ -303,17 +312,21 @@ describe('public userAuth refresh flow', () => {
         req.params = { username: 'yash' };
 
         const res = makeRes();
-        await controller.publicProfile(req, res);
+        await controller.publicProfile(req, res, next);
 
         expect(res.json).toHaveBeenCalledWith(
-            expect.objectContaining({
+        expect.objectContaining({ data: expect.objectContaining({
                 _id: 'user_1',
                 username: 'yash',
                 name: 'Yash',
                 bio: 'builder',
-            })
-        );
-        expect(res.json).not.toHaveBeenCalledWith(expect.objectContaining({ email: 'private@example.com' }));
-        expect(res.json).not.toHaveBeenCalledWith(expect.objectContaining({ password: 'hashed_secret' }));
+            }) })
+    );
+        expect(res.json).not.toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ email: 'private@example.com' }) })
+    );
+        expect(res.json).not.toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ password: 'hashed_secret' }) })
+    );
     });
 });

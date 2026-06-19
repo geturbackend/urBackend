@@ -30,10 +30,17 @@ module.exports = async (req, res, next) => {
         const keyField = isSecret ? 'secretKey' : 'publishableKey';
         const hashedApi = hashApiKey(apiKey);
 
-        let project = await getProjectByApiKeyCache(hashedApi);
+        let project = await getProjectByApiKeyCache(isSecret ? hashedApi : apiKey);
+        if (!project && !isSecret) {
+            project = await getProjectByApiKeyCache(hashedApi);
+        }
 
         if (!project) {
-            project = await Project.findOne({ [keyField]: hashedApi })
+            const queryCondition = isSecret
+                ? { [keyField]: hashedApi }
+                : { $or: [{ [keyField]: apiKey }, { [keyField]: hashedApi }] };
+
+            project = await Project.findOne(queryCondition)
                 .select(`
                     name
                     owner
@@ -55,7 +62,8 @@ module.exports = async (req, res, next) => {
                 return next(new AppError(401, 'Please use a valid API key or regenerate a new one from the dashboard.', 'API key is expired or invalid.'));
             }
 
-            await setProjectByApiKeyCache(hashedApi, project);
+            const cacheKey = isSecret ? hashedApi : (project[keyField] === apiKey ? apiKey : hashedApi);
+            await setProjectByApiKeyCache(cacheKey, project);
         }
 
         if (!project.owner.isVerified) {

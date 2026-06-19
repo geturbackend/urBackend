@@ -78,6 +78,7 @@ const {
   onlyEmailSchema,
   verifyOtpSchema,
   resetPasswordSchema,
+  updateOnboardingSchema,
   createProjectSchema,
   createCollectionSchema,
   createSchemaApiKeySchema,
@@ -119,6 +120,12 @@ const ApiResponse = require("./utils/ApiResponse");
 const { checkLockout, recordFailedAttempt, clearLockout } = require("./utils/loginLockout");
 const { dispatchWebhooks } = require("./utils/webhookDispatcher");
 const { getDayKey, getMonthKey, getEndOfMonthTtlSeconds, incrWithTtlAtomic } = require("./utils/usageCounter");
+const {
+  markDeveloperOnboardingStep,
+  markDeveloperActivated,
+  normalizeOnboarding,
+  updateDeveloperOnboarding,
+} = require("./utils/onboarding");
 const { getProjectAccessQuery, getProjectRole } = require("./utils/projectAccess");
 
 module.exports = {
@@ -155,6 +162,7 @@ module.exports = {
   onlyEmailSchema,
   verifyOtpSchema,
   resetPasswordSchema,
+  updateOnboardingSchema,
   createProjectSchema,
   createCollectionSchema,
   createSchemaApiKeySchema,
@@ -230,6 +238,10 @@ module.exports = {
   getEndOfMonthTtlSeconds,
   incrWithTtlAtomic,
   getS3CompatibleStorage,
+  markDeveloperOnboardingStep,
+  markDeveloperActivated,
+  normalizeOnboarding,
+  updateDeveloperOnboarding,
   getProjectAccessQuery,
   getProjectRole,
 };

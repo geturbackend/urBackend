@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { useOnboarding } from '../context/OnboardingContext';
@@ -18,8 +18,10 @@ import SectionHeader from '../components/Dashboard/SectionHeader';
 function ProjectDetails() {
     const { projectId } = useParams();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { user } = useAuth();
     const { completeStep, setActiveProjectId } = useOnboarding();
+    const revealAttemptedRef = useRef(false);
 
     const [project, setProject] = useState(null);
     const [analytics, setAnalytics] = useState(null);
@@ -28,10 +30,10 @@ function ProjectDetails() {
 
     useEffect(() => {
         Promise.resolve().then(() => {
-            completeStep('get_api_key');
             setActiveProjectId(projectId);
+            if (user?.isVerified) completeStep('get_api_key');
         });
-    }, [completeStep, setActiveProjectId, projectId]);
+    }, [completeStep, setActiveProjectId, projectId, user?.isVerified]);
 
     useEffect(() => {
         let isMounted = true;
@@ -61,11 +63,43 @@ function ProjectDetails() {
         try {
             const res = await api.post(`/api/projects/${projectId}/api-key`, { keyType });
             setNewKey({ key: res.data.apiKey, type: keyType });
+            if (keyType === 'secret') {
+                setProject(prev => ({ ...prev, secretKeyRevealed: false }));
+            } else {
+                setProject(prev => ({ ...prev, publishableKey: res.data.apiKey }));
+            }
             toast.success("New Key Generated!");
         } catch {
             toast.error("Failed to regenerate key");
         }
     };
+
+    useEffect(() => {
+        if (revealAttemptedRef.current || loading || !project || !user?.isVerified || searchParams.get('revealKeys') !== '1') {
+            return;
+        }
+
+        revealAttemptedRef.current = true;
+        const revealKeys = async () => {
+            try {
+                const secretRes = await api.post(`/api/projects/${projectId}/reveal-secret-key`);
+                setNewKey({
+                    type: 'API',
+                    keys: [
+                        { label: 'Publishable Key', value: project.publishableKey },
+                        { label: 'Secret Key', value: secretRes.data.data.secretKey }
+                    ]
+                });
+                completeStep('get_api_key');
+                setSearchParams({}, { replace: true });
+                toast.success('API keys revealed. Copy them now.');
+            } catch (err) {
+                toast.error(err.response?.data?.message || err.response?.data?.error || 'Failed to reveal API keys');
+            }
+        };
+
+        revealKeys();
+    }, [completeStep, loading, project, projectId, searchParams, setSearchParams, user?.isVerified]);
 
     if (loading) return (
         <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--color-text-muted)', gap: '10px' }}>
@@ -86,28 +120,33 @@ function ProjectDetails() {
                     display: 'flex', justifyContent: 'center', alignItems: 'center',
                     backdropFilter: 'blur(8px)'
                 }}>
-                    <div className="glass-card" style={{ maxWidth: '450px', width: '90%', padding: '2rem', borderRadius: '12px', border: `1px solid ${newKey.type === 'secret' ? '#ef4444' : 'var(--color-primary)'}` }}>
+                    <div className="glass-card" style={{ maxWidth: '520px', width: '90%', padding: '2rem', borderRadius: '12px', border: `1px solid ${newKey.type === 'secret' ? '#ef4444' : 'var(--color-primary)'}` }}>
                         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                            <h2 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>New {newKey.type} Key</h2>
+                            <h2 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>New {newKey.type} Key{newKey.keys ? 's' : ''}</h2>
                             <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>Copy this now. It won't be shown again.</p>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', background: '#000', borderRadius: '6px', border: '1px solid var(--color-border)', marginBottom: '1.5rem', overflow: 'hidden' }}>
-                            <code style={{ flex: 1, padding: '12px', fontSize: '0.85rem', wordBreak: 'break-all', color: 'var(--color-primary)', borderRight: '1px solid var(--color-border)' }}>{newKey.key}</code>
-                            <button 
-                                onClick={async () => {
-                                    try {
-                                        await navigator.clipboard.writeText(newKey.key);
-                                        toast.success("Copied to clipboard!");
-                                    } catch {
-                                        toast.error("Failed to copy to clipboard");
-                                    }
-                                }} 
-                                style={{ padding: '0 16px', background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                title="Copy"
-                            >
-                                <Copy size={16} />
-                            </button>
-                        </div>
+                        {(newKey.keys || [{ label: `${newKey.type} Key`, value: newKey.key }]).map((item) => (
+                            <div key={item.label} style={{ marginBottom: '1rem' }}>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '6px' }}>{item.label}</div>
+                                <div style={{ display: 'flex', alignItems: 'center', background: '#000', borderRadius: '6px', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
+                                    <code style={{ flex: 1, padding: '12px', fontSize: '0.85rem', wordBreak: 'break-all', color: item.value?.startsWith('sk_live_') ? '#ef4444' : 'var(--color-primary)', borderRight: '1px solid var(--color-border)' }}>{item.value}</code>
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                await navigator.clipboard.writeText(item.value);
+                                                toast.success("Copied to clipboard!");
+                                            } catch {
+                                                toast.error("Failed to copy to clipboard");
+                                            }
+                                        }}
+                                        style={{ padding: '0 16px', background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        title={`Copy ${item.label}`}
+                                    >
+                                        <Copy size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
                         <button onClick={() => setNewKey(null)} className="btn btn-primary" style={{ width: '100%' }}>I've copied it</button>
                     </div>
                 </div>
@@ -192,28 +231,73 @@ function ProjectDetails() {
                 {/* Right Column */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
                     
+                    {/* Project Status */}
+                    <section>
+                        <SectionHeader title="Project Status" />
+                        <div className="glass-card" style={{ padding: '1.25rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Database Status</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} /> Connected
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Collections</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-primary)', cursor: 'pointer' }} onClick={() => navigate(`/project/${projectId}/database`)}>
+                                    {project.collections?.length || 0} collections
+                                </span>
+                            </div>
+
+                        </div>
+                    </section>
+
                     {/* API Config / Keys */}
                     <section>
                         <SectionHeader title="API Credentials" />
                         <div className="glass-card" style={{ padding: '1.25rem', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                             <div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Publishable Key</label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>API Base Endpoint</label>
+                                </div>
+                                <div style={{ display: 'flex', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
+                                    <input readOnly value={`${PUBLIC_API_URL}/api/data`} style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--color-text-main)', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
+                                    <button 
+                                        onClick={async () => {
+                                            await navigator.clipboard.writeText(`${PUBLIC_API_URL}/api/data`);
+                                            toast.success("Endpoint copied!");
+                                        }} 
+                                        style={{ background: 'none', border: 'none', padding: '0 12px', color: 'var(--color-text-muted)', cursor: 'pointer' }}
+                                    >
+                                        <Copy size={13} />
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 600 }}>Publishable Key</label>
+                                    </div>
                                     <button onClick={() => handleRegenerateKey('publishable')} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: '0.7rem', cursor: 'pointer' }}>Roll</button>
                                 </div>
                                 <div style={{ display: 'flex', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
-                                    <input readOnly value="pk_live_••••••••" type="password" style={{ flex: 1, background: 'transparent', border: 'none', color: '#666', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
-                                    <button onClick={() => toast.error("Roll key to view new value")} style={{ background: 'none', border: 'none', padding: '0 10px', color: '#555' }}><Copy size={12} /></button>
+                                    <input readOnly value={project.publishableKey} style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--color-primary)', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
                                 </div>
                             </div>
+                            
                             <div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ef4444' }}>Secret Key</label>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ef4444' }}>Secret Key</label>
+                                    </div>
                                     <button onClick={() => handleRegenerateKey('secret')} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: '0.7rem', cursor: 'pointer' }}>Roll</button>
                                 </div>
+                                
                                 <div style={{ display: 'flex', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
-                                    <input readOnly value="sk_live_••••••••" type="password" style={{ flex: 1, background: 'transparent', border: 'none', color: '#666', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
-                                    <button onClick={() => toast.error("Roll key to view new value")} style={{ background: 'none', border: 'none', padding: '0 10px', color: '#555' }}><Copy size={12} /></button>
+                                    <input readOnly value="sk_live_************************" type="password" style={{ flex: 1, background: 'transparent', border: 'none', color: '#666', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
+                                    <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', alignSelf: 'center', paddingRight: '12px', whiteSpace: 'nowrap' }}>
+                                        Regenerate to reveal
+                                    </span>
                                 </div>
                             </div>
                         </div>

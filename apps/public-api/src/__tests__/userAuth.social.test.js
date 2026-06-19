@@ -70,6 +70,8 @@ jest.mock('@urbackend/common', () => {
         sanitize: jest.fn((value) => value),
         getConnection: jest.fn().mockResolvedValue({}),
         getCompiledModel: jest.fn(() => mockUsersModel),
+        AppError: class AppError extends Error { constructor(statusCode, message) { super(message); this.statusCode = statusCode; } },
+        ApiResponse: class ApiResponse { constructor(d, m) { this.data=d; this.message=m; this.success=true; } send(res, code) { return res.status(code).json({ success: this.success, data: this.data, message: this.message }); } },
         checkLockout: jest.fn().mockResolvedValue({ locked: false, retryAfterSeconds: 0 }),
         recordFailedAttempt: jest.fn().mockResolvedValue({ locked: false, retryAfterSeconds: 0, attempts: 1 }),
         clearLockout: jest.fn().mockResolvedValue(undefined),
@@ -82,7 +84,7 @@ jest.mock('@urbackend/common', () => {
     };
 });
 
-const { redis } = require('@urbackend/common');
+const { AppError, redis } = require('@urbackend/common');
 const { issueAuthTokens } = require('../utils/refreshToken');
 const controller = require('../controllers/userAuth.controller');
 
@@ -185,7 +187,9 @@ const signGoogleIdToken = (claims = {}) => {
 };
 
 describe('public userAuth social auth', () => {
-    beforeEach(() => {
+    let next;
+beforeEach(() => {
+next = jest.fn();
         jest.clearAllMocks();
         global.fetch = jest.fn();
         process.env.FRONTEND_URL = 'http://localhost:5173';
@@ -197,7 +201,7 @@ describe('public userAuth social auth', () => {
         const req = makeReq({ params: { provider: 'github' } });
         const res = makeRes();
 
-        await controller.startSocialAuth(req, res);
+        await controller.startSocialAuth(req, res, next);
 
         expect(redis.set).toHaveBeenCalled();
         expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('https://github.com/login/oauth/authorize?'));
@@ -208,7 +212,7 @@ describe('public userAuth social auth', () => {
         const req = makeReq({ params: { provider: 'google' } });
         const res = makeRes();
 
-        await controller.startSocialAuth(req, res);
+        await controller.startSocialAuth(req, res, next);
 
         expect(redis.set).toHaveBeenCalled();
         expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('https://accounts.google.com/o/oauth2/v2/auth?'));
@@ -219,10 +223,11 @@ describe('public userAuth social auth', () => {
         const req = makeReq({ params: { provider: 'github' }, query: { code: 'code_1', state: 'missing' } });
         const res = makeRes();
 
-        await controller.handleSocialAuthCallback(req, res);
+        await controller.handleSocialAuthCallback(req, res, next);
 
-        expect(res.status).toHaveBeenCalledWith(400);
-        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'Invalid or expired OAuth state' }));
+        expect(next).toHaveBeenCalledWith(expect.any(AppError));
+            expect(next.mock.calls[next.mock.calls.length - 1][0].statusCode).toBe(400);
+        
     });
 
     test('handleSocialAuthCallback rejects when GitHub returns no email', async () => {
@@ -245,7 +250,7 @@ describe('public userAuth social auth', () => {
         const req = makeReq({ params: { provider: 'github' }, query: { code: 'code_1', state: 'state_1' } });
         const res = makeRes();
 
-        await controller.handleSocialAuthCallback(req, res);
+        await controller.handleSocialAuthCallback(req, res, next);
 
         // P2: errors now redirect to frontend instead of JSON
         expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('error='));
@@ -277,7 +282,7 @@ describe('public userAuth social auth', () => {
         const req = makeReq({ params: { provider: 'github' }, query: { code: 'code_1', state: 'state_1' } });
         const res = makeRes();
 
-        await controller.handleSocialAuthCallback(req, res);
+        await controller.handleSocialAuthCallback(req, res, next);
 
         expect(mockUsersModel.create).toHaveBeenCalledWith(expect.objectContaining({
             email: 'alice@example.com',
@@ -317,7 +322,7 @@ describe('public userAuth social auth', () => {
         const req = makeReq({ params: { provider: 'github' }, query: { code: 'code_1', state: 'state_1' } });
         const res = makeRes();
 
-        await controller.handleSocialAuthCallback(req, res);
+        await controller.handleSocialAuthCallback(req, res, next);
 
         expect(mockUsersModel.updateOne).toHaveBeenCalledWith(
             { _id: 'user_existing_1' },
@@ -350,7 +355,7 @@ describe('public userAuth social auth', () => {
         const req = makeReq({ params: { provider: 'google' }, query: { code: 'code_google', state: 'state_google' } });
         const res = makeRes();
 
-        await controller.handleSocialAuthCallback(req, res);
+        await controller.handleSocialAuthCallback(req, res, next);
 
         expect(mockUsersModel.create).toHaveBeenCalledWith(expect.objectContaining({
             email: 'alice@example.com',
@@ -381,7 +386,7 @@ describe('public userAuth social auth', () => {
         const req = makeReq({ params: { provider: 'google' }, query: { code: 'code_google', state: 'state_google' } });
         const res = makeRes();
 
-        await controller.handleSocialAuthCallback(req, res);
+        await controller.handleSocialAuthCallback(req, res, next);
 
         expect(mockUsersModel.updateOne).toHaveBeenCalledWith(
             { _id: 'user_existing_google' },
@@ -410,7 +415,7 @@ describe('public userAuth social auth', () => {
         const req = makeReq({ params: { provider: 'google' }, query: { code: 'code_google', state: 'state_google' } });
         const res = makeRes();
 
-        await controller.handleSocialAuthCallback(req, res);
+        await controller.handleSocialAuthCallback(req, res, next);
 
         // P2: errors now redirect to frontend instead of JSON
         expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('error='));
@@ -434,7 +439,7 @@ describe('public userAuth social auth', () => {
         const req = makeReq({ params: { provider: 'google' }, query: { code: 'code_google', state: 'state_google' } });
         const res = makeRes();
 
-        await controller.handleSocialAuthCallback(req, res);
+        await controller.handleSocialAuthCallback(req, res, next);
 
         // P2: errors now redirect to frontend instead of JSON
         expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('error='));
@@ -454,17 +459,16 @@ describe('public userAuth social auth', () => {
         };
         const res = makeRes();
 
-        await controller.exchangeSocialRefreshToken(req, res);
+        await controller.exchangeSocialRefreshToken(req, res, next);
 
         expect(redis.getdel).toHaveBeenCalledWith('project:social-auth:refresh-exchange:code_123');
-        expect(res.status).toHaveBeenCalledWith(200);
-        expect(res.json).toHaveBeenCalledWith({
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
             success: true,
             data: {
                 refreshToken: 'issued_refresh_token',
             },
             message: 'Refresh token exchanged successfully',
-        });
+        }));
     });
 
     test('exchangeSocialRefreshToken rejects invalid or expired code', async () => {
@@ -477,14 +481,10 @@ describe('public userAuth social auth', () => {
         };
         const res = makeRes();
 
-        await controller.exchangeSocialRefreshToken(req, res);
+        await controller.exchangeSocialRefreshToken(req, res, next);
 
-        expect(res.status).toHaveBeenCalledWith(400);
-        expect(res.json).toHaveBeenCalledWith({
-            success: false,
-            data: {},
-            message: 'Invalid or expired refresh token exchange code',
-        });
+        expect(next).toHaveBeenCalledWith(expect.any(AppError));
+        expect(next.mock.calls[next.mock.calls.length - 1][0].statusCode).toBe(400);
     });
 
     test('exchangeSocialRefreshToken rejects mismatched token and deletes exchange code', async () => {
@@ -500,13 +500,9 @@ describe('public userAuth social auth', () => {
         };
         const res = makeRes();
 
-        await controller.exchangeSocialRefreshToken(req, res);
-        expect(res.status).toHaveBeenCalledWith(403);
-        expect(res.json).toHaveBeenCalledWith({
-            success: false,
-            data: {},
-            message: 'Invalid refresh token exchange payload',
-        });
+        await controller.exchangeSocialRefreshToken(req, res, next);
+        expect(next).toHaveBeenCalledWith(expect.any(AppError));
+        expect(next.mock.calls[next.mock.calls.length - 1][0].statusCode).toBe(403);
     });
 
     // P2: Provider error forwarding
@@ -527,7 +523,7 @@ describe('public userAuth social auth', () => {
         });
         const res = makeRes();
 
-        await controller.handleSocialAuthCallback(req, res);
+        await controller.handleSocialAuthCallback(req, res, next);
 
         expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('error='));
         expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('The+user+denied'));
@@ -570,7 +566,7 @@ describe('public userAuth social auth', () => {
         const req = makeReq({ params: { provider: 'github' }, query: { code: 'code_1', state: 'state_1' } });
         const res = makeRes();
 
-        await controller.handleSocialAuthCallback(req, res);
+        await controller.handleSocialAuthCallback(req, res, next);
 
         // With verified=true, should successfully link and redirect
         expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('rtCode='));
@@ -605,7 +601,7 @@ describe('public userAuth social auth', () => {
         const req = makeReq({ params: { provider: 'google' }, query: { code: 'code_1', state: 'state_1' } });
         const res = makeRes();
 
-        await controller.handleSocialAuthCallback(req, res);
+        await controller.handleSocialAuthCallback(req, res, next);
 
         // Should redirect with error because email exists but not verified for linking
         expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('error='));

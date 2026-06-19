@@ -2,24 +2,35 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { ONBOARDING_STEPS } from '../constants/onboarding';
 import { useAuth } from './AuthContext';
+import api from '../utils/api';
 
 const OnboardingContext = createContext(null);
 
-const safeJsonParse = (value, fallback) => {
-    try {
-        return value ? JSON.parse(value) : fallback;
-    } catch {
-        return fallback;
-    }
+const SERVER_STEP_BY_UI_STEP = {
+    create_project: 'projectCreated',
+    create_collection: 'collectionCreated',
+    make_api_call: 'firstApiCall'
+};
+
+const getServerProgress = (user) => {
+    const steps = user?.onboarding?.steps || {};
+    return {
+        create_project: Boolean(steps.projectCreated),
+        create_collection: Boolean(steps.collectionCreated),
+        get_api_key: Boolean(user?.isVerified),
+        make_api_call: Boolean(steps.firstApiCall),
+        currentStep: user?.onboarding?.currentStep || 'project',
+        projectId: user?.onboarding?.projectId || null,
+        collectionId: user?.onboarding?.collectionId || null
+    };
 };
 
 export const OnboardingProvider = ({ children }) => {
-    const { user } = useAuth();
+    const { user, updateUser } = useAuth();
     const userId = user?._id || 'anonymous';
 
     const storageKeys = useMemo(() => {
         return {
-            progress: `onboarding_progress:${userId}`,
             dismissed: `onboarding_dismissed:${userId}`,
             activeProjectId: `onboarding_active_project_id:${userId}`
         };
@@ -30,19 +41,14 @@ export const OnboardingProvider = ({ children }) => {
     const [activeProjectId, setActiveProjectIdState] = useState(null);
 
     useEffect(() => {
-        const savedProgress = localStorage.getItem(storageKeys.progress);
         const savedDismissed = localStorage.getItem(storageKeys.dismissed);
         const savedActiveProjectId = localStorage.getItem(storageKeys.activeProjectId);
 
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        setProgress(safeJsonParse(savedProgress, {}));
+        setProgress(getServerProgress(user));
         setIsDismissed(savedDismissed === 'true');
         setActiveProjectIdState(savedActiveProjectId || null);
-    }, [storageKeys]);
-
-    useEffect(() => {
-        localStorage.setItem(storageKeys.progress, JSON.stringify(progress));
-    }, [progress, storageKeys]);
+    }, [storageKeys, user]);
 
     useEffect(() => {
         localStorage.setItem(storageKeys.dismissed, isDismissed.toString());
@@ -53,15 +59,38 @@ export const OnboardingProvider = ({ children }) => {
         else localStorage.removeItem(storageKeys.activeProjectId);
     }, [activeProjectId, storageKeys]);
 
-    const completeStep = useCallback((stepKey) => {
-        setProgress(prev => {
-            if (prev[stepKey]) return prev;
-            return {
-                ...prev,
-                [stepKey]: true
-            };
-        });
-    }, []);
+    const completeStep = useCallback((stepKey, meta = {}) => {
+        const serverStep = SERVER_STEP_BY_UI_STEP[stepKey];
+        if (!serverStep) return;
+
+        api.patch('/api/user/onboarding', {
+            steps: { [serverStep]: true },
+            ...meta
+        })
+            .then((response) => {
+                const onboarding = response.data?.data?.onboarding;
+                if (!onboarding) return;
+                setProgress(getServerProgress({ onboarding }));
+                updateUser((currentUser) => ({
+                    ...currentUser,
+                    onboarding
+                }));
+            })
+            .catch((err) => {
+                console.error('[onboarding] Failed to persist progress:', err.message);
+            });
+    }, [updateUser]);
+
+    const refreshUser = useCallback(async () => {
+        try {
+            const response = await api.get('/api/auth/me');
+            if (response.data.success) {
+                updateUser(response.data.data.user);
+            }
+        } catch (err) {
+            console.error("Failed to refresh user:", err.message);
+        }
+    }, [updateUser]);
 
     const dismissOnboarding = useCallback(() => {
         setIsDismissed(true);
@@ -84,7 +113,7 @@ export const OnboardingProvider = ({ children }) => {
         });
     }, [activeProjectId]);
 
-    const allCompleted = ONBOARDING_STEPS.every(step => progress[step.key]);
+    const allCompleted = !!user?.onboarding?.completed;
     const isVisible = !isDismissed;
 
     const value = {
@@ -97,7 +126,11 @@ export const OnboardingProvider = ({ children }) => {
         isDismissed,
         allCompleted,
         activeProjectId,
-        setActiveProjectId
+        setActiveProjectId,
+        refreshUser,
+        currentStep: progress.currentStep,
+        projectId: progress.projectId,
+        collectionId: progress.collectionId
     };
 
     return (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense, memo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import BackToTop from '../../components/Layout/BackToTop';
@@ -20,6 +20,7 @@ import {
     Activity,
     ChevronDown,
     ChevronUp,
+    CircleHelp,
     Code,
     Check,
     Plus,
@@ -27,11 +28,14 @@ import {
     Mail,
     UserRound
 } from 'lucide-react';
-import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import Footer from '../../components/Layout/Footer';
-import MagicBento from '../../components/MagicBento/MagicBento';
-import Hyperspeed from '../../components/Hyperspeed/Hyperspeed';
+import { useInView } from '../../hooks/useInView';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import './style.css';
+
+const Hyperspeed = lazy(() => import('../../components/Hyperspeed/Hyperspeed'));
+const MagicBento = lazy(() => import('../../components/MagicBento/MagicBento'));
 
 const HERO_ENDPOINTS = [
     { method: 'GET', path: '/api/users', status: '200 OK' },
@@ -354,6 +358,10 @@ const COMPATIBLE_TECHNOLOGIES = [
     }
 ];
 
+const ORBIT_INNER_TECH = COMPATIBLE_TECHNOLOGIES.filter((t) => t.ring === 'inner');
+const ORBIT_MID_TECH = COMPATIBLE_TECHNOLOGIES.filter((t) => t.ring === 'mid');
+const ORBIT_OUTER_TECH = COMPATIBLE_TECHNOLOGIES.filter((t) => t.ring === 'outer');
+
 const APP_SERVICES = [
     {
         id: 'auth',
@@ -583,6 +591,12 @@ const HYPERSPEED_OPTIONS = {
     }
 };
 
+const HYPERSPEED_OPTIONS_MOBILE = {
+    ...HYPERSPEED_OPTIONS,
+    lightPairsPerRoadWay: 20,
+    totalSideLightSticks: 10
+};
+
 const NAV_ITEMS = [
     { label: 'Features', href: '/#client-services', icon: Zap },
     { label: 'Use Cases', href: '/#use-cases', icon: Box },
@@ -590,12 +604,291 @@ const NAV_ITEMS = [
     { label: 'Docs', href: 'https://docs.ub.bitbros.in', icon: Terminal, external: true }
 ];
 
+const MOBILE_MENU_ITEMS = [
+    { label: 'How it Works', href: '#how-it-works', icon: Layers },
+    ...NAV_ITEMS,
+    { label: 'FAQ', href: '#faq', icon: CircleHelp }
+];
+
+function renderNavItem(item, index, { className, iconSize, onNavigate, location }) {
+    const Icon = item.icon;
+    let isActive = false;
+
+    if (item.href.includes('#')) {
+        const normalizedHref = item.href.startsWith('#') ? `/${item.href}` : item.href;
+        const parts = normalizedHref.split('#');
+        const path = parts[0] || '/';
+        const hash = parts[1];
+        isActive = location.pathname === path && location.hash === `#${hash}`;
+    } else if (item.href.startsWith('/')) {
+        isActive = item.href === location.pathname;
+    }
+
+    const content = (
+        <>
+            {Icon && <Icon size={iconSize} />}
+            <span>{item.label}</span>
+        </>
+    );
+
+    const classNames = `${className}${isActive ? ' active' : ''}`;
+
+    if (item.external || item.href.startsWith('http')) {
+        return (
+            <a
+                key={`${item.label}-${index}`}
+                href={item.href}
+                className={classNames}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={onNavigate}
+            >
+                {content}
+            </a>
+        );
+    }
+
+    if (item.href.startsWith('#')) {
+        return (
+            <a
+                key={`${item.label}-${index}`}
+                href={item.href}
+                className={classNames}
+                onClick={onNavigate}
+            >
+                {content}
+            </a>
+        );
+    }
+
+    return (
+        <Link
+            key={`${item.label}-${index}`}
+            to={item.href}
+            className={classNames}
+            onClick={onNavigate}
+        >
+            {content}
+        </Link>
+    );
+}
+
+const bigNumberStyle = {
+    position: 'absolute',
+    top: '-30px',
+    right: '-15px',
+    fontSize: '10rem',
+    fontWeight: 900,
+    color: 'rgba(255, 255, 255, 0.05)',
+    zIndex: 0,
+    lineHeight: 1,
+    pointerEvents: 'none',
+    userSelect: 'none'
+};
+
+const stepCardRelativeStyle = { position: 'relative', overflow: 'hidden', zIndex: 1 };
+
+const FAQ_ITEMS = [
+    { q: 'Is it really free?', a: 'Yes. The Developer Beta tier is permanently free — create a project, connect your MongoDB cluster, and ship APIs with no credit card required.' },
+    { q: 'Is urBackend production-ready?', a: 'We are currently in Public Beta and actively testing with real-world use cases. While the core architecture is built on battle-tested technologies like Express.js and MongoDB, we recommend using it for side projects, MVPs, and internal tools as we continue to refine the platform.' },
+    { q: 'Can I use this with React or Next.js?', a: 'Yes. urBackend outputs standard REST APIs that work with any frontend or mobile framework. For Next.js, call the API from server-side routes to keep your API key secure.' },
+    { q: 'How does it handle security?', a: 'Industry-standard encryption at rest, automatic API key validation, JWT-based user sessions with refresh token rotation, and row-level security enforced on every read and write.' },
+    { q: 'Can I export my data?', a: 'Your data is yours. Since you connect your own MongoDB cluster, you always have direct access. Export at any time — no lock-in.' },
+    { q: 'What is BYOM?', a: 'Bring Your Own MongoDB. Instead of using our managed cluster, you point urBackend at your existing Atlas or self-hosted MongoDB instance. You keep full ownership of the data while we provide the API layer, auth, and schema validation on top.' }
+];
+
+const FaqSection = memo(function FaqSection() {
+    const [openFaqIndex, setOpenFaqIndex] = useState(null);
+
+    const toggleFaq = (index) => {
+        setOpenFaqIndex((current) => (current === index ? null : index));
+    };
+
+    return (
+        <div id="faq" style={{ padding: '8rem 0', background: '#030303', borderTop: '1px solid rgba(255, 255, 255, 0.05)', position: 'relative', overflow: 'hidden' }}>
+            <div className="section-glow" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'radial-gradient(circle, rgba(64,158,255,0.04) 0%, transparent 70%)' }}></div>
+            <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 1.5rem', position: 'relative', zIndex: 1 }}>
+                <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+                    <h2 className="section-title">Common Questions</h2>
+                </div>
+
+                <div className="faq-list">
+                    {FAQ_ITEMS.map((faq, index) => (
+                        <div key={index} className="faq-item">
+                            <div className="faq-question" onClick={() => toggleFaq(index)}>
+                                <span>{faq.q}</span>
+                                {openFaqIndex === index ? <ChevronUp size={20} color="#666" /> : <ChevronDown size={20} color="#666" />}
+                            </div>
+                            {openFaqIndex === index && (
+                                <div className="faq-answer">{faq.a}</div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+});
+
+const OrbitSection = memo(function OrbitSection() {
+    return (
+        <div className="integration-section">
+            <div className="integration-inner">
+                <Motion.div className="integration-heading-wrapper"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6 }}
+                >
+                    <span className="section-badge">Ecosystem</span>
+                    <h2 className="section-title">Compatible with your favorite stack</h2>
+                    <p className="section-desc">Connect from any framework or platform. Enjoy official client SDKs, clean typed models, or direct REST connections.</p>
+                </Motion.div>
+
+                <div className="orbit-stage-wrapper">
+                    <div className="orbit-stage">
+                        <div className="orbit-container">
+                            <div className="orbit-sun">
+                                <div className="orbit-sun-glow"></div>
+                                <img
+                                    className="orbit-sun-logo"
+                                    src="https://cdn.jsdelivr.net/gh/yash-pouranik/urBackend/apps/web-dashboard/public/LOGO_SQ.png"
+                                    alt="urBackend"
+                                    width={64}
+                                    height={64}
+                                    loading="lazy"
+                                    decoding="async"
+                                />
+                                <div className="orbit-sun-ring-dec orbit-sun-ring-1"></div>
+                                <div className="orbit-sun-ring-dec orbit-sun-ring-2"></div>
+                            </div>
+
+                            <div className="orbit-dust orbit-dust-1" style={{ animationDelay: '-4s', '--orbit-radius': '165px', '--dust-color': '#00f5d4' }}></div>
+                            <div className="orbit-dust orbit-dust-2" style={{ animationDelay: '-11s', '--orbit-radius': '260px', '--dust-color': '#a855f7' }}></div>
+                            <div className="orbit-dust orbit-dust-3" style={{ animationDelay: '-19s', '--orbit-radius': '340px', '--dust-color': '#3b82f6' }}></div>
+                            <div className="orbit-dust orbit-dust-4" style={{ animationDelay: '-28s', '--orbit-radius': '395px', '--dust-color': '#00f5d4' }}></div>
+                            <div className="orbit-dust orbit-dust-5" style={{ animationDelay: '-7s', '--orbit-radius': '200px', '--dust-color': '#ec4899' }}></div>
+                            <div className="orbit-dust orbit-dust-6" style={{ animationDelay: '-15s', '--orbit-radius': '365px', '--dust-color': '#eab308' }}></div>
+                            <div className="orbit-dust orbit-dust-7" style={{ animationDelay: '-23s', '--orbit-radius': '430px', '--dust-color': '#a855f7' }}></div>
+
+                            <div className="orbit-ring orbit-ring-inner"></div>
+                            {ORBIT_INNER_TECH.map((item, i, arr) => (
+                                <div
+                                    key={item.id}
+                                    className={`orbit-item-wrapper orbit-inner-wrapper ${item.cls}`}
+                                    style={{
+                                        animationDelay: `${-(20 / arr.length) * i}s`,
+                                        '--hover-color': item.color
+                                    }}
+                                >
+                                    <div className="orbit-connect-line"></div>
+                                    <div className="orbit-logo-card">
+                                        {item.svg}
+                                        <span className="orbit-logo-text">{item.label}</span>
+                                    </div>
+                                </div>
+                            ))}
+
+                            <div className="orbit-ring orbit-ring-mid"></div>
+                            {ORBIT_MID_TECH.map((item, i, arr) => (
+                                <div
+                                    key={item.id}
+                                    className={`orbit-item-wrapper orbit-mid-wrapper ${item.cls}`}
+                                    style={{
+                                        animationDelay: `${-(32 / arr.length) * i}s`,
+                                        '--hover-color': item.color
+                                    }}
+                                >
+                                    <div className="orbit-connect-line"></div>
+                                    <div className="orbit-logo-card">
+                                        {item.svg}
+                                        <span className="orbit-logo-text">{item.label}</span>
+                                    </div>
+                                </div>
+                            ))}
+
+                            <div className="orbit-ring orbit-ring-outer"></div>
+                            {ORBIT_OUTER_TECH.map((item, i, arr) => (
+                                <div
+                                    key={item.id}
+                                    className={`orbit-item-wrapper orbit-outer-wrapper ${item.cls}`}
+                                    style={{
+                                        animationDelay: `${-(48 / arr.length) * i}s`,
+                                        '--hover-color': item.color
+                                    }}
+                                >
+                                    <div className="orbit-connect-line"></div>
+                                    <div className="orbit-logo-card">
+                                        {item.svg}
+                                        <span className="orbit-logo-text">{item.label}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+});
+
 function LandingPage() {
     const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const prefersReducedMotion = usePrefersReducedMotion();
+    const [isNarrowViewport, setIsNarrowViewport] = useState(
+        () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+    );
+    const [servicesRef, servicesInView] = useInView({ rootMargin: '300px 0px', threshold: 0 });
+    const showHyperspeed = !prefersReducedMotion;
+    const hyperspeedOptions = isNarrowViewport ? HYPERSPEED_OPTIONS_MOBILE : HYPERSPEED_OPTIONS;
+
+    const closeMobileMenu = () => setIsMobileMenuOpen(false);
+    const mobileMenuRef = useRef(null);
+
+    useEffect(() => {
+        document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isMobileMenuOpen]);
+
+    useEffect(() => {
+        if (!isMobileMenuOpen) return;
+
+        const closeMenu = () => setIsMobileMenuOpen(false);
+
+        window.addEventListener('scroll', closeMenu, { passive: true, capture: true });
+        window.addEventListener('wheel', closeMenu, { passive: true, capture: true });
+
+        let touchStartY = 0;
+        const onTouchStart = (event) => {
+            touchStartY = event.touches[0]?.clientY ?? 0;
+        };
+        const onTouchMove = (event) => {
+            const currentY = event.touches[0]?.clientY ?? touchStartY;
+            if (touchStartY - currentY > 12) {
+                closeMenu();
+            }
+        };
+
+        document.addEventListener('touchstart', onTouchStart, { passive: true });
+        document.addEventListener('touchmove', onTouchMove, { passive: true });
+
+        const overlay = mobileMenuRef.current;
+        overlay?.addEventListener('scroll', closeMenu, { passive: true });
+
+        return () => {
+            window.removeEventListener('scroll', closeMenu, { capture: true });
+            window.removeEventListener('wheel', closeMenu, { capture: true });
+            document.removeEventListener('touchstart', onTouchStart);
+            document.removeEventListener('touchmove', onTouchMove);
+            overlay?.removeEventListener('scroll', closeMenu);
+        };
+    }, [isMobileMenuOpen]);
 
     useEffect(() => {
         if (location.hash) {
@@ -609,9 +902,6 @@ function LandingPage() {
             }
         }
     }, [location.pathname, location.hash]);
-
-    const [openFaqIndex, setOpenFaqIndex] = useState(null);
-    const [hoveredTech, setHoveredTech] = useState(null);
 
     const [studioStep, setStudioStep] = useState(6);
     const [replayKey, setReplayKey] = useState(0);
@@ -639,41 +929,29 @@ function LandingPage() {
         setReplayKey((prev) => prev + 1);
     };
 
-
-
-    const bigNumberStyle = {
-        position: 'absolute',
-        top: '-30px',
-        right: '-15px',
-        fontSize: '10rem',
-        fontWeight: 900,
-        color: 'rgba(255, 255, 255, 0.05)',
-        zIndex: 0,
-        lineHeight: 1,
-        pointerEvents: 'none',
-        userSelect: 'none'
-    };
-
-    const stepCardRelativeStyle = { position: 'relative', overflow: 'hidden', zIndex: 1 };
+    useEffect(() => {
+        const media = window.matchMedia('(max-width: 768px)');
+        const onChange = (event) => setIsNarrowViewport(event.matches);
+        media.addEventListener('change', onChange);
+        return () => media.removeEventListener('change', onChange);
+    }, []);
 
     useEffect(() => {
+        let ticking = false;
         const handleScroll = () => {
-            const currentScrollY = window.scrollY;
-            setScrolled(currentScrollY > 20);
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(() => {
+                setScrolled(window.scrollY > 20);
+                ticking = false;
+            });
         };
 
-        window.addEventListener('scroll', handleScroll);
-
-
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        handleScroll();
 
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
-
-    const toggleFaq = (index) => {
-        setOpenFaqIndex(openFaqIndex === index ? null : index);
-    };
-
-
 
     return (
         <div className="landing-page">
@@ -691,67 +969,63 @@ function LandingPage() {
                 </div>
             </div>
 
-            <div className={`mobile-menu-overlay ${isMobileMenuOpen ? 'open' : ''}`}>
-                <a href="#how-it-works" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>How it Works</a>
-                <a href="#features" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>Features</a>
-                <a href="#use-cases" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>Use Cases</a>
-                <Link to="/pricing" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>Pricing</Link>
-                <a href="#faq" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', textDecoration: 'none' }}>FAQ</a>
-                <div style={{ height: '1px', width: '60px', background: '#333', margin: '10px 0' }}></div>
-                {isAuthenticated ? (
-                    <button onClick={() => navigate('/dashboard')} className="btn btn-primary" style={{ fontWeight: 600, width: '200px', padding: '12px' }}>
-                        Go to Console
-                    </button>
-                ) : (
-                    <>
-                        <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} style={{ fontSize: '1.2rem', fontWeight: 500, color: '#aaa', textDecoration: 'none' }}>Log in</Link>
-                        <Link to="/signup" onClick={() => setIsMobileMenuOpen(false)} className="btn btn-primary" style={{ fontWeight: 600, padding: '12px 30px', width: '200px', textAlign: 'center' }}>Start for Free</Link>
-                    </>
+            <div
+                ref={mobileMenuRef}
+                className={`mobile-menu-overlay ${isMobileMenuOpen ? 'open' : ''}`}
+                aria-hidden={!isMobileMenuOpen}
+            >
+                {MOBILE_MENU_ITEMS.map((item, index) =>
+                    renderNavItem(item, index, {
+                        className: 'mobile-menu-link',
+                        iconSize: 20,
+                        onNavigate: closeMobileMenu,
+                        location
+                    })
                 )}
+                <div className="mobile-menu-divider" />
+                <div className="mobile-menu-auth">
+                    {isAuthenticated ? (
+                        <button
+                            type="button"
+                            onClick={() => { closeMobileMenu(); navigate('/dashboard'); }}
+                            className="btn btn-primary"
+                            style={{ fontWeight: 600, width: '200px', padding: '12px' }}
+                        >
+                            Go to Console
+                        </button>
+                    ) : (
+                        <>
+                            <Link to="/login" onClick={closeMobileMenu} className="mobile-menu-login">Log in</Link>
+                            <Link to="/signup" onClick={closeMobileMenu} className="btn btn-primary" style={{ fontWeight: 600, padding: '12px 30px', width: '200px', textAlign: 'center' }}>
+                                Start for Free
+                            </Link>
+                        </>
+                    )}
+                </div>
             </div>
 
             <nav className={`nav-glass ${scrolled ? 'nav-scrolled' : ''}`}>
                 <div className="nav-container">
                     <div className="nav-logo">
-                        <img src="https://cdn.jsdelivr.net/gh/yash-pouranik/urBackend/apps/web-dashboard/public/LOGO_SQ.png" alt="urBackend" style={{ height: '40px', width: 'auto' }} />
+                        <img
+                            src="https://cdn.jsdelivr.net/gh/yash-pouranik/urBackend/apps/web-dashboard/public/LOGO_SQ.png"
+                            alt="urBackend"
+                            width={40}
+                            height={40}
+                            decoding="async"
+                            style={{ height: '40px', width: 'auto' }}
+                        />
                     </div>
 
                     <div className="nav-links">
-                        {NAV_ITEMS.map((item, index) => {
-                            const isInternal = item.href.startsWith('/') && !item.href.startsWith('//') && !item.href.includes('#');
-                            const Icon = item.icon;
-                            let isActive = false;
-                            if (item.href.includes('#')) {
-                                const parts = item.href.split('#');
-                                const path = parts[0] || '/';
-                                const hash = parts[1];
-                                isActive = location.pathname === path && location.hash === '#' + hash;
-                            } else {
-                                isActive = item.href === location.pathname;
-                            }
-
-                            return isInternal ? (
-                                <Link 
-                                    key={index} 
-                                    to={item.href} 
-                                    className={`nav-link ${isActive ? 'active' : ''}`}
-                                >
-                                    {Icon && <Icon size={14} />}
-                                    <span>{item.label}</span>
-                                </Link>
-                            ) : (
-                                <a 
-                                    key={index} 
-                                    href={item.href} 
-                                    className={`nav-link ${isActive ? 'active' : ''}`}
-                                    target={item.external ? '_blank' : undefined} 
-                                    rel={item.external ? 'noopener noreferrer' : undefined}
-                                >
-                                    {Icon && <Icon size={14} />}
-                                    <span>{item.label}</span>
-                                </a>
-                            );
-                        })}
+                        {NAV_ITEMS.map((item, index) =>
+                            renderNavItem(item, index, {
+                                className: 'nav-link',
+                                iconSize: 14,
+                                onNavigate: undefined,
+                                location
+                            })
+                        )}
                     </div>
 
                     <div className="nav-actions">
@@ -777,7 +1051,11 @@ function LandingPage() {
             </nav>
 
             <div className="hero-section">
-                <Hyperspeed effectOptions={HYPERSPEED_OPTIONS} />
+                {showHyperspeed && (
+                    <Suspense fallback={null}>
+                        <Hyperspeed effectOptions={hyperspeedOptions} />
+                    </Suspense>
+                )}
                 <div className="hero-glow"></div>
 
                 <div className="hero-split">
@@ -830,7 +1108,7 @@ function LandingPage() {
             </div>
 
             {/* Client App Services Showcase Section */}
-            <div id="client-services" className="services-showcase-section">
+            <div id="client-services" ref={servicesRef} className="services-showcase-section">
                 <div className="section-glow" style={{ top: '20%', left: '50%', transform: 'translateX(-50%)', background: 'radial-gradient(circle, rgba(0, 245, 212, 0.05) 0%, transparent 60%)' }}></div>
                 <div className="services-grid-bg"></div>
                 <div className="services-container">
@@ -847,19 +1125,23 @@ function LandingPage() {
                         </p>
                     </Motion.div>
 
-                    <MagicBento
-                        cards={APP_SERVICES}
-                        textAutoHide={true}
-                        enableStars={false}
-                        enableSpotlight={true}
-                        enableBorderGlow={true}
-                        enableTilt={false}
-                        enableMagnetism={true}
-                        clickEffect={true}
-                        spotlightRadius={300}
-                        particleCount={12}
-                        glowColor="0, 245, 212"
-                    />
+                    {servicesInView && (
+                        <Suspense fallback={<div className="services-bento-placeholder" aria-hidden="true" />}>
+                            <MagicBento
+                                cards={APP_SERVICES}
+                                textAutoHide={true}
+                                enableStars={false}
+                                enableSpotlight={true}
+                                enableBorderGlow={true}
+                                enableTilt={false}
+                                enableMagnetism={true}
+                                clickEffect={true}
+                                spotlightRadius={300}
+                                particleCount={12}
+                                glowColor="0, 245, 212"
+                            />
+                        </Suspense>
+                    )}
                 </div>
             </div>
 
@@ -1074,106 +1356,7 @@ function LandingPage() {
                 </div>
             </div>
 
-            <div className="integration-section">
-                <div className="integration-inner">
-                    <Motion.div className="integration-heading-wrapper"
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.6 }}
-                    >
-                        <span className="section-badge">Ecosystem</span>
-                        <h2 className="section-title">Compatible with your favorite stack</h2>
-                        <p className="section-desc">Connect from any framework or platform. Enjoy official client SDKs, clean typed models, or direct REST connections.</p>
-                    </Motion.div>
-
-                    <div className="orbit-stage-wrapper">
-                        <div className="orbit-stage">
-                            <div className="orbit-container">
-                                {/* Central Sun */}
-                                <div className="orbit-sun">
-                                    <div className="orbit-sun-glow"></div>
-                                    <img className="orbit-sun-logo" src="https://cdn.jsdelivr.net/gh/yash-pouranik/urBackend/apps/web-dashboard/public/LOGO_SQ.png" alt="urBackend" />
-                                    <div className="orbit-sun-ring-dec orbit-sun-ring-1"></div>
-                                    <div className="orbit-sun-ring-dec orbit-sun-ring-2"></div>
-                                </div>
-
-                                {/* Cosmic Orbit Dust */}
-                                <div className="orbit-dust orbit-dust-1" style={{ animationDelay: '-4s', '--orbit-radius': '165px', '--dust-color': '#00f5d4' }}></div>
-                                <div className="orbit-dust orbit-dust-2" style={{ animationDelay: '-11s', '--orbit-radius': '260px', '--dust-color': '#a855f7' }}></div>
-                                <div className="orbit-dust orbit-dust-3" style={{ animationDelay: '-19s', '--orbit-radius': '340px', '--dust-color': '#3b82f6' }}></div>
-                                <div className="orbit-dust orbit-dust-4" style={{ animationDelay: '-28s', '--orbit-radius': '395px', '--dust-color': '#00f5d4' }}></div>
-                                <div className="orbit-dust orbit-dust-5" style={{ animationDelay: '-7s', '--orbit-radius': '200px', '--dust-color': '#ec4899' }}></div>
-                                <div className="orbit-dust orbit-dust-6" style={{ animationDelay: '-15s', '--orbit-radius': '365px', '--dust-color': '#eab308' }}></div>
-                                <div className="orbit-dust orbit-dust-7" style={{ animationDelay: '-23s', '--orbit-radius': '430px', '--dust-color': '#a855f7' }}></div>
-
-                                {/* Inner Orbit */}
-                                <div className="orbit-ring orbit-ring-inner"></div>
-                                {COMPATIBLE_TECHNOLOGIES.filter(t => t.ring === 'inner').map((item, i, arr) => (
-                                    <div
-                                        key={item.id}
-                                        className={`orbit-item-wrapper orbit-inner-wrapper ${item.cls} ${hoveredTech?.id === item.id ? 'active' : ''}`}
-                                        style={{
-                                            animationDelay: `${-(20 / arr.length) * i}s`,
-                                            '--hover-color': item.color
-                                        }}
-                                        onMouseEnter={() => setHoveredTech(item)}
-                                        onMouseLeave={() => setHoveredTech(null)}
-                                    >
-                                        <div className="orbit-connect-line"></div>
-                                        <div className="orbit-logo-card">
-                                            {item.svg}
-                                            <span className="orbit-logo-text">{item.label}</span>
-                                        </div>
-                                    </div>
-                                ))}
-
-                                {/* Mid Orbit */}
-                                <div className="orbit-ring orbit-ring-mid"></div>
-                                {COMPATIBLE_TECHNOLOGIES.filter(t => t.ring === 'mid').map((item, i, arr) => (
-                                    <div
-                                        key={item.id}
-                                        className={`orbit-item-wrapper orbit-mid-wrapper ${item.cls} ${hoveredTech?.id === item.id ? 'active' : ''}`}
-                                        style={{
-                                            animationDelay: `${-(32 / arr.length) * i}s`,
-                                            '--hover-color': item.color
-                                        }}
-                                        onMouseEnter={() => setHoveredTech(item)}
-                                        onMouseLeave={() => setHoveredTech(null)}
-                                    >
-                                        <div className="orbit-connect-line"></div>
-                                        <div className="orbit-logo-card">
-                                            {item.svg}
-                                            <span className="orbit-logo-text">{item.label}</span>
-                                        </div>
-                                    </div>
-                                ))}
-
-                                {/* Outer Orbit */}
-                                <div className="orbit-ring orbit-ring-outer"></div>
-                                {COMPATIBLE_TECHNOLOGIES.filter(t => t.ring === 'outer').map((item, i, arr) => (
-                                    <div
-                                        key={item.id}
-                                        className={`orbit-item-wrapper orbit-outer-wrapper ${item.cls} ${hoveredTech?.id === item.id ? 'active' : ''}`}
-                                        style={{
-                                            animationDelay: `${-(48 / arr.length) * i}s`,
-                                            '--hover-color': item.color
-                                        }}
-                                        onMouseEnter={() => setHoveredTech(item)}
-                                        onMouseLeave={() => setHoveredTech(null)}
-                                    >
-                                        <div className="orbit-connect-line"></div>
-                                        <div className="orbit-logo-card">
-                                            {item.svg}
-                                            <span className="orbit-logo-text">{item.label}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <OrbitSection />
 
             <div id="how-it-works" style={{ padding: '6rem 0', background: '#030303', borderTop: '1px solid rgba(255, 255, 255, 0.08)', position: 'relative', overflow: 'hidden' }}>
                 <div className="section-glow" style={{ top: '-10%', right: '-10%', background: 'radial-gradient(circle, rgba(64,158,255,0.06) 0%, transparent 70%)' }}></div>
@@ -1264,35 +1447,7 @@ function LandingPage() {
                 </div>
             </div>
 
-            <div id="faq" style={{ padding: '8rem 0', background: '#030303', borderTop: '1px solid rgba(255, 255, 255, 0.05)', position: 'relative', overflow: 'hidden' }}>
-                <div className="section-glow" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'radial-gradient(circle, rgba(64,158,255,0.04) 0%, transparent 70%)' }}></div>
-                <div style={{ maxWidth: '800px', margin: '0 auto', padding: '0 1.5rem', position: 'relative', zIndex: 1 }}>
-                    <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-                        <h2 className="section-title">Common Questions</h2>
-                    </div>
-
-                    <div className="faq-list">
-                        {[
-                            { q: "Is it really free?", a: "Yes. The Developer Beta tier is permanently free — create a project, connect your MongoDB cluster, and ship APIs with no credit card required." },
-                            { q: "Is urBackend production-ready?", a: "We are currently in Public Beta and actively testing with real-world use cases. While the core architecture is built on battle-tested technologies like Express.js and MongoDB, we recommend using it for side projects, MVPs, and internal tools as we continue to refine the platform." },
-                            { q: "Can I use this with React or Next.js?", a: "Yes. urBackend outputs standard REST APIs that work with any frontend or mobile framework. For Next.js, call the API from server-side routes to keep your API key secure." },
-                            { q: "How does it handle security?", a: "Industry-standard encryption at rest, automatic API key validation, JWT-based user sessions with refresh token rotation, and row-level security enforced on every read and write." },
-                            { q: "Can I export my data?", a: "Your data is yours. Since you connect your own MongoDB cluster, you always have direct access. Export at any time — no lock-in." },
-                            { q: "What is BYOM?", a: "Bring Your Own MongoDB. Instead of using our managed cluster, you point urBackend at your existing Atlas or self-hosted MongoDB instance. You keep full ownership of the data while we provide the API layer, auth, and schema validation on top." }
-                        ].map((faq, index) => (
-                            <div key={index} className="faq-item">
-                                <div className="faq-question" onClick={() => toggleFaq(index)}>
-                                    <span>{faq.q}</span>
-                                    {openFaqIndex === index ? <ChevronUp size={20} color="#666" /> : <ChevronDown size={20} color="#666" />}
-                                </div>
-                                {openFaqIndex === index && (
-                                    <div className="faq-answer">{faq.a}</div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
+            <FaqSection />
 
             <div className="cta-section">
                 <div className="cta-container">

@@ -1,5 +1,49 @@
 const mongoose = require('mongoose');
 
+const onboardingStepsSchema = new mongoose.Schema({
+    projectCreated: {
+        type: Boolean,
+        default: false
+    },
+    collectionCreated: {
+        type: Boolean,
+        default: false
+    },
+    firstApiCall: {
+        type: Boolean,
+        default: false
+    }
+}, { _id: false });
+
+const onboardingSchema = new mongoose.Schema({
+    completed: {
+        type: Boolean,
+        default: false
+    },
+    steps: {
+        type: onboardingStepsSchema,
+        default: () => ({})
+    },
+    currentStep: {
+        type: String,
+        enum: ['project', 'collection', 'api'],
+        default: 'project'
+    },
+    projectId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Project',
+        default: null
+    },
+    collectionId: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null
+    },
+    activationAt: {
+        type: Date,
+        default: null
+    }
+}, { _id: false });
+
 const developerSchema = new mongoose.Schema({
     email: {
         type: String,
@@ -57,6 +101,10 @@ const developerSchema = new mongoose.Schema({
     avatarUrl: {
         type: String,
         default: null
+    },
+    onboarding: {
+        type: onboardingSchema,
+        default: () => ({})
     }
 }, { timestamps: true });
 

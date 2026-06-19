@@ -135,6 +135,66 @@ export default function Dashboard() {
     return `${(bytes / 1024).toFixed(1)} KB`;
   };
 
+  if (!isLoading && projects.length === 0) {
+    return (
+      <DashboardShell>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '70vh',
+          textAlign: 'center',
+          padding: '2rem'
+        }}>
+          <div style={{
+            fontSize: '3rem',
+            marginBottom: '1.5rem',
+            animation: 'bounce 2s infinite'
+          }}>
+            🚀
+          </div>
+          <h1 style={{
+            fontSize: '2.5rem',
+            fontWeight: 800,
+            marginBottom: '1rem',
+            background: 'linear-gradient(to right, #3ecf8e, #7b61ff)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: '-0.5px'
+          }}>
+            Welcome to urBackend
+          </h1>
+          <p style={{
+            fontSize: '1.1rem',
+            color: 'var(--color-text-muted)',
+            maxWidth: '480px',
+            lineHeight: '1.6',
+            marginBottom: '2.5rem'
+          }}>
+            Create your first backend project with database, authentication and APIs in minutes.
+          </p>
+          <button
+            onClick={() => navigate('/onboarding/project')}
+            className="btn btn-primary"
+            style={{
+              padding: '0.8rem 2.2rem',
+              fontSize: '1.05rem',
+              fontWeight: 600,
+              borderRadius: '8px',
+              boxShadow: '0 4px 14px rgba(62, 207, 142, 0.4)',
+              cursor: 'pointer',
+              border: 'none',
+              transition: 'transform 0.2s, box-shadow 0.2s'
+            }}
+          >
+            Start Building
+          </button>
+        </div>
+      </DashboardShell>
+    );
+  }
+
   const handleAcceptInvite = async (inviteId) => {
     if (processingInvites[inviteId]) return;
     try {

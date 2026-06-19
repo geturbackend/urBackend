@@ -1,6 +1,5 @@
 const rateLimit = require('express-rate-limit');
 const { Log, redis, ApiAnalytics, getDayKey, DEFAULT_DAILY_TTL_SECONDS, incrWithTtlAtomic } = require('@urbackend/common');
-const FIRST_API_SUCCESS_FLAG_TTL_SECONDS = 2 * 365 * 24 * 60 * 60;
 
 // Rate Limiter 
 const limiter = rateLimit({
@@ -75,28 +74,29 @@ const logger = (req, res, next) => {
                 });
             }
 
-            // --- Activation funnel: first_api_success ---
-            // Fires only once per project lifetime, on the very first 2xx response.
-            // Uses a permanent Redis NX flag so we don't hit MongoDB on every request.
-            if (req.project && res.statusCode >= 200 && res.statusCode < 300) {
+            // --- Activation funnel: first_api_call ---
+            // Fires once per developer, only after a successful real data API call.
+            if (
+                req.project &&
+                req.originalUrl.startsWith('/api/data') &&
+                res.statusCode >= 200 &&
+                res.statusCode < 300
+            ) {
                 setImmediate(async () => {
                     try {
-                        const flagKey = `project:activation:first_api_success:${req.project._id}`;
-                        const isFirst = await redis.set(
-                            flagKey,
-                            '1',
-                            'EX',
-                            FIRST_API_SUCCESS_FLAG_TTL_SECONDS,
-                            'NX'
-                        );
-                        if (isFirst) {
-                            const { Project, PlatformEvent } = require('@urbackend/common');
-                            const proj = await Project.findById(req.project._id).select('owner').lean();
-                            if (proj?.owner) {
+                        const { Project, PlatformEvent, markDeveloperActivated } = require('@urbackend/common');
+                        const projectOwner = req.project.owner?._id || req.project.owner;
+                        const ownerId = projectOwner || (await Project.findById(req.project._id).select('owner').lean())?.owner;
+                        if (!ownerId) return;
+
+                        const { activated } = await markDeveloperActivated(ownerId);
+                        if (activated) {
+                            const existingEvent = await PlatformEvent.findOne({ developerId: ownerId, event: 'first_api_call' }).lean();
+                            if (!existingEvent) {
                                 await PlatformEvent.create({
-                                    developerId: proj.owner,
+                                    developerId: ownerId,
                                     projectId: req.project._id,
-                                    event: 'first_api_success',
+                                    event: 'first_api_call',
                                     properties: {
                                         method: req.method,
                                         path: req.originalUrl,
@@ -107,7 +107,7 @@ const logger = (req, res, next) => {
                             }
                         }
                     } catch (err) {
-                        console.error('[activation] first_api_success check failed:', err.message);
+                        console.error('[activation] first_api_call check failed:', err.message);
                     }
                 });
             }

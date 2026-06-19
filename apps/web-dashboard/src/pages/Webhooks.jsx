@@ -262,15 +262,14 @@ if (loading) return <WebhooksSkeleton />;
 
       {/* Webhooks List */}
       {webhooks.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-          <Webhook size={48} color="var(--color-text-muted)" style={{ marginBottom: '1rem' }} />
-          <h3 style={{ marginBottom: '0.5rem' }}>No webhooks configured</h3>
-          <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem' }}>
-            Create a webhook to receive notifications when data changes
+        <div className="glass-card" style={{ textAlign: 'center', padding: '5rem 2rem', borderStyle: 'dashed', borderRadius: '12px', borderColor: 'var(--color-border)', maxWidth: '600px', margin: '2rem auto' }}>
+          <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontWeight: 700 }}>Webhooks</h2>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '2rem' }}>
+            Trigger external services when events occur.
           </p>
           {!isViewer && (
-            <button className="btn btn-primary" onClick={openCreateModal}>
-              <Plus size={18} /> Create your first webhook
+            <button className="btn btn-primary" onClick={openCreateModal} style={{ fontSize: '0.9rem', height: '40px', padding: '0 24px', fontWeight: 600 }}>
+              Create Webhook
             </button>
           )}
         </div>

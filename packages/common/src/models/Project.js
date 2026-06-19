@@ -94,6 +94,14 @@ const projectSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    secretKeyEncrypted: {
+      type: resourceConfigSchema,
+      default: null,
+    },
+    secretKeyRevealed: {
+      type: Boolean,
+      default: false,
+    },
     jwtSecret: {
       type: String,
       required: true,

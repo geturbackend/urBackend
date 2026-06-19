@@ -15,6 +15,7 @@ const {
   sanitizeNonEmptyString,
 } = require("@urbackend/common");
 const { generateApiKey, hashApiKey } = require("@urbackend/common");
+const { markDeveloperOnboardingStep } = require("@urbackend/common");
 const { z } = require("zod");
 const { encrypt, decrypt } = require("@urbackend/common");
 const { URL } = require("url");
@@ -165,8 +166,13 @@ const sanitizeAuthProviders = (authProviders = {}) => {
 };
 
 const sanitizeProjectResponse = (projectObj) => {
-  delete projectObj.publishableKey;
+  if (projectObj.publishableKey && projectObj.publishableKey.startsWith('pk_live_')) {
+    // Keep plaintext public key
+  } else {
+    projectObj.publishableKey = 'pk_live_••••••••';
+  }
   delete projectObj.secretKey;
+  delete projectObj.secretKeyEncrypted;
   delete projectObj.jwtSecret;
   const resendConfig = projectObj.resendApiKey;
   projectObj.hasResendApiKey =
@@ -192,6 +198,20 @@ const sanitizeProjectResponse = (projectObj) => {
         rls: col.rls || getDefaultRlsForCollection(col.name, col.model),
       };
     });
+  }
+
+  return projectObj;
+};
+
+const prepareCreatedProjectResponse = (projectObj, user) => {
+  const canRevealKeys = Boolean(user?.isVerified);
+  delete projectObj.jwtSecret;
+  projectObj.authProviders = sanitizeAuthProviders(projectObj.authProviders);
+
+  if (!canRevealKeys) {
+    delete projectObj.publishableKey;
+    delete projectObj.secretKey;
+    projectObj.apiKeysLocked = true;
   }
 
   return projectObj;
@@ -249,6 +269,16 @@ module.exports.createProject = async (req, res) => {
   const executeOperation = async (session) => {
     const { name, description, siteUrl } = createProjectSchema.parse(req.body);
 
+    if (!req.user.onboarding?.completed) {
+      const queryOpts = session ? { session } : {};
+      const existing = await Project.findOne({ owner: req.user._id }, null, queryOpts);
+      if (existing) {
+        const projectObj = existing.toObject();
+        prepareCreatedProjectResponse(projectObj, req.user);
+        return { projectObj, newProject: existing };
+      }
+    }
+
     if (req.projectLimit !== undefined) {
       const queryOpts = session ? { session } : {};
       const currentCount = await Project.countDocuments(
@@ -264,10 +294,10 @@ module.exports.createProject = async (req, res) => {
     }
 
     const rawPublishableKey = generateApiKey("pk_live_");
-    const hashedPublishableKey = hashApiKey(rawPublishableKey);
 
     const rawSecretKey = generateApiKey("sk_live_");
     const hashedSecretKey = hashApiKey(rawSecretKey);
+    const encryptedSecretKey = encrypt(rawSecretKey);
 
     const rawJwtSecret = generateApiKey("jwt_");
 
@@ -275,8 +305,10 @@ module.exports.createProject = async (req, res) => {
       name,
       description,
       owner: req.user._id,
-      publishableKey: hashedPublishableKey,
+      publishableKey: rawPublishableKey,
       secretKey: hashedSecretKey,
+      secretKeyEncrypted: encryptedSecretKey,
+      secretKeyRevealed: false,
       jwtSecret: rawJwtSecret,
       siteUrl: siteUrl || "",
     });
@@ -287,11 +319,20 @@ module.exports.createProject = async (req, res) => {
     const projectObj = newProject.toObject();
     projectObj.publishableKey = rawPublishableKey;
     projectObj.secretKey = rawSecretKey;
-    delete projectObj.jwtSecret;
-    projectObj.authProviders = sanitizeAuthProviders(projectObj.authProviders);
+    prepareCreatedProjectResponse(projectObj, req.user);
 
     return { projectObj, newProject };
   };
+
+  if (!req.user.onboarding?.completed) {
+    const existing = await Project.findOne({ owner: req.user._id }).lean();
+    if (existing) {
+      await markDeveloperOnboardingStep(req.user._id, 'projectCreated', { projectId: existing._id });
+      const projectObj = { ...existing };
+      prepareCreatedProjectResponse(projectObj, req.user);
+      return res.status(201).json(projectObj);
+    }
+  }
 
   let session = null;
   try {
@@ -303,6 +344,17 @@ module.exports.createProject = async (req, res) => {
     await session.commitTransaction();
     session.endSession();
     
+    markDeveloperOnboardingStep(req.user._id, 'projectCreated', { projectId: newProject._id })
+      .then(() => {
+        // Also reset subsequent steps since this is a new project
+        return Promise.all([
+          markDeveloperOnboardingStep(req.user._id, 'collectionCreated', { _reset: true }),
+          markDeveloperOnboardingStep(req.user._id, 'firstApiCall', { _reset: true })
+        ]);
+      })
+      .catch((err) => {
+        console.error('[onboarding] Failed to mark projectCreated:', err.message);
+      });
     emitEvent(req.user._id, 'project_created', { projectName: projectObj.name }, newProject._id);
     return res.status(201).json(projectObj);
   } catch (err) {
@@ -314,6 +366,9 @@ module.exports.createProject = async (req, res) => {
     if (err.message && (err.message.includes("Transaction numbers are only allowed") || err.message.includes("buffering timed out"))) {
       try {
         const { projectObj, newProject } = await executeOperation(null);
+        markDeveloperOnboardingStep(req.user._id, 'projectCreated', { projectId: newProject._id }).catch((err) => {
+          console.error('[onboarding] Failed to mark projectCreated:', err.message);
+        });
         emitEvent(req.user._id, 'project_created', { projectName: projectObj.name }, newProject._id);
         return res.status(201).json(projectObj);
       } catch (retryErr) {
@@ -452,8 +507,12 @@ module.exports.regenerateApiKey = async (req, res) => {
 
     const updateField =
       keyType === "publishable"
-        ? { publishableKey: hashed }
-        : { secretKey: hashed };
+        ? { publishableKey: newApiKey }
+        : { 
+            secretKey: hashed,
+            secretKeyEncrypted: encrypt(newApiKey),
+            secretKeyRevealed: false
+          };
 
     const project = await Project.findOneAndUpdate(
       { _id: req.params.projectId, ...getProjectAccessQuery(req.user._id) },
@@ -462,10 +521,7 @@ module.exports.regenerateApiKey = async (req, res) => {
     );
     if (!project) return res.status(404).json({ error: "Project not found." });
 
-    const projectObj = project.toObject();
-    delete projectObj.publishableKey;
-    delete projectObj.secretKey;
-    delete projectObj.jwtSecret;
+    const projectObj = sanitizeProjectResponse(project.toObject());
     res.json({ apiKey: newApiKey, keyType, project: projectObj });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -818,6 +874,22 @@ module.exports.createCollection = async (req, res) => {
     return { project, connection, compiledCollectionName, collectionExistedBefore, projectId, collectionName };
   };
 
+  if (!req.user.onboarding?.completed) {
+    const projectId = sanitizeObjectId(req.body.projectId);
+    const project = await Project.findOne({ _id: projectId, owner: req.user._id });
+    if (project) {
+      const customCol = project.collections.find(c => c.name !== 'users');
+      if (customCol) {
+        await markDeveloperOnboardingStep(req.user._id, 'collectionCreated', { collectionId: customCol._id });
+        const projectObj = project.toObject();
+        delete projectObj.publishableKey;
+        delete projectObj.secretKey;
+        delete projectObj.jwtSecret;
+        return res.status(201).json(projectObj);
+      }
+    }
+  }
+
   let session = null;
   try {
     session = await mongoose.startSession();
@@ -838,6 +910,12 @@ module.exports.createCollection = async (req, res) => {
     delete projectObj.secretKey;
     delete projectObj.jwtSecret;
 
+    const createdCol = project.collections.find((c) => c.name === collectionName);
+    if (collectionName !== "users") {
+      markDeveloperOnboardingStep(req.user._id, 'collectionCreated', { collectionId: createdCol?._id }).catch((err) => {
+        console.error('[onboarding] Failed to mark collectionCreated:', err.message);
+      });
+    }
     emitEvent(req.user._id, 'collection_created', { collectionName, isUsersCollection: collectionName === 'users' }, projectId);
 
     return res.status(201).json(projectObj);
@@ -860,6 +938,12 @@ module.exports.createCollection = async (req, res) => {
         delete projectObj.secretKey;
         delete projectObj.jwtSecret;
 
+        const createdCol = project.collections.find((c) => c.name === collectionName);
+        if (collectionName !== "users") {
+          markDeveloperOnboardingStep(req.user._id, 'collectionCreated', { collectionId: createdCol?._id }).catch((err) => {
+            console.error('[onboarding] Failed to mark collectionCreated:', err.message);
+          });
+        }
         emitEvent(req.user._id, 'collection_created', { collectionName, isUsersCollection: collectionName === 'users' }, projectId);
 
         return res.status(201).json(projectObj);
@@ -2854,6 +2938,40 @@ module.exports.sendMarketingBroadcast = async (req, res) => {
     }
 };
 
+module.exports.revealSecretKey = async (req, res) => {
+  try {
+    const project = await Project.findOne({
+      _id: req.params.projectId,
+      owner: req.user._id,
+    }).select("+secretKeyEncrypted secretKeyRevealed");
+
+    if (!project) {
+      return res.status(404).json({ success: false, data: {}, message: "Project not found." });
+    }
+
+    if (!req.user.isVerified) {
+      return res.status(403).json({ success: false, data: {}, message: "Account verification required to reveal secret key." });
+    }
+
+    if (project.secretKeyRevealed) {
+      return res.status(400).json({ success: false, data: {}, message: "Secret key has already been revealed once." });
+    }
+
+    if (!project.secretKeyEncrypted || !project.secretKeyEncrypted.encrypted) {
+      return res.status(404).json({ success: false, data: {}, message: "Secret key cannot be decrypted (it may have been rolled or cleared)." });
+    }
+
+    const decryptedKey = decrypt(project.secretKeyEncrypted);
+
+    project.secretKeyRevealed = true;
+    project.secretKeyEncrypted = null;
+    await project.save();
+
+    res.json({ success: true, data: { secretKey: decryptedKey }, message: "Secret key revealed successfully." });
+  } catch (err) {
+    res.status(500).json({ success: false, data: {}, message: err.message });
+  }
+};
 // ─────────────────────────────────────────────────────────────────────────────
 // TEAM MEMBER MANAGEMENT
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3076,4 +3194,5 @@ module.exports.removeMember = async (req, res, next) => {
     next(err);
   }
 };
+
 

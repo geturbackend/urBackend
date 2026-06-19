@@ -18,7 +18,14 @@ app.get('/', (_req, res) => {
     res.status(200).send('consumer worker running');
 });
 
-const port = Number(process.env.PORT) || 3000;
+let port = process.env.NODE_ENV === 'production'
+    ? (Number(process.env.PORT) || 3000)
+    : (Number(process.env.CONSUMER_PORT) || 1237);
+
+if (port < 1 || port > 65535 || isNaN(port)) {
+    console.warn(`[CONSUMER] Invalid port ${port} detected, defaulting to 1237`);
+    port = 1237;
+}
 let worker;
 let server;
 

@@ -3,7 +3,9 @@
 const mockAggregate = jest.fn();
 
 jest.mock('@urbackend/common', () => ({
-    sanitize: (v) => v,
+    AppError: class AppError extends Error { constructor(code, msg, errTitle) { super(msg); this.statusCode=code; this.error=errTitle||'Error'; } },
+    ApiResponse: class ApiResponse { constructor(d, m) { this.data=d; this.message=m; this.success=true; } send(res, code) { return res.status(code).json({ success: this.success, data: this.data, message: this.message }); } },
+sanitize: (v) => v,
     Project: {},
     getConnection: jest.fn().mockResolvedValue({}),
     getCompiledModel: jest.fn(() => ({
@@ -15,6 +17,7 @@ jest.mock('@urbackend/common', () => ({
     aggregateSchema: require('../../../../packages/common/src/utils/input.validation').aggregateSchema,
 }));
 
+const { AppError } = require('@urbackend/common');
 const { aggregateData } = require('../controllers/data.controller');
 
 function makeReq(overrides = {}) {
@@ -50,16 +53,19 @@ function makeRes() {
 }
 
 describe('aggregateData controller', () => {
+    let next;
+
     beforeEach(() => {
         jest.clearAllMocks();
         mockAggregate.mockResolvedValue([{ _id: 'published', count: 2 }]);
+        next = jest.fn();
     });
 
     test('executes a valid aggregation pipeline', async () => {
         const req = makeReq({ query: {} });
         const res = makeRes();
 
-        await aggregateData(req, res);
+        await aggregateData(req, res, next);
 
         expect(mockAggregate).toHaveBeenCalledWith([
             { $match: { isDeleted: { $ne: true } } },
@@ -86,7 +92,7 @@ describe('aggregateData controller', () => {
         });
         const res = makeRes();
 
-        await aggregateData(req, res);
+        await aggregateData(req, res, next);
 
         expect(mockAggregate).toHaveBeenCalledWith([
             { $match: { userId: 'user_1', isDeleted: { $ne: true } } },
@@ -103,7 +109,7 @@ describe('aggregateData controller', () => {
         });
         const res = makeRes();
 
-        await aggregateData(req, res);
+        await aggregateData(req, res, next);
 
         expect(mockAggregate).toHaveBeenCalledWith([
             { $match: {} }, // softDeleteFilter should be empty
@@ -118,15 +124,12 @@ describe('aggregateData controller', () => {
         });
         const res = makeRes();
 
-        await aggregateData(req, res);
+        await aggregateData(req, res, next);
 
         expect(mockAggregate).not.toHaveBeenCalled();
-        expect(res.statusCode).toBe(400);
-        expect(res.body).toEqual({
-            success: false,
-            data: {},
-            message: 'Aggregation pipeline contains blocked stage.',
-        });
+        expect(next).toHaveBeenCalledWith(expect.any(AppError));
+        expect(next.mock.calls[0][0].statusCode).toBe(400);
+        expect(next.mock.calls[0][0].message).toBe('Aggregation pipeline contains blocked stage.');
     });
 
     test('rejects invalid pipeline payloads', async () => {
@@ -135,14 +138,11 @@ describe('aggregateData controller', () => {
         });
         const res = makeRes();
 
-        await aggregateData(req, res);
+        await aggregateData(req, res, next);
 
         expect(mockAggregate).not.toHaveBeenCalled();
-        expect(res.statusCode).toBe(400);
-        expect(res.body).toEqual({
-            success: false,
-            data: {},
-            message: 'Invalid input: expected array, received object',
-        });
+        expect(next).toHaveBeenCalledWith(expect.any(AppError));
+        expect(next.mock.calls[0][0].statusCode).toBe(400);
+        expect(next.mock.calls[0][0].message).toBe('Invalid input: expected array, received object');
     });
 });

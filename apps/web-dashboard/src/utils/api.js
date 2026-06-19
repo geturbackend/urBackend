@@ -48,8 +48,10 @@ api.interceptors.request.use(async (config) => {
 
 import toast from 'react-hot-toast';
 
-// Upgrade-triggering keywords from backend error messages
+// Upgrade-triggering keywords from backend error messages.
+// Verification gates are activation gates, not pricing gates.
 const UPGRADE_KEYWORDS = ['upgrade', 'limit reached', 'pro feature', 'pro plan'];
+const VERIFICATION_KEYWORDS = ['verify your email', 'email verification', 'email not verified'];
 
 api.interceptors.response.use(
     (response) => response,
@@ -74,23 +76,39 @@ api.interceptors.response.use(
             }
         }
 
-        // 403: Show upgrade modal if it's a plan limit error, else show generic deny
+        // 403: Handle CSRF expiry first — refresh token and retry transparently
         if (error.response?.status === 403) {
             const message = (
-                error.response?.data?.message || error.response?.data?.error ||
-                'Access denied. You do not have permission for this action.'
+                error.response?.data?.message || error.response?.data?.error || ''
             );
 
+            const isCsrfError = message.toLowerCase().includes('csrf') || 
+                                message.toLowerCase().includes('form has expired') ||
+                                error.response?.data?.code === 'EBADCSRFTOKEN';
+
+            if (isCsrfError && !originalRequest._csrfRetry) {
+                originalRequest._csrfRetry = true;
+                // Clear stale token and force a fresh fetch
+                csrfToken = null;
+                csrfTokenPromise = fetchCsrfToken();
+                const newToken = await csrfTokenPromise;
+                if (newToken) {
+                    originalRequest.headers['X-CSRF-Token'] = newToken;
+                    return api(originalRequest);
+                }
+            }
+
+            const isVerificationGate = VERIFICATION_KEYWORDS.some((kw) => message.toLowerCase().includes(kw));
             const isPlanError = UPGRADE_KEYWORDS.some((kw) => message.toLowerCase().includes(kw));
 
-            if (isPlanError) {
+            if (isPlanError && !isVerificationGate) {
                 toast.error("Plan limit reached. Please upgrade to continue.");
                 if (window.location.pathname !== '/pricing') {
                     window.location.assign('/pricing');
                 }
                 return Promise.reject(error);
             } else {
-                toast.error(message);
+                toast.error(message || 'Access denied. You do not have permission for this action.');
             }
         }
 

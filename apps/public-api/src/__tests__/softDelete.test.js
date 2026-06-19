@@ -30,9 +30,12 @@ jest.mock('@urbackend/common', () => {
                 super(message);
                 this.statusCode = statusCode;
             }
-        }
+        },
+        ApiResponse: class ApiResponse { constructor(d, m) { this.data=d; this.message=m; this.success=true; } send(res, code) { return res.status(code).json({ success: this.success, data: this.data, message: this.message }); } },
     };
 });
+
+const { AppError } = require('@urbackend/common');
 
 const { deleteSingleDoc, recoverSingleDoc } = require('../controllers/data.controller');
 
@@ -60,8 +63,11 @@ function makeRes() {
 }
 
 describe('Soft Delete in data.controller', () => {
+    let next;
+
     beforeEach(() => {
         jest.clearAllMocks();
+        next = jest.fn();
     });
 
     test('deleteSingleDoc sets isDeleted: true instead of hard deleting', async () => {
@@ -73,8 +79,7 @@ describe('Soft Delete in data.controller', () => {
         mockFindOneAndUpdate.mockReturnValue({
             lean: jest.fn().mockResolvedValue(doc)
         });
-
-        await deleteSingleDoc(req, res);
+        await deleteSingleDoc(req, res, next);
 
         expect(mockFindOneAndUpdate).toHaveBeenCalledWith(
             expect.objectContaining({ _id: '507f1f77bcf86cd799439011', isDeleted: { $ne: true } }),
@@ -102,11 +107,11 @@ describe('Soft Delete in data.controller', () => {
         mockFindOneAndUpdate.mockReturnValue({
             lean: jest.fn().mockResolvedValue(null)
         });
+        await deleteSingleDoc(req, res, next);
 
-        await deleteSingleDoc(req, res);
-
-        expect(res.status).toHaveBeenCalledWith(404);
-        expect(res.json).toHaveBeenCalledWith({ error: 'Document not found.' });
+        expect(next).toHaveBeenCalledWith(expect.any(AppError));
+        expect(next.mock.calls[0][0].statusCode).toBe(404);
+        expect(next.mock.calls[0][0].message).toBe("Document not found.");
     });
 
     test('recoverSingleDoc restores a soft-deleted document', async () => {
@@ -155,8 +160,6 @@ describe('Soft Delete in data.controller', () => {
     test('recoverSingleDoc returns 404 if document is not in trash', async () => {
         const req = makeReq();
         const res = makeRes();
-        const next = jest.fn();
-
         mockFindOneAndUpdate.mockReturnValue({
             lean: jest.fn().mockResolvedValue(null)
         });
@@ -172,8 +175,6 @@ describe('Soft Delete in data.controller', () => {
     test('recoverSingleDoc returns 409 if document restoration causes a unique field conflict', async () => {
         const req = makeReq();
         const res = makeRes();
-        const next = jest.fn();
-
         const error = new Error('Duplicate key');
         error.code = 11000;
         mockFindOneAndUpdate.mockReturnValue({
@@ -191,8 +192,6 @@ describe('Soft Delete in data.controller', () => {
     test('recoverSingleDoc returns 400 if ID is invalid', async () => {
         const req = makeReq({ params: { collectionName: 'posts', id: 'invalid-id' } });
         const res = makeRes();
-        const next = jest.fn();
-
         await recoverSingleDoc(req, res, next);
 
         expect(next).toHaveBeenCalledWith(expect.objectContaining({

@@ -1,5 +1,5 @@
 const { z } = require("zod");
-const { Project, MailTemplate, decrypt, redis, sendMailSchema, publicEmailQueue, MailLog } = require("@urbackend/common");
+const { Project, MailTemplate, decrypt, redis, sendMailSchema, publicEmailQueue, MailLog, AppError, ApiResponse } = require("@urbackend/common");
 const { Resend } = require("resend");
 const {
   getMonthKey,
@@ -128,15 +128,11 @@ const renderTemplateString = (template, vars, { mode }) => {
   return out;
 };
 
-module.exports.sendMail = async (req, res) => {
+module.exports.sendMail = async (req, res, next) => {
   let consumedQuotaKey = null;
   try {
     if (req.keyRole !== "secret") {
-      return res.status(403).json({
-        success: false,
-        data: {},
-        message: "Forbidden. This action requires a Secret Key (sk_live_...).",
-      });
+      return next(new AppError(403, "Forbidden. This action requires a Secret Key (sk_live_...)."));
     }
 
     const {
@@ -151,12 +147,12 @@ module.exports.sendMail = async (req, res) => {
     const projectId = req.project?._id;
 
     if (!projectId) {
-      return res.status(401).json({ success: false, data: {}, message: "Project context missing." });
+      return next(new AppError(401, "Project context missing."));
     }
 
     const project = await loadProjectMailConfig(projectId);
     if (!project) {
-      return res.status(404).json({ success: false, data: {}, message: "Project not found." });
+      return next(new AppError(404, "Project not found."));
     }
 
     const vars =
@@ -224,17 +220,13 @@ module.exports.sendMail = async (req, res) => {
       }
 
       if (!t) {
-        return res.status(400).json({ success: false, data: {}, message: "Template not found." });
+        return next(new AppError(400, "Template not found."));
       }
 
       // Enforce Pro feature limit only for custom (project-owned) templates.
       if (t.projectId) {
         if (!req.planLimits || req.planLimits.mailTemplatesEnabled !== true) {
-          return res.status(403).json({ 
-            success: false, 
-            data: {}, 
-            message: "Custom Email Templates are a Pro feature. Please upgrade to use this functionality." 
-          });
+          return next(new AppError(403, "Custom Email Templates are a Pro feature. Please upgrade to use this functionality."));
         }
       }
 
@@ -251,14 +243,14 @@ module.exports.sendMail = async (req, res) => {
     }
 
     if (!resolvedSubject || !resolvedSubject.trim()) {
-      return res.status(400).json({ success: false, data: {}, message: "Subject is required." });
+      return next(new AppError(400, "Subject is required."));
     }
 
     const hasBody =
       (typeof resolvedHtml === "string" && resolvedHtml.trim().length > 0) ||
       (typeof resolvedText === "string" && resolvedText.trim().length > 0);
     if (!hasBody) {
-      return res.status(400).json({ success: false, data: {}, message: "Provide at least one of html or text content." });
+      return next(new AppError(400, "Provide at least one of html or text content."));
     }
 
     resolvedSubject = renderTemplateString(resolvedSubject, vars, { mode: "text" });
@@ -270,14 +262,14 @@ module.exports.sendMail = async (req, res) => {
     }
 
     if (!resolvedSubject || !resolvedSubject.trim()) {
-      return res.status(400).json({ success: false, data: {}, message: "Subject is required." });
+      return next(new AppError(400, "Subject is required."));
     }
 
     const hasRenderedBody =
       (typeof resolvedHtml === "string" && resolvedHtml.trim().length > 0) ||
       (typeof resolvedText === "string" && resolvedText.trim().length > 0);
     if (!hasRenderedBody) {
-      return res.status(400).json({ success: false, data: {}, message: "Provide at least one of html or text content." });
+      return next(new AppError(400, "Provide at least one of html or text content."));
     }
 
     const encryptedByokKey =
@@ -292,7 +284,7 @@ module.exports.sendMail = async (req, res) => {
       : process.env.RESEND_API_KEY_2 || process.env.RESEND_API_KEY;
 
     if (!clientKey) {
-      return res.status(500).json({ success: false, data: {}, message: "Resend API key is not configured." });
+      return next(new AppError(500, "Resend API key is not configured."));
     }
 
     const limit = getMonthlyMailLimit(req.project, req.planLimits);
@@ -317,36 +309,25 @@ module.exports.sendMail = async (req, res) => {
       backoff: { type: 'exponential', delay: 5000 }
     });
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        id: job.id ? String(job.id) : null,
-        provider: usingByok ? "byok" : "default",
-        monthlyUsage: count,
-        monthlyLimit: limit,
-        ...(templateUsed ? { templateUsed } : {}),
-      },
-      message: "Mail queued successfully.",
-    });
+    return new ApiResponse({
+      id: job.id ? String(job.id) : null,
+      provider: usingByok ? "byok" : "default",
+      monthlyUsage: count,
+      monthlyLimit: limit,
+      ...(templateUsed ? { templateUsed } : {}),
+    }, "Mail queued successfully.").send(res, 200);
   } catch (err) {
     if (consumedQuotaKey) {
       await redis.decr(consumedQuotaKey).catch(() => {});
     }
 
     if (err instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        data: {},
-        message: err.issues?.[0]?.message || "Invalid mail payload.",
-      });
+      return next(new AppError(400, err.issues?.[0]?.message || "Invalid mail payload.", "Validation Error"));
     }
 
-    return res.status(err.statusCode || 500).json({
-      success: false,
-      data: {},
-      message: err.message || "Failed to send mail.",
-      ...(typeof err.limit === "number" ? { limit: err.limit } : {}),
-    });
+    const appErr = new AppError(err.statusCode || 500, err.message || "Failed to send mail.");
+    if (typeof err.limit === "number") appErr.limit = err.limit;
+    return next(appErr);
   }
 };
 
@@ -391,11 +372,11 @@ const requireByokGate = async (req) => {
 };
 
 // GET /api/mail/logs
-module.exports.getMailLogs = async (req, res) => {
+module.exports.getMailLogs = async (req, res, next) => {
   try {
     const projectId = req.project?._id;
     if (!projectId) {
-      return res.status(401).json({ success: false, data: {}, message: "Project context missing." });
+      return next(new AppError(401, "Project context missing."));
     }
 
     const parsedPage = parseInt(req.query.page, 10);
@@ -411,63 +392,55 @@ module.exports.getMailLogs = async (req, res) => {
       .limit(limit)
       .lean();
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        items: logs,
-        total,
-        page,
-        limit,
-      },
-      message: "Mail logs retrieved successfully."
-    });
+    return new ApiResponse({
+      items: logs,
+      total,
+      page,
+      limit,
+    }, "Mail logs retrieved successfully.").send(res, 200);
   } catch (err) {
-    return res.status(500).json({ success: false, data: {}, message: err.message || "Failed to retrieve mail logs." });
+    return next(new AppError(500, err.message || "Failed to retrieve mail logs."));
   }
 };
 
 // GET /api/mail/logs/:resendId
-module.exports.getMailStatus = async (req, res) => {
+module.exports.getMailStatus = async (req, res, next) => {
   try {
     const { resendId } = req.params;
-    if (!resendId) return res.status(400).json({ success: false, data: {}, message: "resendId is required." });
+    if (!resendId) return next(new AppError(400, "resendId is required."));
     if (!/^[A-Za-z0-9_-]{1,128}$/.test(resendId)) {
-      return res.status(400).json({ success: false, data: {}, message: "Invalid resendId format." });
+      return next(new AppError(400, "Invalid resendId format."));
     }
 
     const projectId = req.project?._id;
     const logEntry = await MailLog.findOne({ resendEmailId: resendId, projectId }).lean();
     if (!logEntry) {
-      return res.status(404).json({ success: false, data: {}, message: "Mail log entry not found for this project." });
+      return next(new AppError(404, "Mail log entry not found for this project."));
     }
 
     const { resend } = await resolveResendClient(req);
     const { data, error } = await resend.emails.get(resendId);
     if (error) {
-      return res.status(error.statusCode || 500).json({ success: false, data: {}, message: error.message || "Failed to fetch email status from Resend." });
+      return next(new AppError(error.statusCode || 500, error.message || "Failed to fetch email status from Resend."));
     }
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        dbLog: logEntry,
-        last_event: data?.last_event || logEntry.status,
-        resendStatus: data
-      },
-      message: "Mail status retrieved successfully."
-    });
+    return new ApiResponse({
+      dbLog: logEntry,
+      last_event: data?.last_event || logEntry.status,
+      resendStatus: data
+    }, "Mail status retrieved successfully.").send(res, 200);
   } catch (err) {
-    return res.status(500).json({ success: false, data: {}, message: err.message || "Failed to fetch mail status." });
+    return next(new AppError(500, err.message || "Failed to fetch mail status."));
   }
 };
 
 // POST /api/mail/webhook (No auth required)
 const { Webhook } = require("svix");
 
-module.exports.handleResendWebhook = async (req, res) => {
+module.exports.handleResendWebhook = async (req, res, next) => {
   const secret = process.env.RESEND_WEBHOOK_SECRET;
   if (!secret) {
-    return res.status(200).json({ success: true, message: "Webhook ignored: secret not configured." });
+    return new ApiResponse(null, "Webhook ignored: secret not configured.").send(res, 200);
   }
 
   const payload = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : (typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
@@ -478,7 +451,7 @@ module.exports.handleResendWebhook = async (req, res) => {
   try {
     evt = wh.verify(payload, headers);
   } catch (err) {
-    return res.status(400).json({ success: false, message: "Webhook signature verification failed." });
+    return next(new AppError(400, "Webhook signature verification failed."));
   }
 
   const { type, data } = evt;
@@ -498,7 +471,7 @@ module.exports.handleResendWebhook = async (req, res) => {
     }
   }
 
-  return res.status(200).json({ success: true });
+  return new ApiResponse(null).send(res, 200);
 };
 
 // POST /api/mail/send-batch
@@ -511,21 +484,17 @@ const sendBatchSchema = z.array(
   })
 ).min(1).max(100);
 
-module.exports.sendBatchMail = async (req, res) => {
+module.exports.sendBatchMail = async (req, res, next) => {
   const reservedKeys = [];
   try {
     if (req.keyRole !== "secret") {
-      return res.status(403).json({
-        success: false,
-        data: {},
-        message: "Forbidden. This action requires a Secret Key (sk_live_...).",
-      });
+      return next(new AppError(403, "Forbidden. This action requires a Secret Key (sk_live_...)."));
     }
 
     const batch = sendBatchSchema.parse(req.body);
     const projectId = req.project?._id;
     if (!projectId) {
-      return res.status(401).json({ success: false, data: {}, message: "Project context missing." });
+      return next(new AppError(401, "Project context missing."));
     }
 
     const { resend, usingByok, fromAddress } = await resolveResendClient(req);
@@ -549,7 +518,7 @@ module.exports.sendBatchMail = async (req, res) => {
       for (const k of reservedKeys) {
         await redis.decr(k).catch(() => {});
       }
-      return res.status(error.statusCode || 500).json({ success: false, data: {}, message: error.message || "Batch send failed." });
+      return next(new AppError(error.statusCode || 500, error.message || "Batch send failed."));
     }
 
     const results = data?.data || data || [];
@@ -570,105 +539,94 @@ module.exports.sendBatchMail = async (req, res) => {
       await MailLog.insertMany(logDocs).catch(e => console.error("Batch log insertion error:", e));
     }
 
-    return res.status(200).json({
-      success: true,
-      data: results,
-      message: `Successfully dispatched batch of ${results.length} emails.`
-    });
+    return new ApiResponse(results, `Successfully dispatched batch of ${results.length} emails.`).send(res, 200);
   } catch (err) {
     for (const k of reservedKeys) {
       await redis.decr(k).catch(() => {});
     }
 
     if (err instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        data: {},
-        message: err.issues?.[0]?.message || "Invalid batch mail payload.",
-      });
+      return next(new AppError(400, err.issues?.[0]?.message || "Invalid batch mail payload.", "Validation Error"));
     }
 
-    return res.status(err.statusCode || 500).json({
-      success: false,
-      data: {},
-      message: err.message || "Failed to send batch mail.",
-      ...(typeof err.limit === "number" ? { limit: err.limit } : {}),
-    });
+    const appErr = new AppError(err.statusCode || 500, err.message || "Failed to send batch mail.");
+    if (typeof err.limit === "number") appErr.limit = err.limit;
+    return next(appErr);
   }
 };
 
 // --- AUDIENCES (BYOK Gate) ---
 
-module.exports.createAudience = async (req, res) => {
+module.exports.createAudience = async (req, res, next) => {
   try {
     const resend = await requireByokGate(req);
     const { name } = req.body;
-    if (!name) return res.status(400).json({ success: false, data: {}, message: "Audience name is required." });
+    if (!name) return next(new AppError(400, "Audience name is required."));
 
     const { data, error } = await resend.audiences.create({ name });
-    if (error) return res.status(error.statusCode || 500).json({ success: false, data: {}, message: error.message });
+    if (error) return next(new AppError(error.statusCode || 500, error.message));
 
-    return res.status(200).json({ success: true, data });
+    return new ApiResponse(data).send(res, 200);
   } catch (err) {
-    return res.status(err.statusCode || 500).json({ success: false, data: {}, message: err.message });
+    return next(new AppError(err.statusCode || 500, err.message));
   }
 };
 
-module.exports.getAudiences = async (req, res) => {
+module.exports.getAudiences = async (req, res, next) => {
   try {
     const resend = await requireByokGate(req);
     const { data, error } = await resend.audiences.list();
-    if (error) return res.status(error.statusCode || 500).json({ success: false, data: {}, message: error.message });
+    if (error) return next(new AppError(error.statusCode || 500, error.message));
 
-    return res.status(200).json({ success: true, data });
+    return new ApiResponse(data).send(res, 200);
   } catch (err) {
-    return res.status(err.statusCode || 500).json({ success: false, data: {}, message: err.message });
+    return next(new AppError(err.statusCode || 500, err.message));
   }
 };
 
-module.exports.getAudienceById = async (req, res) => {
+module.exports.getAudienceById = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!/^[A-Za-z0-9_-]+$/.test(id)) {
-      return res.status(400).json({ success: false, data: {}, message: "Invalid audience ID format." });
+      return next(new AppError(400, "Invalid audience ID format."));
     }
     const resend = await requireByokGate(req);
     const { data, error } = await resend.audiences.get(id);
-    if (error) return res.status(error.statusCode || 500).json({ success: false, data: {}, message: error.message });
+    if (error) return next(new AppError(error.statusCode || 500, error.message));
 
-    return res.status(200).json({ success: true, data });
+    return new ApiResponse(data).send(res, 200);
   } catch (err) {
-    return res.status(err.statusCode || 500).json({ success: false, data: {}, message: err.message });
+    return next(new AppError(err.statusCode || 500, err.message));
   }
 };
 
-module.exports.deleteAudience = async (req, res) => {
+module.exports.deleteAudience = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!/^[A-Za-z0-9_-]+$/.test(id)) {
-      return res.status(400).json({ success: false, data: {}, message: "Invalid audience ID format." });
+      return next(new AppError(400, "Invalid audience ID format."));
     }
     const resend = await requireByokGate(req);
     const { data, error } = await resend.audiences.remove(id);
-    if (error) return res.status(error.statusCode || 500).json({ success: false, data: {}, message: error.message });
+    if (error) return next(new AppError(error.statusCode || 500, error.message));
 
-    return res.status(200).json({ success: true, data });
+    return new ApiResponse(data).send(res, 200);
   } catch (err) {
-    return res.status(err.statusCode || 500).json({ success: false, data: {}, message: err.message });
+    return next(new AppError(err.statusCode || 500, err.message));
   }
 };
 
 // --- CONTACTS (BYOK Gate) ---
 
-module.exports.addContact = async (req, res) => {
+module.exports.addContact = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!/^[A-Za-z0-9_-]+$/.test(id)) {
-      return res.status(400).json({ success: false, data: {}, message: "Invalid audience ID format." });
+      return next(new AppError(400, "Invalid audience ID format."));
     }
     const resend = await requireByokGate(req);
     const { email, firstName, lastName, unsubscribed } = req.body;
-    if (!email) return res.status(400).json({ success: false, data: {}, message: "Contact email is required." });
+    if (!email) return next(new AppError(400, "Contact email is required."));
 
     const payload = { audienceId: id, email };
     if (firstName) payload.firstName = firstName;
@@ -676,51 +634,51 @@ module.exports.addContact = async (req, res) => {
     if (unsubscribed !== undefined) payload.unsubscribed = unsubscribed;
 
     const { data, error } = await resend.contacts.create(payload);
-    if (error) return res.status(error.statusCode || 500).json({ success: false, data: {}, message: error.message });
+    if (error) return next(new AppError(error.statusCode || 500, error.message));
 
-    return res.status(200).json({ success: true, data });
+    return new ApiResponse(data).send(res, 200);
   } catch (err) {
-    return res.status(err.statusCode || 500).json({ success: false, data: {}, message: err.message });
+    return next(new AppError(err.statusCode || 500, err.message));
   }
 };
 
-module.exports.getContacts = async (req, res) => {
+module.exports.getContacts = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!/^[A-Za-z0-9_-]+$/.test(id)) {
-      return res.status(400).json({ success: false, data: {}, message: "Invalid audience ID format." });
+      return next(new AppError(400, "Invalid audience ID format."));
     }
     const resend = await requireByokGate(req);
     const { data, error } = await resend.contacts.list({ audienceId: id });
-    if (error) return res.status(error.statusCode || 500).json({ success: false, data: {}, message: error.message });
+    if (error) return next(new AppError(error.statusCode || 500, error.message));
 
-    return res.status(200).json({ success: true, data });
+    return new ApiResponse(data).send(res, 200);
   } catch (err) {
-    return res.status(err.statusCode || 500).json({ success: false, data: {}, message: err.message });
+    return next(new AppError(err.statusCode || 500, err.message));
   }
 };
 
-module.exports.getContactById = async (req, res) => {
+module.exports.getContactById = async (req, res, next) => {
   try {
     const { id, contactId } = req.params;
     if (!/^[A-Za-z0-9_-]+$/.test(id) || !/^[A-Za-z0-9_-]+$/.test(contactId)) {
-      return res.status(400).json({ success: false, data: {}, message: "Invalid audience or contact ID format." });
+      return next(new AppError(400, "Invalid audience or contact ID format."));
     }
     const resend = await requireByokGate(req);
     const { data, error } = await resend.contacts.get({ audienceId: id, id: contactId });
-    if (error) return res.status(error.statusCode || 500).json({ success: false, data: {}, message: error.message });
+    if (error) return next(new AppError(error.statusCode || 500, error.message));
 
-    return res.status(200).json({ success: true, data });
+    return new ApiResponse(data).send(res, 200);
   } catch (err) {
-    return res.status(err.statusCode || 500).json({ success: false, data: {}, message: err.message });
+    return next(new AppError(err.statusCode || 500, err.message));
   }
 };
 
-module.exports.updateContact = async (req, res) => {
+module.exports.updateContact = async (req, res, next) => {
   try {
     const { id, contactId } = req.params;
     if (!/^[A-Za-z0-9_-]+$/.test(id) || !/^[A-Za-z0-9_-]+$/.test(contactId)) {
-      return res.status(400).json({ success: false, data: {}, message: "Invalid audience or contact ID format." });
+      return next(new AppError(400, "Invalid audience or contact ID format."));
     }
     const resend = await requireByokGate(req);
     const { firstName, lastName, unsubscribed } = req.body;
@@ -731,27 +689,27 @@ module.exports.updateContact = async (req, res) => {
     if (unsubscribed !== undefined) payload.unsubscribed = unsubscribed;
 
     const { data, error } = await resend.contacts.update(payload);
-    if (error) return res.status(error.statusCode || 500).json({ success: false, data: {}, message: error.message });
+    if (error) return next(new AppError(error.statusCode || 500, error.message));
 
-    return res.status(200).json({ success: true, data });
+    return new ApiResponse(data).send(res, 200);
   } catch (err) {
-    return res.status(err.statusCode || 500).json({ success: false, data: {}, message: err.message });
+    return next(new AppError(err.statusCode || 500, err.message));
   }
 };
 
-module.exports.deleteContact = async (req, res) => {
+module.exports.deleteContact = async (req, res, next) => {
   try {
     const { id, contactId } = req.params;
     if (!/^[A-Za-z0-9_-]+$/.test(id) || !/^[A-Za-z0-9_-]+$/.test(contactId)) {
-      return res.status(400).json({ success: false, data: {}, message: "Invalid audience or contact ID format." });
+      return next(new AppError(400, "Invalid audience or contact ID format."));
     }
     const resend = await requireByokGate(req);
     const { data, error } = await resend.contacts.remove({ audienceId: id, id: contactId });
-    if (error) return res.status(error.statusCode || 500).json({ success: false, data: {}, message: error.message });
+    if (error) return next(new AppError(error.statusCode || 500, error.message));
 
-    return res.status(200).json({ success: true, data });
+    return new ApiResponse(data).send(res, 200);
   } catch (err) {
-    return res.status(err.statusCode || 500).json({ success: false, data: {}, message: err.message });
+    return next(new AppError(err.statusCode || 500, err.message));
   }
 };
 
@@ -767,13 +725,13 @@ const requireBroadcastGate = async (req) => {
   return resend;
 };
 
-module.exports.createBroadcast = async (req, res) => {
+module.exports.createBroadcast = async (req, res, next) => {
   try {
     const resend = await requireBroadcastGate(req);
     const { audienceId, segmentId, from, subject, html, scheduledAt } = req.body;
     const resolvedAudienceId = audienceId || segmentId;
     if (!resolvedAudienceId || !subject || !html) {
-      return res.status(400).json({ success: false, data: {}, message: "audienceId, subject, and html are required." });
+      return next(new AppError(400, "audienceId, subject, and html are required."));
     }
 
     const payload = {
@@ -785,70 +743,70 @@ module.exports.createBroadcast = async (req, res) => {
     if (scheduledAt) payload.scheduledAt = scheduledAt;
 
     const { data, error } = await resend.broadcasts.create(payload);
-    if (error) return res.status(error.statusCode || 500).json({ success: false, data: {}, message: error.message });
+    if (error) return next(new AppError(error.statusCode || 500, error.message));
 
-    return res.status(200).json({ success: true, data });
+    return new ApiResponse(data).send(res, 200);
   } catch (err) {
-    return res.status(err.statusCode || 500).json({ success: false, data: {}, message: err.message });
+    return next(new AppError(err.statusCode || 500, err.message));
   }
 };
 
-module.exports.sendBroadcast = async (req, res) => {
+module.exports.sendBroadcast = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!/^[A-Za-z0-9_-]+$/.test(id)) {
-      return res.status(400).json({ success: false, data: {}, message: "Invalid broadcast ID format." });
+      return next(new AppError(400, "Invalid broadcast ID format."));
     }
     const resend = await requireBroadcastGate(req);
     const { data, error } = await resend.broadcasts.send(id);
-    if (error) return res.status(error.statusCode || 500).json({ success: false, data: {}, message: error.message });
+    if (error) return next(new AppError(error.statusCode || 500, error.message));
 
-    return res.status(200).json({ success: true, data });
+    return new ApiResponse(data).send(res, 200);
   } catch (err) {
-    return res.status(err.statusCode || 500).json({ success: false, data: {}, message: err.message });
+    return next(new AppError(err.statusCode || 500, err.message));
   }
 };
 
-module.exports.getBroadcasts = async (req, res) => {
+module.exports.getBroadcasts = async (req, res, next) => {
   try {
     const resend = await requireBroadcastGate(req);
     const { data, error } = await resend.broadcasts.list();
-    if (error) return res.status(error.statusCode || 500).json({ success: false, data: {}, message: error.message });
+    if (error) return next(new AppError(error.statusCode || 500, error.message));
 
-    return res.status(200).json({ success: true, data });
+    return new ApiResponse(data).send(res, 200);
   } catch (err) {
-    return res.status(err.statusCode || 500).json({ success: false, data: {}, message: err.message });
+    return next(new AppError(err.statusCode || 500, err.message));
   }
 };
 
-module.exports.getBroadcastById = async (req, res) => {
+module.exports.getBroadcastById = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!/^[A-Za-z0-9_-]+$/.test(id)) {
-      return res.status(400).json({ success: false, data: {}, message: "Invalid broadcast ID format." });
+      return next(new AppError(400, "Invalid broadcast ID format."));
     }
     const resend = await requireBroadcastGate(req);
     const { data, error } = await resend.broadcasts.get(id);
-    if (error) return res.status(error.statusCode || 500).json({ success: false, data: {}, message: error.message });
+    if (error) return next(new AppError(error.statusCode || 500, error.message));
 
-    return res.status(200).json({ success: true, data });
+    return new ApiResponse(data).send(res, 200);
   } catch (err) {
-    return res.status(err.statusCode || 500).json({ success: false, data: {}, message: err.message });
+    return next(new AppError(err.statusCode || 500, err.message));
   }
 };
 
-module.exports.deleteBroadcast = async (req, res) => {
+module.exports.deleteBroadcast = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!/^[A-Za-z0-9_-]+$/.test(id)) {
-      return res.status(400).json({ success: false, data: {}, message: "Invalid broadcast ID format." });
+      return next(new AppError(400, "Invalid broadcast ID format."));
     }
     const resend = await requireBroadcastGate(req);
     const { data, error } = await resend.broadcasts.remove(id);
-    if (error) return res.status(error.statusCode || 500).json({ success: false, data: {}, message: error.message });
+    if (error) return next(new AppError(error.statusCode || 500, error.message));
 
-    return res.status(200).json({ success: true, data });
+    return new ApiResponse(data).send(res, 200);
   } catch (err) {
-    return res.status(err.statusCode || 500).json({ success: false, data: {}, message: err.message });
+    return next(new AppError(err.statusCode || 500, err.message));
   }
 };

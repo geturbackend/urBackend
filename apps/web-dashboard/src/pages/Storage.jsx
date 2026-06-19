@@ -204,20 +204,21 @@ export default function Storage() {
 
             {/* Empty State */}
             {files.length === 0 ? (
-                <div className="glass-card" style={{ textAlign: 'center', padding: '5rem 2rem', borderStyle: 'dashed', borderRadius: '8px', borderColor: 'var(--color-border)' }}>
-                    <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'var(--color-bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto', border: '1px solid var(--color-border)' }}>
-                        <HardDrive size={22} style={{ color: 'var(--color-text-muted)' }} />
-                    </div>
-                    <h3 style={{ fontSize: '0.95rem', marginBottom: '0.4rem', fontWeight: 600 }}>No files uploaded</h3>
-                    <p style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem', marginBottom: '1.5rem', maxWidth: '320px', margin: '0 auto 1.5rem auto', lineHeight: 1.5 }}>
-                        Upload images, documents, or any assets to your storage bucket.
+                <div className="glass-card" style={{ textAlign: 'center', padding: '5rem 2rem', borderStyle: 'dashed', borderRadius: '12px', borderColor: 'var(--color-border)', maxWidth: '600px', margin: '2rem auto' }}>
+                    <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontWeight: 700 }}>Storage</h2>
+                    <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '2rem' }}>
+                        Upload and serve files.
                     </p>
                     {isViewer ? (
-                        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem', marginBottom: '1.5rem' }}>
+                        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
                             Storage is empty.
                         </p>
                     ) : (
-                        <button onClick={() => fileInputRef.current.click()} className="btn btn-secondary" style={{ fontSize: '0.78rem', height: '30px' }}>
+                        <button 
+                            onClick={() => fileInputRef.current.click()} 
+                            className="btn btn-primary" 
+                            style={{ fontSize: '0.9rem', height: '40px', padding: '0 24px', fontWeight: 600 }}
+                        >
                             Upload your first file
                         </button>
                     )}

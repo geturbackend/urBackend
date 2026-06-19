@@ -38,8 +38,8 @@ function RequestPro() {
       toast.dismiss(loadingToast);
       const data = error.response?.data;
       let errorMessage = 'Failed to submit request. Please try again.';
-      if (typeof data?.error === 'string') errorMessage = data.error;
-      else if (data?.message) errorMessage = data.message;
+      if (data?.message && typeof data.message === 'string') errorMessage = data.message;
+      else if (typeof data?.error === 'string' && data.error !== 'Error' && data.error !== 'Internal Server Error') errorMessage = data.error;
       toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);

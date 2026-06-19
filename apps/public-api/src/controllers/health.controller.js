@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
-const { redis } = require('@urbackend/common');
+const { redis, ApiResponse, AppError } = require('@urbackend/common');
 const REDIS_PING_TIMEOUT_MS = 500;
 
-const getHealth = async (req, res) => {
+const getHealth = async (req, res, next) => {
     const isMongoConnected = mongoose.connection.readyState === 1;
 
     let isRedisConnected = false;
@@ -19,15 +19,20 @@ const getHealth = async (req, res) => {
     }
 
     const status = isMongoConnected && isRedisConnected ? 'ok' : 'error';
-
-    return res.status(status === 'ok' ? 200 : 503).json({
+    const payload = {
         status,
         timestamp: new Date().toISOString(),
         dependencies: {
             mongodb: isMongoConnected ? 'connected' : 'disconnected',
             redis: isRedisConnected ? 'connected' : 'disconnected',
         },
-    });
+    };
+
+    if (status === 'ok') {
+        return new ApiResponse(payload, "Health Check Passed").send(res, 200);
+    } else {
+        return next(new AppError(503, "Service unavailable", "Health Check Failed"));
+    }
 };
 
 module.exports = {

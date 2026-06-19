@@ -440,7 +440,31 @@ export default function Database() {
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Shield size={20} color="var(--color-primary)" />
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Row Level Security (RLS)</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Row Level Security (RLS)</h3>
+                        <a 
+                            href="/docs#rls" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{ 
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center', 
+                                width: '16px', 
+                                height: '16px', 
+                                borderRadius: '50%', 
+                                background: 'rgba(255,255,255,0.1)', 
+                                color: 'var(--color-text-muted)', 
+                                fontSize: '0.65rem', 
+                                fontWeight: 'bold', 
+                                textDecoration: 'none', 
+                                cursor: 'help' 
+                            }}
+                            title="Row Level Security restricts which users can access data. Click to read the docs."
+                        >
+                            ?
+                        </a>
+                    </div>
                 </div>
                 <button 
                   onClick={() => setIsRlsDialogOpen(false)} 

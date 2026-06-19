@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middlewares/authMiddleware");
-const { verifyEmail } = require("@urbackend/common");
 
 const {
   createWebhook,
@@ -14,6 +13,7 @@ const {
 } = require("../controllers/webhook.controller");
 const { attachDeveloper, checkWebhookGate } = require("../middlewares/planEnforcement");
 const authorizeProject = require("../middlewares/authorizeProject");
+const { verifyEmail } = require('@urbackend/common');
 // Create webhook
 router.post("/:projectId/webhooks", authMiddleware, verifyEmail, authorizeProject('admin'), attachDeveloper, checkWebhookGate, createWebhook);
 
@@ -27,7 +27,7 @@ router.get("/:projectId/webhooks/:webhookId", authMiddleware, authorizeProject()
 router.patch("/:projectId/webhooks/:webhookId", authMiddleware, verifyEmail, authorizeProject('admin'), attachDeveloper, checkWebhookGate, updateWebhook);
 
 // Delete webhook
-router.delete("/:projectId/webhooks/:webhookId", authMiddleware, verifyEmail, authorizeProject('admin'), deleteWebhook);
+router.delete("/:projectId/webhooks/:webhookId", authMiddleware, verifyEmail, authorizeProject('admin'), attachDeveloper, checkWebhookGate, deleteWebhook);
 
 // Get delivery history
 router.get("/:projectId/webhooks/:webhookId/deliveries", authMiddleware, authorizeProject(), getDeliveries);

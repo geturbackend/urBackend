@@ -14,7 +14,10 @@ const {
     resetPasswordSchema,
     verifyOtpSchema,
     AppError,
-    ApiResponse
+    ApiResponse,
+    normalizeOnboarding,
+    updateOnboardingSchema,
+    updateDeveloperOnboarding
 } = require("@urbackend/common");
 const { emitEvent } = require('../utils/emitEvent');
 
@@ -87,6 +90,10 @@ const clearGithubStateCookie = (res) => {
         sameSite: 'lax',
         expires: new Date(Date.now() + 10 * 1000),
     });
+};
+const getPostAuthRedirectPath = (user) => {
+    const onboarding = normalizeOnboarding(user?.onboarding);
+    return onboarding.completed ? '/dashboard' : '/onboarding';
 };
 
 const OAUTH_FETCH_TIMEOUT_MS = 10000;
@@ -236,6 +243,7 @@ const issueDashboardSession = async (user, res) => {
 
 const sendTokenResponse = async (user, statusCode, res) => {
     await issueDashboardSession(user, res);
+    const onboarding = normalizeOnboarding(user.onboarding);
 
     return new ApiResponse({
         user: {
@@ -243,8 +251,10 @@ const sendTokenResponse = async (user, statusCode, res) => {
             email: user.email,
             isVerified: user.isVerified,
             maxProjects: user.maxProjects,
-            isAdmin: user.email === process.env.ADMIN_EMAIL
-        }
+            isAdmin: user.email === process.env.ADMIN_EMAIL,
+            onboarding
+        },
+        redirectTo: getPostAuthRedirectPath(user)
     }).send(res, statusCode);
 };
 
@@ -307,8 +317,9 @@ module.exports.register = async (req, res, next) => {
         // Activation funnel — signup completed
         emitEvent(newDev._id, 'signup_completed', { method: 'email' });
 
-        return new ApiResponse({}, "Registered successfully").send(res, 201);
+        return sendTokenResponse(newDev, 201, res);
     } catch (err) {
+        console.error("REGISTER ERROR:", err);
         if (err instanceof z.ZodError) return next(new AppError(400, err.issues?.[0]?.message || 'Validation failed'));
         next(err);
     }
@@ -327,6 +338,7 @@ module.exports.login = async (req, res, next) => {
 
         await sendTokenResponse(dev, 200, res);
     } catch (err) {
+        console.error("LOGIN ERROR:", err);
         if (err instanceof z.ZodError) {
             return next(new AppError(400, err.issues[0]?.message || 'Validation Failed'));
         }
@@ -466,7 +478,18 @@ module.exports.sendOtp = async (req, res, next) => {
 
         const otp = await createAndStoreOtp(existingUser._id);
 
-        await sendOtp(email, otp); // Send raw OTP to user's email
+        try {
+            await sendOtp(email, otp); // Send raw OTP to user's email
+        } catch (emailErr) {
+            if (process.env.NODE_ENV !== 'production' || emailErr.message?.includes('testing emails')) {
+                console.log(`\n==================================================`);
+                console.log(`[DEV MODE] Failed to send email via Resend sandbox.`);
+                console.log(`OTP code for ${email} was generated but could not be sent.`);
+                console.log(`==================================================\n`);
+            } else {
+                throw emailErr;
+            }
+        }
         return new ApiResponse({}, "OTP sent successfully").send(res);
     } catch (err) {
         if (err instanceof z.ZodError) {
@@ -511,7 +534,18 @@ module.exports.forgotPassword = async (req, res, next) => {
 
         const otp = await createAndStoreOtp(dev._id);
 
-        await sendOtp(email, otp, { subject: "Password Reset OTP \u2014 urBackend" });
+        try {
+            await sendOtp(email, otp, { subject: "Password Reset OTP \u2014 urBackend" });
+        } catch (emailErr) {
+            if (process.env.NODE_ENV !== 'production' || emailErr.message?.includes('testing emails')) {
+                console.log(`\n==================================================`);
+                console.log(`[DEV MODE] Failed to send email via Resend sandbox.`);
+                console.log(`Password reset OTP code for ${email} was generated but could not be sent.`);
+                console.log(`==================================================\n`);
+            } else {
+                throw emailErr;
+            }
+        }
         return new ApiResponse({}, "If this email is registered, an OTP has been sent.").send(res, 200);
     } catch (err) {
         if (err instanceof z.ZodError) return next(new AppError(400, err.issues?.[0]?.message || 'Validation failed'));
@@ -618,9 +652,23 @@ module.exports.getMe = async (req, res, next) => {
         const user = await Developer.findById(req.user._id).select("-password -refreshToken");
         if (!user) return next(new AppError(404, "User not found"));
         const userData = typeof user.toObject === 'function' ? user.toObject() : { ...user };
+        userData.onboarding = normalizeOnboarding(userData.onboarding);
         userData.isAdmin = userData.email === process.env.ADMIN_EMAIL;
         return new ApiResponse({ user: userData }).send(res);
     } catch (err) {
+        next(err);
+    }
+};
+
+// UPDATE ONBOARDING
+module.exports.updateOnboarding = async (req, res, next) => {
+    try {
+        const parsedData = updateOnboardingSchema.parse(req.body);
+        const onboarding = await updateDeveloperOnboarding(req.user._id, parsedData);
+        return new ApiResponse({ onboarding }, "Onboarding updated successfully").send(res, 200);
+    } catch (err) {
+        if (err instanceof z.ZodError) return next(new AppError(400, err.issues?.[0]?.message || 'Validation failed'));
+        if (err.statusCode) return next(new AppError(err.statusCode, err.message));
         next(err);
     }
 };

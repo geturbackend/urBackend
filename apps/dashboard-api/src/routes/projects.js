@@ -3,7 +3,7 @@ const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
 const planEnforcement = require('../middlewares/planEnforcement');
 const authorizeProject = require('../middlewares/authorizeProject');
-const { verifyEmail, checkAuthEnabled } = require('@urbackend/common');
+const { verifyEmail, checkAuthEnabled, loadProjectForAdmin } = require('@urbackend/common');
 const multer = require('multer');
 const storage = multer.memoryStorage();
 
@@ -12,6 +12,7 @@ const {
     getAllProject,
     getSingleProject,
     regenerateApiKey,
+    revealSecretKey,
     createCollection,
     deleteCollection,
     getData,
@@ -58,12 +59,13 @@ const { createAdminUser, resetPassword, getUserDetails, updateAdminUser, listAdm
 const exportController = require('../controllers/dbExport.controller');
 
 // POST REQ FOR CREATE PROJECT
-router.post('/', authMiddleware, verifyEmail, planEnforcement.checkProjectLimit, createProject);
+router.post('/', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkProjectLimit, planEnforcement.checkDeveloperCapability('createProject'), createProject);
 router.get('/', authMiddleware, getAllProject);
 router.get('/:projectId', authMiddleware, authorizeProject(), getSingleProject);
 router.post('/:projectId/api-key', authMiddleware, authorizeProject('admin'), verifyEmail, regenerateApiKey);
+router.post('/:projectId/reveal-secret-key', authMiddleware, authorizeProject('admin'), verifyEmail, revealSecretKey);
 
-router.post('/:projectId/collections', authMiddleware, authorizeProject('admin'), verifyEmail, planEnforcement.attachDeveloper, planEnforcement.checkCollectionLimit, createCollection);
+router.post('/:projectId/collections', authMiddleware, authorizeProject('admin'), planEnforcement.attachDeveloper, planEnforcement.checkCollectionLimit, createCollection);
 
 // DELETE REQ FOR COLLECTION
 router.delete('/:projectId/collections/:collectionName', authMiddleware, authorizeProject('admin'), verifyEmail, deleteCollection);
@@ -154,16 +156,16 @@ router.delete('/:projectId/members/:memberId', authMiddleware, authorizeProject(
 
 // ADMIN AUTH ROUTES
 
-router.post('/:projectId/admin/users', authMiddleware, authorizeProject('admin'), checkAuthEnabled, createAdminUser);
-router.patch('/:projectId/admin/users/:userId/password', authMiddleware, authorizeProject('admin'), checkAuthEnabled, resetPassword);
-router.get('/:projectId/admin/users', authMiddleware, authorizeProject(), checkAuthEnabled, listAdminUsers);
-router.get('/:projectId/admin/users/:userId', authMiddleware, authorizeProject(), checkAuthEnabled, getUserDetails);
-router.put('/:projectId/admin/users/:userId', authMiddleware, authorizeProject('admin'), checkAuthEnabled, updateAdminUser);
-router.delete('/:projectId/admin/users/:userId', authMiddleware, authorizeProject('admin'), checkAuthEnabled, deleteAdminUser);
+router.post('/:projectId/admin/users', authMiddleware, authorizeProject('admin'), loadProjectForAdmin, checkAuthEnabled, createAdminUser);
+router.patch('/:projectId/admin/users/:userId/password', authMiddleware, authorizeProject('admin'), loadProjectForAdmin, checkAuthEnabled, resetPassword);
+router.get('/:projectId/admin/users', authMiddleware, authorizeProject(), loadProjectForAdmin, checkAuthEnabled, listAdminUsers);
+router.get('/:projectId/admin/users/:userId', authMiddleware, authorizeProject(), loadProjectForAdmin, checkAuthEnabled, getUserDetails);
+router.put('/:projectId/admin/users/:userId', authMiddleware, authorizeProject('admin'), loadProjectForAdmin, checkAuthEnabled, updateAdminUser);
+router.delete('/:projectId/admin/users/:userId', authMiddleware, authorizeProject('admin'), loadProjectForAdmin, checkAuthEnabled, deleteAdminUser);
 
 // SESSION MANAGEMENT (Admin)
-router.get('/:projectId/admin/users/:userId/sessions', authMiddleware, authorizeProject(), checkAuthEnabled, listUserSessions);
-router.delete('/:projectId/admin/users/:userId/sessions/:tokenId', authMiddleware, authorizeProject('admin'), checkAuthEnabled, revokeUserSession);
+router.get('/:projectId/admin/users/:userId/sessions', authMiddleware, authorizeProject(), loadProjectForAdmin, checkAuthEnabled, listUserSessions);
+router.delete('/:projectId/admin/users/:userId/sessions/:tokenId', authMiddleware, authorizeProject('admin'), loadProjectForAdmin, checkAuthEnabled, revokeUserSession);
 
 // POST req for DB EXPORT
 router.post('/:projectId/collections/:collectionName/export', authMiddleware, authorizeProject(), exportController.dbExportHandler);

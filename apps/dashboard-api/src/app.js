@@ -70,7 +70,8 @@ const csrfProtection = csurf({
     cookie: {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax'
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 // 24 hours — persistent cookie, survives idle/focus loss
     } 
 });
 
@@ -98,6 +99,7 @@ app.use(capture({
 
 
 const authRoute = require('./routes/auth');
+const userRoute = require('./routes/user');
 const projectRoute = require('./routes/projects');
 const releaseRoute = require('./routes/releases');
 const webhookRoute = require('./routes/webhooks');
@@ -109,6 +111,7 @@ const aiRoute = require('./routes/ai.routes');
 const invitationsRoute = require('./routes/invitations');
 
 app.use('/api/auth', authRoute); 
+app.use('/api/user', dashboardLimiter, userRoute);
 app.use('/api/projects', dashboardLimiter, projectRoute);
 app.use('/api/projects/:projectId/ai', dashboardLimiter, aiRoute);
 app.use('/api/projects', dashboardLimiter, webhookRoute);
