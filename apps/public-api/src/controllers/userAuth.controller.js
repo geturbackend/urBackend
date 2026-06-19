@@ -534,7 +534,7 @@ const buildSocialAuthUserPayload = async (usersColConfig, profile) => {
     return buildAuthUserPayload(
         usersColConfig,
         {
-            email: profile.email,
+            email: String(profile.email).toLowerCase().trim(),
             password: randomPassword,
             username: profile.username,
             name: profile.name,
@@ -577,7 +577,13 @@ const findOrCreateSocialUser = async ({ project, usersColConfig, Model, provider
         throw err;
     }
 
-    user = await Model.findOne({ email: profile.email });
+    const normalizedEmail = String(profile.email)
+        .toLowerCase()
+        .trim();
+
+    user = await Model.findOne({
+        email: normalizedEmail
+    });
     if (user) {
         const deletedMsg = checkUserSoftDeleted(user);
         if (deletedMsg) {
@@ -1063,7 +1069,12 @@ module.exports.signup = async (req, res) => {
 
         const newUserPayload = buildAuthUserPayload(
             usersColConfig,
-            { email, password, username, ...otherData },
+            {
+                email: normalizedEmail,
+                password,
+                username,
+                ...otherData
+            },
             hashedPassword,
             false
         );
@@ -1296,6 +1307,7 @@ module.exports.createAdminUser = async (req, res) => {
 
         const parsedData = userSignupSchema.parse(req.body);
         const { email, password, username, ...otherData } = parsedData;
+        const normalizedEmail = email.toLowerCase().trim();
 
         // Get Mongoose Model
         const usersColConfig = project.collections.find(c => c.name === 'users');
@@ -1304,7 +1316,9 @@ module.exports.createAdminUser = async (req, res) => {
         const connection = await getConnection(project._id);
         const Model = getCompiledModel(connection, usersColConfig, project._id, project.resources.db.isExternal);
 
-        const existingUser = await Model.findOne({ email });
+        const existingUser = await Model.findOne({
+            email: normalizedEmail
+        });
         if (existingUser) {
             return res.status(400).json({ error: "User already exists with this email." });
         }
@@ -1314,7 +1328,12 @@ module.exports.createAdminUser = async (req, res) => {
 
         const newUserPayload = buildAuthUserPayload(
             usersColConfig,
-            { email, password, username, ...otherData },
+            {
+                email: normalizedEmail,
+                password,
+                username,
+                ...otherData
+            },
             hashedPassword,
             true
         );
@@ -1323,7 +1342,7 @@ module.exports.createAdminUser = async (req, res) => {
 
         res.status(201).json({
             message: "User created successfully",
-            user: { _id: result._id, email, username, createdAt: newUserPayload.createdAt }
+            user: { _id: result._id, email: normalizedEmail, username, createdAt: newUserPayload.createdAt }
         });
 
     } catch (err) {
