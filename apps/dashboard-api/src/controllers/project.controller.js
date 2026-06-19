@@ -2190,7 +2190,8 @@ module.exports.deleteProject = async (req, res) => {
     }).select(
       "+resources.storage.config.encrypted " +
         "+resources.storage.config.iv " +
-        "+resources.storage.config.tag",
+        "+resources.storage.config.tag " +
+        "publishableKey secretKey",
     );
 
     if (!project) {
@@ -2236,6 +2237,11 @@ module.exports.deleteProject = async (req, res) => {
 
     await MailTemplate.deleteMany({ projectId: project._id });
     await Project.deleteOne({ _id: projectId });
+
+    await deleteProjectByApiKeyCache(project.publishableKey);
+    await deleteProjectByApiKeyCache(project.secretKey);
+    await deleteProjectById(project._id.toString());
+
     storageRegistry.delete(projectId.toString());
 
     res.json({
