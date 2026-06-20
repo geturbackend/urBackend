@@ -601,13 +601,13 @@ const NAV_ITEMS = [
     { label: 'Features', href: '/#client-services', icon: Zap },
     { label: 'Use Cases', href: '/#use-cases', icon: Box },
     { label: 'Pricing', href: '/pricing', icon: Check },
+    { label: 'FAQ', href: '/#faq', icon: CircleHelp },
     { label: 'Docs', href: 'https://docs.ub.bitbros.in', icon: Terminal, external: true }
 ];
 
 const MOBILE_MENU_ITEMS = [
     { label: 'How it Works', href: '#how-it-works', icon: Layers },
-    ...NAV_ITEMS,
-    { label: 'FAQ', href: '#faq', icon: CircleHelp }
+    ...NAV_ITEMS
 ];
 
 function renderNavItem(item, index, { className, iconSize, onNavigate, location }) {
