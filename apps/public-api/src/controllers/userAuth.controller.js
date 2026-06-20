@@ -1341,8 +1341,16 @@ module.exports.createAdminUser = async (req, res) => {
         const result = await Model.create(newUserPayload);
 
         res.status(201).json({
-            message: "User created successfully",
-            user: { _id: result._id, email: normalizedEmail, username, createdAt: newUserPayload.createdAt }
+            success: true,
+            data: {
+                user: {
+                    _id: result._id,
+                    email: normalizedEmail,
+                    username,
+                    createdAt: newUserPayload.createdAt
+                }
+            },
+            message: "User created successfully"
         });
 
     } catch (err) {
