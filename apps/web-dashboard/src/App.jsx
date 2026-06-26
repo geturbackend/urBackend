@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { Analytics as VercelAnalytics } from '@vercel/analytics/react';
 import ScrollToTop from './components/Layout/ScrollToTop';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -189,6 +190,7 @@ function App() {
     <PlanProvider>
       <OnboardingProvider>
         <AppContent />
+        <VercelAnalytics />
       </OnboardingProvider>
     </PlanProvider>
   );
