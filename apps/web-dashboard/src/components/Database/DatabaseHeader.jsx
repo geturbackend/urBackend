@@ -15,10 +15,13 @@ const DatabaseHeader = ({
     <header className="db-header glass-panel" style={{ 
       padding: '0.75rem 1.5rem', 
       display: 'flex', 
+      flexWrap: 'wrap',
+      gap: '1rem',
       justifyContent: 'space-between', 
       alignItems: 'center',
       borderBottom: '1px solid var(--color-border)',
-      height: 'var(--header-height)'
+      minHeight: 'var(--header-height)',
+      height: 'auto'
     }}>
       <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <button
@@ -37,8 +40,8 @@ const DatabaseHeader = ({
           <h1 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{activeCollection?.name}</h1>
         </div>
       </div>
-
-      <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+ 
+      <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
         {activeCollection?.name !== 'users' && (
           <div style={{ marginRight: '10px' }}>
             <AiQueryBar 
