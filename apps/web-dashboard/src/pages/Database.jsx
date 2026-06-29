@@ -10,6 +10,7 @@ import DatabaseSidebar from "../components/DatabaseSidebar";
 import RowDetailDrawer from "../components/RowDetailDrawer";
 import RecordList from "../components/RecordList";
 import { Database as DbIcon, FileText, Shield, X } from "lucide-react";
+import { PUBLIC_API_URL } from '../config';
 
 import DatabaseHeader from "../components/Database/DatabaseHeader";
 import DatabaseFilter from "../components/Database/DatabaseFilter";
@@ -246,8 +247,8 @@ export default function Database() {
   const getCurlSnippet = () => {
     if (!activeCollection) return '';
     return activeCollection.rls?.enabled
-      ? `curl -X POST https://api.urbackend.com/api/data/${activeCollection.name} \\\n  -H "x-api-key: <YOUR_PUBLISHABLE_KEY>" \\\n  -H "Authorization: Bearer <USER_JWT>" \\\n  -H "Content-Type: application/json" \\\n  -d '{}'`
-      : `curl -X POST https://api.urbackend.com/api/data/${activeCollection.name} \\\n  -H "x-api-key: <YOUR_SECRET_KEY>" \\\n  -H "Content-Type: application/json" \\\n  -d '{}'`;
+      ? `curl -X POST ${PUBLIC_API_URL}/api/data/${activeCollection.name} \\\n  -H "x-api-key: <YOUR_PUBLISHABLE_KEY>" \\\n  -H "Authorization: Bearer <USER_JWT>" \\\n  -H "Content-Type: application/json" \\\n  -d '{}'`
+      : `curl -X POST ${PUBLIC_API_URL}/api/data/${activeCollection.name} \\\n  -H "x-api-key: <YOUR_SECRET_KEY>" \\\n  -H "Content-Type: application/json" \\\n  -d '{}'`;
   };
 
   if (loadingProject) {

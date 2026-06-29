@@ -98,7 +98,7 @@ function CreateProject() {
     if (newProject) {
         return (
             <div className="container" style={{ maxWidth: '600px', paddingTop: '4rem', paddingBottom: '4rem' }}>
-                <div className="card" style={{ border: '1px solid rgba(16, 185, 129, 0.3)', background: 'linear-gradient(to bottom, rgba(16, 185, 129, 0.05), rgba(16, 185, 129, 0.02))' }}>
+                <div style={{ padding: '0', background: 'transparent' }}>
                     <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
                         <div style={{
                             width: '80px',
@@ -112,8 +112,8 @@ function CreateProject() {
                         }}>
                             <CheckCircle size={40} color="var(--color-success)" />
                         </div>
-                        <h2 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '0.5rem' }}>Project Created!</h2>
-                        <p style={{ color: 'var(--color-text-muted)' }}><strong>{newProject.name}</strong> has been successfully initialized.</p>
+                        <h2 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--color-text-main)' }}>Project Created!</h2>
+                        <p style={{ color: 'var(--color-text-muted)' }}><strong style={{ color: 'var(--color-text-main)' }}>{newProject.name}</strong> has been successfully initialized.</p>
                     </div>
 
                     {newProject.apiKeysLocked ? (
@@ -143,7 +143,7 @@ function CreateProject() {
                                     <span>Publishable API Key (Frontend safe)</span>
                                 </label>
                                 <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
-                                    <div className="input-field" style={{ fontFamily: 'monospace', backgroundColor: '#111', color: 'var(--color-primary)', overflowX: 'auto', whiteSpace: 'nowrap', flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '0.95rem' }}>
+                                    <div className="input-field" style={{ fontFamily: 'monospace', backgroundColor: 'var(--color-bg-input)', color: 'var(--color-primary)', overflowX: 'auto', whiteSpace: 'nowrap', flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '0.95rem' }}>
                                         {newProject.publishableKey}
                                     </div>
                                     <button onClick={() => copyToClipboard(newProject.publishableKey)} className="btn btn-secondary" title="Copy Publishable API Key" style={{ height: 'auto', padding: '0 15px' }}><Copy size={18} /></button>
@@ -155,7 +155,7 @@ function CreateProject() {
                                     <span>Secret API Key (Backend only)</span>
                                 </label>
                                 <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
-                                    <div className="input-field" style={{ fontFamily: 'monospace', backgroundColor: '#111', color: '#ef4444', overflowX: 'auto', whiteSpace: 'nowrap', flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)', fontSize: '0.95rem' }}>
+                                    <div className="input-field" style={{ fontFamily: 'monospace', backgroundColor: 'var(--color-bg-input)', color: '#ef4444', overflowX: 'auto', whiteSpace: 'nowrap', flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)', fontSize: '0.95rem' }}>
                                         {newProject.secretKey}
                                     </div>
                                     <button onClick={() => copyToClipboard(newProject.secretKey)} className="btn btn-secondary" style={{ height: 'auto', padding: '0 15px', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)' }} title="Copy Secret API Key"><Copy size={18} /></button>
@@ -196,13 +196,13 @@ function CreateProject() {
                 <ArrowLeft size={18} style={{ marginRight: '5px' }} /> Back to Dashboard
             </button>
 
-            <div className="card" style={{ padding: '2.5rem', border: '1px solid var(--color-border)', background: 'var(--color-bg-card)' }}>
+            <div style={{ padding: '0', background: 'transparent' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '1.75rem' }}>
                     <div style={{ padding: '10px', background: 'rgba(62, 207, 142, 0.1)', borderRadius: '10px', display: 'flex' }}>
                         <Plus size={24} color="var(--color-primary)" />
                     </div>
                     <div>
-                        <h2 style={{ fontSize: '1.75rem', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>
+                        <h2 style={{ fontSize: '1.75rem', fontWeight: 700, margin: 0, letterSpacing: '-0.02em', color: 'var(--color-text-main)' }}>
                             Create New Project
                         </h2>
                         <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', marginTop: '0.4rem', marginBottom: 0 }}>
@@ -212,13 +212,13 @@ function CreateProject() {
                 </div>
 
                 <div style={{ padding: '1rem 0', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)', marginBottom: '1.75rem' }}>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.25rem' }}>Project Details</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.25rem', color: 'var(--color-text-main)' }}>Project Details</div>
                     <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>Add a clear name so it’s easy to find in the dashboard.</div>
                 </div>
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label" style={{ fontSize: '0.95rem' }}>Project Name</label>
+                        <label className="form-label" style={{ fontSize: '0.95rem', color: 'var(--color-text-main)' }}>Project Name</label>
                         <input
                             type="text"
                             value={name}
@@ -226,7 +226,7 @@ function CreateProject() {
                             className="input-field"
                             placeholder="e.g. E-commerce API"
                             autoFocus
-                            style={{ padding: '12px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', color: '#fff' }}
+                            style={{ padding: '12px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', color: 'var(--color-text-main)', borderRadius: '6px' }}
                         />
                         <div style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
                             This appears on your dashboard and in API settings.
@@ -234,12 +234,12 @@ function CreateProject() {
                     </div>
 
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label" style={{ fontSize: '0.95rem' }}>Description <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(Optional)</span></label>
+                        <label className="form-label" style={{ fontSize: '0.95rem', color: 'var(--color-text-main)' }}>Description <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(Optional)</span></label>
                         <textarea
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             className="input-field"
-                            style={{ minHeight: '120px', resize: 'vertical', padding: '12px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', color: '#fff', lineHeight: '1.5' }}
+                            style={{ minHeight: '120px', resize: 'vertical', padding: '12px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', color: 'var(--color-text-main)', borderRadius: '6px', lineHeight: '1.5' }}
                             placeholder="Describe your project's purpose..."
                         />
                     </div>
@@ -253,7 +253,7 @@ function CreateProject() {
                                 style={{ accentColor: 'var(--color-primary)', transform: 'scale(1.2)' }}
                             />
                             <div>
-                                <span style={{ fontSize: '0.95rem', fontWeight: 600 }}>Include standard Users collection for Authentication</span>
+                                <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-main)' }}>Include standard Users collection for Authentication</span>
                                 <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', marginTop: '2px', margin: 0 }}>Automatically configures a ready-to-use users table for signup and login.</p>
                             </div>
                         </label>

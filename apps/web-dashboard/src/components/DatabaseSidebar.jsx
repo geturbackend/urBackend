@@ -108,10 +108,10 @@ export default function DatabaseSidebar({
 
             <style>{`
                 /* Sidebar Styles - Scoped */
-                .db-sidebar {
+                 .db-sidebar {
                     width: 280px;
-                    background: transparent; 
-                    border-right: none;
+                    background: var(--color-bg-sidebar); 
+                    border-right: 1px solid var(--color-border);
                     display: flex;
                     flex-direction: column;
                     z-index: 100;
@@ -137,10 +137,10 @@ export default function DatabaseSidebar({
                 }
 
                 .badge {
-                    background: var(--color-bg-input);
+                    background: var(--color-surface-hover-strong);
                     border: 1px solid var(--color-border);
                     padding: 2px 6px;
-                    border-radius: 4px;
+                    border-radius: 12px;
                     color: var(--color-text-main);
                     font-size: 0.7rem;
                 }
