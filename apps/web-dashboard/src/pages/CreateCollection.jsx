@@ -138,7 +138,7 @@ function FieldRow({ field, index, depth, collections, collectionsLoading, collec
             <div className="schema-field-row" style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
                 padding: '10px 12px', marginBottom: '4px',
-                background: depth > 1 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                background: depth > 1 ? 'var(--color-bg-input)' : 'transparent',
                 borderRadius: '6px',
                 borderLeft: depth > 1 ? '2px solid rgba(62, 207, 142, 0.2)' : 'none'
             }}>
@@ -255,7 +255,7 @@ function FieldRow({ field, index, depth, collections, collectionsLoading, collec
                     disabled={field.locked}
                     onChange={(e) => handleDefaultChange(e.target.value)}
                     className="input-field"
-                    style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
+                    style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
                   >
                     <option value="">No default</option>
                     <option value="true">true</option>
@@ -269,7 +269,7 @@ function FieldRow({ field, index, depth, collections, collectionsLoading, collec
                     onChange={(e) => handleDefaultChange(e.target.value)}
                     className="input-field"
                     placeholder={field.type === 'Number' ? 'e.g. 0' : 'e.g. pending'}
-                    style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
+                    style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
                   />
                 )}
               </div>
@@ -286,7 +286,7 @@ function FieldRow({ field, index, depth, collections, collectionsLoading, collec
                         disabled={collectionsLoading || collectionsError}
                         onChange={(e) => handleChange('ref', e.target.value)}
                         className="input-field"
-                        style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
+                        style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
                     >
                         <option value="">{collectionsLoading ? 'Loading collections…' : collectionsError ? 'Failed to load' : 'Select collection...'}</option>
                         {collections.map(c => (
@@ -302,7 +302,7 @@ function FieldRow({ field, index, depth, collections, collectionsLoading, collec
                     <div style={{
                         padding: '8px', borderRadius: '6px',
                         border: '1px solid rgba(62, 207, 142, 0.1)',
-                        background: 'rgba(0,0,0,0.15)'
+                        background: 'var(--color-bg-input)'
                     }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', letterSpacing: '0.05em' }}>
@@ -337,7 +337,7 @@ function FieldRow({ field, index, depth, collections, collectionsLoading, collec
                     <div style={{
                         padding: '8px', borderRadius: '6px',
                         border: '1px solid rgba(62, 207, 142, 0.1)',
-                        background: 'rgba(0,0,0,0.15)'
+                        background: 'var(--color-bg-input)'
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', letterSpacing: '0.05em' }}>
@@ -347,7 +347,7 @@ function FieldRow({ field, index, depth, collections, collectionsLoading, collec
                                 value={field.items?.type || 'String'}
                                 onChange={(e) => handleItemsChange('type', e.target.value)}
                                 className="input-field"
-                                style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
+                                style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
                             >
                                 {availableItemTypes.map(t => (
                                     <option key={t} value={t}>{t}</option>
@@ -392,7 +392,7 @@ function FieldRow({ field, index, depth, collections, collectionsLoading, collec
                                     disabled={collectionsLoading || collectionsError}
                                     onChange={(e) => handleItemsChange('ref', e.target.value)}
                                     className="input-field"
-                                    style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
+                                    style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
                                 >
                                     <option value="">{collectionsLoading ? 'Loading collections…' : collectionsError ? 'Failed to load' : 'Select collection...'}</option>
                                     {collections.map(c => (
@@ -616,7 +616,7 @@ function CreateCollection() {
                         border: '1px solid var(--color-border)',
                         borderRadius: '8px',
                         overflow: 'hidden',
-                        background: 'rgba(0,0,0,0.1)'
+                        background: 'var(--color-bg-input)'
                     }}>
                         {fields.map((field, index) => (
                             <FieldRow
