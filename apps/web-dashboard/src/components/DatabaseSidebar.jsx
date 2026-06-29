@@ -137,10 +137,11 @@ export default function DatabaseSidebar({
                 }
 
                 .badge {
-                    background: rgba(255,255,255,0.1);
+                    background: var(--color-bg-input);
+                    border: 1px solid var(--color-border);
                     padding: 2px 6px;
                     border-radius: 4px;
-                    color: white;
+                    color: var(--color-text-main);
                     font-size: 0.7rem;
                 }
                 
@@ -164,7 +165,7 @@ export default function DatabaseSidebar({
                 }
 
                 .collection-item:hover {
-                    background: rgba(255,255,255,0.03);
+                    background: var(--color-surface-hover);
                     color: var(--color-text-main);
                 }
 

@@ -53,6 +53,7 @@ export default function Database() {
   const [rlsMode, setRlsMode] = useState("public-read");
   const [rlsOwnerField, setRlsOwnerField] = useState("userId");
   const [isRlsDialogOpen, setIsRlsDialogOpen] = useState(false);
+  const [loadingProject, setLoadingProject] = useState(true);
 
   // ... (Keeping core logic: fetchProject, fetchData, handleSaveRls, etc. - mapped to new components)
 
@@ -81,7 +82,11 @@ export default function Database() {
               setActiveCollection(withRlsDefaults.find(c => c.name !== 'users') || withRlsDefaults[0]);
             }
           }
-        } catch { toast.error("Failed to load project"); }
+        } catch { 
+          toast.error("Failed to load project"); 
+        } finally {
+          if (isMounted) setLoadingProject(false);
+        }
       };
       fetchProject();
       return () => { isMounted = false; };
@@ -245,6 +250,14 @@ export default function Database() {
       : `curl -X POST https://api.urbackend.com/api/data/${activeCollection.name} \\\n  -H "x-api-key: <YOUR_SECRET_KEY>" \\\n  -H "Content-Type: application/json" \\\n  -d '{}'`;
   };
 
+  if (loadingProject) {
+    return (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - var(--header-height))', background: 'var(--color-bg-main)' }}>
+        <div className="spinner"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="db-layout" style={{ height: 'calc(100vh - var(--header-height))', display: 'flex', background: 'var(--color-bg-main)' }}>
       <DatabaseSidebar
@@ -302,7 +315,9 @@ export default function Database() {
 
               <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
                 {loadingData ? (
-                  <div style={{ padding: '2rem', textAlign: 'center' }} className="spinner"></div>
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem' }}>
+                    <div className="spinner"></div>
+                  </div>
                 ) : data.length === 0 ? (
                   <div className="empty-state" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ padding: '2.5rem', background: 'rgba(0,0,0,0.1)', border: '1px dashed var(--color-border)', borderRadius: '12px', textAlign: 'center', maxWidth: '600px', width: '100%' }}>
@@ -436,7 +451,7 @@ export default function Database() {
       {/* RLS Dialog */}
       {isRlsDialogOpen && (
         <div className="rls-dialog-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-          <div className="glass-card" style={{ width: '480px', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
+          <div style={{ width: '480px', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--color-border)', background: 'var(--color-bg-card)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Shield size={20} color="var(--color-primary)" />
@@ -453,7 +468,7 @@ export default function Database() {
                                 width: '16px', 
                                 height: '16px', 
                                 borderRadius: '50%', 
-                                background: 'rgba(255,255,255,0.1)', 
+                                background: 'var(--color-surface-hover)', 
                                 color: 'var(--color-text-muted)', 
                                 fontSize: '0.65rem', 
                                 fontWeight: 'bold', 
@@ -469,15 +484,15 @@ export default function Database() {
                 <button 
                   onClick={() => setIsRlsDialogOpen(false)} 
                   className="btn-icon" 
-                  style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '50%', padding: '6px' }}
+                  style={{ background: 'var(--color-bg-input)', borderRadius: '50%', padding: '6px', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
                     <X size={18} />
                 </button>
             </div>
-
+ 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               
-              <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+              <div style={{ padding: '12px', background: 'var(--color-bg-input)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer' }}>
                     <input 
                       type="checkbox" 
