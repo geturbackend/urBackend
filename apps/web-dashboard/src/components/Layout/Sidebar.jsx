@@ -2,7 +2,7 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
     LayoutDashboard, Database, Shield, HardDrive, Settings, BarChart2,
-    ArrowLeft, LogOut, X, Rocket, Webhook, Users
+    ArrowLeft, LogOut, X, Rocket, Webhook, Users, Mail
 } from 'lucide-react';
 import ThemeToggle from '../ThemeToggle';
 
