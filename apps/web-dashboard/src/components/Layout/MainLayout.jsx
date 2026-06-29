@@ -9,13 +9,32 @@ const logoImage = "https://cdn.jsdelivr.net/gh/yash-pouranik/urBackend@main/fron
 
 function MainLayout({ children }) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+        try {
+            return localStorage.getItem('urbackend-sidebar-collapsed') === 'true';
+        } catch {
+            return false;
+        }
+    });
     const location = useLocation();
     const { headerContent } = useLayout();
 
     const isProjectRoute = matchPath("/project/:projectId/*", location.pathname);
 
+    const toggleSidebarCollapse = () => {
+        setIsSidebarCollapsed(prev => {
+            const nextVal = !prev;
+            try {
+                localStorage.setItem('urbackend-sidebar-collapsed', String(nextVal));
+            } catch (err) {
+                console.warn("localStorage not accessible", err);
+            }
+            return nextVal;
+        });
+    };
+
     return (
-        <div className="app-shell">
+        <div className={`app-shell ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
             {/* Mobile Overlay - Only visible when sidebar is open on mobile */}
             {isSidebarOpen && (
                 <div
@@ -29,6 +48,8 @@ function MainLayout({ children }) {
                 logo={logoImage}
                 isOpen={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}
+                isCollapsed={isSidebarCollapsed}
+                onToggleCollapse={toggleSidebarCollapse}
             />
 
             {/* Main Content Area */}
@@ -39,6 +60,7 @@ function MainLayout({ children }) {
                     logo={logoImage}
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                     showToggle={true}
+                    isSidebarCollapsed={isSidebarCollapsed}
                 >
                     {headerContent}
                 </Header>

@@ -71,6 +71,7 @@
 
   /* Dimensions */
   --sidebar-width: 240px;
+  --sidebar-width-collapsed: 68px;
   --header-height: 48px; /* Slimmer header */
   --border-radius: 4px;
 
@@ -426,6 +427,30 @@ a {
   display: flex;
   flex-direction: column;
   z-index: 100;
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.collapsed {
+  width: var(--sidebar-width-collapsed);
+}
+
+/* Hide sidebar labels, section names and logout text when collapsed */
+.sidebar.collapsed .logo-text,
+.sidebar.collapsed .back-text,
+.sidebar.collapsed .logout-text,
+.sidebar.collapsed .collapse-text,
+.sidebar.collapsed .nav-item span,
+.sidebar.collapsed .nav-section-label {
+  display: none !important;
+}
+
+.sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.responsive-header {
+  transition: padding-left 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-header {
@@ -495,6 +520,10 @@ a {
   flex-direction: column;
   min-height: 100vh;
   transition: margin-left 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-collapsed .main-content {
+  margin-left: var(--sidebar-width-collapsed);
 }
 
 .content-wrapper {

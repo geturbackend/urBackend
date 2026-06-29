@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Menu, ChevronRight, Search } from 'lucide-react';
 import api from '../../utils/api';
 
-function Header({ onToggleSidebar, showToggle = true }) {
+function Header({ onToggleSidebar, showToggle = true, isSidebarCollapsed = false }) {
     const { user } = useAuth();
     const { projectId } = useParams();
     const [projectName, setProjectName] = useState('');
@@ -84,7 +84,9 @@ function Header({ onToggleSidebar, showToggle = true }) {
             left: 0,
             zIndex: 1000,
             width: '100%',
-            paddingLeft: showToggle ? 'calc(var(--sidebar-width) + 1.5rem)' : '1.5rem'
+            paddingLeft: showToggle 
+                ? `calc(${isSidebarCollapsed ? 'var(--sidebar-width-collapsed)' : 'var(--sidebar-width)'} + 1.5rem)` 
+                : '1.5rem'
         }} className="responsive-header">
 
             {/* CSS override for mobile padding in style tag below */}
