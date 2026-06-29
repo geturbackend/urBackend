@@ -1,13 +1,19 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Menu, ChevronRight } from 'lucide-react';
+import { Menu, ChevronRight, Search } from 'lucide-react';
 import api from '../../utils/api';
 
-function Header({ onToggleSidebar, showToggle = true, children }) {
+function Header({ onToggleSidebar, showToggle = true }) {
     const { user } = useAuth();
     const { projectId } = useParams();
     const [projectName, setProjectName] = useState('');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const location = useLocation();
+    
+    const [inputValue, setInputValue] = useState(searchParams.get('q') || '');
+    const searchInputRef = useRef(null);
     const initial = user?.email ? user.email[0].toUpperCase() : 'D';
 
     useEffect(() => {
@@ -25,6 +31,43 @@ function Header({ onToggleSidebar, showToggle = true, children }) {
             .catch(err => console.error("Failed to fetch project name for header:", err));
         return () => { isMounted = false; };
     }, [projectId]);
+
+    // Sync input value with URL search param
+    useEffect(() => {
+        let isMounted = true;
+        queueMicrotask(() => {
+            if (isMounted) {
+                setInputValue(searchParams.get('q') || '');
+            }
+        });
+        return () => { isMounted = false; };
+    }, [searchParams]);
+
+    // Keyboard shortcut to focus search input
+    useEffect(() => {
+        const handleKeyPress = (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+            }
+        };
+        window.addEventListener('keydown', handleKeyPress);
+        return () => window.removeEventListener('keydown', handleKeyPress);
+    }, []);
+
+    const handleSearchChange = (e) => {
+        const val = e.target.value;
+        setInputValue(val);
+        if (location.pathname === '/dashboard') {
+            setSearchParams(val ? { q: val } : {});
+        }
+    };
+
+    const handleSearchKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            navigate(`/dashboard?q=${encodeURIComponent(inputValue)}`);
+        }
+    };
 
     return (
         <header style={{
@@ -52,6 +95,9 @@ function Header({ onToggleSidebar, showToggle = true, children }) {
                     }
                     .mobile-toggle {
                         display: block !important;
+                    }
+                    .search-container {
+                        display: none !important; /* Hide search bar on mobile headers to save space */
                     }
                 }
                 .mobile-toggle {
@@ -85,9 +131,36 @@ function Header({ onToggleSidebar, showToggle = true, children }) {
                 )}
             </div>
 
-            {/* Search / Center Content Slot */}
-            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: '0 2rem' }}>
-                {!projectId && children}
+            {/* Persistent Global Search Input */}
+            <div className="search-container" style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: '0 2rem' }}>
+                <div className="auth-input-wrap" style={{ width: '100%', maxWidth: '480px', position: 'relative' }}>
+                    <Search size={15} style={{ left: '12px', position: 'absolute', color: 'var(--color-text-muted)', zIndex: 1, top: '50%', transform: 'translateY(-50%)' }} />
+                    <input
+                        ref={searchInputRef}
+                        type="text"
+                        className="input-field"
+                        placeholder="Search projects..."
+                        style={{ paddingLeft: '2.4rem', paddingRight: '4rem', height: '32px', fontSize: '0.75rem', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '6px' }}
+                        value={inputValue}
+                        onChange={handleSearchChange}
+                        onKeyDown={handleSearchKeyDown}
+                    />
+                    <div style={{ 
+                        position: 'absolute', 
+                        right: '8px', 
+                        top: '50%', 
+                        transform: 'translateY(-50%)',
+                        padding: '1px 5px',
+                        background: 'var(--color-bg-main)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: '4px',
+                        fontSize: '0.6rem',
+                        color: 'var(--color-text-muted)',
+                        pointerEvents: 'none'
+                    }}>
+                        {navigator.platform.includes('Mac') ? '⌘ K' : 'Ctrl K'}
+                    </div>
+                </div>
             </div>
 
             {/* User Profile */}

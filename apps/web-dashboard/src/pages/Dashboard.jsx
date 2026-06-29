@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Search, Activity, Zap, Database, HardDrive, LayoutGrid, AlertTriangle } from 'lucide-react';
 
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import { useLayout } from '../context/LayoutContext';
 import { usePlan } from '../context/PlanContext';
 
 import DashboardShell from '../components/Dashboard/DashboardShell';
@@ -24,25 +23,12 @@ export default function Dashboard() {
   const [activity, setActivity] = useState([]);
   const [invitations, setInvitations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchParams] = useSearchParams();
+  const searchTerm = searchParams.get('q') || '';
   const [processingInvites, setProcessingInvites] = useState({});
   const { user } = useAuth();
-  const { setHeaderContent } = useLayout();
   const { fetchPlanData, planData } = usePlan();
   const navigate = useNavigate();
-  const searchInputRef = useRef(null);
-
-  // Keyboard shortcut Ctrl+K / Cmd+K
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -75,42 +61,6 @@ export default function Dashboard() {
       return () => { isMounted = false; };
     }
   }, [user, fetchPlanData]);
-
-  // Inject search bar into global header
-  useEffect(() => {
-    setHeaderContent(
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', width: '100%', maxWidth: '600px' }}>
-        <div className="auth-input-wrap" style={{ flex: 1, position: 'relative' }}>
-          <Search size={18} style={{ left: '14px', position: 'absolute', color: 'var(--color-text-muted)', zIndex: 1, top: '50%', transform: 'translateY(-50%)' }} />
-          <input
-            ref={searchInputRef}
-            type="text"
-            className="input-field"
-            placeholder="Search projects..."
-            style={{ paddingLeft: '2.8rem', paddingRight: '4rem', height: '38px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)' }}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <div style={{ 
-            position: 'absolute', 
-            right: '10px', 
-            top: '50%', 
-            transform: 'translateY(-50%)',
-            padding: '2px 6px',
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid var(--color-border)',
-            borderRadius: '4px',
-            fontSize: '0.65rem',
-            color: 'var(--color-text-muted)',
-            pointerEvents: 'none'
-          }}>
-            {navigator.platform.includes('Mac') ? '⌘ K' : 'Ctrl K'}
-          </div>
-        </div>
-      </div>
-    );
-    return () => setHeaderContent(null);
-  }, [searchTerm, setHeaderContent]);
 
   const handleCreateProject = () => navigate('/create-project');
 
