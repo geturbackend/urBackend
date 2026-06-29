@@ -157,44 +157,7 @@ export default function Dashboard() {
   }, [planData]);
 
 
-  if (!isLoading && projects.length === 0) {
-    return (
-      <DashboardShell>
-        <div style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          justifyContent: 'center', minHeight: '60vh', textAlign: 'center', padding: '2rem'
-        }}>
-          <div style={{
-            width: '40px', height: '40px', borderRadius: '8px',
-            border: '1px solid var(--color-border)',
-            background: 'var(--color-bg-card)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            marginBottom: '1.5rem'
-          }}>
-            <Database size={18} color="var(--color-text-muted)" />
-          </div>
-          <h1 style={{
-            fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.5rem',
-            color: 'var(--color-text-main)', letterSpacing: '-0.02em'
-          }}>
-            No projects yet
-          </h1>
-          <p style={{
-            fontSize: '0.8125rem', color: 'var(--color-text-muted)',
-            maxWidth: '340px', lineHeight: '1.5', marginBottom: '1.5rem'
-          }}>
-            Create your first project to get a database, authentication, and REST APIs in seconds.
-          </p>
-          <button
-            onClick={() => navigate('/onboarding/project')}
-            className="btn btn-primary"
-          >
-            Create Project
-          </button>
-        </div>
-      </DashboardShell>
-    );
-  }
+
 
   const handleAcceptInvite = async (inviteId) => {
     if (processingInvites[inviteId]) return;
@@ -254,7 +217,10 @@ export default function Dashboard() {
                   <AlertTriangle size={13} color={isCritical ? 'var(--color-danger)' : '#eab308'} />
                   <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-main)' }}>
                     <strong>{w.label}</strong> is at <strong>{w.pct}%</strong> of your plan limit
-                    {isCritical && ' — requests may be blocked'}
+                    {isCritical && w.label === 'API Requests' && ' — requests may be blocked'}
+                    {isCritical && w.label === 'Database Storage' && ' — database writes may be blocked'}
+                    {isCritical && w.label === 'File Storage' && ' — file uploads may be blocked'}
+                    {isCritical && w.label === 'Projects' && ' — project creation disabled'}
                   </span>
                 </div>
                 <button

@@ -321,6 +321,7 @@ a {
 
 /* Buttons */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 14px; border-radius: 6px; font-weight: 500; font-size: 0.8125rem; cursor: pointer; border: 1px solid transparent; transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease; text-decoration: none; outline: none; }
+.btn:focus-visible, .btn-icon:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 .btn:active { opacity: 0.85; }
 .btn-primary { background-color: var(--color-primary); color: #000 !important; border-color: var(--color-primary); }
 .btn-primary:hover { background-color: var(--color-primary-hover); color: #000 !important; }
