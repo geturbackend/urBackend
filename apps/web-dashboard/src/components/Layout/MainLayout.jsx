@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useLocation, matchPath } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import ProjectNavbar from './ProjectNavbar';
 import { useLayout } from '../../context/LayoutContext';
 import BackToTop from './BackToTop';
 // Use the new official logo from public directory
@@ -13,51 +12,38 @@ function MainLayout({ children }) {
     const location = useLocation();
     const { headerContent } = useLayout();
 
-    // Check if we are inside a project route to toggle layout mode
-    // Paths like /project/:projectId/...
     const isProjectRoute = matchPath("/project/:projectId/*", location.pathname);
 
     return (
         <div className="app-shell">
             {/* Mobile Overlay - Only visible when sidebar is open on mobile */}
-            {isSidebarOpen && !isProjectRoute && (
+            {isSidebarOpen && (
                 <div
                     className="sidebar-overlay"
                     onClick={() => setIsSidebarOpen(false)}
                 ></div>
             )}
 
-            {/* Sidebar - Only show if NOT in a project route (or if we want global sidebar always, but plan said hide it) */}
-            {!isProjectRoute && (
-                <Sidebar
-                    logo={logoImage}
-                    isOpen={isSidebarOpen}
-                    onClose={() => setIsSidebarOpen(false)}
-                />
-            )}
+            {/* Sidebar - Always visible */}
+            <Sidebar
+                logo={logoImage}
+                isOpen={isSidebarOpen}
+                onClose={() => setIsSidebarOpen(false)}
+            />
 
             {/* Main Content Area */}
-            {/* If Project Route, remove margin-left (full width) */}
-            {/* Add paddingTop to account for fixed global header only if not in project route */}
-            <div className={`main-content ${isProjectRoute ? 'full-width' : ''}`} style={{ paddingTop: isProjectRoute ? '0' : 'var(--header-height)' }}>
+            <div className="main-content" style={{ paddingTop: 'var(--header-height)' }}>
 
-                {/* Global Header */}
-                {!isProjectRoute && (
-                    <Header
-                        logo={logoImage}
-                        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-                        // Hide toggle button if sidebar is hidden
-                        showToggle={true}
-                    >
-                        {headerContent}
-                    </Header>
-                )}
-
-                {/* Project Navigation Bar - Only visible in project routes */}
-                {isProjectRoute && <ProjectNavbar />}
+                {/* Global Header - Always visible */}
+                <Header
+                    logo={logoImage}
+                    onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                    showToggle={true}
+                >
+                    {headerContent}
+                </Header>
 
                 {/* Dynamic Page Content */}
-                {/* Remove default margin-top as main-content has padding now. Remove padding for Database page. */}
                 <div
                     className="content-wrapper"
                     style={{

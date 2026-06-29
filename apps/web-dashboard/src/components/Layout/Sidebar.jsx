@@ -11,7 +11,12 @@ function Sidebar({ logo, isOpen, onClose }) {
     const { projectId } = useParams();
     const { logout } = useAuth();
 
-    const isActive = (path) => location.pathname === path;
+    const isActive = (path) => {
+        if (path === `/project/${projectId}`) {
+            return location.pathname === path;
+        }
+        return location.pathname.startsWith(path);
+    };
 
     const handleNavClick = () => {
         if (window.innerWidth <= 768) onClose();
@@ -49,13 +54,16 @@ function Sidebar({ logo, isOpen, onClose }) {
                             <Database size={16} /> <span>Database</span>
                         </Link>
                         <Link to={`/project/${projectId}/auth`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/auth`) ? 'active' : ''}`} {...navA11yProps('Authentication')}>
-                            <Shield size={16} /> <span>Authentication</span>
+                            <Shield size={16} /> <span>Auth</span>
+                        </Link>
+                        <Link to={`/project/${projectId}/webhooks`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/webhooks`) ? 'active' : ''}`} {...navA11yProps('Webhooks')}>
+                            <Webhook size={16} /> <span>Webhooks</span>
                         </Link>
                         <Link to={`/project/${projectId}/storage`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/storage`) ? 'active' : ''}`} {...navA11yProps('Storage')}>
                             <HardDrive size={16} /> <span>Storage</span>
                         </Link>
-                        <Link to={`/project/${projectId}/webhooks`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/webhooks`) ? 'active' : ''}`} {...navA11yProps('Webhooks')}>
-                            <Webhook size={16} /> <span>Webhooks</span>
+                        <Link to={`/project/${projectId}/mail`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/mail`) ? 'active' : ''}`} {...navA11yProps('Mail')}>
+                            <Mail size={16} /> <span>Mail</span>
                         </Link>
                         <Link to={`/project/${projectId}/analytics`} onClick={handleNavClick} className={`nav-item ${isActive(`/project/${projectId}/analytics`) ? 'active' : ''}`} {...navA11yProps('Analytics')}>
                             <BarChart2 size={16} /> <span>Analytics</span>
