@@ -57,7 +57,7 @@ export default function DeveloperMetrics() {
           <span>{pct}%</span>
         </div>
         <div style={{ height: '6px', background: 'var(--color-bg-input)', borderRadius: '4px', overflow: 'hidden' }}>
-          <div style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg, #3ecf8e, #818cf8)', borderRadius: '4px' }} />
+          <div style={{ width: `${pct}%`, height: '100%', background: 'var(--color-primary)', borderRadius: '4px' }} />
         </div>
       </div>
 

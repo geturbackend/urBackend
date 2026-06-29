@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Search, Activity, Zap, Database, HardDrive, LayoutGrid } from 'lucide-react';
+import { Search, Activity, Zap, Database, HardDrive, LayoutGrid, AlertTriangle } from 'lucide-react';
 
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
@@ -17,7 +17,6 @@ import SkeletonLoader from '../components/Dashboard/SkeletonLoader';
 import RecentActivityItem from '../components/Dashboard/RecentActivityItem';
 import UsageQuota from '../components/Dashboard/UsageQuota';
 import OnboardingChecklist from '../components/Onboarding/OnboardingChecklist';
-import DeveloperMetrics from '../components/Dashboard/DeveloperMetrics';
 import DocLinks from '../components/Dashboard/DocLinks';
 
 export default function Dashboard() {
@@ -133,62 +132,64 @@ export default function Dashboard() {
     if (!bytes) return '0 MB';
     if (bytes > 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     return `${(bytes / 1024).toFixed(1)} KB`;
-  };
+  };  // Compute usage warnings from planData
+  const usageWarnings = useMemo(() => {
+    if (!planData) return [];
+    const { limits, usage } = planData;
+    const warnings = [];
+    const pct = (used, limit) => (limit > 0 && limit !== -1 ? Math.round((used / limit) * 100) : 0);
+
+    const reqPct = pct(usage?.totalRequests ?? 0, limits?.reqPerDay ?? 2000);
+    if (reqPct >= 80) warnings.push({ label: 'API Requests', pct: reqPct, icon: <Activity size={13} /> });
+
+    const dbPct = pct(usage?.totalDatabaseUsed ?? 0, limits?.mongoBytes ?? 52428800);
+    if (dbPct >= 80 && !limits?.byomEnabled && limits?.mongoBytes !== -1)
+      warnings.push({ label: 'Database Storage', pct: dbPct, icon: <Database size={13} /> });
+
+    const storagePct = pct(usage?.totalStorageUsed ?? 0, limits?.storageBytes ?? 10485760);
+    if (storagePct >= 80 && limits?.storageBytes !== -1)
+      warnings.push({ label: 'File Storage', pct: storagePct, icon: <HardDrive size={13} /> });
+
+    const projPct = pct(usage?.totalProjects ?? 0, limits?.maxProjects ?? 1);
+    if (projPct >= 80) warnings.push({ label: 'Projects', pct: projPct, icon: <LayoutGrid size={13} /> });
+
+    return warnings;
+  }, [planData]);
+
 
   if (!isLoading && projects.length === 0) {
     return (
       <DashboardShell>
         <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '70vh',
-          textAlign: 'center',
-          padding: '2rem'
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          justifyContent: 'center', minHeight: '60vh', textAlign: 'center', padding: '2rem'
         }}>
           <div style={{
-            fontSize: '3rem',
-            marginBottom: '1.5rem',
-            animation: 'bounce 2s infinite'
+            width: '40px', height: '40px', borderRadius: '8px',
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg-card)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            marginBottom: '1.5rem'
           }}>
-            🚀
+            <Database size={18} color="var(--color-text-muted)" />
           </div>
           <h1 style={{
-            fontSize: '2.5rem',
-            fontWeight: 800,
-            marginBottom: '1rem',
-            background: 'linear-gradient(to right, #3ecf8e, #7b61ff)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            letterSpacing: '-0.5px'
+            fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.5rem',
+            color: 'var(--color-text-main)', letterSpacing: '-0.02em'
           }}>
-            Welcome to urBackend
+            No projects yet
           </h1>
           <p style={{
-            fontSize: '1.1rem',
-            color: 'var(--color-text-muted)',
-            maxWidth: '480px',
-            lineHeight: '1.6',
-            marginBottom: '2.5rem'
+            fontSize: '0.8125rem', color: 'var(--color-text-muted)',
+            maxWidth: '340px', lineHeight: '1.5', marginBottom: '1.5rem'
           }}>
-            Create your first backend project with database, authentication and APIs in minutes.
+            Create your first project to get a database, authentication, and REST APIs in seconds.
           </p>
           <button
             onClick={() => navigate('/onboarding/project')}
             className="btn btn-primary"
-            style={{
-              padding: '0.8rem 2.2rem',
-              fontSize: '1.05rem',
-              fontWeight: 600,
-              borderRadius: '8px',
-              boxShadow: '0 4px 14px rgba(62, 207, 142, 0.4)',
-              cursor: 'pointer',
-              border: 'none',
-              transition: 'transform 0.2s, box-shadow 0.2s'
-            }}
           >
-            Start Building
+            Create Project
           </button>
         </div>
       </DashboardShell>
@@ -235,52 +236,70 @@ export default function Dashboard() {
       <DocLinks />
       <DashboardHeader onCreateProject={handleCreateProject} />
 
+      {/* Usage Warning Banner — shown when any metric >= 80% */}
+      {!isLoading && usageWarnings.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '1rem' }}>
+          {usageWarnings.map(w => {
+            const isCritical = w.pct >= 100;
+            return (
+              <div key={w.label} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                border: `1px solid ${isCritical ? 'var(--color-danger)' : 'rgba(234, 179, 8, 0.4)'}`,
+                background: isCritical ? 'rgba(234, 84, 85, 0.06)' : 'rgba(234, 179, 8, 0.05)',
+                gap: '0.75rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertTriangle size={13} color={isCritical ? 'var(--color-danger)' : '#eab308'} />
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-main)' }}>
+                    <strong>{w.label}</strong> is at <strong>{w.pct}%</strong> of your plan limit
+                    {isCritical && ' — requests may be blocked'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => navigate('/pricing')}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.75rem', padding: '3px 10px', whiteSpace: 'nowrap', flexShrink: 0 }}
+                >
+                  Upgrade
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Pending Invitations Banner */}
       {!isLoading && invitations.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
           {invitations.map(invite => (
-            <div key={invite._id} className="glass-card" style={{
-              padding: '1.25rem 1.5rem',
-              borderRadius: '12px',
-              border: '1px solid rgba(99, 102, 241, 0.3)',
-              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(129, 140, 248, 0.05) 100%)',
+            <div key={invite._id} style={{
+              padding: '0.875rem 1rem',
+              borderRadius: '6px',
+              border: '1px solid var(--color-border)',
+              borderLeft: '3px solid #6366f1',
+              background: 'var(--color-bg-card)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
-              gap: '1rem'
+              gap: '0.75rem'
             }}>
               <div>
-                <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600, color: '#fff' }}>
-                  📬 You've been invited to join <span style={{ color: 'var(--color-primary)' }}>{invite.project?.name}</span>
-                </h4>
-                <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                  Role: <strong style={{ color: '#fff', textTransform: 'capitalize' }}>{invite.role}</strong> · Invited by: {invite.invitedBy?.email}
+                <p style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--color-text-main)', marginBottom: '2px' }}>
+                  Invited to <strong>{invite.project?.name}</strong>
+                </p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                  Role: {invite.role} · From: {invite.invitedBy?.email}
                 </p>
               </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  id={`accept-invite-${invite._id}`}
-                  onClick={() => handleAcceptInvite(invite._id)}
-                  className="btn btn-primary"
-                  style={{ padding: '6px 16px', fontSize: '0.8rem', height: 'auto' }}
-                >
-                  Accept
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button id={`accept-invite-${invite._id}`} onClick={() => handleAcceptInvite(invite._id)} className="btn btn-primary" style={{ fontSize: '0.75rem', padding: '4px 12px' }}>
+                  {processingInvites[invite._id] ? '...' : 'Accept'}
                 </button>
-                <button
-                  id={`decline-invite-${invite._id}`}
-                  onClick={() => handleDeclineInvite(invite._id)}
-                  className="btn btn-secondary"
-                  style={{
-                    padding: '6px 16px',
-                    fontSize: '0.8rem',
-                    height: 'auto',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: '#fff'
-                  }}
-                >
-                  Decline
+                <button id={`decline-invite-${invite._id}`} onClick={() => handleDeclineInvite(invite._id)} className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '4px 12px' }}>
+                  {processingInvites[invite._id] ? '...' : 'Decline'}
                 </button>
               </div>
             </div>
@@ -288,44 +307,38 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Global Usage Overview Belt - More Compact */}
+      {/* Stats Overview */}
+
       {!isLoading && (
-        <div className="glass-card" style={{ 
-          padding: '1rem 1.5rem', 
-          borderRadius: '12px', 
+        <div style={{
+          padding: '0.875rem 1rem',
+          borderRadius: '6px',
           marginBottom: '1.5rem',
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: '1.5rem',
-          background: 'linear-gradient(135deg, rgba(62, 207, 142, 0.05) 0%, rgba(123, 97, 255, 0.05) 100%)',
-          border: '1px solid rgba(255,255,255,0.05)'
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: '0',
+          border: '1px solid var(--color-border)',
+          background: 'var(--color-bg-card)',
         }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <LayoutGrid size={12} /> Total Projects
-            </span>
-            <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>{projects.length}</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Database size={12} /> Database Used
-            </span>
-            <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>{formatSize(totalDatabaseUsed)}</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <HardDrive size={12} /> Storage Used
-            </span>
-            <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>{formatSize(totalStorageUsed)}</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Activity size={12} /> API Requests
-            </span>
-            <span style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary)' }}>
-              {planData ? `${planData.usage?.totalRequests || 0} / ${planData.limits?.reqPerDay === -1 ? '∞' : (planData.limits?.reqPerDay || 2000)}` : '—'}
-            </span>
-          </div>
+          {[
+            { icon: <LayoutGrid size={13} />, label: 'Projects', value: projects.length },
+            { icon: <Database size={13} />, label: 'Database', value: formatSize(totalDatabaseUsed) },
+            { icon: <HardDrive size={13} />, label: 'Storage', value: formatSize(totalStorageUsed) },
+            { icon: <Activity size={13} />, label: 'API Requests', value: planData ? `${planData.usage?.totalRequests || 0}` : '—', accent: true },
+          ].map((item, i, arr) => (
+            <div key={item.label} style={{
+              display: 'flex', flexDirection: 'column', gap: '4px',
+              padding: '0.75rem 1rem',
+              borderRight: i < arr.length - 1 ? '1px solid var(--color-border)' : 'none',
+            }}>
+              <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                {item.icon}{item.label}
+              </span>
+              <span style={{ fontSize: '1rem', fontWeight: 600, color: item.accent ? 'var(--color-primary)' : 'var(--color-text-main)' }}>
+                {item.value}
+              </span>
+            </div>
+          ))}
         </div>
       )}
 
@@ -353,22 +366,21 @@ export default function Dashboard() {
           <SectionHeader title="Plan & Usage" />
           <UsageQuota />
 
-          {/* 1.5 My Performance (Per-Dev Analytics) */}
-          <DeveloperMetrics />
+          {/* DeveloperMetrics removed — low value, 2 extra API calls */}
 
           {/* 2. Onboarding (Helpful Context) */}
           <OnboardingChecklist />
 
           {/* 3. Recent Activity (Historical Context) */}
           <SectionHeader title="Recent Activity" />
-          <div className="glass-card custom-scrollbar" style={{ 
-            padding: '1.25rem', 
-            borderRadius: '12px', 
-            maxHeight: '400px', 
+          <div className="custom-scrollbar" style={{ 
+            padding: '0',
+            border: '1px solid var(--color-border)',
+            borderRadius: '6px',
+            maxHeight: '360px', 
             overflowY: 'auto',
             background: 'var(--color-bg-card)',
-            border: '1px solid var(--color-border)',
-            marginBottom: '2rem'
+            marginBottom: '1rem'
           }}>
             {activity.length === 0 ? (
               <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', textAlign: 'center', padding: '2rem 0' }}>
@@ -385,10 +397,10 @@ export default function Dashboard() {
           {user?.isAdmin && (
             <>
               <SectionHeader title="Admin" />
-              <div className="glass-card" style={{ padding: '1rem', borderRadius: '12px', marginBottom: '2rem' }}>
+              <div style={{ marginBottom: '1rem' }}>
                 <button
                   className="btn btn-secondary"
-                  style={{ width: '100%', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', padding: '0.75rem', borderRadius: '6px' }}
+                  style={{ width: '100%' }}
                   onClick={() => navigate('/admin/pro-requests')}
                 >
                   Pro Requests

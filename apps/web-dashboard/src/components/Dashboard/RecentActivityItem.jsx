@@ -20,20 +20,20 @@ const RecentActivityItem = ({ activity }) => {
 
   return (
     <div style={{ 
-      padding: '12px 0', 
+      padding: '8px 1rem', 
       borderBottom: '1px solid var(--color-border)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '4px'
+      gap: '3px'
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-main)' }}>
           {activity.method} <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>{activity.path}</span>
         </span>
         <div style={{ 
-          width: '8px', height: '8px', borderRadius: '50%', 
+          width: '6px', height: '6px', borderRadius: '50%', 
           background: getStatusColor(activity.status),
-          boxShadow: `0 0 8px ${getStatusColor(activity.status)}`
+          flexShrink: 0
         }}></div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>

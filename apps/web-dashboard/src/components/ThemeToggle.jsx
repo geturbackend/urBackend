@@ -86,7 +86,7 @@ const ThemeToggle = () => {
       aria-pressed={isDark}
       title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
     >
-      {isDark ? <Moon size={16} /> : <Sun size={16} />}
+      {isDark ? <Sun size={16} /> : <Moon size={16} />}
       <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
     </button>
   );

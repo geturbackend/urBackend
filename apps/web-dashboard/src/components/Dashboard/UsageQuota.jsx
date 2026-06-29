@@ -20,21 +20,22 @@ const UsageQuota = () => {
   const isPro = plan === 'pro';
 
   return (
-    <div className="glass-card" style={{ 
-      padding: '1rem',
-      borderRadius: '8px',
+    <div style={{ 
+      padding: '0.875rem',
+      borderRadius: '6px',
       background: 'var(--color-bg-card)',
       border: '1px solid var(--color-border)',
-      marginBottom: '1rem'
+      marginBottom: '0.75rem'
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-        <h4 style={{ fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
-          <Zap size={12} color="#00f5d4" /> Usage Quota
+        <h4 style={{ fontSize: '0.6875rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', margin: 0, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <Zap size={11} /> Usage Quota
         </h4>
         <span style={{
           fontSize: '0.6rem', padding: '1px 5px', borderRadius: '3px', fontWeight: 600,
-          background: isPro ? 'rgba(0, 245, 212, 0.12)' : 'rgba(100,100,100,0.1)',
-          color: isPro ? '#00f5d4' : 'var(--color-text-muted)'
+          background: isPro ? 'rgba(62, 207, 142, 0.1)' : 'rgba(100,100,100,0.1)',
+          color: isPro ? 'var(--color-primary)' : 'var(--color-text-muted)',
+          border: '1px solid var(--color-border)'
         }}>
           {isPro ? 'PRO' : 'FREE'}
         </span>
@@ -103,16 +104,10 @@ const UsageQuota = () => {
         <button
           id="usage-quota-upgrade-btn"
           onClick={() => navigate('/pricing')}
-          style={{
-            marginTop: '0.75rem', width: '100%',
-            background: 'transparent',
-            border: '1px solid #00f5d4',
-            borderRadius: '6px', padding: '6px',
-            fontSize: '0.7rem', fontWeight: 600, color: '#00f5d4',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px'
-          }}
+          className="btn btn-secondary"
+          style={{ marginTop: '0.5rem', width: '100%', fontSize: '0.75rem', padding: '5px' }}
         >
-          <Zap size={10} /> View Pricing & Upgrade
+          <Zap size={10} /> Upgrade Plan
         </button>
       )}
     </div>

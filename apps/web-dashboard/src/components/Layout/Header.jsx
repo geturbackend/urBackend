@@ -63,10 +63,11 @@ function Header({ onToggleSidebar, showToggle = true, children }) { // Default s
                     {user?.email || 'Dev'}
                 </span>
                 <div style={{
-                    width: '32px', height: '32px', borderRadius: '50%',
-                    background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-hover))',
-                    color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: '700', fontSize: '0.9rem'
+                width: '28px', height: '28px', borderRadius: '4px',
+                    background: 'var(--color-bg-input)',
+                    border: '1px solid var(--color-border)',
+                    color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: '600', fontSize: '0.75rem'
                 }}>
                     {initial}
                 </div>

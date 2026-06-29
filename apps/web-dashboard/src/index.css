@@ -1,4 +1,4 @@
-/* --- GLOBAL DESIGN SYSTEM (Premium / Supabase-like) --- */
+/* --- GLOBAL DESIGN SYSTEM (Vercel-like) --- */
 @import "tailwindcss";
 
 :root {
@@ -18,9 +18,9 @@
   --color-text-main: #EDEDED;
   --color-text-muted: #888888;
 
-  --color-border: #1E1E1E;
-  /* Very subtle borders */
-  --color-border-hover: #333333;
+  --color-border: rgba(255, 255, 255, 0.14);
+  /* Pure white with opacity (Vercel style) */
+  --color-border-hover: rgba(255, 255, 255, 0.2);
 
   --color-danger: #ea5455;
   /* Slightly more vibrant red */
@@ -195,35 +195,30 @@ a {
 .card {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: 6px;
   padding: 1.5rem;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 0.15s ease;
 }
 
 .card:hover {
   border-color: var(--color-border-hover);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
 }
 
 /* --- PREMIUM DESIGN SYSTEM EXTENSIONS --- */
+/* glass-card now just an alias for card — no blur, no shadow */
 .glass-card {
-  background: var(--color-glass-card-bg);
-  backdrop-filter: var(--glass-backdrop);
-  border: 1px solid var(--color-glass-card-border);
-  box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.5);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  transition: border-color 0.15s ease;
 }
 
 .glass-card:hover {
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.6);
-  transform: translateY(-2px);
+  border-color: var(--color-border-hover);
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #3ECF8E 0%, #7B61FF 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--color-text-main);
 }
 
 .badge {
@@ -325,93 +320,20 @@ a {
 }
 
 /* Buttons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: var(--border-radius);
-  font-weight: 500;
-  font-size: 0.9rem;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  text-decoration: none;
-  outline: none;
-}
-
-.btn:active {
-  transform: scale(0.96);
-}
-
-.btn-primary {
-  background-color: var(--color-primary);
-  color: #000 !important;
-  border-color: var(--color-primary);
-  box-shadow: 0 2px 10px rgba(62, 207, 142, 0.2);
-}
-
-.btn-primary:hover {
-  background-color: var(--color-primary-hover);
-  color: #000 !important;
-  box-shadow: 0 4px 15px rgba(62, 207, 142, 0.3);
-}
-
-.btn-secondary {
-  background-color: var(--color-glass-card-bg);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-main);
-}
-
-.btn-secondary:hover {
-  background-color: var(--color-surface-hover-strong);
-  border-color: var(--color-text-muted);
-}
-
-.btn-danger {
-  background-color: rgba(255, 95, 86, 0.1);
-  color: var(--color-danger);
-  border: 1px solid rgba(255, 95, 86, 0.2);
-}
-
-.btn-danger:hover {
-  background-color: rgba(255, 95, 86, 0.15);
-  border-color: var(--color-danger);
-}
-
-.btn-icon {
-  padding: 8px;
-  border-radius: var(--border-radius);
-  color: var(--color-text-muted);
-  transition: all 0.2s;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-}
-
-.btn-icon:hover {
-  color: var(--color-text-main);
-  background: var(--color-surface-hover);
-}
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 14px; border-radius: 6px; font-weight: 500; font-size: 0.8125rem; cursor: pointer; border: 1px solid transparent; transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease; text-decoration: none; outline: none; }
+.btn:active { opacity: 0.85; }
+.btn-primary { background-color: var(--color-primary); color: #000 !important; border-color: var(--color-primary); }
+.btn-primary:hover { background-color: var(--color-primary-hover); color: #000 !important; }
+.btn-secondary { background-color: transparent; border: 1px solid var(--color-border); color: var(--color-text-main); }
+.btn-secondary:hover { background-color: var(--color-surface-hover); border-color: var(--color-border-hover); }
+.btn-danger { background-color: transparent; color: var(--color-danger); border: 1px solid var(--color-border); }
+.btn-danger:hover { background-color: rgba(255, 95, 86, 0.08); border-color: var(--color-danger); }
+.btn-icon { padding: 6px; border-radius: 4px; color: var(--color-text-muted); transition: color 0.15s ease, background-color 0.15s ease; background: transparent; border: none; cursor: pointer; }
+.btn-icon:hover { color: var(--color-text-main); background: var(--color-surface-hover); }
 
 /* Form Elements */
-.input-field {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: var(--border-radius);
-  border: 1px solid var(--color-border);
-  background-color: var(--color-bg-input);
-  color: var(--color-text-main);
-  font-size: 0.95rem;
-  outline: none;
-  transition: all 0.2s ease;
-}
-
-.input-field:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(62, 207, 142, 0.1);
-}
+.input-field { width: 100%; padding: 7px 12px; border-radius: 6px; border: 1px solid var(--color-border); background-color: var(--color-bg-input); color: var(--color-text-main); font-size: 0.8125rem; outline: none; transition: border-color 0.15s ease; }
+.input-field:focus { border-color: var(--color-text-muted); }
 
 /* Animations */
 @keyframes spin {

@@ -7,9 +7,9 @@ const ProjectCard = ({ project }) => {
   const cardStyle = {
     background: 'var(--color-bg-card)',
     border: '1px solid var(--color-border)',
-    borderRadius: '8px', // Smaller radius
-    padding: '1rem', // Minimal padding
-    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+    borderRadius: '6px',
+    padding: '0.875rem',
+    transition: 'border-color 0.15s ease',
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
@@ -30,14 +30,15 @@ const ProjectCard = ({ project }) => {
       className="dashboard-card-link"
       style={{ textDecoration: 'none', display: 'block', height: '100%' }}
     >
-      <div className="dashboard-card group glass-card" style={cardStyle}>
+      <div className="dashboard-card group" style={cardStyle}>
         {/* Top Section */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
           <div style={{
-            width: '32px', height: '32px', // Shrunk
-            borderRadius: '6px',
-            background: 'rgba(62, 207, 142, 0.1)',
-            color: 'var(--color-primary)',
+            width: '28px', height: '28px',
+            borderRadius: '4px',
+            background: 'var(--color-bg-input)',
+            border: '1px solid var(--color-border)',
+            color: 'var(--color-text-muted)',
             display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}>
             <Database size={14} />

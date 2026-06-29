@@ -6,10 +6,8 @@ const DashboardShell = ({ children }) => {
       {children}
       <style>{`
         .dashboard-card:hover {
-          transform: translateY(-4px);
           border-color: var(--color-border-hover) !important;
           background: var(--color-bg-input) !important;
-          box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
         }
         .dashboard-card-add:hover {
           border-color: var(--color-primary) !important;
