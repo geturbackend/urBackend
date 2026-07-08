@@ -99,6 +99,16 @@ module.exports = async (req, res, next) => {
         );
       }
 
+      if (!project.owner?.isVerified) {
+        return next(
+          new AppError(
+            401,
+            "Verify your account on https://urbackend.bitbros.in/dashboard",
+            "Owner not verified",
+          ),
+        );
+      }
+
       const cacheKey = isSecret
         ? hashedApi
         : project[keyField] === apiKey
@@ -107,7 +117,7 @@ module.exports = async (req, res, next) => {
       await setProjectByApiKeyCache(cacheKey, project);
     }
 
-    if (!project.owner.isVerified) {
+    if (!project.owner?.isVerified) {
       return next(
         new AppError(
           401,
