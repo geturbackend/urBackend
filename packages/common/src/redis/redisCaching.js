@@ -44,7 +44,13 @@ async function getProjectByApiKeyCache(api) {
         console.timeEnd("cache parse");
 
         if (parsedData && parsedData.jwtSecret && typeof parsedData.jwtSecret === "object") {
-            parsedData.jwtSecret = decrypt(parsedData.jwtSecret);
+            const decryptedJwtSecret = decrypt(parsedData.jwtSecret);
+            if (decryptedJwtSecret == null) {
+              await redis.del(cacheKey);
+              return null;
+            }
+
+            parsedData.jwtSecret = decryptedJwtSecret;
         }
 
         return parsedData;
