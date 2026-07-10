@@ -46,7 +46,7 @@ async function getProjectByApiKeyCache(api) {
         if (parsedData && parsedData.jwtSecret && typeof parsedData.jwtSecret === "object") {
             const decryptedJwtSecret = decrypt(parsedData.jwtSecret);
             if (decryptedJwtSecret == null) {
-              await redis.del(cacheKey);
+              await redis.del(`project:apikey:${api}`);
               return null;
             }
 
