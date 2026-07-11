@@ -121,7 +121,7 @@ export class UrBackendClient {
       if (response.status === 401 && path !== '/api/userAuth/refresh-token' && !options.token) {
         try {
           const refreshRes = await this.auth.refreshToken();
-          const newToken = refreshRes.token || (refreshRes as any).accessToken;
+          const newToken = refreshRes.token || (refreshRes as { accessToken?: string }).accessToken;
           if (newToken) {
             headers['Authorization'] = `Bearer ${newToken}`;
             if (typeof window !== 'undefined') {
@@ -134,7 +134,7 @@ export class UrBackendClient {
               credentials: options.credentials,
             });
           }
-        } catch (e) {
+        } catch {
           // If refresh fails, fall through to throw original 401
         }
       }
