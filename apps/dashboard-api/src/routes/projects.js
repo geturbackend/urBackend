@@ -59,6 +59,7 @@ const {
 const { createAdminUser, resetPassword, getUserDetails, updateAdminUser, listAdminUsers, deleteAdminUser, listUserSessions, revokeUserSession } = require('../controllers/userAuth.controller');
 
 const exportController = require('../controllers/dbExport.controller');
+const { syncSchema } = require('../controllers/syncSchema.controller');
 
 // POST REQ FOR CREATE PROJECT
 router.post('/', authMiddleware, planEnforcement.attachDeveloper, planEnforcement.checkProjectLimit, planEnforcement.checkDeveloperCapability('createProject'), createProject);
@@ -172,5 +173,8 @@ router.delete('/:projectId/admin/users/:userId/sessions/:tokenId', authMiddlewar
 
 // POST req for DB EXPORT
 router.post('/:projectId/collections/:collectionName/export', authMiddleware, authorizeProject(), exportController.dbExportHandler);
+
+// PUT REQ FOR SCHEMA SYNC (CLI)
+router.put('/:projectId/sync-schema', authFlexible, authorizeProject('admin'), planEnforcement.attachDeveloper, syncSchema);
 
 module.exports = router;
