@@ -81,7 +81,13 @@ app.use((req, res, next) => {
     // Exclude CLI routes — CLI authenticates via Bearer PAT, not cookies
      const isCliRoute =
         req.path === '/api/user/cli' || req.path.startsWith('/api/user/cli/');
-    if (req.path === '/api/billing/webhook' || isCliRoute) {
+
+    // Bearer PAT requests are immune to CSRF by design (no cookies involved),
+    // so skip CSRF validation for any request carrying a PAT token.
+    const authHeader = req.headers.authorization || '';
+    const isPATRequest = authHeader.startsWith('Bearer ubpat_');
+
+    if (req.path === '/api/billing/webhook' || isCliRoute || isPATRequest) {
         return next();
     }
     csrfProtection(req, res, next);
