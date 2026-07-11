@@ -43,3 +43,22 @@ export async function deleteProject(projectId: string): Promise<void> {
     method: "DELETE",
   });
 }
+
+export interface SyncSchemaResult {
+  synced: number;
+  collections: string[];
+}
+
+export async function syncSchema(
+  projectId: string,
+  collections: { name: string; model: any[] }[],
+): Promise<SyncSchemaResult> {
+  const res = await apiFetch<APIResponse<SyncSchemaResult>>(
+    `/projects/${projectId}/sync-schema`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ collections }),
+    },
+  );
+  return res.data;
+}
