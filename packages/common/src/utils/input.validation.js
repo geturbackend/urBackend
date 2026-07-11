@@ -234,6 +234,37 @@ module.exports.createCollectionSchema = z.object({
   schema: z.array(fieldSchemaZod).optional(),
 });
 
+// SYNC SCHEMA (CLI)
+// Validates the full collections array sent by `ub push`.
+// Each entry carries a name + model (field definitions).
+// RLS is optional but the controller preserves existing RLS for
+// known collections and applies safe defaults for new ones.
+const syncCollectionEntrySchema = z.object({
+  name: z
+    .string()
+    .min(1, "Collection name is required")
+    .max(64, "Collection name is too long")
+    .regex(
+      /^[a-zA-Z_][a-zA-Z0-9_-]*$/,
+      "Collection name must start with a letter or underscore and contain only alphanumeric characters, hyphens, or underscores",
+    ),
+  model: z.array(fieldSchemaZod).default([]),
+});
+
+module.exports.syncSchemaPayload = z.object({
+  collections: z
+    .array(syncCollectionEntrySchema)
+    .min(1, "At least one collection is required")
+    .max(100, "Cannot sync more than 100 collections at once")
+    .refine(
+      (cols) => {
+        const names = cols.map((c) => c.name);
+        return new Set(names).size === names.length;
+      },
+      { message: "Duplicate collection names are not allowed" },
+    ),
+});
+
 // SCHEMA - CREATE COLLECTION (API)
 const buildApiFieldSchemaZod = (depth = 1) => {
   const base = z
