@@ -111,12 +111,33 @@ export class UrBackendClient {
     }
 
     try {
-      const response = await fetch(url, {
+      let response = await fetch(url, {
         method,
         headers,
         body: requestBody,
         credentials: options.credentials,
       });
+
+      if (response.status === 401 && path !== '/api/userAuth/refresh-token' && !options.token) {
+        try {
+          const refreshRes = await this.auth.refreshToken();
+          const newToken = refreshRes.token || (refreshRes as any).accessToken;
+          if (newToken) {
+            headers['Authorization'] = `Bearer ${newToken}`;
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('ur_auth_token', newToken);
+            }
+            response = await fetch(url, {
+              method,
+              headers,
+              body: requestBody,
+              credentials: options.credentials,
+            });
+          }
+        } catch (e) {
+          // If refresh fails, fall through to throw original 401
+        }
+      }
 
       if (!response.ok) {
         throw await parseApiError(response);

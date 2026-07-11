@@ -1,0 +1,153 @@
+---
+title: "CLI Overview"
+description: "The urBackend Command Line Interface provides a powerful set of tools to manage your projects, collections, and local workspace right from your terminal."
+---
+
+## Installation
+
+You can run the CLI directly using `npx` (recommended for always using the latest version):
+
+```bash
+npx @urbackend/cli <command>
+```
+
+Alternatively, install it globally on your machine. Once installed globally, the CLI is available as the `ub` command.
+
+```bash
+npm install -g @urbackend/cli
+```
+
+---
+
+## Authentication Commands
+
+Before running most commands, you need to authenticate your machine with a Personal Access Token (PAT). You can generate this in your urBackend Dashboard settings.
+
+### `ub login`
+Prompts you to enter your Personal Access Token (PAT). The CLI verifies the token with the server and stores it securely on your machine for future commands.
+
+```bash
+ub login
+```
+
+### `ub logout`
+Removes the stored authentication credentials from your local machine, effectively logging you out.
+
+```bash
+ub logout
+```
+
+### `ub whoami`
+Displays the currently authenticated developer profile associated with your stored token.
+
+```bash
+ub whoami
+```
+
+---
+
+## Workspace & Types (Local Sync)
+
+These commands connect your local development environment to your remote urBackend project, enabling seamless schema synchronization and TypeScript type generation.
+
+### `ub init [projectIdOrName]`
+Initializes a local urBackend workspace in the current directory.
+- **Under the hood**: Creates a `.ub` hidden folder in your directory to store your workspace configuration (`projectId` and `projectName`). It also automatically appends `.ub` to your `.gitignore` file to ensure configuration isn't leaked into version control.
+- **Usage**: You can pass the project ID or name directly, or run it without arguments to get an interactive list of your projects.
+
+```bash
+ub init "My App"
+```
+
+### `ub pull`
+Fetches the latest schemas from your remote urBackend project and saves them locally.
+- **Under the hood**: Reads the linked project ID from your `.ub/config.json`. It then calls the urBackend API to retrieve all your collection models and Row Level Security (RLS) rules, saving them as individual `.json` schema files inside `.ub/schemas/`.
+- **Requirement**: Must run `ub init` first.
+
+```bash
+ub pull
+```
+
+### `ub generate`
+Reads your local JSON schemas and generates a comprehensive TypeScript definition file.
+- **Under the hood**: Parses the schemas located in `.ub/schemas/` and generates a single `urbackend.d.ts` file in your root directory. This file exports an `UrBackendTypes` interface mapping your database fields to strict TypeScript types (e.g., `String` to `string`, handling arrays, nested objects, and optionals).
+- **Requirement**: Must run `ub pull` first to have schemas available.
+
+```bash
+ub generate
+```
+
+---
+
+## Project Commands
+
+Manage the urBackend projects you have access to.
+
+### `ub project list`
+*(Alias: `ub project ls`)*
+Lists all the urBackend projects you have access to, displaying their names and IDs.
+
+```bash
+ub project list
+```
+
+### `ub project use [projectIdOrName]`
+Sets a project as the "active" project globally for your CLI. Subsequent commands (like collection commands) will default to this project if no workspace is linked.
+
+```bash
+ub project use "My App"
+```
+
+### `ub project info [projectId]`
+Displays detailed information, limits, and configurations for a specific project. If no ID is provided, it defaults to the active project.
+
+```bash
+ub project info
+```
+
+---
+
+## Collection Commands
+
+Manage the database collections inside your projects.
+
+### `ub collection list`
+*(Alias: `ub collection ls`, `ub col ls`)*
+Lists all collections inside the active project.
+- **Options**:
+  - `-p, --project <projectId>`: Target a specific project ID instead of the active one.
+
+```bash
+ub collection list
+```
+
+### `ub collection delete <collectionName>`
+*(Alias: `ub collection rm`, `ub col rm`)*
+Deletes a collection and **all of its associated data**. This action is irreversible.
+- **Options**:
+  - `-f, --force`: Skips the interactive confirmation prompt.
+  - `-p, --project <projectId>`: Target a specific project ID instead of the active one.
+
+```bash
+ub collection delete "users" --force
+```
+
+---
+
+## Utilities
+
+### `ub status`
+Shows your account usage and recent API activity to help you monitor your limits and project health.
+
+```bash
+ub status
+```
+
+### `ub doctor`
+Runs diagnostic checks on your CLI setup and network connectivity to the urBackend servers. Useful for debugging authentication or connection issues.
+- **Options**:
+  - `--json`: Outputs the diagnostic results as a JSON string, which is useful for CI environments or programmatic parsing.
+
+```bash
+ub doctor
+```

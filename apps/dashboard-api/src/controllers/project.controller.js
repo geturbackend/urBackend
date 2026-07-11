@@ -453,13 +453,17 @@ module.exports.getSingleProject = async (req, res) => {
       await setProjectById(req.params.projectId, projectObj);
     }
 
-    if (!getProjectRole(projectObj, req.user._id)) {
-      throw new AppError(403, "Access denied.");
-    }
-
     res.json(sanitizeProjectResponse(projectObj));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    if (err instanceof AppError) {
+      return res.status(err.statusCode).json({
+        success: false,
+        data: {},
+        message: err.message,
+      });
+    }
+
+    res.status(500).json({ success: false, data: {}, message: err.message });
   }
 };
 

@@ -21,29 +21,31 @@ Based on the following merged pull requests from the last 7 days, write a Mintli
 Merged PRs (${prCount} total):
 ${prSummary}
 
-Output ONLY the raw <Update> MDX block — no explanation, no markdown fences.
+Output ONLY the raw <Update> MDX block — no explanation.
 Use this exact format (matching the existing changelog style):
 
 <Update label="${TODAY}" description="Week of ${WEEK_START}–${TODAY}" tags={["Feature", "Improvement", "Fix"]}>
 ## New features
 
-**Feature name** — User-facing description.
+**Feature name** — User-facing description. ([#PR_NUMBER](https://github.com/geturbackend/urBackend/pull/PR_NUMBER) by [@username](https://github.com/username))
 
 ## Improvements
 
-**Improvement name** — Description.
+**Improvement name** — Description. ([#PR_NUMBER](https://github.com/geturbackend/urBackend/pull/PR_NUMBER) by [@username](https://github.com/username))
 
 ## Bug fixes
 
-- Fix description (#PR_NUMBER)
+- Fix description ([#PR_NUMBER](https://github.com/geturbackend/urBackend/pull/PR_NUMBER) by [@username](https://github.com/username))
 </Update>
 
 Rules:
-- Only include sections (## New features / ## Improvements / ## Bug fixes) that have actual content.
-- Adjust the tags array to only include applicable tags from: "Feature", "Improvement", "Fix", "Security".
-- Write for developers using the platform, not the internal team.
-- Be concise and factual. Do not invent features not evidenced by the PRs.
-- If no PRs were merged, output: <Update label="${TODAY}" description="Week of ${WEEK_START}–${TODAY}" tags={[]}>No significant changes this week.</Update>`;
+1. CRITICAL: Start your response EXACTLY with <Update and end with </Update>. Do NOT wrap your output in markdown code blocks (\`\`\`). Any extra text will break our pipeline.
+2. Ignore internal chores, dependency bumps, CI/CD updates, and test-only PRs. Only include changes that directly impact end-users or developers.
+3. For every item, include the PR number linked to its URL and the author linked to their GitHub profile.
+4. Only include sections (## New features / ## Improvements / ## Bug fixes) that have actual content.
+5. Adjust the tags array to only include applicable tags from: "Feature", "Improvement", "Fix", "Security".
+6. Write for developers using the platform, not the internal team. Be concise and factual. Do not invent features not evidenced by the PRs.
+7. If no PRs were merged (or if all were ignored), output: <Update label="${TODAY}" description="Week of ${WEEK_START}–${TODAY}" tags={[]}>No significant changes this week.</Update>`;
 
 const payload = JSON.stringify({
   model: "llama-3.3-70b-versatile",

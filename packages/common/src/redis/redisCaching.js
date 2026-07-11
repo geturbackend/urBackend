@@ -1,11 +1,18 @@
 const redis = require("../config/redis");
+const { hashApiKey } = require("../utils/api");
+const { encrypt, decrypt } = require("../utils/encryption");
 
 async function setProjectByApiKeyCache(api, project) {
     if (redis.status !== "ready") return;
 
     try {
+        const projectCopy = { ...project };
+        if (projectCopy.jwtSecret && typeof projectCopy.jwtSecret === "string") {
+            projectCopy.jwtSecret = encrypt(projectCopy.jwtSecret);
+        }
+
         console.time("cache stringify");
-        const data = JSON.stringify(project);
+        const data = JSON.stringify(projectCopy);
         console.timeEnd("cache stringify");
 
         console.time("redis set");
@@ -36,6 +43,16 @@ async function getProjectByApiKeyCache(api) {
         const parsedData = JSON.parse(data);
         console.timeEnd("cache parse");
 
+        if (parsedData && parsedData.jwtSecret && typeof parsedData.jwtSecret === "object") {
+            const decryptedJwtSecret = decrypt(parsedData.jwtSecret);
+            if (decryptedJwtSecret == null) {
+              await redis.del(`project:apikey:${api}`);
+              return null;
+            }
+
+            parsedData.jwtSecret = decryptedJwtSecret;
+        }
+
         return parsedData;
 
     } catch (err) {
@@ -48,6 +65,10 @@ async function deleteProjectByApiKeyCache(api) {
     if (redis.status !== "ready") return;
     try {
         await redis.del(`project:apikey:${api}`);
+        if (typeof api === "string" && (api.startsWith("pk_live_") || api.startsWith("sk_live_"))) {
+            const hashed = hashApiKey(api);
+            await redis.del(`project:apikey:${hashed}`);
+        }
     } catch (err) {
         console.log(err);
     }
@@ -57,8 +78,13 @@ async function setProjectById(id, project) {
     if (redis.status !== "ready") return;
 
     try {
+        const projectCopy = { ...project };
+        if (projectCopy.jwtSecret && typeof projectCopy.jwtSecret === "string") {
+            projectCopy.jwtSecret = encrypt(projectCopy.jwtSecret);
+        }
+
         console.time("cache stringify by id");
-        const data = JSON.stringify(project);
+        const data = JSON.stringify(projectCopy);
         console.timeEnd("cache stringify by id");
 
         console.time("redis set by id");
@@ -88,6 +114,10 @@ async function getProjectById(id) {
         console.time("cache parse by id");
         const parsedData = JSON.parse(data);
         console.timeEnd("cache parse by id");
+
+        if (parsedData && parsedData.jwtSecret && typeof parsedData.jwtSecret === "object") {
+            parsedData.jwtSecret = decrypt(parsedData.jwtSecret);
+        }
 
         return parsedData;
 

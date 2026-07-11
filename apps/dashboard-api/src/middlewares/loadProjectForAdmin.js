@@ -1,11 +1,16 @@
 // FUNCTION - LOAD PROJECT FOR ADMIN (MIDDLEWARE)
 
 const { Project, AppError, getProjectAccessQuery } = require('@urbackend/common');
+const mongoose = require('mongoose');
 
 module.exports = async (req, res, next) => {
     try {
         const { projectId } = req.params;
         if (!projectId) return next(new AppError(400, "Project ID is required"));
+
+        if (!mongoose.Types.ObjectId.isValid(projectId)) {
+            return next(new AppError(400, "Invalid project ID format"));
+        }
 
         const project = await Project.findOne({
             _id: projectId,

@@ -46,14 +46,34 @@ module.exports.dbExportHandler = async (req, res, next) => {
         const today = new Date().toISOString().split('T')[0];
         const key = `project:${projectId}:export_limit:${today}`;
 
-        const currentCount = await redis.get(key);
-        if (currentCount && Number(currentCount) >= maxExports) {
-            return next(new AppError(429, `Daily export limit reached (${maxExports}/${maxExports}). Please try again tomorrow.`));
+        // Atomic check-and-increment: use Lua script to prevent TOCTOU race where
+        // two concurrent requests both read the current count, both pass the limit
+        // check, and both increment, exceeding the daily quota. The script ensures
+        // only one request at a time sees a sub-limit count.
+        const luaScript = `
+            local current = redis.call('GET', KEYS[1])
+            current = current and tonumber(current) or 0
+            if current >= tonumber(ARGV[1]) then
+                return {0, current}
+            end
+            local newCount = redis.call('INCR', KEYS[1])
+            if newCount == 1 then
+                redis.call('EXPIRE', KEYS[1], tonumber(ARGV[2]))
+            end
+            return {1, newCount}
+        `;
+
+        let result;
+        try {
+            result = await redis.eval(luaScript, 1, key, maxExports, 86400);
+        } catch (err) {
+            console.error("[Dashboard API] Redis Lua script error:", err);
+            return next(new AppError(500, "Failed to check export quota."));
         }
 
-        const newCount = await redis.incr(key);
-        if (newCount === 1) {
-            await redis.expire(key, 86400); // Set expiry to 24 hours
+        const [allowed, newCount] = result;
+        if (!allowed) {
+            return next(new AppError(429, `Daily export limit reached (${maxExports}/${maxExports}). Please try again tomorrow.`));
         }
 
         await exportQueue.add('export-database', { projectId, collectionName, userId, email });

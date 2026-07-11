@@ -93,8 +93,9 @@
           {
             "group": "Changelog",
             "pages": [
-              "changelog/may-2026",
+              "changelog/july-2026",
               "changelog/june-2026",
+              "changelog/may-2026",
               "changelog/april-2026"
             ]
           }
@@ -142,6 +143,17 @@
             "group": "Mail",
             "pages": [
               "api-reference/mail/send"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "CLI Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "cli/overview"
             ]
           }
         ]

@@ -29,7 +29,7 @@ jest.mock('@urbackend/common', () => {
     };
 });
 
-const { hashApiKey, getProjectByApiKeyCache, Project } = require('@urbackend/common');
+const { hashApiKey, getProjectByApiKeyCache, setProjectByApiKeyCache, Project } = require('@urbackend/common');
 const verifyApiKey = require('../middlewares/verifyApiKey');
 
 // ---------------------------------------------------------------------------
@@ -173,6 +173,17 @@ describe('verifyApiKey middleware', () => {
 
         expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 401, error: 'Owner not verified' }));
         expect(res.status).not.toHaveBeenCalled();
+    });
+
+    test('does not cache project when owner is not verified', async () => {
+        mockLean.mockResolvedValueOnce(makeProject({ owner: { isVerified: false } }));
+        const req = makeReq({ query: { key: 'pk_live_unverifiedowner' } });
+        const res = makeRes();
+
+        await verifyApiKey(req, res, next);
+
+        expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 401, error: 'Owner not verified' }));
+        expect(setProjectByApiKeyCache).not.toHaveBeenCalled();
     });
 
     test('uses cache when available and does not query DB', async () => {

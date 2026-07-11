@@ -15,6 +15,22 @@ import AddRecordDrawer from '../components/AddRecordDrawer';
 import { PUBLIC_API_URL } from '../config';
 
 export default function Auth() {
+    const unwrapApiResponse = (payload) => {
+        if (!payload || typeof payload !== 'object') {
+            return { ok: true, data: payload, message: '' };
+        }
+
+        if (Object.prototype.hasOwnProperty.call(payload, 'success')) {
+            return {
+                ok: payload.success !== false,
+                data: payload.data ?? payload.project ?? payload,
+                message: payload.message || payload.error || ''
+            };
+        }
+
+        return { ok: true, data: payload, message: '' };
+    };
+
     const normalizeUsersResponse = (payload) => {
         if (Array.isArray(payload)) return payload;
         if (Array.isArray(payload?.items)) return payload.items;
@@ -87,25 +103,39 @@ export default function Auth() {
         const fetchData = async () => {
             try {
                 const projRes = await api.get(`/api/projects/${projectId}`);
+                const projectResult = unwrapApiResponse(projRes.data);
+
+                if (!projectResult.ok) {
+                    throw new Error(projectResult.message || 'Failed to load auth details');
+                }
+
                 if (isMounted) {
-                    setProject(projRes.data);
-                    if (projRes.data.authProviders) setAuthProviders(projRes.data.authProviders);
-                    if (projRes.data.isAuthEnabled) {
+                    setProject(projectResult.data);
+                    if (projectResult.data?.authProviders) setAuthProviders(projectResult.data.authProviders);
+                    if (projectResult.data?.isAuthEnabled) {
                         const requestId = ++latestUsersRequestId.current;
                         const usersRes = await api.get(
                             `/api/projects/${projectId}/admin/users?page=${page}&limit=${limit}`
                         );
 
+                        const usersResult = unwrapApiResponse(usersRes.data);
+
+                        if (!usersResult.ok) {
+                            throw new Error(usersResult.message || 'Failed to load auth users');
+                        }
+
                         if (!isMounted || requestId !== latestUsersRequestId.current) return;
-                        setUsers(normalizeUsersResponse(usersRes.data));
+                        setUsers(normalizeUsersResponse(usersResult.data));
                         setTotalRecords(
-                            usersRes.data?.data?.total ||
-                            usersRes.data?.total ||
-                            normalizeUsersResponse(usersRes.data).length
+                            usersResult.data?.data?.total ||
+                            usersResult.data?.total ||
+                            normalizeUsersResponse(usersResult.data).length
                         );
                     }
                 }
-            } catch { toast.error("Failed to load auth details"); }
+            } catch (err) {
+                toast.error(err?.response?.data?.message || err?.response?.data?.error || err.message || "Failed to load auth details");
+            }
             finally { if (isMounted) setLoading(false); }
         };
         fetchData();

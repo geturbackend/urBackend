@@ -7,12 +7,22 @@ class AppError extends Error {
     }
 }
 
+const mockAppError = AppError;
+
 jest.mock('@urbackend/common', () => ({
-    AppError,
+    AppError: mockAppError,
     Project: {
         findOne: jest.fn()
     },
     getProjectAccessQuery: jest.fn((userId) => ({ $or: [{ owner: userId }, { "members.user": userId }] }))
+}));
+
+jest.mock('mongoose', () => ({
+    Types: {
+        ObjectId: {
+            isValid: jest.fn((value) => value === '507f1f77bcf86cd799439011')
+        }
+    }
 }));
 
 const { Project } = require('@urbackend/common');
@@ -43,13 +53,26 @@ describe('loadProjectForAdmin Middleware', () => {
         expect(Project.findOne).not.toHaveBeenCalled();
     });
 
+    it('should call next with AppError(400) if projectId is invalid', async () => {
+        req.params.projectId = 'bad-id';
+
+        await loadProjectForAdmin(req, res, next);
+
+        expect(next).toHaveBeenCalledTimes(1);
+        expect(next).toHaveBeenCalledWith(expect.any(AppError));
+        const error = next.mock.calls[0][0];
+        expect(error.statusCode).toBe(400);
+        expect(error.message).toBe("Invalid project ID format");
+        expect(Project.findOne).not.toHaveBeenCalled();
+    });
+
     it('should call next with AppError(404) if project is not found', async () => {
-        req.params.projectId = 'proj123';
+        req.params.projectId = '507f1f77bcf86cd799439011';
         Project.findOne.mockResolvedValueOnce(null);
 
         await loadProjectForAdmin(req, res, next);
 
-        expect(Project.findOne).toHaveBeenCalledWith({ _id: 'proj123', $or: [{ owner: 'user123' }, { "members.user": 'user123' }] });
+        expect(Project.findOne).toHaveBeenCalledWith({ _id: '507f1f77bcf86cd799439011', $or: [{ owner: 'user123' }, { "members.user": 'user123' }] });
         expect(next).toHaveBeenCalledTimes(1);
         expect(next).toHaveBeenCalledWith(expect.any(AppError));
         const error = next.mock.calls[0][0];
@@ -58,13 +81,13 @@ describe('loadProjectForAdmin Middleware', () => {
     });
 
     it('should set req.project and call next without error if project is found', async () => {
-        req.params.projectId = 'proj123';
-        const mockProject = { _id: 'proj123', name: 'Test Project' };
+        req.params.projectId = '507f1f77bcf86cd799439011';
+        const mockProject = { _id: '507f1f77bcf86cd799439011', name: 'Test Project' };
         Project.findOne.mockResolvedValueOnce(mockProject);
 
         await loadProjectForAdmin(req, res, next);
 
-        expect(Project.findOne).toHaveBeenCalledWith({ _id: 'proj123', $or: [{ owner: 'user123' }, { "members.user": 'user123' }] });
+        expect(Project.findOne).toHaveBeenCalledWith({ _id: '507f1f77bcf86cd799439011', $or: [{ owner: 'user123' }, { "members.user": 'user123' }] });
         expect(req.project).toEqual(mockProject);
         expect(next).toHaveBeenCalledTimes(1);
         expect(next).toHaveBeenCalledWith();

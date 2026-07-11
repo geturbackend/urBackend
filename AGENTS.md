@@ -14,6 +14,7 @@ SDKs:
 - `sdks/urbackend-sdk`: Core TypeScript/JavaScript SDK (Framework-agnostic)
 - `sdks/urbackend-react`: React SDK (`UrProvider`, `useUrContext`, UI components)
 - `sdks/urbackend-python`: Official Python SDK (Requests-based)
+- `sdks/urbackend-cli` : Official CLI to Manage urbackend projects
 
 Workspace scripts are defined in [package.json](/package.json).
 

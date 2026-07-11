@@ -67,13 +67,14 @@ jobs:
       - name: Prepend entry to current month's Mintlify changelog
         run: |
           MONTH=$(date --utc +%B | tr '[:upper:]' '[:lower:]')
+          TITLE_MONTH=$(date --utc +%B)
           YEAR=$(date --utc +%Y)
           FILE="mintlify/docs/changelog/${MONTH}-${YEAR}.mdx"
 
           # Create monthly file if it doesn't exist yet
           if [ ! -f "$FILE" ]; then
             echo "---" > "$FILE"
-            echo "title: Changelog" >> "$FILE"
+            echo "title: ${TITLE_MONTH} ${YEAR}" >> "$FILE"
             echo "description: What's new in urBackend — new features, improvements, and fixes." >> "$FILE"
             echo "---" >> "$FILE"
             echo "" >> "$FILE"

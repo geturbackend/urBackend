@@ -10,7 +10,6 @@ if (process.env.NODE_ENV !== 'test') {
 
 const express = require('express')
 const mongoose = require('mongoose')
-const cors = require('cors')
 const cookieParser = require('cookie-parser');
 const app = express();
 app.set('trust proxy', 1);
@@ -31,7 +30,19 @@ app.use('/api/mail/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(standardizeApiResponse);
-app.use(cors());
+const projectCorsPreflight = (req, res, next) => {
+    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-api-key");
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Max-Age", "86400"); // Cache preflight for 24 hours
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+    next();
+};
+
+app.use(projectCorsPreflight);
 app.use(cookieParser());
 
 
@@ -62,21 +73,10 @@ const healthRoute = require('./routes/health');
 
 // ROUTES SETUP 
 app.use('/api/userAuth', limiter, logger, userAuthRoute);
-
-const projectCorsPreflight = (req, res, next) => {
-    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
-    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-api-key");
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-    next();
-};
-
-app.use('/api/data', projectCorsPreflight, limiter, logger, dataRoute);
-app.use('/api/schemas', projectCorsPreflight, limiter, logger, schemaRoute);
-app.use('/api/storage', projectCorsPreflight, limiter, logger, storageRoute);
-app.use('/api/mail', projectCorsPreflight, limiter, logger, mailRoute);
+app.use('/api/data', limiter, logger, dataRoute);
+app.use('/api/schemas', limiter, logger, schemaRoute);
+app.use('/api/storage', limiter, logger, storageRoute);
+app.use('/api/mail', limiter, logger, mailRoute);
 app.use('/api/health', limiter, logger, healthRoute);
 
 app.get('/api/server-ip', async (req, res) => {
