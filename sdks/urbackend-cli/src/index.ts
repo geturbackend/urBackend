@@ -11,6 +11,7 @@ import { statusCommand } from "./commands/status/index.js";
 import { doctorCommand } from "./commands/doctor/index.js";
 import { initCommand } from "./commands/init/index.js";
 import { pullCommand } from "./commands/pull/index.js";
+import { pushCommand } from "./commands/push/index.js";
 import { generateCommand } from "./commands/generate/index.js";
 
 const program = new Command();
@@ -107,6 +108,11 @@ program
   .command("pull")
   .description("Fetch the latest schemas for the linked project")
   .action(pullCommand);
+
+program
+  .command("push")
+  .description("Push local schemas to the remote project")
+  .action(pushCommand);
 
 program
   .command("generate")
