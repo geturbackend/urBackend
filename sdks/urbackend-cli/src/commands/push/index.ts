@@ -74,7 +74,8 @@ export async function pushCommand(): Promise<void> {
       process.exitCode = 1;
       return;
     }
-    logger.error("Unable to connect to the urBackend API.");
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`Unable to connect to the urBackend API. Error: ${errorMessage}`);
     process.exitCode = 1;
   }
 }

@@ -176,7 +176,7 @@ module.exports.syncSchema = async (req, res, next) => {
       const sanitizedModel = sanitizeSchemaFields(entry.model || []);
 
       // Enforce users schema contract
-      if (entry.name === "users") {
+      if (entry.name.toLowerCase() === "users") {
         if (!validateUsersSchema(sanitizedModel)) {
           return next(
             new AppError(
