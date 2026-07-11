@@ -580,7 +580,27 @@ const findOrCreateSocialUser = async ({ project, usersColConfig, Model, provider
         newUserPayload.avatarUrl = profile.avatarUrl;
     }
 
-    user = await Model.create(newUserPayload);
+    try {
+        user = await Model.create(newUserPayload);
+    } catch (err) {
+        if (err.name === 'ValidationError') {
+            try {
+                if (typeof Model === 'function') {
+                    const doc = new Model(newUserPayload);
+                    await doc.save({ validateBeforeSave: false });
+                    user = doc;
+                } else {
+                    user = await Model.create(newUserPayload);
+                }
+            } catch (saveErr) {
+                const validationError = new Error(`Validation failed during social signup: ${err.message}`);
+                validationError.statusCode = 400;
+                throw validationError;
+            }
+        } else {
+            throw err;
+        }
+    }
     return { user, isNewUser: true, linkedByEmail: false };
 };
 
