@@ -592,11 +592,17 @@ const findOrCreateSocialUser = async ({ project, usersColConfig, Model, provider
                 } else {
                     user = await Model.create(newUserPayload);
                 }
-            } catch (saveErr) {
-                const validationError = new Error(`Validation failed during social signup: ${err.message}`);
-                validationError.statusCode = 400;
-                throw validationError;
-            }
+            } 
+            catch (saveErr) {
+    if (saveErr.code === 11000) {
+        throw new AppError("User already exists.", 409);
+    }
+
+    throw new AppError(
+        "Failed to complete social signup.",
+        500
+    );
+}
         } else {
             throw err;
         }
