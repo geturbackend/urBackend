@@ -604,7 +604,10 @@ const findOrCreateSocialUser = async ({ project, usersColConfig, Model, provider
     );
 }
         } else {
-            throw err;
+            if (err.code === 11000) {
+                throw new AppError("User already exists.", 409);
+            }
+            throw new AppError("Failed to complete social signup.", 500);
         }
     }
     return { user, isNewUser: true, linkedByEmail: false };
