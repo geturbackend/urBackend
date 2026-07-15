@@ -79,6 +79,15 @@ jest.mock('@urbackend/common', () => {
             if (encrypted.encrypted === 'google') return 'google_secret';
             return null;
         }),
+        AppError: class AppError extends Error {
+            constructor(statusCode, message, error = null) {
+                super(message);
+                this.statusCode = statusCode;
+                this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
+                this.error = error || (statusCode >= 500 ? "Internal Server Error" : "Error");
+                this.isOperational = true;
+            }
+        },
     };
 });
 
@@ -746,5 +755,195 @@ describe('public userAuth social auth', () => {
         expect(mockSave).toHaveBeenCalledWith({ validateBeforeSave: false });
         expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('/auth/callback?'));
         expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('userId=mocked_user_id'));
+    });
+
+    test('handleSocialAuthCallback handles ValidationError on create where save fails with 11000 duplicate key error', async () => {
+        redis.get.mockResolvedValueOnce(JSON.stringify({
+            projectId: 'project_1',
+            provider: 'github',
+            callbackUrl: 'http://localhost:5173/auth/callback',
+        }));
+        mockProjectFindByIdChain.lean.mockResolvedValueOnce(makeProject());
+
+        mockUsersModel.findOne
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce(null);
+
+        const mockSave = jest.fn().mockRejectedValue({ code: 11000 });
+        class MockModel {
+            constructor(payload) {
+                Object.assign(this, payload);
+            }
+        }
+        MockModel.prototype.save = mockSave;
+        MockModel.findOne = jest.fn()
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce(null);
+        MockModel.create = jest.fn().mockImplementation(() => {
+            const error = new Error('users validation failed: customField: Path `customField` is required.');
+            error.name = 'ValidationError';
+            throw error;
+        });
+
+        const { getCompiledModel } = require('@urbackend/common');
+        getCompiledModel.mockReturnValueOnce(MockModel);
+
+        global.fetch
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ access_token: 'github_access_token' }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ id: 123, login: 'alice', avatar_url: '' }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ([{ email: 'alice@example.com', verified: true, primary: true }]),
+            });
+
+        const req = makeReq({ params: { provider: 'github' }, query: { code: 'code_1', state: 'state_1' } });
+        const res = makeRes();
+
+        await controller.handleSocialAuthCallback(req, res);
+
+        expect(MockModel.create).toHaveBeenCalled();
+        expect(mockSave).toHaveBeenCalledWith({ validateBeforeSave: false });
+        expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('error=User+already+exists.'));
+    });
+
+    test('handleSocialAuthCallback handles ValidationError on create where save fails with generic database error', async () => {
+        redis.get.mockResolvedValueOnce(JSON.stringify({
+            projectId: 'project_1',
+            provider: 'github',
+            callbackUrl: 'http://localhost:5173/auth/callback',
+        }));
+        mockProjectFindByIdChain.lean.mockResolvedValueOnce(makeProject());
+
+        mockUsersModel.findOne
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce(null);
+
+        const mockSave = jest.fn().mockRejectedValue(new Error('Connection timed out'));
+        class MockModel {
+            constructor(payload) {
+                Object.assign(this, payload);
+            }
+        }
+        MockModel.prototype.save = mockSave;
+        MockModel.findOne = jest.fn()
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce(null);
+        MockModel.create = jest.fn().mockImplementation(() => {
+            const error = new Error('users validation failed: customField: Path `customField` is required.');
+            error.name = 'ValidationError';
+            throw error;
+        });
+
+        const { getCompiledModel } = require('@urbackend/common');
+        getCompiledModel.mockReturnValueOnce(MockModel);
+
+        global.fetch
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ access_token: 'github_access_token' }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ id: 123, login: 'alice', avatar_url: '' }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ([{ email: 'alice@example.com', verified: true, primary: true }]),
+            });
+
+        const req = makeReq({ params: { provider: 'github' }, query: { code: 'code_1', state: 'state_1' } });
+        const res = makeRes();
+
+        await controller.handleSocialAuthCallback(req, res);
+
+        expect(MockModel.create).toHaveBeenCalled();
+        expect(mockSave).toHaveBeenCalledWith({ validateBeforeSave: false });
+        expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('error=Failed+to+complete+social+signup.'));
+    });
+
+    test('handleSocialAuthCallback handles direct duplicate key error on Model.create', async () => {
+        redis.get.mockResolvedValueOnce(JSON.stringify({
+            projectId: 'project_1',
+            provider: 'github',
+            callbackUrl: 'http://localhost:5173/auth/callback',
+        }));
+        mockProjectFindByIdChain.lean.mockResolvedValueOnce(makeProject());
+
+        mockUsersModel.findOne
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce(null);
+
+        mockUsersModel.create.mockImplementationOnce(() => {
+            const error = new Error('E11000 duplicate key error collection');
+            error.code = 11000;
+            throw error;
+        });
+
+        global.fetch
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ access_token: 'github_access_token' }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ id: 123, login: 'alice', avatar_url: '' }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ([{ email: 'alice@example.com', verified: true, primary: true }]),
+            });
+
+        const req = makeReq({ params: { provider: 'github' }, query: { code: 'code_1', state: 'state_1' } });
+        const res = makeRes();
+
+        await controller.handleSocialAuthCallback(req, res);
+
+        expect(mockUsersModel.create).toHaveBeenCalled();
+        expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('error=User+already+exists.'));
+    });
+
+    test('handleSocialAuthCallback handles direct generic database error on Model.create', async () => {
+        redis.get.mockResolvedValueOnce(JSON.stringify({
+            projectId: 'project_1',
+            provider: 'github',
+            callbackUrl: 'http://localhost:5173/auth/callback',
+        }));
+        mockProjectFindByIdChain.lean.mockResolvedValueOnce(makeProject());
+
+        mockUsersModel.findOne
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce(null);
+
+        mockUsersModel.create.mockImplementationOnce(() => {
+            throw new Error('Database connection lost');
+        });
+
+        global.fetch
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ access_token: 'github_access_token' }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ id: 123, login: 'alice', avatar_url: '' }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ([{ email: 'alice@example.com', verified: true, primary: true }]),
+            });
+
+        const req = makeReq({ params: { provider: 'github' }, query: { code: 'code_1', state: 'state_1' } });
+        const res = makeRes();
+
+        await controller.handleSocialAuthCallback(req, res);
+
+        expect(mockUsersModel.create).toHaveBeenCalled();
+        expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('error=Failed+to+complete+social+signup.'));
     });
 });
