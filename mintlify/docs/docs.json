@@ -53,7 +53,8 @@
                "guides/mail-platform",
                "guides/database",
                "guides/storage",
-               "guides/webhooks"
+               "guides/webhooks",
+               "guides/ai-byok"
              ]
            },
           {

@@ -1,0 +1,143 @@
+---
+title: "BYOK for AI"
+description: "Bring your own Groq API key for urBackend's AI features to bypass platform session limits."
+---
+
+urBackend's AI features (like the AI Query Builder) run on Groq. By default, requests use urBackend's platform key with a per-account monthly session cap. **Bring Your Own Key (BYOK) for AI** lets you configure a personal Groq API key so your AI requests use your key directly, with no urBackend-side session cap.
+
+You can configure a key at two levels:
+
+- **Developer (account) level** — used by every project you own that does not have its own key.
+- **Project level** — used only for a single project. Overrides the developer-level key.
+
+## When to use BYOK
+
+- You are on the **Free plan** and want to use AI features without hitting the platform session cap. Free accounts must add a personal Groq key to keep using AI once the platform cap is reached.
+- You are on the **Pro plan** and have hit (or expect to hit) the 20 AI sessions per month platform cap.
+- You want to bill AI usage directly to your own Groq account and control your own model quota.
+
+## Resolution order
+
+For each AI request, urBackend picks the Groq key using this order:
+
+1. **Project-level BYOK key** (if set on the project handling the request).
+2. **Developer-level BYOK key** (if set on your account).
+3. **urBackend platform key** — falls back to the shared platform key, subject to your plan's monthly session cap.
+
+If a BYOK key is used, no urBackend-side session cap applies. Groq's own rate limits and billing still apply to your key.
+
+## Plan-tier behavior
+
+| Plan | Personal Groq key allowed? | Platform-key AI sessions per month |
+| :--- | :--- | :--- |
+| Free | Yes | 5 |
+| Pro | Yes | 20 |
+
+The monthly counter resets on the first of each calendar month (UTC).
+
+Once your plan's platform-key cap is reached, further AI requests return `403 Forbidden` until either the counter resets or you configure a BYOK key.
+
+## Get a Groq API key
+
+1. Sign in at [console.groq.com](https://console.groq.com).
+2. Open **API Keys** and create a new key.
+3. Copy the key. Groq keys start with `gsk_`.
+
+<Warning>
+  Treat your Groq key like any other secret. urBackend encrypts it at rest, but anyone with the raw key can bill your Groq account.
+</Warning>
+
+## Set a developer-level key
+
+Use this when you want a single key to cover every project on your account.
+
+1. Open the urBackend dashboard and go to **Settings**.
+2. Find the **AI Integration (BYOK)** section.
+3. Paste your Groq API key (must start with `gsk_`) into **Groq API Key**.
+4. Click **Save Key**.
+
+Once saved, the field shows a masked placeholder (`gsk_••••••••`) and a **Configured** badge. The raw key is never returned by the API after it is stored.
+
+To remove the key, click **Clear**. Your account will fall back to the platform key (subject to the monthly session cap).
+
+## Set a project-level key
+
+Use this when a single project needs its own key — for example, when it belongs to a different Groq billing account, or when only that project should have unlimited AI usage.
+
+1. Open the project in the dashboard.
+2. Go to **Settings → Integrations**.
+3. In the **AI Services** section, find **Groq API (BYOK)**.
+4. Paste your Groq API key and click **Save Key**.
+
+A project-level key overrides the developer-level key for that project only. Other projects on the same account continue to use the developer-level key (or the platform key, if none is set).
+
+To remove the key, click **Clear** on the project's AI Services card.
+
+## API
+
+You can also manage BYOK keys programmatically.
+
+### Set or clear the developer-level key
+
+**Endpoint:** `PUT /api/user/me/byok`
+
+Requires a logged-in dashboard session.
+
+```bash
+# Save a key
+curl -X PUT "https://api.ub.bitbros.in/api/user/me/byok" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: <your-session-cookie>" \
+  -d '{"groqKey": "gsk_..."}'
+
+# Clear the key
+curl -X PUT "https://api.ub.bitbros.in/api/user/me/byok" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: <your-session-cookie>" \
+  -d '{"groqKey": null}'
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": { "hasGroqKey": true },
+  "message": "BYOK key saved successfully"
+}
+```
+
+### Set or clear a project-level key
+
+**Endpoint:** `PUT /api/projects/:projectId/byok`
+
+Requires the project **admin** role.
+
+```bash
+curl -X PUT "https://api.ub.bitbros.in/api/projects/PROJECT_ID/byok" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: <your-session-cookie>" \
+  -d '{"groqKey": "gsk_..."}'
+```
+
+Pass `"groqKey": null` to clear the project's key.
+
+### Validation and errors
+
+| Condition | Status | Detail |
+| :--- | :--- | :--- |
+| Key does not start with `gsk_`, or is longer than 200 characters | `400` | `Invalid Groq API key format. Key must start with 'gsk_'.` |
+| Saving a key on a plan without BYOK for AI enabled | `403` | `Bring Your Own AI Key (Groq) is a Pro feature. Please upgrade to continue.` |
+| Project ID is not a valid ObjectId | `400` | `Invalid project ID` |
+| Project not found or caller is not an admin | `404` | `Project not found or access denied` |
+| Groq rejects the key at request time | `401` | `Invalid BYOK Groq key provided` |
+
+## How the key is stored
+
+- Keys are encrypted at rest with AES-256-GCM before being written to the database.
+- The dashboard and API never return the raw key. Responses only include a `hasGroqKey` boolean.
+- When an AI request runs, urBackend decrypts the key in memory, re-encrypts it for transit to the internal AI service, and never logs it.
+
+## Related
+
+- [Limits & Quotas](/limits-and-quotas)

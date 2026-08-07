@@ -31,6 +31,19 @@ Files that exceed the limit return `413 Payload Too Large`.
 
 When your project approaches the database quota, writes may be rejected with `403 Forbidden`. Monitor your usage in the Dashboard.
 
+## AI session limits
+
+AI features (like the AI Query Builder) that use urBackend's platform Groq key are capped per account, per calendar month:
+
+| Plan | AI sessions per month (platform key) |
+| :--- | :--- |
+| Free | 5 |
+| Pro | 20 |
+
+Requests beyond the monthly cap return `403 Forbidden` until the counter resets on the first of the next calendar month (UTC).
+
+To bypass this cap, configure a personal Groq API key at the developer or project level. Requests that resolve to a BYOK key are not counted against the platform cap. See [BYOK for AI](/guides/ai-byok).
+
 ## HTTP status codes
 
 | Code | Meaning | Common cause |
