@@ -54,7 +54,7 @@
                "guides/database",
                "guides/storage",
                "guides/webhooks",
-               "guides/audit-log"
+               "guides/audit-log",
                "guides/ai-byok"
              ]
            },
