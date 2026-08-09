@@ -10,7 +10,7 @@ from config import settings
 from dependencies import redis_client
 from services.transit_crypto import decrypt_transit
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("services.byok")
 
 FREE_TIER_LIMIT = 5
 PRO_TIER_LIMIT = 20
@@ -49,30 +49,35 @@ async def resolve_ai_client(
     Raises:
         HTTPException: 401 if BYOK key is invalid, 403 if rate limited, 500 if no platform key.
     """
+    logger.info("Resolving AI client | developer_id=%s, plan=%s, has_byok=%s", developer_id, plan, bool(encrypted_byok and encrypted_byok.get("groqKey")))
 
     # ── 1. Try BYOK ──
     if encrypted_byok and encrypted_byok.get("groqKey"):
+        logger.info("🔑 Attempting to decrypt BYOK Groq key for developer_id=%s...", developer_id)
         try:
             decrypted_key = decrypt_transit(encrypted_byok["groqKey"])
+            logger.info("✅ BYOK Groq key decrypted successfully. Initializing ChatGroq client (model=llama-3.1-8b-instant)...")
             return ChatGroq(
                 api_key=decrypted_key,
                 model_name="llama-3.1-8b-instant",
                 temperature=0,
             )
         except Exception as e:
-            logger.warning("BYOK decryption/init failed: %s", e)
+            logger.warning("❌ BYOK decryption/init failed for developer_id=%s: %s", developer_id, e)
             if isinstance(e, ValueError) and "INTERNAL_PAYLOAD_KEY" in str(e):
                 raise HTTPException(status_code=500, detail=str(e)) from e
             raise HTTPException(status_code=401, detail="Invalid BYOK Groq key provided") from e
 
     # ── 2. Platform key guard ──
     if not settings.GROQ_API_KEY:
+        logger.error("❌ Platform AI key (GROQ_API_KEY) is not configured in settings")
         raise HTTPException(
             status_code=500, detail="Platform AI key not configured"
         )
 
     # ── 3. Platform key atomic rate limit ──
     if not developer_id:
+        logger.warning("❌ developer_id missing for platform key rate limiting")
         raise HTTPException(
             status_code=400,
             detail="developer_id is required for platform key rate limiting"
@@ -82,8 +87,11 @@ async def resolve_ai_client(
     month = datetime.datetime.now(datetime.UTC).strftime("%Y-%m")
     key = f"ai:gen:count:{developer_id}:{month}"
 
+    logger.info("🏢 Using Platform Groq key. Checking Redis rate limit at '%s' (limit=%d/month)...", key, limit)
+
     # Atomic script execution: INCR + EXPIRE (if new key)
     count, ttl = await redis_client.eval(LUA_RATE_LIMIT, 1, key, 32 * 86400)
+    logger.info("📊 Monthly usage for developer_id=%s: %d/%d (TTL: %ds remaining in window)", developer_id, count, limit, ttl)
 
     if count > limit:
         tier_name = "Pro" if plan == "pro" else "Free"
@@ -92,14 +100,17 @@ async def resolve_ai_client(
             if plan == "pro"
             else "Upgrade to Pro or add your own Groq key in Settings."
         )
+        logger.warning("🚫 Rate limit exceeded for developer_id=%s: %d > %d allowed in %s tier", developer_id, count, limit, tier_name)
         raise HTTPException(
             status_code=403,
             detail=f"{tier_name} tier AI limit reached ({limit}/month). {upgrade_msg}",
         )
 
     # ── 4. Return platform client ──
+    logger.info("✅ Rate limit check passed for developer_id=%s. Initializing Platform ChatGroq client (model=llama-3.1-8b-instant)...", developer_id)
     return ChatGroq(
         api_key=settings.GROQ_API_KEY,
         model_name="llama-3.1-8b-instant",
         temperature=0,
     )
+

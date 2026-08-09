@@ -9,7 +9,7 @@ from dependencies import verify_signature
 from services.byok import resolve_ai_client
 
 router = APIRouter(prefix="/ai", tags=["ai"], dependencies=[Depends(verify_signature)])
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("routers.ai")
 
 class FilterItem(BaseModel):
     field: str = Field(description="The exact field name from the schema")
@@ -37,6 +37,13 @@ class QueryBuilderRequest(BaseModel):
 
 @router.post("/query-builder", response_model=QueryResult)
 async def query_builder(request: QueryBuilderRequest):
+    logger.info(
+        "📥 Received /ai/query-builder request | developer_id=%s, plan=%s, schema_fields=%d, prompt=%r",
+        request.developer_id,
+        request.plan,
+        len(request.schema_fields),
+        request.prompt[:120] if len(request.prompt) > 120 else request.prompt,
+    )
     try:
         # Resolve the AI client (BYOK → Pro → Free with limits)
         llm = await resolve_ai_client(
@@ -70,6 +77,8 @@ Schema Fields: {schema}"""
         # Create the LangChain chain
         chain = prompt | structured_llm
 
+        logger.info("🤖 Invoking LangChain LLM chain (15s timeout) for developer_id=%s...", request.developer_id)
+
         # Invoke the chain with a timeout to prevent hanging requests
         result = await asyncio.wait_for(
             chain.ainvoke({
@@ -79,13 +88,21 @@ Schema Fields: {schema}"""
             timeout=15.0
         )
 
+        logger.info(
+            "✅ AI Query Builder success for developer_id=%s | %d filter(s) generated, sort=%r",
+            request.developer_id,
+            len(result.filters),
+            result.sort,
+        )
         return result
 
-    except HTTPException:
+    except HTTPException as e:
+        logger.warning("⚠️ AI Query Builder rejected with HTTP %d for developer_id=%s: %s", e.status_code, request.developer_id, e.detail)
         raise  # Re-raise BYOK/rate-limit errors as-is
     except asyncio.TimeoutError as e:
-        logger.error("AI Query Builder timeout", exc_info=True)
+        logger.error("⏱️ AI Query Builder request timed out after 15s for developer_id=%s", request.developer_id, exc_info=True)
         raise HTTPException(status_code=504, detail="AI request timed out") from e
     except Exception as e:
-        logger.error("AI Query Builder failed", exc_info=True)
+        logger.error("❌ AI Query Builder unhandled failure for developer_id=%s: %s", request.developer_id, e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error") from e
+
