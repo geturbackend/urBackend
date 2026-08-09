@@ -53,8 +53,8 @@ const queryBuilder = async (req, res, next) => {
             throw new AppError(404, `Collection '${safeCollectionName}' not found in this project`);
         }
 
-        // Add index checking fields
-        const schemaFieldsCheck = new Set([
+        // Allowed fields whitelist for output validation
+        const allowedFields = new Set([
             ...collection.model.map(field => field.key),
             '_id',
             'createdAt',
@@ -155,6 +155,7 @@ const queryBuilder = async (req, res, next) => {
             return next(new AppError(error.response.status || 500, errorMessage));
         }
 
+        console.error("AI Query Builder unexpected error:", error);
         next(new AppError(500, "Failed to build query via AI"));
     }
 };
