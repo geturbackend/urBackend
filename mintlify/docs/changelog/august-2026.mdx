@@ -3,6 +3,27 @@ title: August 2026
 description: What's new in urBackend — new features, improvements, and fixes.
 ---
 
+<Update label="2026-08-10" description="Week of 2026-08-04–2026-08-10" tags={["Feature", "Improvement", "Fix"]}>
+## New features
+
+- **BYOK for AI** — Bring your own Groq API key so AI Query Builder requests use your key directly, with no urBackend-side session cap. Falls back to project-level, then developer-level, then the platform key. See [BYOK for AI](/guides/ai-byok). (by [@yash-pouranik](https://github.com/yash-pouranik) in [#383](https://github.com/geturbackend/urBackend/pull/383))
+- **BYOK dashboard UI** — Add, rotate, and remove your Groq BYOK key from the dashboard. Keys are masked in API responses. See [BYOK for AI](/guides/ai-byok). (by [@yash-pouranik](https://github.com/yash-pouranik) in [#384](https://github.com/geturbackend/urBackend/pull/384))
+- **BYOD dual-server database validation** — Bring-your-own MongoDB connections are now validated from both the dashboard API and public API before they're saved. The dashboard shows both public IPs to whitelist in your MongoDB Atlas allowlist. See [Connect your own MongoDB](/guides/database#connect-your-own-mongodb-byod). (by [@yash-pouranik](https://github.com/yash-pouranik) in [#371](https://github.com/geturbackend/urBackend/pull/371))
+
+## Improvements
+
+- **AI session limits and plan enforcement** — Platform AI usage is now restricted for Pro-tier users without a BYOK key, with clearer `403` responses when the monthly session cap is reached. See [Plan-tier behavior](/guides/ai-byok#plan-tier-behavior). (by [@yash-pouranik](https://github.com/yash-pouranik) in [#383](https://github.com/geturbackend/urBackend/pull/383))
+
+## Bug fixes
+
+- **Audit log author email** — Config change entries now correctly show the author's email in the audit log. (by [@yash-pouranik](https://github.com/yash-pouranik) in [`daf6659`](https://github.com/geturbackend/urbackend/commit/daf665903ac4a89217bfb0fa69a284eb75104237))
+- **`/me` endpoint** — Fixed a `MongoServerError` caused by mixed projection exclusions when fetching the current user. (by [@yash-pouranik](https://github.com/yash-pouranik) in [`4fe8062`](https://github.com/geturbackend/urbackend/commit/4fe8062ed58aa3c4d83edf43149d54b313599390))
+- **Get single project response shape** — Restored the direct project object return format for `getSingleProject` and added safe unwrapping across the frontend. (by [@yash-pouranik](https://github.com/yash-pouranik) in [`b0c68b9`](https://github.com/geturbackend/urbackend/commit/b0c68b973c1a666cccc223ed15b86356c6e69882))
+- **AI controller crash on save** — Fixed a `ReferenceError: allowedFields is not defined` when saving a BYOK key. (by [@yash-pouranik](https://github.com/yash-pouranik) in [`cacecdc`](https://github.com/geturbackend/urbackend/commit/cacecdc58ba3b9b75af725220457ebf565f2dcc3))
+- **SDK auth** — `@urbackend/sdk` and `@urbackend/react` now keep tokens in memory instead of `localStorage`, and refresh tokens persist correctly across cross-origin requests. Bumped `@urbackend/sdk` to `0.4.6` and `@urbackend/react` to `0.2.6`. (by [@yash-pouranik](https://github.com/yash-pouranik) in [`8a678cb`](https://github.com/geturbackend/urbackend/commit/8a678cb415fbb35fcb42b6225dbab8dcd5d7e9ba))
+- **Export email delivery** — Fixed the `from` field on export emails so exports are delivered reliably. (by [@yash-pouranik](https://github.com/yash-pouranik) in [`e4cfd7a`](https://github.com/geturbackend/urbackend/commit/e4cfd7a5380c4de900d33822a86ae9c5b83e3869))
+</Update>
+
 <Update label="2026-08-01" description="Weeks of 2026-07-19–2026-08-01" tags={["Feature", "Improvement", "Fix"]}>
 ## New features
 
