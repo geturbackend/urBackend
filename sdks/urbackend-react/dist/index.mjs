@@ -51,7 +51,7 @@ var UrProvider = ({ apiKey, baseUrl, children }) => {
           try {
             const res = await auth.refreshToken();
             const newToken = res?.accessToken || res?.token;
-            if (newToken) auth.setToken(newToken);
+            if (newToken) auth.setToken(newToken, res.refreshToken);
           } catch (e) {
           }
         }

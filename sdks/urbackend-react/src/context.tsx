@@ -77,11 +77,11 @@ export const UrProvider: React.FC<UrProviderProps> = ({ apiKey, baseUrl, childre
           }
           window.history.replaceState({}, document.title, window.location.pathname);
         } else {
-          // Attempt to silently refresh session using the HTTP-only cookie
+          // Attempt to silently refresh session using stored refresh token / header mode (or fallback to cookie)
           try {
             const res = await auth.refreshToken();
             const newToken = res?.accessToken || (res as any)?.token;
-            if (newToken) auth.setToken(newToken);
+            if (newToken) auth.setToken(newToken, res.refreshToken);
           } catch (e) {
             // If refresh fails, user is not logged in / session expired
           }

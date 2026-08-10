@@ -50,6 +50,7 @@ import { AuthError } from '../errors';
  */
 export class AuthModule {
   private sessionToken?: string;
+  private refreshTokenVal?: string;
 
   /**
    * Creates an instance of AuthModule
@@ -61,6 +62,35 @@ export class AuthModule {
    * const auth = new AuthModule(client);
    */
   constructor(private client: UrBackendClient) {}
+
+  /**
+   * Sets or clears the refresh token in memory and localStorage (if in browser)
+   * 
+   * @param {string} [token] - The refresh token to store, or undefined to clear
+   */
+  public setRefreshToken(token?: string): void {
+    this.refreshTokenVal = token;
+    if (typeof window !== 'undefined') {
+      if (token) {
+        localStorage.setItem('ub_refresh_token', token);
+      } else {
+        localStorage.removeItem('ub_refresh_token');
+      }
+    }
+  }
+
+  /**
+   * Gets the stored refresh token from memory or localStorage
+   * 
+   * @returns {string | undefined} The current refresh token, if any
+   */
+  public getRefreshToken(): string | undefined {
+    if (this.refreshTokenVal) return this.refreshTokenVal;
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('ub_refresh_token') || undefined;
+    }
+    return undefined;
+  }
 
   /**
    * Creates a new user account
@@ -101,14 +131,22 @@ export class AuthModule {
    * }
    */
   public async signUp(payload: SignUpPayload): Promise<AuthUser> {
-    return this.client.request<AuthUser>('POST', '/api/userAuth/signup', {
+    const response = await this.client.request<AuthUser & { accessToken?: string; token?: string; refreshToken?: string }>('POST', '/api/userAuth/signup', {
       body: payload,
+      headers: { 'x-refresh-token-mode': 'header' },
       credentials: 'include',
     });
+
+    const activeToken = response.accessToken || response.token;
+    if (activeToken) {
+      this.setToken(activeToken, response.refreshToken);
+    }
+
+    return response;
   }
 
   /**
-   * Authenticates an existing user and stores the session token
+   * Authenticates an existing user and stores the session tokens
    * 
    * @param {LoginPayload} payload - User login credentials
    * @param {string} payload.email - User's email address
@@ -142,10 +180,12 @@ export class AuthModule {
   public async login(payload: LoginPayload): Promise<AuthResponse> {
     const response = await this.client.request<AuthResponse>('POST', '/api/userAuth/login', {
       body: payload,
+      headers: { 'x-refresh-token-mode': 'header' },
       credentials: 'include',
     });
 
-    this.sessionToken = response.accessToken || response.token;
+    const activeToken = response.accessToken || response.token;
+    this.setToken(activeToken, response.refreshToken);
 
     if (!response.accessToken && response.token) {
       console.warn(
@@ -462,15 +502,21 @@ export class AuthModule {
    * }
    */
   public async refreshToken(refreshToken?: string): Promise<AuthResponse> {
+    const tokenToUse = refreshToken || this.getRefreshToken();
     const options: RequestOptions = {};
-    if (refreshToken) {
-      options.headers = { 'x-refresh-token': refreshToken, 'x-refresh-token-mode': 'header' };
+
+    if (tokenToUse) {
+      options.headers = {
+        'x-refresh-token': tokenToUse,
+        'x-refresh-token-mode': 'header',
+      };
     } else {
       options.credentials = 'include';
     }
 
     const response = await this.client.request<AuthResponse>('POST', '/api/userAuth/refresh-token', options);
-    this.sessionToken = response.accessToken || response.token;
+    const activeToken = response.accessToken || response.token;
+    this.setToken(activeToken, response.refreshToken);
     return response;
   }
 
@@ -513,15 +559,21 @@ export class AuthModule {
    * const token = hashParams.get('token');
    * if (rtCode && token) {
    *   const response = await auth.socialExchange({ token, rtCode });
-   *   console.log('Refresh token exchange successful, proceeding to token refresh:', response.rtToken);
+   *   console.log('Refresh token exchange successful, proceeding to token refresh:', response.refreshToken);
    *   await auth.refreshToken();
    * }
    */
   public async socialExchange(payload: SocialExchangePayload): Promise<SocialExchangeResponse> {
-    return this.client.request<SocialExchangeResponse>('POST', '/api/userAuth/social/exchange', {
+    const response = await this.client.request<SocialExchangeResponse>('POST', '/api/userAuth/social/exchange', {
       body: payload,
       credentials: 'include',
     });
+
+    if (response.refreshToken) {
+      this.setRefreshToken(response.refreshToken);
+    }
+
+    return response;
   }
 
   /**
@@ -551,15 +603,24 @@ export class AuthModule {
    * }
    */
   public async logout(token?: string): Promise<{ success: boolean; message: string }> {
-    const activeToken = token || this.sessionToken;
+    const activeToken = token || this.getToken();
+    const tokenToUse = this.getRefreshToken();
     let result = { success: true, message: 'Logged out locally' };
 
+    const options: RequestOptions = { credentials: 'include' };
     if (activeToken) {
+      options.token = activeToken;
+    }
+    if (tokenToUse) {
+      options.headers = { 'x-refresh-token': tokenToUse };
+    }
+
+    if (activeToken || tokenToUse) {
       try {
         result = await this.client.request<{ success: boolean; message: string }>(
           'POST',
           '/api/userAuth/logout',
-          { token: activeToken, credentials: 'include' },
+          options,
         );
       } catch (e) {
         // Silently fail if server logout fails, we still want to clear local state
@@ -567,34 +628,45 @@ export class AuthModule {
       }
     }
 
-    this.sessionToken = undefined;
+    this.setToken(undefined, undefined);
     return result;
   }
 
   /**
-   * Manually sets the session token (e.g., after social authentication exchange)
+   * Manually sets the session access token and optional refresh token
    * 
-   * @param {string} token - The session/access token to store
+   * @param {string} [token] - The session/access token to store
+   * @param {string} [refreshToken] - Optional refresh token to store
    * 
    * @example
    * // After successful social exchange
-   * const response = await auth.socialExchange({ rtCode, provider: 'github' });
-   * auth.setToken(response.accessToken);
+   * auth.setToken(response.accessToken, response.refreshToken);
    * 
    * @example
-   * // Restore session from localStorage
-   * const savedToken = localStorage.getItem('authToken');
+   * // Restore session from storage
+   * const savedToken = localStorage.getItem('ub_auth_token');
+   * const savedRt = localStorage.getItem('ub_refresh_token');
    * if (savedToken) {
-   *   auth.setToken(savedToken);
+   *   auth.setToken(savedToken, savedRt);
    *   const user = await auth.me();
    * }
    */
-  public setToken(token: string): void {
+  public setToken(token?: string, refreshToken?: string): void {
     this.sessionToken = token;
+    if (typeof window !== 'undefined') {
+      if (token) {
+        localStorage.setItem('ub_auth_token', token);
+      } else {
+        localStorage.removeItem('ub_auth_token');
+      }
+    }
+    if (refreshToken !== undefined) {
+      this.setRefreshToken(refreshToken);
+    }
   }
 
   /**
-   * Gets the current stored session token
+   * Gets the current stored session access token
    * 
    * @returns {string | undefined} The current session token, if any
    * 
@@ -602,18 +674,14 @@ export class AuthModule {
    * // Get token for custom API calls
    * const token = auth.getToken();
    * if (token) {
-   *   // Use token in custom API request
    *   fetch('/api/custom', { headers: { Authorization: `Bearer ${token}` } });
-   * }
-   * 
-   * @example
-   * // Save token to localStorage for persistence
-   * const token = auth.getToken();
-   * if (token) {
-   *   localStorage.setItem('authToken', token);
    * }
    */
   public getToken(): string | undefined {
-    return this.sessionToken;
+    if (this.sessionToken) return this.sessionToken;
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('ub_auth_token') || undefined;
+    }
+    return undefined;
   }
 }

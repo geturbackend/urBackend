@@ -86,6 +86,7 @@ export interface AuthResponse {
   accessToken?: string;
   /** @deprecated use accessToken instead */
   token?: string;
+  refreshToken?: string;
   expiresIn?: string;
   userId?: string;
   user?: AuthUser;
