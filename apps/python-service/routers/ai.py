@@ -43,7 +43,7 @@ class Message(BaseModel):
 class CollectionField(BaseModel):
     name: str
     type: str
-    required: bool
+    required: bool = False
     ref: str | None = None
 
 class CollectionSchema(BaseModel):
@@ -207,6 +207,9 @@ Rules:
         logger.error("[Trace: %s] ⏱️ AI Collection Creator request timed out after 30s for developer_id=%s", trace_id, request.developer_id, exc_info=True)
         raise HTTPException(status_code=504, detail="AI request timed out") from e
     except Exception as e:
+        error_name = e.__class__.__name__
         logger.error("[Trace: %s] ❌ AI Collection Creator unhandled failure for developer_id=%s: %s", trace_id, request.developer_id, e, exc_info=True)
+        if "BadRequest" in error_name or "Validation" in error_name:
+            raise HTTPException(status_code=400, detail=f"AI generation failed validation: {str(e)}") from e
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
