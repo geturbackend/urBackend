@@ -4,7 +4,9 @@ description: "Manage user accounts, sessions, and social authentication with the
 keywords: ["auth", "authentication", "login", "signup", "sdk", "social auth", "oauth"]
 ---
 
-You can access auth methods via `client.auth`. When you call `login()` or `refreshToken()`, the module stores the `accessToken` and uses it for subsequent authenticated requests such as `me()` or `updateProfile()`.
+You can access auth methods via `client.auth`. When you call `login()`, `signUp()`, or `refreshToken()`, the module stores the `accessToken` and `refreshToken` and uses them for subsequent authenticated requests such as `me()` or `updateProfile()`.
+
+In the browser, the SDK persists the access token in `localStorage` under `ub_auth_token` and the refresh token under `ub_refresh_token`. On the next page load, both values are read back automatically. Login, signup, and refresh calls send `x-refresh-token-mode: header` (and, for refresh, `x-refresh-token`) so cross-domain setups work without relying on HTTP-only cookies.
 
 ## `signUp`
 
@@ -41,6 +43,7 @@ login(payload: LoginPayload): Promise<AuthResponse>
 interface AuthResponse {
   accessToken?: string;
   token?: string; // Alias for accessToken (deprecated)
+  refreshToken?: string;
   expiresIn?: string;
   userId?: string;
   user?: AuthUser;
@@ -60,10 +63,12 @@ const { accessToken, user } = await client.auth.login({
 
 ## `refreshToken`
 
-Rotate the current access token. 
+Rotate the current access token.
 
-- **Browser**: Call without arguments. It will automatically use the `refreshToken` stored in your HTTP-only cookies.
-- **Mobile/Node**: Pass the `refreshToken` string manually.
+- **Browser**: Call without arguments. The SDK reads the refresh token stored in `localStorage` under `ub_refresh_token` and sends it in the `x-refresh-token` header. If no stored token is found, the request falls back to `credentials: 'include'` so any legacy HTTP-only cookie is still honored.
+- **Mobile/Node**: Pass the `refreshToken` string manually. The SDK sends it in the `x-refresh-token` header.
+
+The returned `refreshToken`, if present, is persisted automatically for the next call.
 
 ```typescript
 refreshToken(refreshToken?: string): Promise<AuthResponse>
@@ -179,7 +184,17 @@ logout(token?: string): Promise<{ success: boolean; message: string }>
 
 ## Manual token management
 
-If you need to manage tokens manually (for example, after social auth), you can use these helper methods:
+If you need to manage tokens manually (for example, after social auth or when restoring a session in a non-browser environment), you can use these helper methods:
 
-- `getToken()`: Returns the current in-memory access token.
-- `setToken(token)`: Manually set the access token for the client.
+- `getToken()`: Returns the current access token. In the browser, falls back to `localStorage.ub_auth_token` when the in-memory value is unset.
+- `setToken(token?, refreshToken?)`: Manually set the access token and, optionally, the refresh token. In the browser, both values are also written to `localStorage` (`ub_auth_token` and `ub_refresh_token`). Passing `undefined` for the access token clears it.
+- `getRefreshToken()`: Returns the current refresh token. In the browser, falls back to `localStorage.ub_refresh_token`.
+- `setRefreshToken(token?)`: Manually set or clear the refresh token. In the browser, this also writes to `localStorage.ub_refresh_token`.
+
+```typescript
+// Restore a session (for example, after socialExchange returns a refresh token)
+client.auth.setToken(accessToken, refreshToken);
+
+// Later, hand the access token to a custom fetch call
+const token = client.auth.getToken();
+```

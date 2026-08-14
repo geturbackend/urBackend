@@ -33,9 +33,13 @@ function App() {
 
 When `<UrProvider>` mounts, it automatically:
 1. Initializes a singleton `@urbackend/sdk` instance.
-2. Checks `localStorage` and cookies for an existing active session.
-3. Automatically attempts to refresh the session in the background if the access token has expired.
+2. Checks `localStorage` for an existing active session. The access token is read from `ub_auth_token` and the refresh token from `ub_refresh_token`.
+3. Attempts to refresh the session in the background by calling `auth.refreshToken()`, which sends the stored refresh token in the `x-refresh-token` header (and falls back to any HTTP-only cookie if no stored token is found). This makes cross-domain auth work without shared cookies.
 4. Exposes the `AuthUser` state and SDK client to all child components via React Context (accessed through hooks like `useUser` and `useDb`).
+
+<Note>
+Access tokens live in memory during the session and are mirrored to `localStorage.ub_auth_token`. Refresh tokens are persisted to `localStorage.ub_refresh_token`. Call `client.auth.logout()` (or `setToken(undefined, undefined)`) to clear both.
+</Note>
 
 <Note>
 The provider sets up global state. You only ever need **one** `<UrProvider>` at the root of your React tree.
