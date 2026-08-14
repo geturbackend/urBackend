@@ -17,7 +17,7 @@ import { Info, ExternalLink, X } from 'lucide-react';
  */
 export default function SettingInfoTooltip({ title, description, docsUrl }) {
     const [open, setOpen] = useState(false);
-    const [pos, setPos] = useState({ top: 0, left: 0, align: 'left' });
+    const [pos, setPos] = useState({ top: 0, left: 0 });
     const btnRef = useRef(null);
     const popoverRef = useRef(null);
 
@@ -26,35 +26,38 @@ export default function SettingInfoTooltip({ title, description, docsUrl }) {
 
         const isMobile = window.innerWidth < 640;
         if (isMobile) {
-            setPos({ top: '50%', left: '50%', align: 'center' });
+            setPos({ top: '50%', left: '50%' });
             return;
         }
 
         const rect = btnRef.current.getBoundingClientRect();
         const POPOVER_WIDTH = 320;
-        const POPOVER_OFFSET = 8; // gap between button and popover
+        const POPOVER_OFFSET = 8;
+        const ESTIMATED_MAX_HEIGHT = 240;
+        const VIEWPORT_MARGIN = 12;
 
         // Prefer opening to the right; if not enough space, open to the left
         const spaceRight = window.innerWidth - rect.right;
         const spaceLeft = rect.left;
 
         let left;
-        let align;
         if (spaceRight >= POPOVER_WIDTH + POPOVER_OFFSET) {
             left = rect.right + POPOVER_OFFSET + window.scrollX;
-            align = 'left';
         } else if (spaceLeft >= POPOVER_WIDTH + POPOVER_OFFSET) {
             left = rect.left - POPOVER_WIDTH - POPOVER_OFFSET + window.scrollX;
-            align = 'left';
         } else {
             // Center horizontally under the button
-            left = Math.max(8, rect.left + rect.width / 2 - POPOVER_WIDTH / 2 + window.scrollX);
-            align = 'left';
+            left = Math.max(VIEWPORT_MARGIN, rect.left + rect.width / 2 - POPOVER_WIDTH / 2 + window.scrollX);
         }
 
-        const top = rect.top + window.scrollY;
+        // Vertical placement clamped to viewport bounds
+        let top = rect.top + window.scrollY;
+        const maxTop = window.scrollY + window.innerHeight - ESTIMATED_MAX_HEIGHT - VIEWPORT_MARGIN;
+        if (top > maxTop) {
+            top = Math.max(window.scrollY + VIEWPORT_MARGIN, maxTop);
+        }
 
-        setPos({ top, left, align });
+        setPos({ top, left });
     }, []);
 
     const handleOpen = (e) => {
@@ -63,9 +66,19 @@ export default function SettingInfoTooltip({ title, description, docsUrl }) {
         setOpen(true);
     };
 
-    const handleClose = useCallback(() => setOpen(false), []);
+    const handleClose = useCallback(() => {
+        setOpen(false);
+        btnRef.current?.focus();
+    }, []);
 
-    // Click outside
+    // Focus dialog when opened
+    useEffect(() => {
+        if (open) {
+            popoverRef.current?.focus();
+        }
+    }, [open]);
+
+    // Click outside & Escape key listeners
     useEffect(() => {
         if (!open) return;
 
@@ -130,6 +143,7 @@ export default function SettingInfoTooltip({ title, description, docsUrl }) {
                 onClick={handleOpen}
                 aria-label={`More info about ${title}`}
                 aria-expanded={open}
+                aria-haspopup="dialog"
                 title={`About: ${title}`}
                 style={{
                     display: 'inline-flex',
@@ -179,8 +193,10 @@ export default function SettingInfoTooltip({ title, description, docsUrl }) {
 
                     <div
                         ref={popoverRef}
-                        role="tooltip"
-                        aria-live="polite"
+                        role="dialog"
+                        aria-label={title}
+                        aria-modal={isMobile ? "true" : "false"}
+                        tabIndex={-1}
                         style={{
                             ...popoverStyle,
                             background: 'var(--color-bg-card, #161b22)',
@@ -188,6 +204,7 @@ export default function SettingInfoTooltip({ title, description, docsUrl }) {
                             borderRadius: '10px',
                             boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)',
                             overflow: 'hidden',
+                            outline: 'none',
                             animation: 'sitTooltipIn 0.12s ease',
                         }}
                     >

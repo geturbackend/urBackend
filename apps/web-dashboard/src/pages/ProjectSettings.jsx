@@ -247,7 +247,7 @@ export default function ProjectSettings() {
                                     hint={<>Used by Social Auth to redirect to <code>/auth/callback</code></>}
                                     info={{
                                         title: 'Site URL',
-                                        description: 'The root URL of your frontend application (e.g. https://myapp.com). After a successful social login (GitHub/Google), urBackend redirects users to <SiteUrl>/auth/callback. Leave blank if you are not using Social Auth.',
+                                        description: 'The root URL of your frontend application (e.g. https://myapp.com). After a successful social login (GitHub/Google), urBackend redirects users to your Site URL at /auth/callback. Leave blank if you are not using Social Auth.',
                                         docsUrl: 'https://docs.ub.bitbros.in/guides/social-auth'
                                     }}
                                 >
@@ -295,7 +295,6 @@ export default function ProjectSettings() {
                                         <SettingInfoTooltip
                                             title="Delete Project"
                                             description="Permanently deletes this project and ALL associated data: every collection, every document, all uploaded files, auth users, API keys, and team memberships. This cannot be undone. Export your data before proceeding."
-                                            docsUrl="https://docs.ub.bitbros.in/concepts/collections-schemas"
                                         />
                                     </h3>
                                 </div>

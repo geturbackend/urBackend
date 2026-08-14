@@ -248,7 +248,7 @@ if (pageLoading) return <SettingsSkeleton />;
                             AI Integration (BYOK)
                             <SettingInfoTooltip
                                 title="AI Integration — Bring Your Own Key"
-                                description="Connect your personal Groq API key (starts with gsk_) to bypass urBackend's platform session cap. Free plan: 5 AI sessions/month. Pro: 20/month. With BYOK, your AI usage goes directly to your own Groq account — no urBackend cap applies. Keys are encrypted at rest and never returned by the API."
+                                description="Connect your personal Groq API key (starts with gsk_) to bypass platform session limits across your projects. With BYOK, all AI queries are billed directly to your Groq account rather than urBackend's plan quotas. Keys are encrypted at rest and never returned by the API."
                                 docsUrl="https://docs.ub.bitbros.in/guides/ai-byok"
                             />
                         </h3>

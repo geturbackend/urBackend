@@ -256,7 +256,7 @@ export default function IntegrationsSettings({
                             OAuth2 Providers
                             <SettingInfoTooltip
                                 title="OAuth2 Social Auth Providers"
-                                description="Enable GitHub or Google social login for your application's end-users. You need to register an OAuth app on each provider's developer console, then paste the Client ID and Client Secret here. The Callback URL is auto-generated and read-only — copy it into the provider's app settings. Credentials are encrypted at rest."
+                                description="Enable GitHub or Google social login for your application's end-users. Click a provider card to open its configuration modal, select your provider, and enter your Client ID and Client Secret. The Callback URL is auto-generated and read-only — copy it into your provider's developer console. Credentials are encrypted at rest."
                                 docsUrl="https://docs.ub.bitbros.in/guides/social-auth"
                             />
                         </h3>

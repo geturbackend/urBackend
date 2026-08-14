@@ -12,8 +12,10 @@ export function FormField({ label, hint, info, children }) {
     return (
         <div className="form-group">
             {label && (
-                <label className="form-label" style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-                    <span>{label}</span>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
+                    <label className="form-label" style={{ margin: 0, fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+                        {label}
+                    </label>
                     {info && (
                         <SettingInfoTooltip
                             title={info.title}
@@ -21,7 +23,7 @@ export function FormField({ label, hint, info, children }) {
                             docsUrl={info.docsUrl}
                         />
                     )}
-                </label>
+                </div>
             )}
             {children}
             {hint && <small style={{ display: 'block', marginTop: '5px', fontSize: '0.68rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>{hint}</small>}
