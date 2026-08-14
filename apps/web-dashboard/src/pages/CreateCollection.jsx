@@ -570,16 +570,24 @@ function CreateCollection() {
                     <h2 style={{ fontSize: '1.5rem', fontWeight: 600, margin: 0 }}>Create Collection</h2>
                     
                     {initialName !== 'users' && (
-                        <div className="flex bg-muted/30 p-1 rounded-lg">
+                        <div style={{ display: 'inline-flex', padding: '4px', background: 'var(--color-bg-input)', borderRadius: '8px', border: '1px solid var(--color-border)', gap: '4px' }}>
                             <button
                                 type="button"
                                 aria-pressed={mode === 'manual'}
                                 onClick={() => setMode('manual')}
-                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                                    mode === 'manual' 
-                                    ? 'bg-background text-foreground shadow-sm' 
-                                    : 'text-muted-foreground hover:text-foreground'
-                                }`}
+                                style={{
+                                    padding: '6px 16px',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 500,
+                                    borderRadius: '6px',
+                                    transition: 'all 0.2s ease',
+                                    background: mode === 'manual' ? 'var(--color-bg-card)' : 'transparent',
+                                    color: mode === 'manual' ? 'var(--color-text-main)' : 'var(--color-text-muted)',
+                                    border: '1px solid',
+                                    borderColor: mode === 'manual' ? 'var(--color-border)' : 'transparent',
+                                    boxShadow: mode === 'manual' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
+                                    cursor: 'pointer'
+                                }}
                             >
                                 Manual
                             </button>
@@ -587,11 +595,22 @@ function CreateCollection() {
                                 type="button"
                                 aria-pressed={mode === 'ai'}
                                 onClick={() => setMode('ai')}
-                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-                                    mode === 'ai' 
-                                    ? 'bg-blue-600 text-white shadow-sm' 
-                                    : 'text-muted-foreground hover:text-foreground'
-                                }`}
+                                style={{
+                                    padding: '6px 16px',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 500,
+                                    borderRadius: '6px',
+                                    transition: 'all 0.2s ease',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    background: mode === 'ai' ? 'var(--color-primary)' : 'transparent',
+                                    color: mode === 'ai' ? '#000' : 'var(--color-text-muted)',
+                                    border: '1px solid',
+                                    borderColor: mode === 'ai' ? 'var(--color-primary)' : 'transparent',
+                                    boxShadow: mode === 'ai' ? '0 2px 8px rgba(62,207,142,0.2)' : 'none',
+                                    cursor: 'pointer'
+                                }}
                             >
                                 <Wand2 size={14} /> AI-Assisted
                             </button>
