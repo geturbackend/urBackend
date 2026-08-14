@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from fastapi import APIRouter, HTTPException, Depends, Request
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 from typing import List, Union, Literal
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate
@@ -62,6 +62,12 @@ class CollectionCreatorResponse(BaseModel):
     schema_: list[CollectionSchema] | None = Field(default=None, alias="schema")
     
     model_config = ConfigDict(populate_by_name=True)
+
+    @model_validator(mode='after')
+    def check_schema_presence(self):
+        if self.type == "schema" and self.schema_ is None:
+            raise ValueError("schema_ must be provided when type is 'schema'")
+        return self
 
 @router.post("/query-builder", response_model=QueryResult)
 async def query_builder(request: QueryBuilderRequest, req: Request):

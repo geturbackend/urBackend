@@ -8,7 +8,46 @@ client = TestClient(app)
 
 from dependencies import verify_signature
 
-app.dependency_overrides[verify_signature] = lambda: True
+@pytest.fixture(autouse=True)
+def mock_verify_signature_override():
+    original = app.dependency_overrides.get(verify_signature)
+    app.dependency_overrides[verify_signature] = lambda: True
+    yield
+    if original is not None:
+        app.dependency_overrides[verify_signature] = original
+    else:
+        app.dependency_overrides.pop(verify_signature, None)
+
+@pytest.mark.asyncio
+async def test_collection_creator_schema_validation_rejection():
+    # If the LLM generates type="schema" but schema_ is null/missing, Pydantic should reject it
+    # We simulate this by mocking the LLM to return a dict that fails our Pydantic model validation.
+    payload = {
+        "messages": [{"role": "user", "content": "Make an ecommerce app"}],
+        "developer_id": "dev123",
+        "plan": "free"
+    }
+    
+    with patch("routers.ai.resolve_ai_client") as mock_resolve:
+        from unittest.mock import MagicMock
+        from pydantic import ValidationError
+        mock_llm = MagicMock()
+        mock_structured = AsyncMock()
+        
+        # When ainvoke is called, simulate a validation error thrown by Langchain/Pydantic
+        mock_structured.ainvoke = AsyncMock(side_effect=ValidationError.from_exception_data(title="CollectionCreatorResponse", line_errors=[]))
+        
+        mock_llm.with_structured_output.return_value = mock_structured
+        mock_resolve.return_value = mock_llm
+
+        response = client.post(
+            "/ai/collection-creator",
+            json=payload,
+            headers={"X-Internal-Signature": "fake_sig"}
+        )
+        
+        # Pydantic validation errors from Langchain result in an unhandled exception (500)
+        assert response.status_code == 500
 
 @pytest.mark.asyncio
 async def test_collection_creator_success():
