@@ -44,7 +44,17 @@ export default function AllowedDomainsForm({ project, projectId, onProjectUpdate
     const removeDomain = (d) => handleUpdate(domains.filter(x => x !== d));
 
     return (
-        <SettingsCard title="Allowed Domains (CORS)" icon={Globe} iconColor="#6366f1" accentColor="#6366f1">
+        <SettingsCard
+            title="Allowed Domains (CORS)"
+            icon={Globe}
+            iconColor="#6366f1"
+            accentColor="#6366f1"
+            info={{
+                title: 'Allowed Domains (CORS)',
+                description: "Restricts which browser origins are permitted to make requests using your Publishable API Key (pk_live_...). Add your frontend URL like https://myapp.com. Use * to allow all origins (not recommended for production). If this list is empty, pk_live requests from browsers will be blocked.",
+                docsUrl: 'https://docs.ub.bitbros.in/concepts/api-keys'
+            }}
+        >
             <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '0.75rem', lineHeight: 1.5 }}>
                 Restrict which websites can send requests using your <strong>Publishable API Key</strong>.{' '}
                 Use <code>*</code> to allow all, or specify like <code>https://example.com</code>.

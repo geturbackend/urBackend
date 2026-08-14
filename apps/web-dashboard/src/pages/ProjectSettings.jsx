@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import {
     Trash2, AlertTriangle, Settings, Database, Sliders
 } from "lucide-react";
+import SettingInfoTooltip from "../components/Settings/SettingInfoTooltip";
 import ConfirmationModal from "./ConfirmationModal";
 import SectionHeader from "../components/Dashboard/SectionHeader";
 import IntegrationsSettings from "../components/Settings/IntegrationsSettings";
@@ -224,7 +225,14 @@ export default function ProjectSettings() {
                         <SectionHeader title="General" />
                         <SettingsCard title="Project Info" icon={Settings} iconColor="var(--color-primary)">
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', alignItems: 'end' }}>
-                                <FormField label="Project Name">
+                                <FormField
+                                    label="Project Name"
+                                    info={{
+                                        title: 'Project Name',
+                                        description: 'The display name for this project shown across the dashboard and SDKs. Renaming does not affect your API keys or existing data.',
+                                        docsUrl: 'https://docs.ub.bitbros.in/introduction'
+                                    }}
+                                >
                                     <input
                                         type="text"
                                         className="input-field"
@@ -237,6 +245,11 @@ export default function ProjectSettings() {
                                 <FormField
                                     label="Site URL"
                                     hint={<>Used by Social Auth to redirect to <code>/auth/callback</code></>}
+                                    info={{
+                                        title: 'Site URL',
+                                        description: 'The root URL of your frontend application (e.g. https://myapp.com). After a successful social login (GitHub/Google), urBackend redirects users to <SiteUrl>/auth/callback. Leave blank if you are not using Social Auth.',
+                                        docsUrl: 'https://docs.ub.bitbros.in/guides/social-auth'
+                                    }}
                                 >
                                     <input
                                         type="url"
@@ -277,7 +290,14 @@ export default function ProjectSettings() {
                             <div className="glass-card" style={{ borderRadius: '8px', border: '1px solid rgba(234,84,85,0.25)', background: 'rgba(234,84,85,0.02)', padding: '1rem' }}>
                                 <div style={{ display: 'flex', gap: '7px', alignItems: 'center', marginBottom: '0.75rem', color: '#ea5455' }}>
                                     <AlertTriangle size={14} />
-                                    <h3 style={{ fontSize: '0.85rem', fontWeight: 600 }}>Delete Project</h3>
+                                    <h3 style={{ fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                                        Delete Project
+                                        <SettingInfoTooltip
+                                            title="Delete Project"
+                                            description="Permanently deletes this project and ALL associated data: every collection, every document, all uploaded files, auth users, API keys, and team memberships. This cannot be undone. Export your data before proceeding."
+                                            docsUrl="https://docs.ub.bitbros.in/concepts/collections-schemas"
+                                        />
+                                    </h3>
                                 </div>
                                 <p style={{ color: 'var(--color-text-muted)', marginBottom: '1rem', fontSize: '0.75rem', lineHeight: 1.5 }}>
                                     This will permanently delete <strong style={{ color: '#fff' }}>{project?.name}</strong> and all associated data including collections, files, and users. This action cannot be undone.

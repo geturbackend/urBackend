@@ -246,7 +246,18 @@ export default function MailTemplatesForm({ projectId, role }) {
                 />
             )}
 
-            <SettingsCard title="Mail Templates" icon={Mail} iconColor="#60a5fa" accentColor="#3b82f6" style={{ borderColor: 'rgba(59,130,246,0.25)' }}>
+            <SettingsCard
+                title="Mail Templates"
+                icon={Mail}
+                iconColor="#60a5fa"
+                accentColor="#3b82f6"
+                style={{ borderColor: 'rgba(59,130,246,0.25)' }}
+                info={{
+                    title: 'Mail Templates',
+                    description: "Create reusable email templates for transactional messages like OTPs, welcome emails, and notifications. Templates support Handlebars-style variable interpolation: {{variable}} (HTML-escaped) and {{{raw_variable}}} (unescaped). Reference a template by its slug when calling POST /api/mail/send. A live preview is shown as you edit.",
+                    docsUrl: 'https://docs.ub.bitbros.in/guides/mail-platform'
+                }}
+            >
                 <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.5, marginBottom: '10px' }}>
                     Create reusable subjects/bodies and preview how they render with variables. Use <code>{'{{name}}'}</code> (escaped) or <code>{'{{{name}}}'}</code> (raw) inside HTML.
                 </p>

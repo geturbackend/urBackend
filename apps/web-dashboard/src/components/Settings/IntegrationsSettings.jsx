@@ -11,6 +11,7 @@ import { inputStyle } from '../../utils/styles';
 import DatabaseConfigForm from './DatabaseConfigForm';
 import StorageConfigForm from './StorageConfigForm';
 import MailTemplatesForm from './MailTemplatesForm';
+import SettingInfoTooltip from './SettingInfoTooltip';
 
 /* ─── SVG Brand Icons ─── */
 const Icons = {
@@ -251,7 +252,14 @@ export default function IntegrationsSettings({
             <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                     <div>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>OAuth2 Providers</h3>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center' }}>
+                            OAuth2 Providers
+                            <SettingInfoTooltip
+                                title="OAuth2 Social Auth Providers"
+                                description="Enable GitHub or Google social login for your application's end-users. You need to register an OAuth app on each provider's developer console, then paste the Client ID and Client Secret here. The Callback URL is auto-generated and read-only — copy it into the provider's app settings. Credentials are encrypted at rest."
+                                docsUrl="https://docs.ub.bitbros.in/guides/social-auth"
+                            />
+                        </h3>
                         <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: '2px 0 0 0' }}>
                             Enable third-party social logins for your application users.
                         </p>
@@ -340,7 +348,14 @@ export default function IntegrationsSettings({
 
             {/* 3. MAIL SECTION */}
             <div>
-                <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 4px 0' }}>Mail Delivery & Templates</h3>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 4px 0', display: 'flex', alignItems: 'center' }}>
+                    Mail Delivery & Templates
+                    <SettingInfoTooltip
+                        title="Mail Delivery — Resend.com (BYOK)"
+                        description="Connect a Resend.com API key (starts with re_) to send transactional emails from your own domain. Set a default From address (e.g. 'Acme <info@acme.com>'). Without a custom key, urBackend's shared mail quota applies. The API key is encrypted at rest."
+                        docsUrl="https://docs.ub.bitbros.in/guides/mail-platform"
+                    />
+                </h3>
                 <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: '0 0 1rem 0' }}>
                     Transactional email providers and dynamic template engine.
                 </p>
@@ -409,7 +424,14 @@ export default function IntegrationsSettings({
 
             {/* 5. AI SERVICES (BYOK) */}
             <div>
-                <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 4px 0' }}>AI Services</h3>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 4px 0', display: 'flex', alignItems: 'center' }}>
+                    AI Services
+                    <SettingInfoTooltip
+                        title="AI Services — Project-level Groq BYOK"
+                        description="Provide a project-specific Groq API key to override the developer-level key for all AI operations in this project (schema suggestions, query generation, etc.). This key takes priority and is billed to your Groq account. Encrypted at rest; never returned by any API response."
+                        docsUrl="https://docs.ub.bitbros.in/guides/ai-byok#set-a-project-level-key"
+                    />
+                </h3>
                 <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: '0 0 1rem 0' }}>
                     Project-level overrides for AI capabilities.
                 </p>

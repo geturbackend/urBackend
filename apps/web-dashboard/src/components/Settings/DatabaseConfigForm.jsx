@@ -91,7 +91,17 @@ export default function DatabaseConfigForm({ project, projectId, onProjectUpdate
     };
 
     return (
-        <SettingsCard title="Database (MongoDB)" icon={Database} iconColor="var(--color-primary)" accentColor="var(--color-primary)">
+        <SettingsCard
+            title="Database (MongoDB)"
+            icon={Database}
+            iconColor="var(--color-primary)"
+            accentColor="var(--color-primary)"
+            info={{
+                title: 'Database — Bring Your Own Database (BYOD)',
+                description: "Connect your own MongoDB Atlas cluster (or any MongoDB-compatible URI) as the data store for this project. Both the Dashboard API and Public API server IPs must be whitelisted in Atlas. Once connected, all collection data is stored in your own cluster — urBackend becomes a headless layer. The connection URI is encrypted at rest.",
+                docsUrl: 'https://docs.ub.bitbros.in/guides/database#connect-your-own-mongodb-byod'
+            }}
+        >
             {showRemoveModal && (
                 <ConfirmationModal
                     open={showRemoveModal}

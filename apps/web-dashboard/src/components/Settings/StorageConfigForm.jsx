@@ -76,7 +76,17 @@ export default function StorageConfigForm({ project, projectId, onProjectUpdate,
     };
 
     return (
-        <SettingsCard title="Storage (BYOS)" icon={HardDrive} iconColor="#34d399" accentColor="#34d399">
+        <SettingsCard
+            title="Storage (BYOS)"
+            icon={HardDrive}
+            iconColor="#34d399"
+            accentColor="#34d399"
+            info={{
+                title: 'Storage — Bring Your Own Storage (BYOS)',
+                description: "Connect your own cloud storage bucket for file uploads. Supported providers: Supabase Storage, AWS S3, Cloudflare R2, and Google Cloud Storage. urBackend proxies file operations through the Public API (/api/storage) using signed URLs. Your bucket credentials are encrypted at rest.",
+                docsUrl: 'https://docs.ub.bitbros.in/guides/storage'
+            }}
+        >
             {showRemoveModal && (
                 <ConfirmationModal
                     open={showRemoveModal}
