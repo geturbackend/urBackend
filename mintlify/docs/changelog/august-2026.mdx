@@ -3,6 +3,16 @@ title: August 2026
 description: What's new in urBackend — new features, improvements, and fixes.
 ---
 
+<Update label="2026-08-14" description="Week of 2026-08-11–2026-08-14" tags={["Improvement", "Fix"]}>
+## Improvements
+
+- **Settings info popovers with docs links** — Every settings form across the dashboard (project settings, account settings, database, storage, allowed domains, mail templates, integrations, PATs) now has an `i` button next to each field that opens a popover with a plain-language description and a **Learn more** link to the relevant docs page. Click the icon to read what the setting does before you change it. (by [@yash-pouranik](https://github.com/yash-pouranik) in [#389](https://github.com/geturbackend/urBackend/pull/389))
+
+## Bug fixes
+
+- **SDK cross-domain auth** — `@urbackend/sdk` `0.4.7` and `@urbackend/react` `0.2.7` fix silent session refresh when the dashboard and API are on different domains. The SDK now persists the access token and refresh token in `localStorage` (`ub_auth_token`, `ub_refresh_token`) and sends the refresh token in the `x-refresh-token` header instead of relying on an HTTP-only cookie, so sessions survive page reloads on cross-origin deployments where third-party cookies are blocked. `auth.setToken(accessToken, refreshToken)` now accepts an optional refresh token; `auth.getRefreshToken()` and `auth.setRefreshToken()` are exposed for advanced use. No app changes are required — upgrade both packages together. (by [@yash-pouranik](https://github.com/yash-pouranik) in [#389](https://github.com/geturbackend/urBackend/pull/389))
+</Update>
+
 <Update label="2026-08-10" description="Week of 2026-08-04–2026-08-10" tags={["Feature", "Improvement", "Fix"]}>
 ## New features
 
