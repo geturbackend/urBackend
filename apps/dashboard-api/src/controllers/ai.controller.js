@@ -260,8 +260,10 @@ const collectionCreator = async (req, res, next) => {
                            type: f.type,
                            required: !!f.required
                        };
-                       if (f.type === 'Ref' && f.ref) {
-                           fieldDef.ref = f.ref;
+                       if (f.type === 'Ref') {
+                           fieldDef.ref = f.ref || 'users';
+                       } else if (f.type === 'Array') {
+                           fieldDef.items = f.items || { type: 'String' };
                        }
                        return fieldDef;
                     });

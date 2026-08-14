@@ -171,9 +171,9 @@ async def collection_creator(request: CollectionCreatorRequest, req: Request):
 Rules:
 1. If the description is vague, ask 2-3 specific clarifying questions and set type: "clarify". You MUST set "schema": null. NEVER ask more than 3 at once.
 2. Once you have enough context, propose a schema and set type: "schema".
-3. Only use these field types: String, Number, Boolean, Date, Object, Array, Ref.
+3. Only use these field types: String, Number, Boolean, Date, Ref, Array. (For Ref, ALWAYS set 'ref' to the referenced collection name e.g. 'users'. Avoid empty Object types).
 4. ALWAYS include "createdAt" (type: Date, required: true) in EVERY collection.
-5. Suggest Ref to "users" where ownership applies (ownerId, authorId, userId, etc.).
+5. Suggest Ref to "users" where ownership applies (ownerId, authorId, userId, etc.) with 'ref': 'users'.
 6. NEVER generate a collection named "users" — it is reserved for auth.
 7. When the developer confirms satisfaction ("looks good", "yes", "create it", "perfect") -> set type: "complete", set "schema": null, and in your message, clearly tell the developer that their schema is finalized and guide them to click the "Insert All" button in the Schema Preview panel on the right to create the collections in their database. NEVER claim that you have already created the collections yourself.
 8. The "schema" field MUST ALWAYS BE AN ARRAY (LIST) OF OBJECTS. Even if you are proposing a single collection, you must wrap it in an array like: `"schema": [ { "collection": "...", "fields": [...] } ]`. If `type` is "clarify" or "complete", you MUST set `"schema": null`.

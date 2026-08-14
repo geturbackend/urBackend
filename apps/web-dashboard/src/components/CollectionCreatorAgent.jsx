@@ -83,10 +83,16 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
             type: f.type,
             required: !!f.required
           };
-          if (f.unique !== undefined) fieldDef.unique = !!f.unique;
-          if (f.ref) fieldDef.ref = f.ref;
-          if (f.fields) fieldDef.fields = mapSchemaFields(f.fields);
-          if (f.items) fieldDef.items = mapSchemaFields(f.items);
+          if (f.type === 'Array') {
+            fieldDef.items = f.items ? (typeof f.items === 'object' ? f.items : { type: f.items }) : { type: 'String' };
+          } else if (f.type === 'Object') {
+            fieldDef.fields = f.fields?.length ? mapSchemaFields(f.fields) : [{ key: 'data', type: 'String', required: false }];
+          } else if (f.type === 'Ref') {
+            fieldDef.ref = f.ref || 'users';
+          }
+          if (f.unique !== undefined && !['Array', 'Object', 'Ref'].includes(f.type)) {
+            fieldDef.unique = !!f.unique;
+          }
           return fieldDef;
         });
       };
