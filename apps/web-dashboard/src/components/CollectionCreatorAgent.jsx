@@ -161,27 +161,20 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-[72vh] min-h-[560px] font-sans">
+    <div className="flex flex-col lg:flex-row gap-8 h-[calc(100vh-170px)] min-h-[580px] font-sans">
       
-      {/* Chat Workspace - Left */}
-      <div 
-        className="flex flex-col flex-1 h-full rounded-xl overflow-hidden relative"
-        style={{ 
-          backgroundColor: 'var(--color-bg-card)', 
-          border: '1px solid var(--color-border)',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-      >
-        {/* Messages Container */}
+      {/* Open Chat Stream & Floating Composer - Left */}
+      <div className="flex flex-col flex-1 h-full relative" style={{ display: 'flex', flexDirection: 'column' }}>
+        
+        {/* Messages Stream (No container box) */}
         <div 
           className="flex-1 overflow-y-auto custom-scrollbar" 
           style={{ 
-            padding: '1.5rem', 
+            paddingRight: '1rem',
+            paddingBottom: '1rem',
             display: 'flex', 
             flexDirection: 'column', 
-            gap: '1.25rem',
-            backgroundColor: 'var(--color-bg-main)'
+            gap: '1.25rem'
           }}
         >
           {messages.map((msg, idx) => (
@@ -189,16 +182,16 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
               <div 
                 style={{ 
                   maxWidth: '85%', 
-                  padding: '12px 18px', 
-                  fontSize: '0.875rem',
+                  padding: '14px 20px', 
+                  fontSize: '0.9rem',
                   lineHeight: '1.6',
-                  borderRadius: '16px',
-                  borderBottomRightRadius: msg.role === 'user' ? '4px' : '16px',
-                  borderBottomLeftRadius: msg.role === 'assistant' ? '4px' : '16px',
-                  backgroundColor: msg.role === 'user' ? 'var(--color-primary)' : 'var(--color-bg-input)',
+                  borderRadius: '18px',
+                  borderBottomRightRadius: msg.role === 'user' ? '4px' : '18px',
+                  borderBottomLeftRadius: msg.role === 'assistant' ? '4px' : '18px',
+                  backgroundColor: msg.role === 'user' ? 'var(--color-primary)' : 'var(--color-bg-card)',
                   color: msg.role === 'user' ? '#000' : 'var(--color-text-main)',
                   border: msg.role === 'assistant' ? '1px solid var(--color-border)' : 'none',
-                  boxShadow: msg.role === 'assistant' ? '0 2px 8px rgba(0,0,0,0.04)' : '0 4px 14px rgba(62,207,142,0.2)',
+                  boxShadow: msg.role === 'assistant' ? '0 2px 10px rgba(0,0,0,0.06)' : '0 4px 14px rgba(62,207,142,0.25)',
                   whiteSpace: 'pre-wrap'
                 }}
               >
@@ -210,9 +203,9 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
             <div className="flex justify-start">
               <div 
                 style={{ 
-                  backgroundColor: 'var(--color-bg-input)', 
-                  padding: '12px 18px', 
-                  borderRadius: '16px', 
+                  backgroundColor: 'var(--color-bg-card)', 
+                  padding: '12px 20px', 
+                  borderRadius: '18px', 
                   borderBottomLeftRadius: '4px', 
                   border: '1px solid var(--color-border)',
                   display: 'flex',
@@ -221,7 +214,7 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
                 }}
               >
                 <div className="spinner-small" style={{ width: '14px', height: '14px', borderTopColor: 'var(--color-primary)' }}></div>
-                <span style={{ fontSize: '0.825rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
                   AI is designing your schema...
                 </span>
               </div>
@@ -230,24 +223,18 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
           <div ref={messagesEndRef} />
         </div>
         
-        {/* Anchored Composer - Bottom */}
-        <div 
-          style={{ 
-            padding: '1rem 1.25rem 1.25rem', 
-            borderTop: '1px solid var(--color-border)', 
-            backgroundColor: 'var(--color-bg-card)',
-            flexShrink: 0
-          }}
-        >
+        {/* Floating Bottom Composer */}
+        <div style={{ marginTop: 'auto', paddingTop: '12px', flexShrink: 0 }}>
           <div 
             style={{
               position: 'relative',
               display: 'flex',
               alignItems: 'flex-end',
-              backgroundColor: 'var(--color-bg-input)',
+              backgroundColor: 'var(--color-bg-card)',
               border: '1px solid var(--color-border)',
-              borderRadius: '16px',
-              padding: '8px 12px 8px 16px',
+              borderRadius: '20px',
+              padding: '10px 14px 10px 20px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
               transition: 'border-color 0.2s ease, box-shadow 0.2s ease'
             }}
           >
@@ -266,10 +253,10 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
                 border: 'none',
                 outline: 'none',
                 color: 'var(--color-text-main)',
-                fontSize: '0.875rem',
+                fontSize: '0.9rem',
                 lineHeight: '1.5',
                 resize: 'none',
-                maxHeight: '120px',
+                maxHeight: '130px',
                 minHeight: '26px',
                 padding: '4px 0'
               }}
@@ -282,17 +269,17 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: '34px',
-                height: '34px',
-                borderRadius: '10px',
-                backgroundColor: (inputValue.trim() && aiStatus !== 'loading' && iterationsLeft !== 0) ? 'var(--color-primary)' : 'transparent',
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                backgroundColor: (inputValue.trim() && aiStatus !== 'loading' && iterationsLeft !== 0) ? 'var(--color-primary)' : 'var(--color-bg-input)',
                 color: (inputValue.trim() && aiStatus !== 'loading' && iterationsLeft !== 0) ? '#000' : 'var(--color-text-muted)',
-                border: 'none',
+                border: '1px solid var(--color-border)',
                 cursor: (inputValue.trim() && aiStatus !== 'loading' && iterationsLeft !== 0) ? 'pointer' : 'default',
-                opacity: (!inputValue.trim() || aiStatus === 'loading' || iterationsLeft === 0) ? 0.35 : 1,
+                opacity: (!inputValue.trim() || aiStatus === 'loading' || iterationsLeft === 0) ? 0.4 : 1,
                 transition: 'all 0.2s ease',
                 flexShrink: 0,
-                marginLeft: '8px'
+                marginLeft: '10px'
               }}
               title="Send message (Enter)"
             >
@@ -303,16 +290,16 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
         </div>
       </div>
 
-      {/* Schema Preview Panel - Right */}
+      {/* Floating Schema Preview Panel - Right */}
       <div 
-        className="flex flex-col w-full lg:w-[48%] h-full rounded-xl overflow-hidden shadow-sm transition-all" 
+        className="flex flex-col w-full lg:w-[48%] h-full rounded-2xl overflow-hidden shadow-sm transition-all" 
         style={{ 
           backgroundColor: 'var(--color-bg-card)', 
           border: '1px solid var(--color-border)',
           display: 'flex'
         }}
       >
-        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{ padding: '1.1rem 1.5rem', borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
           <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
             <Sparkles size={16} style={{ color: 'var(--color-primary)' }} /> Schema Preview
           </h3>
@@ -321,7 +308,7 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
               onClick={handleInsertAll}
               disabled={isInserting}
               className="btn btn-primary"
-              style={{ opacity: isInserting ? 0.7 : 1, padding: '6px 16px', fontSize: '0.85rem' }}
+              style={{ opacity: isInserting ? 0.7 : 1, padding: '6px 18px', fontSize: '0.85rem', borderRadius: '8px' }}
             >
               {isInserting ? (
                 <>
@@ -333,7 +320,7 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
           )}
         </div>
         
-        <div className="flex-1 overflow-y-auto custom-scrollbar" style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)' }}>
+        <div className="flex-1 overflow-y-auto custom-scrollbar" style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-card)' }}>
           {!schema || schema.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center transition-all" style={{ color: 'var(--color-text-muted)', minHeight: '300px' }}>
               <div style={{ padding: '20px', borderRadius: '50%', backgroundColor: 'var(--color-bg-input)', border: '1px solid var(--color-border)', marginBottom: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.05)' }}>
@@ -347,7 +334,7 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
           ) : (
             <div className="space-y-6">
               {insertResults && (
-                <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '8px', animation: 'fadeIn 0.3s ease-out' }}>
+                <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '10px', animation: 'fadeIn 0.3s ease-out' }}>
                   <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '12px' }}>Insert Results</p>
                   <ul className="space-y-3">
                     {insertResults.map((r, i) => (
@@ -364,8 +351,8 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
               )}
               
               {schema.map((col, idx) => (
-                <div key={idx} style={{ backgroundColor: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: '10px', overflow: 'hidden', animation: 'fadeIn 0.4s ease-out' }} className="transition-all hover:border-white/20 shadow-sm">
-                  <div style={{ backgroundColor: 'var(--color-bg-input)', padding: '12px 18px', borderBottom: '1px solid var(--color-border)', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-main)', fontFamily: 'monospace', display: 'flex', alignItems: 'center' }}>
+                <div key={idx} style={{ backgroundColor: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '12px', overflow: 'hidden', animation: 'fadeIn 0.4s ease-out' }} className="transition-all hover:border-white/20 shadow-sm">
+                  <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--color-border)', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-main)', fontFamily: 'monospace', display: 'flex', alignItems: 'center' }}>
                     <span style={{ color: 'var(--color-primary)', marginRight: '10px', fontSize: '1.1rem' }}>⛁</span>
                     {col.collection}
                   </div>
@@ -373,11 +360,11 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
                     <table style={{ width: '100%', textAlign: 'left', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
                       <tbody style={{ display: 'block', width: '100%' }}>
                         {col.fields?.map((f, i) => (
-                          <tr key={i} style={{ display: 'flex', width: '100%', borderBottom: i < col.fields.length - 1 ? '1px solid var(--color-border)' : 'none', backgroundColor: 'var(--color-bg-main)' }}>
+                          <tr key={i} style={{ display: 'flex', width: '100%', borderBottom: i < col.fields.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
                             <td style={{ padding: '12px 18px', fontFamily: 'monospace', color: 'var(--color-text-main)', width: '50%', borderRight: '1px solid var(--color-border)' }}>{f.name}</td>
                             <td style={{ padding: '12px 18px', color: 'var(--color-text-muted)', width: '50%', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                               <span className="badge" style={{ 
-                                backgroundColor: 'var(--color-bg-input)', 
+                                backgroundColor: 'var(--color-bg-card)', 
                                 border: '1px solid var(--color-border)',
                                 color: 'var(--color-text-main)',
                                 fontSize: '0.7rem',

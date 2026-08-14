@@ -556,164 +556,165 @@ function CreateCollection() {
     };
 
     return (
-        <div className="container" style={{ maxWidth: mode === 'ai' ? '1280px' : '900px', transition: 'max-width 0.2s ease' }}>
-            <button
-                onClick={() => navigate(`/project/${projectId}`)}
-                className="btn btn-ghost"
-                style={{ marginBottom: '1rem', paddingLeft: 0 }}
-            >
-                <ArrowLeft size={18} /> Cancel & Back
-            </button>
-
-            <div className="card" style={{ padding: mode === 'ai' ? '1.5rem' : '2rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: mode === 'ai' ? '1.25rem' : '2rem' }}>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 600, margin: 0 }}>Create Collection</h2>
-                    
-                    {initialName !== 'users' && (
-                        <div style={{ display: 'inline-flex', padding: '4px', background: 'var(--color-bg-input)', borderRadius: '8px', border: '1px solid var(--color-border)', gap: '4px' }}>
-                            <button
-                                type="button"
-                                aria-pressed={mode === 'manual'}
-                                onClick={() => setMode('manual')}
-                                style={{
-                                    padding: '6px 16px',
-                                    fontSize: '0.85rem',
-                                    fontWeight: 500,
-                                    borderRadius: '6px',
-                                    transition: 'all 0.2s ease',
-                                    background: mode === 'manual' ? 'var(--color-bg-card)' : 'transparent',
-                                    color: mode === 'manual' ? 'var(--color-text-main)' : 'var(--color-text-muted)',
-                                    border: '1px solid',
-                                    borderColor: mode === 'manual' ? 'var(--color-border)' : 'transparent',
-                                    boxShadow: mode === 'manual' ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Manual
-                            </button>
-                            <button
-                                type="button"
-                                aria-pressed={mode === 'ai'}
-                                onClick={() => setMode('ai')}
-                                style={{
-                                    padding: '6px 16px',
-                                    fontSize: '0.85rem',
-                                    fontWeight: 500,
-                                    borderRadius: '6px',
-                                    transition: 'all 0.2s ease',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    background: mode === 'ai' ? 'var(--color-primary)' : 'transparent',
-                                    color: mode === 'ai' ? '#000' : 'var(--color-text-muted)',
-                                    border: '1px solid',
-                                    borderColor: mode === 'ai' ? 'var(--color-primary)' : 'transparent',
-                                    boxShadow: mode === 'ai' ? '0 2px 8px rgba(62,207,142,0.2)' : 'none',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                <Wand2 size={14} /> AI-Assisted
-                            </button>
-                        </div>
-                    )}
+        <div className="container" style={{ maxWidth: mode === 'ai' ? '1380px' : '840px', transition: 'max-width 0.2s ease', paddingBottom: '3rem' }}>
+            {/* Top Navigation & Mode Switch Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem', gap: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <button
+                        onClick={() => navigate(`/project/${projectId}`)}
+                        className="btn btn-ghost"
+                        style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)', borderRadius: '8px' }}
+                    >
+                        <ArrowLeft size={16} /> Cancel & Back
+                    </button>
+                    <div style={{ height: '16px', width: '1px', backgroundColor: 'var(--color-border)' }} />
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0, color: 'var(--color-text-main)' }}>
+                        Create Collection
+                    </h2>
                 </div>
-
-                {mode === 'manual' ? (
-                    <>
-                        <div className="form-group">
-                    <label className="form-label">Name</label>
-                    <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        disabled={initialName === 'users'}
-                        className="input-field"
-                        style={{
-                            cursor: initialName === 'users' ? 'not-allowed' : 'text',
-                            opacity: initialName === 'users' ? 0.7 : 1
-                        }}
-                        placeholder="e.g. users, products, orders"
-                        autoFocus={initialName !== 'users'}
-                    />
-                    <small style={{ color: 'var(--color-text-muted)', marginTop: '5px', display: 'block' }}>
-                        This will be the name of your collection in the database.
-                    </small>
-                </div>
-
-                <div style={{ marginTop: '2.5rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Fields</h3>
+                
+                {initialName !== 'users' && (
+                    <div style={{ display: 'inline-flex', padding: '3px', background: 'var(--color-bg-card)', borderRadius: '10px', border: '1px solid var(--color-border)', gap: '4px' }}>
                         <button
                             type="button"
-                            onClick={addField}
-                            className="btn btn-secondary"
-                            style={{ fontSize: '0.85rem' }}
+                            aria-pressed={mode === 'manual'}
+                            onClick={() => setMode('manual')}
+                            style={{
+                                padding: '6px 16px',
+                                fontSize: '0.85rem',
+                                fontWeight: 500,
+                                borderRadius: '7px',
+                                transition: 'all 0.2s ease',
+                                background: mode === 'manual' ? 'var(--color-bg-input)' : 'transparent',
+                                color: mode === 'manual' ? 'var(--color-text-main)' : 'var(--color-text-muted)',
+                                border: '1px solid',
+                                borderColor: mode === 'manual' ? 'var(--color-border)' : 'transparent',
+                                cursor: 'pointer'
+                            }}
                         >
-                            <Plus size={14} /> Add Field
+                            Manual
+                        </button>
+                        <button
+                            type="button"
+                            aria-pressed={mode === 'ai'}
+                            onClick={() => setMode('ai')}
+                            style={{
+                                padding: '6px 16px',
+                                fontSize: '0.85rem',
+                                fontWeight: 500,
+                                borderRadius: '7px',
+                                transition: 'all 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                background: mode === 'ai' ? 'var(--color-primary)' : 'transparent',
+                                color: mode === 'ai' ? '#000' : 'var(--color-text-muted)',
+                                border: '1px solid',
+                                borderColor: mode === 'ai' ? 'var(--color-primary)' : 'transparent',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <Wand2 size={14} /> AI-Assisted
                         </button>
                     </div>
-
-                    <div style={{
-                        display: 'flex', alignItems: 'center', gap: '8px',
-                        padding: '6px 12px 6px 38px', marginBottom: '4px',
-                        fontSize: '0.75rem', fontWeight: 600,
-                        color: 'var(--color-text-muted)', letterSpacing: '0.05em'
-                    }}>
-                        <span style={{ flex: 2 }}>NAME</span>
-                        <span style={{ flex: 1 }}>TYPE</span>
-                        <span style={{ width: '24px', textAlign: 'center' }}>REQ</span>
-                        <span style={{ width: '24px', textAlign: 'center' }}>UNIQ</span>
-                        <span style={{ width: '30px' }}></span>
-                    </div>
-
-                    <div style={{
-                        border: '1px solid var(--color-border)',
-                        borderRadius: '8px',
-                        overflow: 'hidden',
-                        background: 'var(--color-bg-input)'
-                    }}>
-                        {fields.map((field, index) => (
-                            <FieldRow
-                                key={field._id}
-                                field={field}
-                                index={index}
-                                depth={1}
-                                collections={collections}
-                                collectionsLoading={collectionsLoading}
-                                collectionsError={collectionsError}
-                                onChange={handleFieldChange}
-                                onRemove={removeField}
-                            />
-                        ))}
-                    </div>
-
-                    <div style={{ marginTop: '10px', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-                        Tip: We automatically add a unique <code>_id</code> field to every document.
-                        {' '}Use <strong>Object</strong> for nested data, <strong>Array</strong> for lists, and <strong>Ref</strong> to link collections.
-                    </div>
-                </div>
-
-                <div style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end' }}>
-                    <button
-                        onClick={handleSubmit}
-                        className="btn btn-primary"
-                        disabled={loading}
-                        style={{ paddingLeft: '2rem', paddingRight: '2rem' }}
-                    >
-                        {loading ? 'Creating...' : 'Save'}
-                    </button>
-                </div>
-                </>
-                ) : (
-                    <CollectionCreatorAgent 
-                        projectId={projectId} 
-                        onInsertAll={() => {
-                            completeStep('create_collection');
-                            navigate(`/project/${projectId}/database`);
-                        }} 
-                    />
                 )}
             </div>
+
+            {mode === 'manual' ? (
+                <div style={{ backgroundColor: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: '14px', padding: '2rem', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+                    <div className="form-group">
+                        <label className="form-label">Name</label>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            disabled={initialName === 'users'}
+                            className="input-field"
+                            style={{
+                                cursor: initialName === 'users' ? 'not-allowed' : 'text',
+                                opacity: initialName === 'users' ? 0.7 : 1
+                            }}
+                            placeholder="e.g. users, products, orders"
+                            autoFocus={initialName !== 'users'}
+                        />
+                        <small style={{ color: 'var(--color-text-muted)', marginTop: '5px', display: 'block' }}>
+                            This will be the name of your collection in the database.
+                        </small>
+                    </div>
+
+                    <div style={{ marginTop: '2.5rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Fields</h3>
+                            <button
+                                type="button"
+                                onClick={addField}
+                                className="btn btn-secondary"
+                                style={{ fontSize: '0.85rem' }}
+                            >
+                                <Plus size={14} /> Add Field
+                            </button>
+                        </div>
+
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            padding: '6px 12px 6px 38px', marginBottom: '4px',
+                            fontSize: '0.75rem', fontWeight: 600,
+                            color: 'var(--color-text-muted)', letterSpacing: '0.05em'
+                        }}>
+                            <span style={{ flex: 2 }}>NAME</span>
+                            <span style={{ flex: 1 }}>TYPE</span>
+                            <span style={{ width: '24px', textAlign: 'center' }}>REQ</span>
+                            <span style={{ width: '24px', textAlign: 'center' }}>UNIQ</span>
+                            <span style={{ width: '30px' }}></span>
+                        </div>
+
+                        <div style={{
+                            border: '1px solid var(--color-border)',
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            background: 'var(--color-bg-input)'
+                        }}>
+                            {fields.map((field, index) => (
+                                <FieldRow
+                                    key={field._id}
+                                    field={field}
+                                    index={index}
+                                    depth={1}
+                                    collections={collections}
+                                    collectionsLoading={collectionsLoading}
+                                    collectionsError={collectionsError}
+                                    onChange={handleFieldChange}
+                                    onRemove={removeField}
+                                />
+                            ))}
+                        </div>
+
+                        <div style={{ marginTop: '10px', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                            Tip: We automatically add a unique <code>_id</code> field to every document.
+                            {' '}Use <strong>Object</strong> for nested data, <strong>Array</strong> for lists, and <strong>Ref</strong> to link collections.
+                        </div>
+                    </div>
+
+                    <div style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end' }}>
+                        <button
+                            onClick={handleSubmit}
+                            className="btn btn-primary"
+                            disabled={loading}
+                            style={{ paddingLeft: '2rem', paddingRight: '2rem' }}
+                        >
+                            {loading ? 'Creating...' : 'Save'}
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <CollectionCreatorAgent 
+                    projectId={projectId} 
+                    onInsertAll={() => {
+                        completeStep('create_collection');
+                        navigate(`/project/${projectId}/database`);
+                    }} 
+                />
+            )}
         </div>
     );
 }
