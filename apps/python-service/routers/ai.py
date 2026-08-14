@@ -140,7 +140,10 @@ Schema Fields: {schema}"""
         logger.error("[Trace: %s] ⏱️ AI Query Builder request timed out after 15s for developer_id=%s", trace_id, request.developer_id, exc_info=True)
         raise HTTPException(status_code=504, detail="AI request timed out") from e
     except Exception as e:
+        error_name = e.__class__.__name__
         logger.error("[Trace: %s] ❌ AI Query Builder unhandled failure for developer_id=%s: %s", trace_id, request.developer_id, e, exc_info=True)
+        if "BadRequest" in error_name or "Validation" in error_name:
+            raise HTTPException(status_code=400, detail="The AI generated an invalid query format. Please rephrase or simplify your prompt.") from e
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 @router.post("/collection-creator", response_model=CollectionCreatorResponse)
@@ -210,6 +213,6 @@ Rules:
         error_name = e.__class__.__name__
         logger.error("[Trace: %s] ❌ AI Collection Creator unhandled failure for developer_id=%s: %s", trace_id, request.developer_id, e, exc_info=True)
         if "BadRequest" in error_name or "Validation" in error_name:
-            raise HTTPException(status_code=400, detail=f"AI generation failed validation: {str(e)}") from e
+            raise HTTPException(status_code=400, detail="The AI generated an invalid response format. Please rephrase or simplify your prompt.") from e
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
