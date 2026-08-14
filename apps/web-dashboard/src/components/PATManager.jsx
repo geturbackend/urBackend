@@ -3,6 +3,7 @@ import api from '../utils/api';
 import toast from 'react-hot-toast';
 import { Key, Trash2, Plus, Copy, CheckCircle, AlertTriangle } from 'lucide-react';
 import ConfirmationModal from '../pages/ConfirmationModal';
+import SettingInfoTooltip from './Settings/SettingInfoTooltip';
 
 const formatDate = (dateString) => {
     if (!dateString) return 'Never';
@@ -154,7 +155,14 @@ export default function PATManager() {
                         <Key size={20} />
                     </div>
                     <div>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '2px' }}>Personal Access Tokens</h3>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '2px', display: 'flex', alignItems: 'center' }}>
+                            Personal Access Tokens
+                            <SettingInfoTooltip
+                                title="Personal Access Tokens (PAT)"
+                                description="Long-lived authentication tokens for the urBackend CLI (@urbackend/cli). Each token is prefixed with ubpat_ and is shown only once on creation — store it securely. You can set a TTL of 7, 30, 90, or 365 days. Use 'ub login' in your terminal with a PAT to authenticate the CLI."
+                                docsUrl="https://docs.ub.bitbros.in/cli/overview"
+                            />
+                        </h3>
                         <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Generate tokens to securely authenticate with the urBackend CLI.</p>
                     </div>
                 </div>

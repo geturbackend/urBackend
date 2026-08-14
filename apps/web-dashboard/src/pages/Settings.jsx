@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Lock, Trash2, AlertTriangle, Save, CheckCircle, Cpu, Eye, EyeOff } from 'lucide-react';
+import SettingInfoTooltip from '../components/Settings/SettingInfoTooltip';
 import ConfirmationModal from './ConfirmationModal';
 import PATManager from '../components/PATManager';
 
@@ -190,7 +191,14 @@ if (pageLoading) return <SettingsSkeleton />;
                         <Lock size={20} />
                     </div>
                     <div>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '2px' }}>Change Password</h3>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '2px', display: 'flex', alignItems: 'center' }}>
+                            Change Password
+                            <SettingInfoTooltip
+                                title="Change Password"
+                                description="Update your developer account password. You'll need to enter your current password to confirm the change. Use a strong, unique password to protect your account and all associated projects."
+                                docsUrl="https://docs.ub.bitbros.in/security"
+                            />
+                        </h3>
                         <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Secure your account with a strong password.</p>
                     </div>
                 </div>
@@ -236,7 +244,14 @@ if (pageLoading) return <SettingsSkeleton />;
                         <Cpu size={20} />
                     </div>
                     <div>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '2px' }}>AI Integration (BYOK)</h3>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '2px', display: 'flex', alignItems: 'center' }}>
+                            AI Integration (BYOK)
+                            <SettingInfoTooltip
+                                title="AI Integration — Bring Your Own Key"
+                                description="Connect your personal Groq API key (starts with gsk_) to bypass platform session limits across your projects. With BYOK, all AI queries are billed directly to your Groq account rather than urBackend's plan quotas. Keys are encrypted at rest and never returned by the API."
+                                docsUrl="https://docs.ub.bitbros.in/guides/ai-byok"
+                            />
+                        </h3>
                         <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>Bring Your Own Key to bypass platform rate limits for AI queries.</p>
                     </div>
                 </div>
@@ -307,7 +322,14 @@ if (pageLoading) return <SettingsSkeleton />;
                         <AlertTriangle size={20} />
                     </div>
                     <div>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '2px' }}>Danger Zone</h3>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '2px', display: 'flex', alignItems: 'center' }}>
+                            Danger Zone
+                            <SettingInfoTooltip
+                                title="Delete Account"
+                                description="Permanently and irreversibly deletes your developer account. All projects, API keys, collections, storage files, and team memberships will be immediately erased. This action cannot be undone — make sure you've exported any data you need before proceeding."
+                                docsUrl="https://docs.ub.bitbros.in/security"
+                            />
+                        </h3>
                         <p style={{ fontSize: '0.85rem', color: '#ea5455', opacity: 0.8 }}>Irreversible account actions.</p>
                     </div>
                 </div>
