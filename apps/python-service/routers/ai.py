@@ -89,7 +89,7 @@ async def query_builder(request: QueryBuilderRequest, req: Request):
         )
 
         # Enforce structured output based on our Pydantic schema
-        structured_llm = llm.with_structured_output(QueryResult)
+        structured_llm = llm.with_structured_output(QueryResult, method="json_mode")
 
         # Build the system prompt
         system_prompt = """You are a highly intelligent database query builder for a MongoDB-based BaaS called urBackend.
@@ -164,7 +164,7 @@ async def collection_creator(request: CollectionCreatorRequest, req: Request):
             encrypted_byok=request.encrypted_byok.model_dump() if request.encrypted_byok else None,
         )
 
-        structured_llm = llm.with_structured_output(CollectionCreatorResponse)
+        structured_llm = llm.with_structured_output(CollectionCreatorResponse, method="json_mode")
 
         system_prompt = """You are a MongoDB schema designer for urBackend, a Backend-as-a-Service platform.
 
