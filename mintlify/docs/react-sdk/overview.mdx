@@ -8,7 +8,7 @@ The `@urbackend/react` SDK provides everything you need to build secure, scalabl
 ## Features
 
 - **Pre-built Auth UI**: A beautiful, customizable `<UrAuth />` component for login/signup (email/password & social).
-- **Session Management**: Automatically persists tokens to `localStorage` and handles silent background refreshes.
+- **Session Management**: Automatically persists the access token (`ub_auth_token`) and refresh token (`ub_refresh_token`) to `localStorage`, and handles silent background refreshes over the `x-refresh-token` header so cross-domain setups work without shared cookies.
 - **Protected Routing**: Simple `<ProtectedRoute>` and `<GuestRoute>` wrappers to secure your pages.
 - **Customizable UI**: Includes `<UrUserButton />` for a ready-to-use profile dropdown.
 - **Powerful Hooks**: `useUser`, `useAuth`, `useDb`, and `useStorage` to interact with your backend data natively.
