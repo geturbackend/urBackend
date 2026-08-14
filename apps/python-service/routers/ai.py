@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, Field
 from typing import List, Union
 from langchain_core.prompts import ChatPromptTemplate
@@ -64,9 +64,11 @@ class CollectionCreatorResponse(BaseModel):
         populate_by_name = True
 
 @router.post("/query-builder", response_model=QueryResult)
-async def query_builder(request: QueryBuilderRequest):
+async def query_builder(request: QueryBuilderRequest, req: Request):
+    trace_id = req.headers.get("x-trace-id", "unknown")
     logger.info(
-        "📥 Received /ai/query-builder request | developer_id=%s, plan=%s, schema_fields=%d, prompt=%r",
+        "[Trace: %s] 📥 Received /ai/query-builder request | developer_id=%s, plan=%s, schema_fields=%d, prompt=%r",
+        trace_id,
         request.developer_id,
         request.plan,
         len(request.schema_fields),
@@ -105,7 +107,7 @@ Schema Fields: {schema}"""
         # Create the LangChain chain
         chain = prompt | structured_llm
 
-        logger.info("🤖 Invoking LangChain LLM chain (15s timeout) for developer_id=%s...", request.developer_id)
+        logger.info("[Trace: %s] 🤖 Invoking LangChain LLM chain (15s timeout) for developer_id=%s...", trace_id, request.developer_id)
 
         # Invoke the chain with a timeout to prevent hanging requests
         result = await asyncio.wait_for(
@@ -117,7 +119,8 @@ Schema Fields: {schema}"""
         )
 
         logger.info(
-            "✅ AI Query Builder success for developer_id=%s | %d filter(s) generated, sort=%r",
+            "[Trace: %s] ✅ AI Query Builder success for developer_id=%s | %d filter(s) generated, sort=%r",
+            trace_id,
             request.developer_id,
             len(result.filters),
             result.sort,
@@ -125,19 +128,21 @@ Schema Fields: {schema}"""
         return result
 
     except HTTPException as e:
-        logger.warning("⚠️ AI Query Builder rejected with HTTP %d for developer_id=%s: %s", e.status_code, request.developer_id, e.detail)
+        logger.warning("[Trace: %s] ⚠️ AI Query Builder rejected with HTTP %d for developer_id=%s: %s", trace_id, e.status_code, request.developer_id, e.detail)
         raise  # Re-raise BYOK/rate-limit errors as-is
     except asyncio.TimeoutError as e:
-        logger.error("⏱️ AI Query Builder request timed out after 15s for developer_id=%s", request.developer_id, exc_info=True)
+        logger.error("[Trace: %s] ⏱️ AI Query Builder request timed out after 15s for developer_id=%s", trace_id, request.developer_id, exc_info=True)
         raise HTTPException(status_code=504, detail="AI request timed out") from e
     except Exception as e:
-        logger.error("❌ AI Query Builder unhandled failure for developer_id=%s: %s", request.developer_id, e, exc_info=True)
+        logger.error("[Trace: %s] ❌ AI Query Builder unhandled failure for developer_id=%s: %s", trace_id, request.developer_id, e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 @router.post("/collection-creator", response_model=CollectionCreatorResponse)
-async def collection_creator(request: CollectionCreatorRequest):
+async def collection_creator(request: CollectionCreatorRequest, req: Request):
+    trace_id = req.headers.get("x-trace-id", "unknown")
     logger.info(
-        "📥 Received /ai/collection-creator request | developer_id=%s, plan=%s, msgs=%d",
+        "[Trace: %s] 📥 Received /ai/collection-creator request | developer_id=%s, plan=%s, msgs=%d",
+        trace_id,
         request.developer_id,
         request.plan,
         len(request.messages),
@@ -173,7 +178,7 @@ Rules:
         prompt = ChatPromptTemplate.from_messages(formatted_messages)
         chain = prompt | structured_llm
 
-        logger.info("🤖 Invoking LangChain LLM chain (30s timeout) for developer_id=%s...", request.developer_id)
+        logger.info("[Trace: %s] 🤖 Invoking LangChain LLM chain (30s timeout) for developer_id=%s...", trace_id, request.developer_id)
 
         result = await asyncio.wait_for(
             chain.ainvoke({}),
@@ -181,7 +186,8 @@ Rules:
         )
 
         logger.info(
-            "✅ AI Collection Creator success for developer_id=%s | type=%r, schema collections=%d",
+            "[Trace: %s] ✅ AI Collection Creator success for developer_id=%s | type=%r, schema collections=%d",
+            trace_id,
             request.developer_id,
             result.type,
             len(result.schema_) if result.schema_ else 0,
@@ -189,12 +195,12 @@ Rules:
         return result
 
     except HTTPException as e:
-        logger.warning("⚠️ AI Collection Creator rejected with HTTP %d for developer_id=%s: %s", e.status_code, request.developer_id, e.detail)
+        logger.warning("[Trace: %s] ⚠️ AI Collection Creator rejected with HTTP %d for developer_id=%s: %s", trace_id, e.status_code, request.developer_id, e.detail)
         raise
     except asyncio.TimeoutError as e:
-        logger.error("⏱️ AI Collection Creator request timed out after 30s for developer_id=%s", request.developer_id, exc_info=True)
+        logger.error("[Trace: %s] ⏱️ AI Collection Creator request timed out after 30s for developer_id=%s", trace_id, request.developer_id, exc_info=True)
         raise HTTPException(status_code=504, detail="AI request timed out") from e
     except Exception as e:
-        logger.error("❌ AI Collection Creator unhandled failure for developer_id=%s: %s", request.developer_id, e, exc_info=True)
+        logger.error("[Trace: %s] ❌ AI Collection Creator unhandled failure for developer_id=%s: %s", trace_id, request.developer_id, e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
