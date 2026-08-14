@@ -8,7 +8,6 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
   ]);
   const [aiStatus, setAiStatus] = useState('idle'); // 'idle' | 'loading' | 'error'
   const [schema, setSchema] = useState(null);
-  const [isComplete, setIsComplete] = useState(false);
   const [iterationsLeft, setIterationsLeft] = useState(null);
   const [inputValue, setInputValue] = useState('');
   const [isInserting, setIsInserting] = useState(false);
@@ -26,8 +25,9 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
   }, [messages, aiStatus]);
 
   useEffect(() => {
+    const timers = timersRef.current;
     return () => {
-      timersRef.current.forEach(clearTimeout);
+      timers.forEach(clearTimeout);
     };
   }, []);
 
@@ -46,18 +46,12 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
         userMessage: userText
       });
       
-      const { type, message, schema: newSchema, iterationsLeft: left } = res.data.data;
+      const { message, schema: newSchema, iterationsLeft: left } = res.data.data;
       
       setMessages(prev => [...prev, { role: 'assistant', content: message }]);
       
       if (newSchema?.length) {
         setSchema(newSchema);
-      }
-      
-      if (type === 'complete') {
-        setIsComplete(true);
-      } else {
-        setIsComplete(false); // Just in case it goes back to clarifying
       }
       
       if (left !== undefined) {
@@ -224,7 +218,7 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
           <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
              Schema Preview
           </h3>
-          {isComplete && schema && schema.length > 0 && (
+          {schema && schema.length > 0 && (
             <button
               onClick={handleInsertAll}
               disabled={isInserting}
