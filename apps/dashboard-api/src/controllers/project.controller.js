@@ -993,6 +993,129 @@ module.exports.createCollection = async (req, res) => {
   }
 };
 
+module.exports.bulkCreateCollections = async (req, res, next) => {
+    try {
+        const { projectId } = req.params;
+        const { collections } = req.body;
+        
+        if (!Array.isArray(collections) || collections.length === 0 || collections.length > 20) {
+            return next(new AppError(400, "collections must be a non-empty array of max 20 items"));
+        }
+
+        const project = await Project.findOne({
+            _id: projectId,
+            ...getProjectAccessQuery(req.user._id),
+        });
+        if (!project) return next(new AppError(404, "Project not found"));
+
+        const results = [];
+        let createdCount = 0;
+        let failedCount = 0;
+        
+        for (const colDef of collections) {
+            try {
+                const { collectionName, schema } = colDef;
+                
+                try {
+                    createCollectionSchema.parse({ projectId, collectionName, schema });
+                } catch (zodErr) {
+                    throw new AppError(400, zodErr.issues?.[0]?.message || 'Validation Failed');
+                }
+                
+                if (collectionName.toLowerCase() === 'users') {
+                    throw new AppError(403, "Cannot bulk create 'users' collection");
+                }
+                
+                const exists = project.collections.find((c) => c.name === collectionName);
+                if (exists) {
+                    throw new AppError(400, "Collection already exists");
+                }
+                
+                if (req.collectionLimit !== undefined) {
+                    if (project.collections.length >= req.collectionLimit) {
+                        throw new AppError(403, `Collection limit reached (${req.collectionLimit}).`);
+                    }
+                }
+                
+                if (!project.jwtSecret) {
+                    project.jwtSecret = generateApiKey("jwt_");
+                }
+                
+                const newCollectionConfig = {
+                  name: collectionName,
+                  model: schema,
+                  rls: getDefaultRlsForCollection(collectionName, schema),
+                };
+                
+                project.collections.push(newCollectionConfig);
+                await project.save();
+                
+                try {
+                    const connection = await getConnection(projectId);
+                    const Model = getCompiledModel(
+                      connection,
+                      newCollectionConfig,
+                      projectId,
+                      project.resources.db.isExternal,
+                    );
+                    
+                    await createUniqueIndexes(Model, newCollectionConfig.model);
+                } catch (err) {
+                    // rollback the newly pushed collection metadata
+                    project.collections = project.collections.filter(c => c.name !== collectionName);
+                    await project.save();
+                    throw err; // rethrow to outer catch
+                }
+                
+                results.push({ collection: collectionName, success: true });
+                createdCount++;
+                
+                emitEvent(req.user._id, 'collection_created', { collectionName, isUsersCollection: false }, projectId);
+                
+            } catch (err) {
+                failedCount++;
+                let errorMessage = "Unknown error";
+                if (err instanceof AppError) {
+                    errorMessage = err.message;
+                } else if (err instanceof z.ZodError) {
+                    errorMessage = err.issues?.[0]?.message || 'Validation Failed';
+                }
+                
+                results.push({ 
+                    collection: colDef.collectionName || 'unknown', 
+                    success: false, 
+                    error: errorMessage
+                });
+            }
+        }
+        
+        if (createdCount > 0) {
+            const finalProject = await Project.findById(projectId);
+            if (finalProject) {
+                await deleteProjectById(projectId);
+                await setProjectById(projectId, finalProject.toObject());
+                await deleteProjectByApiKeyCache(finalProject.publishableKey);
+                await deleteProjectByApiKeyCache(finalProject.secretKey);
+                
+                markDeveloperOnboardingStep(req.user._id, 'collectionCreated', {}).catch(() => {});
+            }
+        }
+        
+        return res.status(200).json({
+            success: true,
+            message: "Bulk creation complete",
+            data: {
+                results,
+                created: createdCount,
+                failed: failedCount
+            }
+        });
+        
+    } catch(err) {
+        next(err);
+    }
+};
+
 module.exports.updateCollection = async (req, res, next) => {
   try {
     const { projectId, collectionName, schema } = editCollectionSchema.parse({

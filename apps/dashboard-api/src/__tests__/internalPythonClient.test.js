@@ -12,6 +12,7 @@ describe('internalPythonClient', () => {
         
         // Mock Date.now to freeze timestamp for assertions
         jest.spyOn(Date, 'now').mockImplementation(() => 1609459200000); // 2021-01-01T00:00:00.000Z
+        jest.spyOn(crypto, 'randomUUID').mockReturnValue('test-trace-id');
         jest.spyOn(axios, 'post').mockResolvedValue({ data: { success: true } });
     });
 
@@ -53,6 +54,7 @@ describe('internalPythonClient', () => {
                 headers: {
                     'X-Internal-Signature': expectedSignature,
                     'X-Timestamp': timestamp,
+                    'X-Trace-Id': 'test-trace-id',
                     'Content-Type': 'application/json'
                 }
             }

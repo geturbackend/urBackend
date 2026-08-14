@@ -93,6 +93,7 @@ jest.mock('../controllers/project.controller', () => {
     removeMember: jest.fn(ok),
     updateCollection: jest.fn(ok),
     updateProjectByok: jest.fn(ok),
+    bulkCreateCollections: jest.fn(ok),
   };
 });
 

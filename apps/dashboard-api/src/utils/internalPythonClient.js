@@ -17,6 +17,7 @@ const forwardToPythonService = async (path, payload) => {
 
     const payloadString = JSON.stringify(payload);
     const timestamp = Date.now().toString();
+    const traceId = crypto.randomUUID();
 
     // Generate HMAC-SHA256 signature
     const signature = crypto
@@ -29,12 +30,13 @@ const forwardToPythonService = async (path, payload) => {
             headers: {
                 'X-Internal-Signature': signature,
                 'X-Timestamp': timestamp,
+                'X-Trace-Id': traceId,
                 'Content-Type': 'application/json'
             }
         });
         return response.data;
     } catch (error) {
-        console.error("Error communicating with Python Service:", error.response?.data || error.message);
+        console.error(`[Trace: ${traceId}] Error communicating with Python Service:`, error.response?.data || error.message);
         throw error;
     }
 };
