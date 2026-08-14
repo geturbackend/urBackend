@@ -15,6 +15,7 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
   const [insertResults, setInsertResults] = useState(null);
   
   const messagesEndRef = useRef(null);
+  const timersRef = useRef([]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -23,6 +24,12 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
   useEffect(() => {
     scrollToBottom();
   }, [messages, aiStatus]);
+
+  useEffect(() => {
+    return () => {
+      timersRef.current.forEach(clearTimeout);
+    };
+  }, []);
 
   const sendMessage = async (e) => {
     if (e) e.preventDefault();
@@ -55,15 +62,17 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
       if (left !== undefined) {
         setIterationsLeft(left);
       }
+      setAiStatus('idle');
     } catch (err) {
       const detail = err.response?.data?.message || err.response?.data?.error || "AI request failed. Please try again.";
       setAiStatus('error');
       toast.error(detail);
       
       // Automatically clear the error status after a short delay so they can type again
-      setTimeout(() => setAiStatus('idle'), 2000);
-    } finally {
-      if (aiStatus !== 'error') setAiStatus('idle');
+      const timer = setTimeout(() => {
+          setAiStatus(prev => prev === 'error' ? 'idle' : prev);
+      }, 2000);
+      timersRef.current.push(timer);
     }
   };
 
@@ -71,17 +80,25 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
     setIsInserting(true);
     setInsertResults(null);
     try {
-      const collections = schema.map(c => ({
-        collectionName: c.collection,
-        schema: c.fields.map(f => {
+      const mapSchemaFields = (fields) => {
+        if (!fields) return [];
+        return fields.map(f => {
           const fieldDef = {
             key: f.name,
             type: f.type,
             required: !!f.required
           };
+          if (f.unique !== undefined) fieldDef.unique = !!f.unique;
           if (f.ref) fieldDef.ref = f.ref;
+          if (f.fields) fieldDef.fields = mapSchemaFields(f.fields);
+          if (f.items) fieldDef.items = mapSchemaFields(f.items);
           return fieldDef;
-        })
+        });
+      };
+
+      const collections = schema.map(c => ({
+        collectionName: c.collection,
+        schema: mapSchemaFields(c.fields)
       }));
 
       const res = await api.post(`/api/projects/${projectId}/collections/bulk`, { collections });
@@ -97,10 +114,10 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
 
       if (failed === 0) {
         toast.success(`${created} collection(s) created successfully!`);
-        setTimeout(() => onInsertAll(), 1500);
+        timersRef.current.push(setTimeout(() => onInsertAll(), 1500));
       } else {
         toast.error(`${failed} collection(s) failed. ${created} created successfully.`);
-        setTimeout(() => onInsertAll(), 4000);
+        timersRef.current.push(setTimeout(() => onInsertAll(), 4000));
       }
     } catch (err) {
       toast.error(err.response?.data?.message || err.response?.data?.error || "Bulk insert failed");
@@ -125,10 +142,10 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
   };
 
   return (
-    <div className="flex h-[75vh] w-full border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm font-sans mt-4">
+    <div className="flex h-[75vh] w-full border border-border rounded-lg overflow-hidden bg-background shadow-sm font-sans mt-4">
       
       {/* Chat Panel - Left */}
-      <div className="flex flex-col w-[55%] border-r border-gray-200 bg-gray-50 relative">
+      <div className="flex flex-col w-[55%] border-r border-border bg-muted/30 relative">
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -164,6 +181,7 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
               onChange={(e) => setInputValue(e.target.value)}
               disabled={aiStatus === 'loading' || (iterationsLeft === 0)}
               placeholder={iterationsLeft === 0 ? "Turn limit reached." : "Describe your app..."}
+              aria-label="Message the schema assistant"
               className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
             />
             <button 

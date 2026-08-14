@@ -6,10 +6,9 @@ from routers.ai import CollectionCreatorResponse
 
 client = TestClient(app)
 
-@pytest.fixture
-def mock_verify_signature():
-    with patch("dependencies.verify_signature", return_value=True):
-        yield
+from dependencies import verify_signature
+
+app.dependency_overrides[verify_signature] = lambda: True
 
 @pytest.mark.asyncio
 async def test_collection_creator_success():
@@ -34,7 +33,8 @@ async def test_collection_creator_success():
     )
 
     with patch("routers.ai.resolve_ai_client") as mock_resolve:
-        mock_llm = AsyncMock()
+        from unittest.mock import MagicMock
+        mock_llm = MagicMock()
         mock_structured = AsyncMock()
         mock_structured.ainvoke = AsyncMock(return_value=mock_schema_response)
         
@@ -66,7 +66,8 @@ async def test_collection_creator_timeout():
     }
 
     with patch("routers.ai.resolve_ai_client") as mock_resolve:
-        mock_llm = AsyncMock()
+        from unittest.mock import MagicMock
+        mock_llm = MagicMock()
         mock_structured = AsyncMock()
         
         import asyncio

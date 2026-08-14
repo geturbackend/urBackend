@@ -570,23 +570,27 @@ function CreateCollection() {
                     <h2 style={{ fontSize: '1.5rem', fontWeight: 600, margin: 0 }}>Create Collection</h2>
                     
                     {initialName !== 'users' && (
-                        <div className="flex bg-gray-100 p-1 rounded-lg">
+                        <div className="flex bg-muted/30 p-1 rounded-lg">
                             <button
+                                type="button"
+                                aria-pressed={mode === 'manual'}
                                 onClick={() => setMode('manual')}
                                 className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
                                     mode === 'manual' 
-                                    ? 'bg-white text-gray-900 shadow-sm' 
-                                    : 'text-gray-500 hover:text-gray-700'
+                                    ? 'bg-background text-foreground shadow-sm' 
+                                    : 'text-muted-foreground hover:text-foreground'
                                 }`}
                             >
                                 Manual
                             </button>
                             <button
+                                type="button"
+                                aria-pressed={mode === 'ai'}
                                 onClick={() => setMode('ai')}
                                 className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
                                     mode === 'ai' 
                                     ? 'bg-blue-600 text-white shadow-sm' 
-                                    : 'text-gray-500 hover:text-gray-700'
+                                    : 'text-muted-foreground hover:text-foreground'
                                 }`}
                             >
                                 <Wand2 size={14} /> AI-Assisted

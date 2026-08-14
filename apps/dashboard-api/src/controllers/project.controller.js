@@ -993,14 +993,20 @@ module.exports.createCollection = async (req, res) => {
   }
 };
 
-module.exports.bulkCreateCollections = async (req, res) => {
+module.exports.bulkCreateCollections = async (req, res, next) => {
     try {
         const { projectId } = req.params;
         const { collections } = req.body;
         
         if (!Array.isArray(collections) || collections.length === 0 || collections.length > 20) {
-            return res.status(400).json({ error: "collections must be a non-empty array of max 20 items" });
+            return next(new AppError(400, "collections must be a non-empty array of max 20 items"));
         }
+
+        const project = await Project.findOne({
+            _id: projectId,
+            ...getProjectAccessQuery(req.user._id),
+        });
+        if (!project) return next(new AppError(404, "Project not found"));
 
         const results = [];
         let createdCount = 0;
@@ -1008,28 +1014,26 @@ module.exports.bulkCreateCollections = async (req, res) => {
         
         for (const colDef of collections) {
             try {
-                const project = await Project.findOne({
-                    _id: projectId,
-                    ...getProjectAccessQuery(req.user._id),
-                });
-                if (!project) throw new Error("Project not found");
-                
                 const { collectionName, schema } = colDef;
                 
-                if (collectionName.toLowerCase() === 'users') {
-                    throw new Error("Cannot bulk create 'users' collection");
+                try {
+                    createCollectionSchema.parse({ projectId, collectionName, schema });
+                } catch (zodErr) {
+                    throw new AppError(400, zodErr.issues?.[0]?.message || 'Validation Failed');
                 }
                 
-                createCollectionSchema.parse({ projectId, collectionName, schema });
+                if (collectionName.toLowerCase() === 'users') {
+                    throw new AppError(403, "Cannot bulk create 'users' collection");
+                }
                 
                 const exists = project.collections.find((c) => c.name === collectionName);
                 if (exists) {
-                    throw new Error("Collection already exists");
+                    throw new AppError(400, "Collection already exists");
                 }
                 
                 if (req.collectionLimit !== undefined) {
                     if (project.collections.length >= req.collectionLimit) {
-                        throw new Error(`Collection limit reached (${req.collectionLimit}).`);
+                        throw new AppError(403, `Collection limit reached (${req.collectionLimit}).`);
                     }
                 }
                 
@@ -1046,15 +1050,22 @@ module.exports.bulkCreateCollections = async (req, res) => {
                 project.collections.push(newCollectionConfig);
                 await project.save();
                 
-                const connection = await getConnection(projectId);
-                const Model = getCompiledModel(
-                  connection,
-                  newCollectionConfig,
-                  projectId,
-                  project.resources.db.isExternal,
-                );
-                
-                await createUniqueIndexes(Model, newCollectionConfig.model);
+                try {
+                    const connection = await getConnection(projectId);
+                    const Model = getCompiledModel(
+                      connection,
+                      newCollectionConfig,
+                      projectId,
+                      project.resources.db.isExternal,
+                    );
+                    
+                    await createUniqueIndexes(Model, newCollectionConfig.model);
+                } catch (err) {
+                    // rollback the newly pushed collection metadata
+                    project.collections = project.collections.filter(c => c.name !== collectionName);
+                    await project.save();
+                    throw err; // rethrow to outer catch
+                }
                 
                 results.push({ collection: collectionName, success: true });
                 createdCount++;
@@ -1063,10 +1074,17 @@ module.exports.bulkCreateCollections = async (req, res) => {
                 
             } catch (err) {
                 failedCount++;
+                let errorMessage = "Unknown error";
+                if (err instanceof AppError) {
+                    errorMessage = err.message;
+                } else if (err instanceof z.ZodError) {
+                    errorMessage = err.issues?.[0]?.message || 'Validation Failed';
+                }
+                
                 results.push({ 
                     collection: colDef.collectionName || 'unknown', 
                     success: false, 
-                    error: err.message || "Unknown error" 
+                    error: errorMessage
                 });
             }
         }
@@ -1085,6 +1103,7 @@ module.exports.bulkCreateCollections = async (req, res) => {
         
         return res.status(200).json({
             success: true,
+            message: "Bulk creation complete",
             data: {
                 results,
                 created: createdCount,
@@ -1093,7 +1112,7 @@ module.exports.bulkCreateCollections = async (req, res) => {
         });
         
     } catch(err) {
-        return res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 

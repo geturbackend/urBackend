@@ -1,8 +1,9 @@
 import asyncio
 import logging
 from fastapi import APIRouter, HTTPException, Depends, Request
-from pydantic import BaseModel, Field
-from typing import List, Union
+from pydantic import BaseModel, Field, ConfigDict
+from typing import List, Union, Literal
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 from config import settings
 from dependencies import verify_signature
@@ -36,7 +37,7 @@ class QueryBuilderRequest(BaseModel):
     encrypted_byok: EncryptedByok | None = None
 
 class Message(BaseModel):
-    role: str
+    role: Literal["user", "assistant"]
     content: str
 
 class CollectionField(BaseModel):
@@ -56,12 +57,11 @@ class CollectionCreatorRequest(BaseModel):
     encrypted_byok: EncryptedByok | None = None
 
 class CollectionCreatorResponse(BaseModel):
-    type: str
+    type: Literal["schema", "complete"]
     message: str
     schema_: list[CollectionSchema] | None = Field(default=None, alias="schema")
     
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 @router.post("/query-builder", response_model=QueryResult)
 async def query_builder(request: QueryBuilderRequest, req: Request):
@@ -171,17 +171,17 @@ Rules:
 9. Respond ONLY in the defined JSON structure. No prose outside the message field."""
 
         # Convert our Message models to a format LangChain likes
-        formatted_messages = [("system", system_prompt)]
+        lc_messages = [SystemMessage(content=system_prompt)]
         for msg in request.messages:
-            formatted_messages.append((msg.role, msg.content))
+            if msg.role == "user":
+                lc_messages.append(HumanMessage(content=msg.content))
+            else:
+                lc_messages.append(AIMessage(content=msg.content))
 
-        prompt = ChatPromptTemplate.from_messages(formatted_messages)
-        chain = prompt | structured_llm
-
-        logger.info("[Trace: %s] 🤖 Invoking LangChain LLM chain (30s timeout) for developer_id=%s...", trace_id, request.developer_id)
+        logger.info("[Trace: %s] 🤖 Invoking LangChain LLM (30s timeout) for developer_id=%s...", trace_id, request.developer_id)
 
         result = await asyncio.wait_for(
-            chain.ainvoke({}),
+            structured_llm.ainvoke(lc_messages),
             timeout=30.0
         )
 
