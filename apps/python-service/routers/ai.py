@@ -59,14 +59,14 @@ class CollectionCreatorRequest(BaseModel):
 class CollectionCreatorResponse(BaseModel):
     type: Literal["clarify", "schema", "complete"]
     message: str
-    schema_: list[CollectionSchema] | None = Field(default=None, alias="schema")
+    schema_: list[CollectionSchema] = Field(..., alias="schema", description="Must be an empty array [] if type is 'clarify'")
     
     model_config = ConfigDict(populate_by_name=True)
 
     @model_validator(mode='after')
     def check_schema_presence(self):
-        if self.type == "schema" and self.schema_ is None:
-            raise ValueError("schema_ must be provided when type is 'schema'")
+        if self.type == "schema" and not self.schema_:
+            raise ValueError("schema_ must not be empty when type is 'schema'")
         return self
 
 @router.post("/query-builder", response_model=QueryResult)
@@ -169,7 +169,7 @@ async def collection_creator(request: CollectionCreatorRequest, req: Request):
         system_prompt = """You are a MongoDB schema designer for urBackend, a Backend-as-a-Service platform.
 
 Rules:
-1. If the description is vague, ask 2-3 specific clarifying questions and set type: "clarify". NEVER ask more than 3 at once.
+1. If the description is vague, ask 2-3 specific clarifying questions and set type: "clarify". Set schema: [] to satisfy the tool schema. NEVER ask more than 3 at once.
 2. Once you have enough context, propose a schema and set type: "schema".
 3. Only use these field types: String, Number, Boolean, Date, Object, Array, Ref.
 4. ALWAYS include "createdAt" (type: Date, required: true) in EVERY collection.
