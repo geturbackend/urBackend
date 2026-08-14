@@ -3,8 +3,9 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import api from '../utils/api';
 import { useOnboarding } from '../context/OnboardingContext';
 import toast from 'react-hot-toast';
-import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, Wand2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import CollectionCreatorAgent from '../components/CollectionCreatorAgent';
 
 const MAX_DEPTH = 3;
 
@@ -439,6 +440,7 @@ function CreateCollection() {
     const initialName = queryParams.get('name')?.trim().toLowerCase() || '';
     const preset = queryParams.get('preset')?.trim().toLowerCase() || '';
 
+    const [mode, setMode] = useState('manual');
     const [name, setName] = useState(initialName === 'users' ? 'users' : initialName);
 
     // Default fields for a new collection
@@ -564,9 +566,38 @@ function CreateCollection() {
             </button>
 
             <div className="card">
-                <h2 style={{ marginBottom: '2rem', fontSize: '1.5rem', fontWeight: 600 }}>Create Collection</h2>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 600, margin: 0 }}>Create Collection</h2>
+                    
+                    {initialName !== 'users' && (
+                        <div className="flex bg-gray-100 p-1 rounded-lg">
+                            <button
+                                onClick={() => setMode('manual')}
+                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                                    mode === 'manual' 
+                                    ? 'bg-white text-gray-900 shadow-sm' 
+                                    : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                Manual
+                            </button>
+                            <button
+                                onClick={() => setMode('ai')}
+                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                                    mode === 'ai' 
+                                    ? 'bg-blue-600 text-white shadow-sm' 
+                                    : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                <Wand2 size={14} /> AI-Assisted
+                            </button>
+                        </div>
+                    )}
+                </div>
 
-                <div className="form-group">
+                {mode === 'manual' ? (
+                    <>
+                        <div className="form-group">
                     <label className="form-label">Name</label>
                     <input
                         type="text"
@@ -649,6 +680,16 @@ function CreateCollection() {
                         {loading ? 'Creating...' : 'Save'}
                     </button>
                 </div>
+                </>
+                ) : (
+                    <CollectionCreatorAgent 
+                        projectId={projectId} 
+                        onInsertAll={() => {
+                            completeStep('create_collection');
+                            navigate(`/project/${projectId}/database`);
+                        }} 
+                    />
+                )}
             </div>
         </div>
     );

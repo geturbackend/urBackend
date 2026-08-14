@@ -993,6 +993,110 @@ module.exports.createCollection = async (req, res) => {
   }
 };
 
+module.exports.bulkCreateCollections = async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const { collections } = req.body;
+        
+        if (!Array.isArray(collections) || collections.length === 0 || collections.length > 20) {
+            return res.status(400).json({ error: "collections must be a non-empty array of max 20 items" });
+        }
+
+        const results = [];
+        let createdCount = 0;
+        let failedCount = 0;
+        
+        for (const colDef of collections) {
+            try {
+                const project = await Project.findOne({
+                    _id: projectId,
+                    ...getProjectAccessQuery(req.user._id),
+                });
+                if (!project) throw new Error("Project not found");
+                
+                const { collectionName, schema } = colDef;
+                
+                if (collectionName.toLowerCase() === 'users') {
+                    throw new Error("Cannot bulk create 'users' collection");
+                }
+                
+                createCollectionSchema.parse({ projectId, collectionName, schema });
+                
+                const exists = project.collections.find((c) => c.name === collectionName);
+                if (exists) {
+                    throw new Error("Collection already exists");
+                }
+                
+                if (req.collectionLimit !== undefined) {
+                    if (project.collections.length >= req.collectionLimit) {
+                        throw new Error(`Collection limit reached (${req.collectionLimit}).`);
+                    }
+                }
+                
+                if (!project.jwtSecret) {
+                    project.jwtSecret = generateApiKey("jwt_");
+                }
+                
+                const newCollectionConfig = {
+                  name: collectionName,
+                  model: schema,
+                  rls: getDefaultRlsForCollection(collectionName, schema),
+                };
+                
+                project.collections.push(newCollectionConfig);
+                await project.save();
+                
+                const connection = await getConnection(projectId);
+                const Model = getCompiledModel(
+                  connection,
+                  newCollectionConfig,
+                  projectId,
+                  project.resources.db.isExternal,
+                );
+                
+                await createUniqueIndexes(Model, newCollectionConfig.model);
+                
+                results.push({ collection: collectionName, success: true });
+                createdCount++;
+                
+                emitEvent(req.user._id, 'collection_created', { collectionName, isUsersCollection: false }, projectId);
+                
+            } catch (err) {
+                failedCount++;
+                results.push({ 
+                    collection: colDef.collectionName || 'unknown', 
+                    success: false, 
+                    error: err.message || "Unknown error" 
+                });
+            }
+        }
+        
+        if (createdCount > 0) {
+            const finalProject = await Project.findById(projectId);
+            if (finalProject) {
+                await deleteProjectById(projectId);
+                await setProjectById(projectId, finalProject.toObject());
+                await deleteProjectByApiKeyCache(finalProject.publishableKey);
+                await deleteProjectByApiKeyCache(finalProject.secretKey);
+                
+                markDeveloperOnboardingStep(req.user._id, 'collectionCreated', {}).catch(() => {});
+            }
+        }
+        
+        return res.status(200).json({
+            success: true,
+            data: {
+                results,
+                created: createdCount,
+                failed: failedCount
+            }
+        });
+        
+    } catch(err) {
+        return res.status(500).json({ error: err.message });
+    }
+};
+
 module.exports.updateCollection = async (req, res, next) => {
   try {
     const { projectId, collectionName, schema } = editCollectionSchema.parse({

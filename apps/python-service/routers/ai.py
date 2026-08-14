@@ -35,6 +35,34 @@ class QueryBuilderRequest(BaseModel):
     plan: str = "free"
     encrypted_byok: EncryptedByok | None = None
 
+class Message(BaseModel):
+    role: str
+    content: str
+
+class CollectionField(BaseModel):
+    name: str
+    type: str
+    required: bool
+    ref: str | None = None
+
+class CollectionSchema(BaseModel):
+    collection: str
+    fields: list[CollectionField]
+
+class CollectionCreatorRequest(BaseModel):
+    messages: list[Message]
+    developer_id: str
+    plan: str = "free"
+    encrypted_byok: EncryptedByok | None = None
+
+class CollectionCreatorResponse(BaseModel):
+    type: str
+    message: str
+    schema_: list[CollectionSchema] | None = Field(default=None, alias="schema")
+    
+    class Config:
+        populate_by_name = True
+
 @router.post("/query-builder", response_model=QueryResult)
 async def query_builder(request: QueryBuilderRequest):
     logger.info(
@@ -104,5 +132,69 @@ Schema Fields: {schema}"""
         raise HTTPException(status_code=504, detail="AI request timed out") from e
     except Exception as e:
         logger.error("❌ AI Query Builder unhandled failure for developer_id=%s: %s", request.developer_id, e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error") from e
+
+@router.post("/collection-creator", response_model=CollectionCreatorResponse)
+async def collection_creator(request: CollectionCreatorRequest):
+    logger.info(
+        "📥 Received /ai/collection-creator request | developer_id=%s, plan=%s, msgs=%d",
+        request.developer_id,
+        request.plan,
+        len(request.messages),
+    )
+    try:
+        # Resolve AI client
+        llm = await resolve_ai_client(
+            developer_id=request.developer_id,
+            plan=request.plan,
+            encrypted_byok=request.encrypted_byok.model_dump() if request.encrypted_byok else None,
+        )
+
+        structured_llm = llm.with_structured_output(CollectionCreatorResponse)
+
+        system_prompt = """You are a MongoDB schema designer for urBackend, a Backend-as-a-Service platform.
+
+Rules:
+1. If the description is vague, ask 2-3 specific clarifying questions. NEVER ask more than 3 at once.
+2. Once you have enough context, propose a schema and set type: "schema".
+3. Only use these field types: String, Number, Boolean, Date, Object, Array, Ref.
+4. ALWAYS include "createdAt" (type: Date, required: true) in EVERY collection.
+5. Suggest Ref to "users" where ownership applies (ownerId, authorId, userId, etc.).
+6. NEVER generate a collection named "users" — it is reserved for auth.
+7. When the developer confirms satisfaction ("looks good", "yes", "create it", "perfect") -> set type: "complete".
+8. When proposing or updating the schema, populate the schema array. Set type "schema" for proposals, "complete" for final confirmation.
+9. Respond ONLY in the defined JSON structure. No prose outside the message field."""
+
+        # Convert our Message models to a format LangChain likes
+        formatted_messages = [("system", system_prompt)]
+        for msg in request.messages:
+            formatted_messages.append((msg.role, msg.content))
+
+        prompt = ChatPromptTemplate.from_messages(formatted_messages)
+        chain = prompt | structured_llm
+
+        logger.info("🤖 Invoking LangChain LLM chain (30s timeout) for developer_id=%s...", request.developer_id)
+
+        result = await asyncio.wait_for(
+            chain.ainvoke({}),
+            timeout=30.0
+        )
+
+        logger.info(
+            "✅ AI Collection Creator success for developer_id=%s | type=%r, schema collections=%d",
+            request.developer_id,
+            result.type,
+            len(result.schema_) if result.schema_ else 0,
+        )
+        return result
+
+    except HTTPException as e:
+        logger.warning("⚠️ AI Collection Creator rejected with HTTP %d for developer_id=%s: %s", e.status_code, request.developer_id, e.detail)
+        raise
+    except asyncio.TimeoutError as e:
+        logger.error("⏱️ AI Collection Creator request timed out after 30s for developer_id=%s", request.developer_id, exc_info=True)
+        raise HTTPException(status_code=504, detail="AI request timed out") from e
+    except Exception as e:
+        logger.error("❌ AI Collection Creator unhandled failure for developer_id=%s: %s", request.developer_id, e, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error") from e
 

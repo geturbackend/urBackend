@@ -55,7 +55,8 @@ const {
     updateMemberRole,
     removeMember,
     updateCollection,
-    updateProjectByok
+    updateProjectByok,
+    bulkCreateCollections
 } = require("../controllers/project.controller");
 
 const { createAdminUser, resetPassword, getUserDetails, updateAdminUser, listAdminUsers, deleteAdminUser, listUserSessions, revokeUserSession } = require('../controllers/userAuth.controller');
@@ -72,6 +73,7 @@ router.get('/:projectId', authFlexible, authorizeProject(), getSingleProject);
 router.post('/:projectId/api-key', authMiddleware, authorizeProject('admin'), verifyEmail, regenerateApiKey);
 router.post('/:projectId/reveal-secret-key', authMiddleware, authorizeProject('admin'), verifyEmail, revealSecretKey);
 
+router.post('/:projectId/collections/bulk', authMiddleware, authorizeProject('admin'), planEnforcement.attachDeveloper, planEnforcement.checkCollectionLimit, bulkCreateCollections);
 router.post('/:projectId/collections', authMiddleware, authorizeProject('admin'), planEnforcement.attachDeveloper, planEnforcement.checkCollectionLimit, createCollection);
 
 // DELETE REQ FOR COLLECTION

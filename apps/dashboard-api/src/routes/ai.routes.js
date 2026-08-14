@@ -13,4 +13,18 @@ router.use(authMiddleware);
  */
 router.post('/query-builder', aiController.queryBuilder);
 
+/**
+ * @route POST /api/projects/:projectId/ai/collection-creator
+ * @desc Interactive chat with AI to create collection schema
+ * @access Private
+ */
+router.post('/collection-creator', aiController.collectionCreator);
+
+/**
+ * @route DELETE /api/projects/:projectId/ai/collection-creator/session
+ * @desc Clears the interactive chat session for collection creator
+ * @access Private
+ */
+router.delete('/collection-creator/session', aiController.clearCollectionCreatorSession);
+
 module.exports = router;
