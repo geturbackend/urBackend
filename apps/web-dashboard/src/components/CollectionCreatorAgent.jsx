@@ -121,7 +121,6 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
       }
     } catch (err) {
       toast.error(err.response?.data?.message || err.response?.data?.error || "Bulk insert failed");
-    } finally {
       setIsInserting(false);
     }
   };
