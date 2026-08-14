@@ -260,6 +260,17 @@ if (pageLoading) return <SettingsSkeleton />;
                     <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem', lineHeight: '1.6' }}>
                         Your Groq API key is encrypted at rest. When set, all your AI queries use your key directly.
                     </p>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--color-bg-input)', borderRadius: '8px', border: '1px solid var(--color-border)', marginBottom: '1.5rem' }}>
+                        <div>
+                            <p style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--color-text-main)', marginBottom: '4px' }}>Platform Quota</p>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{user?.hasGroqKey ? "You are using BYOK (Unlimited)." : "Free tier AI queries reset monthly."}</p>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                            <span style={{ fontSize: '1.1rem', fontWeight: 600, color: user?.hasGroqKey ? 'var(--color-primary)' : 'var(--color-text-main)' }}>
+                                {user?.hasGroqKey ? "Unlimited" : `${user?.aiUsage ?? 0} / ${user?.aiLimit ?? 20}`}
+                            </span>
+                        </div>
+                    </div>
                     <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                         <label className="form-label" style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}>
                             Groq API Key

@@ -1,6 +1,7 @@
 const { Developer } = require("@urbackend/common");
 const { Otp } = require("@urbackend/common");
 const { Project } = require("@urbackend/common");
+const redis = require('@urbackend/common/src/config/redis');
 const bcrypt = require("bcryptjs");
 const z = require("zod");
 const jwt = require("jsonwebtoken");
@@ -658,6 +659,22 @@ module.exports.getMe = async (req, res, next) => {
         
         userData.onboarding = normalizeOnboarding(userData.onboarding);
         userData.isAdmin = userData.email === process.env.ADMIN_EMAIL;
+        
+        // Fetch AI Usage Quota
+        try {
+            const now = new Date();
+            const year = now.getUTCFullYear();
+            const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+            const redisKey = `ai:gen:count:${req.user._id.toString()}:${year}-${month}`;
+            const countStr = await redis.get(redisKey);
+            userData.aiUsage = countStr ? parseInt(countStr, 10) : 0;
+            userData.aiLimit = 20; // Platform free tier limit
+        } catch (e) {
+            console.error("Failed to fetch AI usage from redis", e);
+            userData.aiUsage = 0;
+            userData.aiLimit = 20;
+        }
+
         return new ApiResponse({ user: userData }).send(res);
     } catch (err) {
         next(err);
