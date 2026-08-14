@@ -556,7 +556,7 @@ function CreateCollection() {
     };
 
     return (
-        <div className="container" style={{ maxWidth: '900px' }}>
+        <div className="container" style={{ maxWidth: mode === 'ai' ? '1280px' : '900px', transition: 'max-width 0.2s ease' }}>
             <button
                 onClick={() => navigate(`/project/${projectId}`)}
                 className="btn btn-ghost"
@@ -565,8 +565,8 @@ function CreateCollection() {
                 <ArrowLeft size={18} /> Cancel & Back
             </button>
 
-            <div className="card">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+            <div className="card" style={{ padding: mode === 'ai' ? '1.5rem' : '2rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: mode === 'ai' ? '1.25rem' : '2rem' }}>
                     <h2 style={{ fontSize: '1.5rem', fontWeight: 600, margin: 0 }}>Create Collection</h2>
                     
                     {initialName !== 'users' && (

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../utils/api';
 import { toast } from 'react-hot-toast';
+import { Send, Sparkles } from 'lucide-react';
 
 export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
   const [messages, setMessages] = useState([
@@ -15,6 +16,7 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
   
   const messagesEndRef = useRef(null);
   const timersRef = useRef([]);
+  const textareaRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -31,12 +33,23 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
     };
   }, []);
 
+  // Auto-grow textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+    }
+  }, [inputValue]);
+
   const sendMessage = async (e) => {
     if (e) e.preventDefault();
-    if (!inputValue.trim() || aiStatus === 'loading') return;
+    if (!inputValue.trim() || aiStatus === 'loading' || iterationsLeft === 0) return;
     
     const userText = inputValue.trim();
     setInputValue('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
     setMessages(prev => [...prev, { role: 'user', content: userText }]);
     setAiStatus('loading');
     setInsertResults(null);
@@ -68,6 +81,13 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
           setAiStatus(prev => prev === 'error' ? 'idle' : prev);
       }, 2000);
       timersRef.current.push(timer);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
     }
   };
 
@@ -129,12 +149,11 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
   const getIterationsBadge = () => {
     if (iterationsLeft === null) return null; // BYOK
     
-    // Total is always 3 for platform limit
     const used = 3 - iterationsLeft;
     const dots = Array(3).fill(0).map((_, i) => i < used ? '●' : '○').join('');
     
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', padding: '0 4px', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
         <span>{used} of 3 AI turns used <span style={{ marginLeft: '6px', letterSpacing: '0.1em' }}>{dots}</span></span>
         {iterationsLeft === 0 && <span style={{ color: 'var(--color-danger)', fontWeight: 600 }}>Add Groq API key in Settings for unlimited</span>}
       </div>
@@ -142,40 +161,46 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 h-[75vh] mt-6 font-sans">
+    <div className="flex flex-col lg:flex-row gap-6 h-[72vh] min-h-[560px] font-sans">
       
-      {/* Chat Panel - Left */}
-      <div className="card flex flex-col flex-1 h-full shadow-sm transition-all" style={{ padding: 0, display: 'flex', overflow: 'hidden' }}>
-        {/* Header */}
-        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-card)' }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: 'var(--color-primary)' }}>✦</span> AI Schema Assistant
-          </h3>
-          <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: '6px' }}>
-            Describe your application and let the AI generate a tailored schema.
-          </p>
-        </div>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar" style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {/* Chat Workspace - Left */}
+      <div 
+        className="flex flex-col flex-1 h-full rounded-xl overflow-hidden relative"
+        style={{ 
+          backgroundColor: 'var(--color-bg-card)', 
+          border: '1px solid var(--color-border)',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        {/* Messages Container */}
+        <div 
+          className="flex-1 overflow-y-auto custom-scrollbar" 
+          style={{ 
+            padding: '1.5rem', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '1.25rem',
+            backgroundColor: 'var(--color-bg-main)'
+          }}
+        >
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div 
                 style={{ 
                   maxWidth: '85%', 
-                  padding: '12px 16px', 
-                  fontSize: '0.85rem',
+                  padding: '12px 18px', 
+                  fontSize: '0.875rem',
                   lineHeight: '1.6',
-                  borderRadius: '14px',
-                  borderBottomRightRadius: msg.role === 'user' ? '4px' : '14px',
-                  borderBottomLeftRadius: msg.role === 'assistant' ? '4px' : '14px',
+                  borderRadius: '16px',
+                  borderBottomRightRadius: msg.role === 'user' ? '4px' : '16px',
+                  borderBottomLeftRadius: msg.role === 'assistant' ? '4px' : '16px',
                   backgroundColor: msg.role === 'user' ? 'var(--color-primary)' : 'var(--color-bg-input)',
                   color: msg.role === 'user' ? '#000' : 'var(--color-text-main)',
                   border: msg.role === 'assistant' ? '1px solid var(--color-border)' : 'none',
-                  boxShadow: msg.role === 'assistant' ? '0 4px 12px rgba(0,0,0,0.02)' : '0 4px 12px rgba(62,207,142,0.15)',
+                  boxShadow: msg.role === 'assistant' ? '0 2px 8px rgba(0,0,0,0.04)' : '0 4px 14px rgba(62,207,142,0.2)',
                   whiteSpace: 'pre-wrap'
                 }}
-                className="transition-all"
               >
                 {msg.content}
               </div>
@@ -183,53 +208,120 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
           ))}
           {aiStatus === 'loading' && (
             <div className="flex justify-start">
-              <div style={{ backgroundColor: 'var(--color-bg-input)', padding: '12px 16px', borderRadius: '14px', borderBottomLeftRadius: '4px', border: '1px solid var(--color-border)' }} className="flex space-x-2 items-center">
-                <div className="spinner-small" style={{ width: '12px', height: '12px', borderTopColor: 'var(--color-primary)' }}></div>
-                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>AI is thinking...</span>
+              <div 
+                style={{ 
+                  backgroundColor: 'var(--color-bg-input)', 
+                  padding: '12px 18px', 
+                  borderRadius: '16px', 
+                  borderBottomLeftRadius: '4px', 
+                  border: '1px solid var(--color-border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}
+              >
+                <div className="spinner-small" style={{ width: '14px', height: '14px', borderTopColor: 'var(--color-primary)' }}></div>
+                <span style={{ fontSize: '0.825rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+                  AI is designing your schema...
+                </span>
               </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
         
-        {/* Input */}
-        <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-card)' }}>
-          <form onSubmit={sendMessage} className="flex gap-3">
-            <input 
-              type="text" 
+        {/* Anchored Composer - Bottom */}
+        <div 
+          style={{ 
+            padding: '1rem 1.25rem 1.25rem', 
+            borderTop: '1px solid var(--color-border)', 
+            backgroundColor: 'var(--color-bg-card)',
+            flexShrink: 0
+          }}
+        >
+          <div 
+            style={{
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'flex-end',
+              backgroundColor: 'var(--color-bg-input)',
+              border: '1px solid var(--color-border)',
+              borderRadius: '16px',
+              padding: '8px 12px 8px 16px',
+              transition: 'border-color 0.2s ease, box-shadow 0.2s ease'
+            }}
+          >
+            <textarea 
+              ref={textareaRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
               disabled={aiStatus === 'loading' || (iterationsLeft === 0)}
-              placeholder={iterationsLeft === 0 ? "Turn limit reached." : "Describe your app (e.g. e-commerce with reviews)..."}
+              placeholder={iterationsLeft === 0 ? "Turn limit reached. Add Groq key in Settings." : "Describe your app (e.g. e-commerce, project management, todo app...)"}
               aria-label="Message the schema assistant"
-              className="input-field"
-              style={{ borderRadius: '24px', padding: '12px 20px', fontSize: '0.85rem' }}
+              rows={1}
+              style={{ 
+                width: '100%',
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                color: 'var(--color-text-main)',
+                fontSize: '0.875rem',
+                lineHeight: '1.5',
+                resize: 'none',
+                maxHeight: '120px',
+                minHeight: '26px',
+                padding: '4px 0'
+              }}
             />
             <button 
-              type="submit"
+              type="button"
+              onClick={sendMessage}
               disabled={!inputValue.trim() || aiStatus === 'loading' || (iterationsLeft === 0)}
-              className="btn btn-primary"
-              style={{ borderRadius: '24px', padding: '0 24px', opacity: (!inputValue.trim() || aiStatus === 'loading' || iterationsLeft === 0) ? 0.5 : 1 }}
+              style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '34px',
+                height: '34px',
+                borderRadius: '10px',
+                backgroundColor: (inputValue.trim() && aiStatus !== 'loading' && iterationsLeft !== 0) ? 'var(--color-primary)' : 'transparent',
+                color: (inputValue.trim() && aiStatus !== 'loading' && iterationsLeft !== 0) ? '#000' : 'var(--color-text-muted)',
+                border: 'none',
+                cursor: (inputValue.trim() && aiStatus !== 'loading' && iterationsLeft !== 0) ? 'pointer' : 'default',
+                opacity: (!inputValue.trim() || aiStatus === 'loading' || iterationsLeft === 0) ? 0.35 : 1,
+                transition: 'all 0.2s ease',
+                flexShrink: 0,
+                marginLeft: '8px'
+              }}
+              title="Send message (Enter)"
             >
-              Send
+              <Send size={15} />
             </button>
-          </form>
+          </div>
           {getIterationsBadge()}
         </div>
       </div>
 
       {/* Schema Preview Panel - Right */}
-      <div className="card flex flex-col w-full md:w-[48%] h-full shadow-sm transition-all" style={{ padding: 0, display: 'flex', overflow: 'hidden' }}>
-        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-             Schema Preview
+      <div 
+        className="flex flex-col w-full lg:w-[48%] h-full rounded-xl overflow-hidden shadow-sm transition-all" 
+        style={{ 
+          backgroundColor: 'var(--color-bg-card)', 
+          border: '1px solid var(--color-border)',
+          display: 'flex'
+        }}
+      >
+        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            <Sparkles size={16} style={{ color: 'var(--color-primary)' }} /> Schema Preview
           </h3>
           {schema && schema.length > 0 && (
             <button
               onClick={handleInsertAll}
               disabled={isInserting}
               className="btn btn-primary"
-              style={{ opacity: isInserting ? 0.7 : 1 }}
+              style={{ opacity: isInserting ? 0.7 : 1, padding: '6px 16px', fontSize: '0.85rem' }}
             >
               {isInserting ? (
                 <>
@@ -243,14 +335,14 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
         
         <div className="flex-1 overflow-y-auto custom-scrollbar" style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)' }}>
           {!schema || schema.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center transition-all" style={{ color: 'var(--color-text-muted)' }}>
-              <div style={{ padding: '24px', borderRadius: '50%', backgroundColor: 'var(--color-bg-input)', border: '1px solid var(--color-border)', marginBottom: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.05)' }}>
-                <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="h-full flex flex-col items-center justify-center text-center transition-all" style={{ color: 'var(--color-text-muted)', minHeight: '300px' }}>
+              <div style={{ padding: '20px', borderRadius: '50%', backgroundColor: 'var(--color-bg-input)', border: '1px solid var(--color-border)', marginBottom: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.05)' }}>
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
-              <p style={{ fontSize: '0.9rem', color: 'var(--color-text-main)', fontWeight: 500 }}>Your generated schema will appear here.</p>
-              <p style={{ fontSize: '0.8rem', opacity: 0.8, marginTop: '8px' }}>Start by chatting with the AI.</p>
+              <p style={{ fontSize: '0.9rem', color: 'var(--color-text-main)', fontWeight: 500, margin: 0 }}>Your generated schema will appear here.</p>
+              <p style={{ fontSize: '0.8rem', opacity: 0.8, marginTop: '6px', margin: 0 }}>Start by chatting with the AI.</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -272,9 +364,9 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
               )}
               
               {schema.map((col, idx) => (
-                <div key={idx} style={{ backgroundColor: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden', animation: 'fadeIn 0.4s ease-out' }} className="transition-all hover:border-white/20 shadow-sm">
+                <div key={idx} style={{ backgroundColor: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: '10px', overflow: 'hidden', animation: 'fadeIn 0.4s ease-out' }} className="transition-all hover:border-white/20 shadow-sm">
                   <div style={{ backgroundColor: 'var(--color-bg-input)', padding: '12px 18px', borderBottom: '1px solid var(--color-border)', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-main)', fontFamily: 'monospace', display: 'flex', alignItems: 'center' }}>
-                    <span style={{ color: 'var(--color-primary)', marginRight: '10px', fontSize: '1.2rem' }}>⛁</span>
+                    <span style={{ color: 'var(--color-primary)', marginRight: '10px', fontSize: '1.1rem' }}>⛁</span>
                     {col.collection}
                   </div>
                   <div>
@@ -289,7 +381,8 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
                                 border: '1px solid var(--color-border)',
                                 color: 'var(--color-text-main)',
                                 fontSize: '0.7rem',
-                                padding: '4px 10px'
+                                padding: '3px 8px',
+                                borderRadius: '4px'
                               }}>
                                 {f.type}
                               </span>
