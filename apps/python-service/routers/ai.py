@@ -175,7 +175,7 @@ Rules:
 4. ALWAYS include "createdAt" (type: Date, required: true) in EVERY collection.
 5. Suggest Ref to "users" where ownership applies (ownerId, authorId, userId, etc.).
 6. NEVER generate a collection named "users" — it is reserved for auth.
-7. When the developer confirms satisfaction ("looks good", "yes", "create it", "perfect") -> set type: "complete". You MUST set "schema": null.
+7. When the developer confirms satisfaction ("looks good", "yes", "create it", "perfect") -> set type: "complete", set "schema": null, and in your message, clearly tell the developer that their schema is finalized and guide them to click the "Insert All" button in the Schema Preview panel on the right to create the collections in their database. NEVER claim that you have already created the collections yourself.
 8. The "schema" field MUST ALWAYS BE AN ARRAY (LIST) OF OBJECTS. Even if you are proposing a single collection, you must wrap it in an array like: `"schema": [ { "collection": "...", "fields": [...] } ]`. If `type` is "clarify" or "complete", you MUST set `"schema": null`.
 9. Respond ONLY in the defined JSON structure. No prose outside the message field."""
 
