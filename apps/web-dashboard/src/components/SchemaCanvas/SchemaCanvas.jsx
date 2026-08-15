@@ -19,27 +19,38 @@ const nodeTypes = {
 };
 
 export default function SchemaCanvas({ collections = [], isAiAssisted = false }) {
-  // Convert collections list into React Flow Nodes and Edges with auto-layout
+  // Convert collections list into React Flow Nodes and Edges with spacious layout
   const { initialNodes, initialEdges, totalFields, totalRelations } = useMemo(() => {
     const nodes = [];
     const edges = [];
     let fieldCount = 0;
     let relationCount = 0;
 
-    const COLS = collections.length > 4 ? 3 : 2;
-    const X_GAP = 320;
-    const Y_GAP = 300;
+    const COLS = collections.length > 3 ? 3 : 2;
+    const X_GAP = 420;
+    const Y_GAP = 360;
+
+    // Index map for smart routing
+    const colIndexMap = {};
+    collections.forEach((col, idx) => {
+      colIndexMap[col.name] = {
+        colX: (idx % COLS) * X_GAP + 50,
+        colY: Math.floor(idx / COLS) * Y_GAP + 50,
+        index: idx,
+        col: idx % COLS,
+        row: Math.floor(idx / COLS)
+      };
+    });
 
     collections.forEach((col, idx) => {
-      const colX = (idx % COLS) * X_GAP + 40;
-      const colY = Math.floor(idx / COLS) * Y_GAP + 40;
+      const pos = colIndexMap[col.name] || { colX: (idx % COLS) * X_GAP + 50, colY: Math.floor(idx / COLS) * Y_GAP + 50 };
       const fields = col.model || col.fields || [];
       fieldCount += fields.length;
 
       nodes.push({
         id: col.name,
         type: 'collectionNode',
-        position: { x: colX, y: colY },
+        position: { x: pos.colX, y: pos.colY },
         data: {
           name: col.name,
           fields,
@@ -47,29 +58,39 @@ export default function SchemaCanvas({ collections = [], isAiAssisted = false })
         },
       });
 
-      // Find Ref fields and create relation edges
+      // Find Ref fields and create clean relationship edges
       fields.forEach((field) => {
         const targetRef = field.ref || field.items?.ref;
         if ((field.type === 'Ref' || field.items?.type === 'Ref') && targetRef) {
           relationCount++;
+          const targetPos = colIndexMap[targetRef];
+          
+          // Smart routing: if target is above/below in same column, route to top handle
+          const useTopHandle = targetPos && targetPos.col === pos.col && targetPos.row !== pos.row;
+          const targetHandle = useTopHandle ? `${targetRef}-target-top` : `${targetRef}-target`;
+
           edges.push({
             id: `edge-${col.name}-${field.key}-${targetRef}`,
             source: col.name,
             target: targetRef,
             sourceHandle: `${col.name}-${field.key}-ref`,
-            targetHandle: `${targetRef}-target`,
+            targetHandle: targetHandle,
             type: 'smoothstep',
             animated: true,
+            pathOptions: {
+              borderRadius: 16,
+              offset: 24,
+            },
             label: `${field.key} → ${targetRef}`,
-            labelStyle: { fill: 'var(--color-text-muted)', fontSize: 10, fontFamily: 'monospace' },
-            labelBgStyle: { fill: 'var(--color-bg-card)', fillOpacity: 0.85 },
-            labelBgPadding: [4, 2],
-            labelBgBorderRadius: 4,
-            style: { stroke: 'var(--color-primary)', strokeWidth: 1.5 },
+            labelStyle: { fill: 'var(--color-text-main)', fontSize: 10, fontFamily: 'monospace', fontWeight: 600 },
+            labelBgStyle: { fill: 'var(--color-bg-card)', fillOpacity: 0.95, stroke: 'var(--color-border)', strokeWidth: 1 },
+            labelBgPadding: [6, 3],
+            labelBgBorderRadius: 6,
+            style: { stroke: 'var(--color-primary)', strokeWidth: 2 },
             markerEnd: {
               type: MarkerType.ArrowClosed,
-              width: 14,
-              height: 14,
+              width: 16,
+              height: 16,
               color: 'var(--color-primary)',
             },
           });
@@ -89,9 +110,9 @@ export default function SchemaCanvas({ collections = [], isAiAssisted = false })
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
   return (
-    <div className="relative w-full h-full min-h-[480px] bg-[var(--color-bg-main)] rounded-lg overflow-hidden border border-[var(--color-border)] select-none">
+    <div className="relative w-full h-full min-h-[420px] bg-[var(--color-bg-main)] rounded-xl overflow-hidden select-none">
       {/* Top Overlay Stats Bar */}
-      <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-[var(--color-bg-card)]/90 backdrop-blur-md px-3 py-1.5 rounded-md border border-[var(--color-border)] shadow-sm pointer-events-auto">
+      <div className="absolute top-3 left-3 z-10 flex items-center gap-2.5 bg-[var(--color-bg-card)]/90 backdrop-blur-md px-3.5 py-1.5 rounded-lg border border-[var(--color-border)] shadow-md pointer-events-auto">
         <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-main)] font-semibold">
           <Database size={13} className="text-[var(--color-primary)]" />
           <span>{collections.length} Collection{collections.length !== 1 ? 's' : ''}</span>
@@ -124,9 +145,11 @@ export default function SchemaCanvas({ collections = [], isAiAssisted = false })
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.25 }}
+        fitViewOptions={{ padding: 0.3 }}
         minZoom={0.2}
-        maxZoom={1.5}
+        maxZoom={1.6}
+        nodesDraggable={true}
+        elementsSelectable={true}
         defaultEdgeOptions={{
           type: 'smoothstep',
         }}
@@ -134,18 +157,18 @@ export default function SchemaCanvas({ collections = [], isAiAssisted = false })
       >
         <Background
           variant={BackgroundVariant.Dots}
-          gap={18}
-          size={1}
+          gap={20}
+          size={1.2}
           color="var(--color-border)"
           className="opacity-40"
         />
         <Controls
-          className="!bg-[var(--color-bg-card)] !border !border-[var(--color-border)] !rounded-md !shadow-md [&>button]:!bg-[var(--color-bg-card)] [&>button]:!border-b [&>button]:!border-[var(--color-border)] [&>button]:!text-[var(--color-text-main)] [&>button:hover]:!bg-[var(--color-surface-hover)]"
+          className="!bg-[var(--color-bg-card)] !border !border-[var(--color-border)] !rounded-lg !shadow-lg [&>button]:!bg-[var(--color-bg-card)] [&>button]:!border-b [&>button]:!border-[var(--color-border)] [&>button]:!text-[var(--color-text-main)] [&>button:hover]:!bg-[var(--color-surface-hover)]"
         />
         <MiniMap
           nodeColor="var(--color-bg-input)"
           maskColor="rgba(0, 0, 0, 0.4)"
-          className="!bg-[var(--color-bg-card)] !border !border-[var(--color-border)] !rounded-md"
+          className="!bg-[var(--color-bg-card)] !border !border-[var(--color-border)] !rounded-lg !shadow-md"
           zoomable
           pannable
         />

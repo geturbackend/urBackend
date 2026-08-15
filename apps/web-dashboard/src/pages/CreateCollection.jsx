@@ -4,7 +4,6 @@ import api from '../utils/api';
 import { useOnboarding } from '../context/OnboardingContext';
 import toast from 'react-hot-toast';
 import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, Wand2 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 import CollectionCreatorAgent from '../components/CollectionCreatorAgent';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 
@@ -19,514 +18,125 @@ const ALL_TYPES = [...PRIMITIVE_TYPES, 'Object', 'Array', 'Ref'];
 const ARRAY_ITEM_TYPES = [...PRIMITIVE_TYPES, 'Object', 'Ref'];
 
 function createEmptyField() {
-    return { _id: nextFieldId(), key: '', type: 'String', required: false, unique: false, default: undefined };
+    return {
+        _id: nextFieldId(),
+        key: '',
+        type: 'String',
+        required: false,
+        unique: false,
+        fields: [],
+        items: { type: 'String', ref: '', fields: [] },
+        ref: ''
+    };
 }
 
-// FUNCTION - FIELD ROW COMPONENT
-function FieldRow({ field, index, depth, collections, collectionsLoading, collectionsError, onChange, onRemove }) {
-    const [expanded, setExpanded] = useState(true);
-
-    const handleChange = (prop, value) => {
-        if (field.locked) return;
-        const updated = { ...field, [prop]: value };
-
-        // Reset sub-properties when type changes
-        if (prop === 'type') {
-            delete updated.fields;
-            delete updated.items;
-            delete updated.ref;
-            delete updated.default;
-            if (value === 'Object') {
-                updated.fields = [createEmptyField()];
-                updated.unique = false;
-            } else if (value === 'Array') {
-                updated.items = { type: 'String' };
-                updated.unique = false;
-            } else if (value === 'Ref') {
-                updated.ref = '';
-                updated.unique = false;
-            }
-        }
-
-        if (prop === 'required' && value) {
-            delete updated.default;
-        }
-        
-        onChange(index, updated);
-    };
-
-    const handleSubFieldChange = (subIndex, updatedSubField) => {
-        const newFields = [...(field.fields || [])];
-        newFields[subIndex] = updatedSubField;
-        onChange(index, { ...field, fields: newFields });
-    };
-
-    const handleDefaultChange = (rawValue) => {
-      if (field.locked) return;
-    
-      let nextDefault;
-      if (field.type === 'String') {
-        nextDefault = rawValue === '' ? undefined : rawValue;
-      } else if (field.type === 'Number') {
-        if (rawValue === '') nextDefault = undefined;
-        else {
-          const parsed = Number(rawValue);
-          nextDefault = Number.isNaN(parsed) ? undefined : parsed;
-        }
-      } else if (field.type === 'Boolean') {
-        if (rawValue === '') nextDefault = undefined;
-        else nextDefault = rawValue === 'true';
-      } else {
-        nextDefault = undefined;
-      }
-    
-      const updated = { ...field };
-      if (nextDefault === undefined) delete updated.default;
-      else updated.default = nextDefault;
-    
-      onChange(index, updated);
-    };
-
-    const addSubField = () => {
-        const newFields = [...(field.fields || []), createEmptyField()];
-        onChange(index, { ...field, fields: newFields });
-    };
-
-    const removeSubField = (subIndex) => {
-        const newFields = (field.fields || []).filter((_, i) => i !== subIndex);
-        onChange(index, { ...field, fields: newFields });
-    };
-
-    const handleItemsChange = (prop, value) => {
-        const updatedItems = { ...field.items, [prop]: value };
-        if (prop === 'type') {
-            delete updatedItems.fields;
-            if (value === 'Object') {
-                updatedItems.fields = [createEmptyField()];
-            }
-        }
-        onChange(index, { ...field, items: updatedItems });
-    };
-
-    const handleItemSubFieldChange = (subIndex, updatedSubField) => {
-        const newFields = [...(field.items?.fields || [])];
-        newFields[subIndex] = updatedSubField;
-        onChange(index, { ...field, items: { ...field.items, fields: newFields } });
-    };
-
-    const addItemSubField = () => {
-        const newFields = [...(field.items?.fields || []), createEmptyField()];
-        onChange(index, { ...field, items: { ...field.items, fields: newFields } });
-    };
-
-    const removeItemSubField = (subIndex) => {
-        const newFields = (field.items?.fields || []).filter((_, i) => i !== subIndex);
-        onChange(index, { ...field, items: { ...field.items, fields: newFields } });
-    };
-
-    const availableTypes = depth >= MAX_DEPTH
-        ? PRIMITIVE_TYPES.concat(['Ref'])  // No Object/Array at max depth
-        : ALL_TYPES;
-
-    const availableItemTypes = depth >= MAX_DEPTH
-        ? PRIMITIVE_TYPES.concat(['Ref'])
-        : ARRAY_ITEM_TYPES;
-
-    const isComplex = field.type === 'Object' || field.type === 'Array' || field.type === 'Ref';
-    const indent = depth * 20;
-
-    return (
-        <div style={{ marginLeft: `${indent}px` }}>
-            <div className="schema-field-row" style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                padding: '10px 12px', marginBottom: '4px',
-                background: depth > 1 ? 'var(--color-bg-input)' : 'transparent',
-                borderRadius: '6px',
-                borderLeft: depth > 1 ? '2px solid rgba(62, 207, 142, 0.2)' : 'none'
-            }}>
-                {/* Expand toggle for complex types */}
-                {isComplex && field.type !== 'Ref' ? (
-                    <button
-                        type="button"
-                        onClick={() => setExpanded(!expanded)}
-                        className="btn-icon"
-                        style={{ padding: '2px', color: 'var(--color-text-muted)', flexShrink: 0 }}
-                    >
-                        {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    </button>
-                ) : (
-                    <div style={{ width: '18px', flexShrink: 0 }} />
-                )}
-
-                {/* Key name */}
-                <input
-                    type="text"
-                    placeholder="field_name"
-                    value={field.key}
-                    disabled={field.locked}
-                    onChange={(e) => handleChange('key', e.target.value)}
-                    className="input-field"
-                    style={{
-                        flex: 2, border: 'none', background: 'transparent',
-                        padding: '4px 0', fontSize: '0.9rem',
-                        opacity: field.locked ? 0.6 : 1,
-                        cursor: field.locked ? 'not-allowed' : 'text'
-                    }}
-                />
-
-                {/* Type selector */}
-                <select
-                    value={field.type}
-                    disabled={field.locked}
-                    onChange={(e) => handleChange('type', e.target.value)}
-                    className="input-field"
-                    style={{
-                        flex: 1, border: 'none', background: 'transparent',
-                        padding: '4px 0', cursor: field.locked ? 'not-allowed' : 'pointer', fontSize: '0.9rem',
-                        opacity: field.locked ? 0.6 : 1
-                    }}
-                >
-                    {availableTypes.map(t => (
-                        <option key={t} value={t}>{t}</option>
-                    ))}
-                </select>
-
-                {/* Required Checkbox */}
-                <div style={{ width: '24px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
-                    <input
-                        type="checkbox"
-                        aria-label="required"
-                        checked={field.required}
-                        disabled={field.locked}
-                        onChange={(e) => handleChange('required', e.target.checked)}
-                        style={{
-                            accentColor: 'var(--color-primary)',
-                            transform: 'scale(1.1)', cursor: field.locked ? 'not-allowed' : 'pointer',
-                            opacity: field.locked ? 0.6 : 1
-                        }}
-                    />
-                </div>
-
-                {/* Unique Checkbox */}
-                <div style={{ width: '24px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
-                    {depth === 1 && PRIMITIVE_TYPES.includes(field.type) ? (
-                        <input
-                            type="checkbox"
-                            aria-label="unique"
-                            checked={!!field.unique}
-                            disabled={field.locked}
-                            onChange={(e) => handleChange('unique', e.target.checked)}
-                            style={{
-                                accentColor: 'var(--color-primary)',
-                                transform: 'scale(1.1)', cursor: field.locked ? 'not-allowed' : 'pointer',
-                                opacity: field.locked ? 0.6 : 1
-                            }}
-                        />
-                    ) : (
-                        <div aria-hidden="true" />
-                    )}
-                </div>
-
-                {/* Delete Button */}
-                <button
-                    type="button"
-                    onClick={() => onRemove(index)}
-                    disabled={field.locked}
-                    className="btn btn-ghost"
-                    style={{ 
-                        color: 'var(--color-text-muted)', 
-                        padding: '4px', 
-                        flexShrink: 0,
-                        opacity: field.locked ? 0.3 : 1,
-                        cursor: field.locked ? 'not-allowed' : 'pointer'
-                    }}
-                >
-                    <Trash2 size={15} />
-                </button>
-            </div>
-
-            {!field.required && ['String', 'Number', 'Boolean'].includes(field.type) && (
-              <div style={{ marginLeft: '26px', marginBottom: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
-                  → Default Value:
-                </span>
-
-                {field.type === 'Boolean' ? (
-                  <select
-                    value={field.default === true ? 'true' : field.default === false ? 'false' : ''}
-                    disabled={field.locked}
-                    onChange={(e) => handleDefaultChange(e.target.value)}
-                    className="input-field"
-                    style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
-                  >
-                    <option value="">No default</option>
-                    <option value="true">true</option>
-                    <option value="false">false</option>
-                  </select>
-                ) : (
-                  <input
-                    type={field.type === 'Number' ? 'number' : 'text'}
-                    value={field.default ?? ''}
-                    disabled={field.locked}
-                    onChange={(e) => handleDefaultChange(e.target.value)}
-                    className="input-field"
-                    placeholder={field.type === 'Number' ? 'e.g. 0' : 'e.g. pending'}
-                    style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
-                  />
-                )}
-              </div>
-            )}
-
-            {/* Ref — Collection Picker */}
-            {field.type === 'Ref' && (
-                <div style={{ marginLeft: '26px', marginBottom: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
-                        → References:
-                    </span>
-                    <select
-                        value={field.ref || ''}
-                        disabled={collectionsLoading || collectionsError}
-                        onChange={(e) => handleChange('ref', e.target.value)}
-                        className="input-field"
-                        style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
-                    >
-                        <option value="">{collectionsLoading ? 'Loading collections…' : collectionsError ? 'Failed to load' : 'Select collection...'}</option>
-                        {collections.map(c => (
-                            <option key={c.name} value={c.name}>{c.name}</option>
-                        ))}
-                    </select>
-                </div>
-            )}
-
-            {/* Object — nested sub-fields */}
-            {field.type === 'Object' && expanded && (
-                <div style={{ marginLeft: '8px', marginBottom: '8px' }}>
-                    <div style={{
-                        padding: '8px', borderRadius: '6px',
-                        border: '1px solid rgba(62, 207, 142, 0.1)',
-                        background: 'var(--color-bg-input)'
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', letterSpacing: '0.05em' }}>
-                                SUB-FIELDS
-                            </span>
-                            {depth < MAX_DEPTH && (
-                                <button type="button" onClick={addSubField} className="btn btn-ghost" style={{ fontSize: '0.75rem', padding: '2px 6px' }}>
-                                    <Plus size={12} /> Add
-                                </button>
-                            )}
-                        </div>
-                        {(field.fields || []).map((subField, subIdx) => (
-                            <FieldRow
-                                key={subField._id}
-                                field={subField}
-                                index={subIdx}
-                                depth={depth + 1}
-                                collections={collections}
-                                collectionsLoading={collectionsLoading}
-                                collectionsError={collectionsError}
-                                onChange={handleSubFieldChange}
-                                onRemove={removeSubField}
-                            />
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Array — item type config */}
-            {field.type === 'Array' && expanded && (
-                <div style={{ marginLeft: '8px', marginBottom: '8px' }}>
-                    <div style={{
-                        padding: '8px', borderRadius: '6px',
-                        border: '1px solid rgba(62, 207, 142, 0.1)',
-                        background: 'var(--color-bg-input)'
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', letterSpacing: '0.05em' }}>
-                                ITEMS TYPE
-                            </span>
-                            <select
-                                value={field.items?.type || 'String'}
-                                onChange={(e) => handleItemsChange('type', e.target.value)}
-                                className="input-field"
-                                style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
-                            >
-                                {availableItemTypes.map(t => (
-                                    <option key={t} value={t}>{t}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Array of Objects — sub-fields */}
-                        {field.items?.type === 'Object' && (
-                            <div style={{ marginTop: '6px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>Object Fields</span>
-                                    {depth < MAX_DEPTH && (
-                                        <button type="button" onClick={addItemSubField} className="btn btn-ghost" style={{ fontSize: '0.75rem', padding: '2px 6px' }}>
-                                            <Plus size={12} /> Add
-                                        </button>
-                                    )}
-                                </div>
-                                {(field.items?.fields || []).map((subField, subIdx) => (
-                                    <FieldRow
-                                        key={subField._id}
-                                        field={subField}
-                                        index={subIdx}
-                                        depth={depth + 1}
-                                        collections={collections}
-                                        collectionsLoading={collectionsLoading}
-                                        collectionsError={collectionsError}
-                                        onChange={handleItemSubFieldChange}
-                                        onRemove={removeItemSubField}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                        {/* Array of Ref — collection picker */}
-                        {field.items?.type === 'Ref' && (
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
-                                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
-                                    → References:
-                                </span>
-                                <select
-                                    value={field.items?.ref || ''}
-                                    disabled={collectionsLoading || collectionsError}
-                                    onChange={(e) => handleItemsChange('ref', e.target.value)}
-                                    className="input-field"
-                                    style={{ flex: 1, fontSize: '0.85rem', padding: '4px 8px', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '4px' }}
-                                >
-                                    <option value="">{collectionsLoading ? 'Loading collections…' : collectionsError ? 'Failed to load' : 'Select collection...'}</option>
-                                    {collections.map(c => (
-                                        <option key={c.name} value={c.name}>{c.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
-
-// FUNCTION - CLEAN FIELDS FOR API
-function cleanFieldsForApi(fields) {
-    return fields.map(f => {
-      const { _id, ...clean } = f;
-      
-      const supportsDefault = ['String', 'Number', 'Boolean'].includes(clean.type);
-      if (clean.required || !supportsDefault || clean.default === undefined) {
-        delete clean.default;
-      }
-      
-        if (clean.fields) clean.fields = cleanFieldsForApi(clean.fields);
-        if (clean.items?.fields) {
-            clean.items = { ...clean.items, fields: cleanFieldsForApi(clean.items.fields) };
-        }
-        return clean;
-    });
-}
-
-
-// FUNCTION - CREATE COLLECTION COMPONENT
 function CreateCollection() {
     const { projectId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
     const { completeStep } = useOnboarding();
-    const { user } = useAuth();
 
-    const queryParams = new URLSearchParams(location.search);
-    const initialName = queryParams.get('name')?.trim().toLowerCase() || '';
-    const preset = queryParams.get('preset')?.trim().toLowerCase() || '';
+    const initialName = new URLSearchParams(location.search).get('name') || '';
 
-    const [mode, setMode] = useState('manual');
-    const [name, setName] = useState(initialName === 'users' ? 'users' : initialName);
-
-    // Default fields for a new collection
-    // If it's a "users" collection, we provide the essential Auth fields
-    const getInitialFields = () => {
-        if (initialName === 'users' || preset === 'auth-users') {
+    const [name, setName] = useState(initialName);
+    const [fields, setFields] = useState(() => {
+        if (initialName === 'users') {
             return [
-                { ...createEmptyField(), key: 'email', type: 'String', required: true, locked: true },
-                { ...createEmptyField(), key: 'password', type: 'String', required: true, locked: true },
-                { ...createEmptyField(), key: 'username', type: 'String', required: false },
-                { ...createEmptyField(), key: 'emailVerified', type: 'Boolean', required: false },
+                { _id: nextFieldId(), key: 'email', type: 'String', required: true, unique: true, fields: [], items: { type: 'String' }, ref: '', isFixed: true },
+                { _id: nextFieldId(), key: 'password', type: 'String', required: true, unique: false, fields: [], items: { type: 'String' }, ref: '', isFixed: true }
             ];
         }
-        return [
-            { ...createEmptyField(), key: 'name', type: 'String', required: true }
-        ];
-    };
-
-    const [fields, setFields] = useState(getInitialFields());
-    const [loading, setLoading] = useState(false);
+        return [createEmptyField()];
+    });
     const [collections, setCollections] = useState([]);
-    const [collectionsLoading, setCollectionsLoading] = useState(true);
+    const [collectionsLoading, setCollectionsLoading] = useState(false);
     const [collectionsError, setCollectionsError] = useState(null);
+    const [loading, setLoading] = useState(false);
 
-    // Fetch existing collections for Ref picker — runs immediately on mount
-    // so it fires in parallel with any other in-flight requests.
+    const [mode, setMode] = useState(() => {
+        const params = new URLSearchParams(location.search);
+        return params.get('mode') === 'ai' ? 'ai' : 'manual';
+    });
+
     useEffect(() => {
-        let isMounted = true;
         const fetchCollections = async () => {
-            if (isMounted) {
-                setCollectionsLoading(true);
-                setCollections([]);
-                setCollectionsError(null);
-            }
+            setCollectionsLoading(true);
+            setCollectionsError(null);
             try {
                 const res = await api.get(`/api/projects/${projectId}`);
-                if (isMounted) {
-                    const projectData = res.data.data || res.data;
-                    const myMember = projectData.members?.find(m => m.user === user?._id || m.email === user?.email);
-                    const myRole = projectData.owner === user?._id ? 'owner' : (myMember?.role || 'viewer');
-                    if (myRole === 'viewer') {
-                        toast.error("Viewers cannot create collections");
-                        navigate(`/project/${projectId}/database`);
-                        return;
-                    }
-                    setCollections(projectData.collections || []);
+                if (res.data && res.data.data && Array.isArray(res.data.data.collections)) {
+                    setCollections(res.data.data.collections);
+                } else {
+                    setCollections([]);
                 }
             } catch (err) {
-                console.error('Failed to fetch collections for Ref picker:', err);
-                if (isMounted) {
-                    setCollectionsError('Failed to load collections');
-                    toast.error('Failed to load collections for references');
-                }
+                console.error("Failed to fetch collections", err);
+                setCollectionsError("Could not load collections for Ref field");
             } finally {
-                if (isMounted) setCollectionsLoading(false);
+                setCollectionsLoading(false);
             }
         };
-        fetchCollections();
-        return () => { isMounted = false; };
-    }, [projectId, user, navigate]);
+
+        if (projectId) {
+            fetchCollections();
+        }
+    }, [projectId]);
 
     const addField = () => {
         setFields([...fields, createEmptyField()]);
     };
 
-    const removeField = (index) => {
-        const newFields = fields.filter((_, i) => i !== index);
-        setFields(newFields);
+    const removeField = (indexToRemove) => {
+        setFields(fields.filter((_, idx) => idx !== indexToRemove));
     };
 
     const handleFieldChange = (index, updatedField) => {
-        const newFields = [...fields];
-        newFields[index] = updatedField;
-        setFields(newFields);
+        const updated = [...fields];
+        updated[index] = updatedField;
+        setFields(updated);
+    };
+
+    const cleanFieldsForApi = (fieldList) => {
+        return fieldList.map(f => {
+            const cleaned = {
+                key: f.key,
+                type: f.type,
+                required: !!f.required,
+            };
+
+            if (f.unique && !['Array', 'Object', 'Ref'].includes(f.type)) {
+                cleaned.unique = true;
+            }
+
+            if (f.type === 'Ref') {
+                cleaned.ref = f.ref || 'users';
+            }
+
+            if (f.type === 'Array') {
+                const itemType = f.items?.type || 'String';
+                const itemsDef = { type: itemType };
+                if (itemType === 'Ref') {
+                    itemsDef.ref = f.items?.ref || 'users';
+                }
+                if (itemType === 'Object') {
+                    itemsDef.fields = cleanFieldsForApi(f.items?.fields || []);
+                }
+                cleaned.items = itemsDef;
+            }
+
+            if (f.type === 'Object') {
+                cleaned.fields = cleanFieldsForApi(f.fields || []);
+            }
+
+            return cleaned;
+        });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         const normalizedName = name.trim().toLowerCase();
-        if (!normalizedName) return toast.error("Collection name is required");
-        if (initialName === 'users' && normalizedName !== 'users') {
-            return toast.error("The 'users' collection name cannot be changed.");
-        }
 
+        if (!normalizedName) return toast.error("Collection name is required");
         if (fields.some(f => !f.key)) return toast.error("All fields must have a name");
 
         if (normalizedName === 'users') {
@@ -557,31 +167,38 @@ function CreateCollection() {
     };
 
     return (
-        <div className="container" style={{ maxWidth: mode === 'ai' ? '1380px' : '840px', transition: 'max-width 0.2s ease', paddingBottom: '3rem' }}>
-            {/* Top Navigation & Mode Switch Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem', gap: '1rem', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div 
+            className="w-full h-[calc(100vh-64px)] flex flex-col overflow-hidden"
+            style={{ 
+                padding: '1rem 1.5rem',
+                boxSizing: 'border-box'
+            }}
+        >
+            {/* Top Navigation & Mode Switch Header (Pinned, Non-overlapping) */}
+            <div 
+                className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--color-border)] flex-shrink-0 gap-4"
+            >
+                <div className="flex items-center gap-3">
                     <button
                         onClick={() => navigate(`/project/${projectId}`)}
-                        className="btn btn-ghost"
-                        style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)', borderRadius: '8px' }}
+                        className="btn btn-ghost text-xs px-2.5 py-1.5 flex items-center gap-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] rounded-md border border-[var(--color-border)]"
                     >
-                        <ArrowLeft size={16} /> Cancel & Back
+                        <ArrowLeft size={14} /> Cancel & Back
                     </button>
-                    <div style={{ height: '16px', width: '1px', backgroundColor: 'var(--color-border)' }} />
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0, color: 'var(--color-text-main)' }}>
+                    <div className="h-4 w-px bg-[var(--color-border)]" />
+                    <h2 className="text-base font-semibold m-0 text-[var(--color-text-main)]">
                         Create Collection
                     </h2>
                 </div>
                 
                 {initialName !== 'users' && (
-                    <Tabs value={mode} onValueChange={setMode} className="w-auto">
-                        <TabsList className="h-8">
-                            <TabsTrigger value="manual" className="text-xs px-3 py-1">
+                    <Tabs value={mode} onValueChange={setMode} className="w-auto shrink-0">
+                        <TabsList className="h-8 p-1 bg-[var(--color-bg-input)] border border-[var(--color-border)]">
+                            <TabsTrigger value="manual" className="text-xs px-3 py-1 font-medium">
                                 Manual Builder
                             </TabsTrigger>
-                            <TabsTrigger value="ai" className="text-xs px-3 py-1 gap-1.5 data-[state=active]:text-[var(--color-primary)]">
-                                <Wand2 size={13} />
+                            <TabsTrigger value="ai" className="text-xs px-3 py-1 gap-1.5 font-medium data-[state=active]:text-[var(--color-primary)]">
+                                <Wand2 size={13} className="text-[var(--color-primary)]" />
                                 <span>AI-Assisted</span>
                             </TabsTrigger>
                         </TabsList>
@@ -589,100 +206,308 @@ function CreateCollection() {
                 )}
             </div>
 
+            {/* Main Area */}
             {mode === 'manual' ? (
-                <div style={{ backgroundColor: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: '14px', padding: '2rem', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
-                    <div className="form-group">
-                        <label className="form-label">Name</label>
-                        <input
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            disabled={initialName === 'users'}
-                            className="input-field"
-                            style={{
-                                cursor: initialName === 'users' ? 'not-allowed' : 'text',
-                                opacity: initialName === 'users' ? 0.7 : 1
-                            }}
-                            placeholder="e.g. users, products, orders"
-                            autoFocus={initialName !== 'users'}
-                        />
-                        <small style={{ color: 'var(--color-text-muted)', marginTop: '5px', display: 'block' }}>
-                            This will be the name of your collection in the database.
-                        </small>
-                    </div>
+                <div className="flex-1 overflow-y-auto custom-scrollbar max-w-4xl mx-auto w-full py-4">
+                    <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-6 shadow-sm">
+                        <div className="form-group mb-6">
+                            <label className="form-label text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5 block">
+                                Collection Name
+                            </label>
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                disabled={initialName === 'users'}
+                                className="input-field w-full text-sm font-mono"
+                                style={{
+                                    cursor: initialName === 'users' ? 'not-allowed' : 'text',
+                                    opacity: initialName === 'users' ? 0.7 : 1
+                                }}
+                                placeholder="e.g. products, orders, articles"
+                                autoFocus={initialName !== 'users'}
+                            />
+                            <small className="text-xs text-[var(--color-text-muted)] mt-1.5 block">
+                                This will be the name of your collection in the database.
+                            </small>
+                        </div>
 
-                    <div style={{ marginTop: '2.5rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                            <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Fields</h3>
+                        <div className="mt-6">
+                            <div className="flex justify-between items-center mb-3">
+                                <h3 className="text-sm font-semibold text-[var(--color-text-main)] m-0">Fields</h3>
+                                <button
+                                    type="button"
+                                    onClick={addField}
+                                    className="btn btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5 rounded-md"
+                                >
+                                    <Plus size={13} /> Add Field
+                                </button>
+                            </div>
+
+                            <div className="flex items-center gap-2 px-3 py-1.5 mb-1 text-[10px] font-semibold text-[var(--color-text-muted)] tracking-wider">
+                                <span className="flex-2">NAME</span>
+                                <span className="flex-1">TYPE</span>
+                                <span className="w-6 text-center">REQ</span>
+                                <span className="w-6 text-center">UNIQ</span>
+                                <span className="w-8"></span>
+                            </div>
+
+                            <div className="border border-[var(--color-border)] rounded-lg overflow-hidden bg-[var(--color-bg-input)] divide-y divide-[var(--color-border)]">
+                                {fields.map((field, index) => (
+                                    <FieldRow
+                                        key={field._id}
+                                        field={field}
+                                        index={index}
+                                        depth={1}
+                                        collections={collections}
+                                        collectionsLoading={collectionsLoading}
+                                        collectionsError={collectionsError}
+                                        onChange={handleFieldChange}
+                                        onRemove={removeField}
+                                    />
+                                ))}
+                            </div>
+
+                            <div className="mt-3 text-xs text-[var(--color-text-muted)]">
+                                Tip: We automatically add a unique <code>_id</code> field to every document.
+                                {' '}Use <strong>Object</strong> for nested data, <strong>Array</strong> for lists, and <strong>Ref</strong> to link collections.
+                            </div>
+                        </div>
+
+                        <div className="mt-8 pt-4 border-t border-[var(--color-border)] flex justify-end">
                             <button
-                                type="button"
-                                onClick={addField}
-                                className="btn btn-secondary"
-                                style={{ fontSize: '0.85rem' }}
+                                onClick={handleSubmit}
+                                className="btn btn-primary text-xs px-6 py-2 font-semibold"
+                                disabled={loading}
                             >
-                                <Plus size={14} /> Add Field
+                                {loading ? 'Creating...' : 'Save Collection'}
                             </button>
                         </div>
-
-                        <div style={{
-                            display: 'flex', alignItems: 'center', gap: '8px',
-                            padding: '6px 12px 6px 38px', marginBottom: '4px',
-                            fontSize: '0.75rem', fontWeight: 600,
-                            color: 'var(--color-text-muted)', letterSpacing: '0.05em'
-                        }}>
-                            <span style={{ flex: 2 }}>NAME</span>
-                            <span style={{ flex: 1 }}>TYPE</span>
-                            <span style={{ width: '24px', textAlign: 'center' }}>REQ</span>
-                            <span style={{ width: '24px', textAlign: 'center' }}>UNIQ</span>
-                            <span style={{ width: '30px' }}></span>
-                        </div>
-
-                        <div style={{
-                            border: '1px solid var(--color-border)',
-                            borderRadius: '8px',
-                            overflow: 'hidden',
-                            background: 'var(--color-bg-input)'
-                        }}>
-                            {fields.map((field, index) => (
-                                <FieldRow
-                                    key={field._id}
-                                    field={field}
-                                    index={index}
-                                    depth={1}
-                                    collections={collections}
-                                    collectionsLoading={collectionsLoading}
-                                    collectionsError={collectionsError}
-                                    onChange={handleFieldChange}
-                                    onRemove={removeField}
-                                />
-                            ))}
-                        </div>
-
-                        <div style={{ marginTop: '10px', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-                            Tip: We automatically add a unique <code>_id</code> field to every document.
-                            {' '}Use <strong>Object</strong> for nested data, <strong>Array</strong> for lists, and <strong>Ref</strong> to link collections.
-                        </div>
-                    </div>
-
-                    <div style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end' }}>
-                        <button
-                            onClick={handleSubmit}
-                            className="btn btn-primary"
-                            disabled={loading}
-                            style={{ paddingLeft: '2rem', paddingRight: '2rem' }}
-                        >
-                            {loading ? 'Creating...' : 'Save'}
-                        </button>
                     </div>
                 </div>
             ) : (
-                <CollectionCreatorAgent 
-                    projectId={projectId} 
-                    onInsertAll={() => {
-                        completeStep('create_collection');
-                        navigate(`/project/${projectId}/database`);
-                    }} 
-                />
+                <div className="flex-1 overflow-hidden min-h-0 w-full">
+                    <CollectionCreatorAgent 
+                        projectId={projectId} 
+                        onInsertAll={() => {
+                            completeStep('create_collection');
+                            navigate(`/project/${projectId}/database`);
+                        }} 
+                    />
+                </div>
+            )}
+        </div>
+    );
+}
+
+// FieldRow Component
+function FieldRow({
+    field,
+    index,
+    depth,
+    collections,
+    collectionsLoading,
+    collectionsError,
+    onChange,
+    onRemove
+}) {
+    const isFixed = field.isFixed;
+    const isObject = field.type === 'Object';
+    const isArray = field.type === 'Array';
+    const isRef = field.type === 'Ref';
+    const [collapsed, setCollapsed] = useState(false);
+
+    const handleKeyChange = (e) => onChange(index, { ...field, key: e.target.value });
+    const handleTypeChange = (e) => {
+        const nextType = e.target.value;
+        const nextField = { ...field, type: nextType };
+        if (nextType === 'Object' && (!field.fields || field.fields.length === 0)) {
+            nextField.fields = [createEmptyField()];
+        }
+        if (nextType === 'Array') {
+            nextField.items = { type: 'String', ref: '', fields: [] };
+        }
+        if (nextType === 'Ref') {
+            nextField.ref = collections[0]?.name || 'users';
+            nextField.unique = false;
+        }
+        if (nextType === 'Object' || nextType === 'Array') {
+            nextField.unique = false;
+        }
+        onChange(index, nextField);
+    };
+
+    const handleRequiredToggle = () => onChange(index, { ...field, required: !field.required });
+    const handleUniqueToggle = () => onChange(index, { ...field, unique: !field.unique });
+    const handleRefChange = (e) => onChange(index, { ...field, ref: e.target.value });
+
+    const handleSubFieldChange = (subIndex, updatedSubField) => {
+        const newFields = [...(field.fields || [])];
+        newFields[subIndex] = updatedSubField;
+        onChange(index, { ...field, fields: newFields });
+    };
+
+    const addSubField = () => {
+        onChange(index, { ...field, fields: [...(field.fields || []), createEmptyField()] });
+    };
+
+    const removeSubField = (subIndex) => {
+        onChange(index, { ...field, fields: (field.fields || []).filter((_, idx) => idx !== subIndex) });
+    };
+
+    const handleArrayItemTypeChange = (e) => {
+        const itemType = e.target.value;
+        const nextItems = { type: itemType, ref: '', fields: [] };
+        if (itemType === 'Object') {
+            nextItems.fields = [createEmptyField()];
+        }
+        if (itemType === 'Ref') {
+            nextItems.ref = collections[0]?.name || 'users';
+        }
+        onChange(index, { ...field, items: nextItems });
+    };
+
+    return (
+        <div className="text-xs bg-[var(--color-bg-card)]">
+            <div className="flex items-center gap-2 p-2 px-3 hover:bg-[var(--color-surface-hover)] transition-colors">
+                {/* Collapse / Expand icon for complex types */}
+                <div className="w-5 flex items-center justify-center">
+                    {(isObject || (isArray && field.items?.type === 'Object')) ? (
+                        <button
+                            type="button"
+                            onClick={() => setCollapsed(!collapsed)}
+                            className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] p-0.5"
+                        >
+                            {collapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
+                        </button>
+                    ) : (
+                        <span className="w-3" />
+                    )}
+                </div>
+
+                {/* Field Name */}
+                <div className="flex-2">
+                    <input
+                        type="text"
+                        value={field.key}
+                        onChange={handleKeyChange}
+                        disabled={isFixed}
+                        placeholder="field_name"
+                        className="input-field w-full text-xs font-mono py-1 px-2 h-7"
+                    />
+                </div>
+
+                {/* Field Type Selector */}
+                <div className="flex-1">
+                    <select
+                        value={field.type}
+                        onChange={handleTypeChange}
+                        disabled={isFixed}
+                        className="input-field w-full text-xs py-1 px-2 h-7"
+                    >
+                        {ALL_TYPES.map(t => (
+                            <option key={t} value={t}>{t}</option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Ref Collection Dropdown */}
+                {isRef && (
+                    <div className="flex-1">
+                        <select
+                            value={field.ref || 'users'}
+                            onChange={handleRefChange}
+                            className="input-field w-full text-xs py-1 px-2 h-7 font-mono text-cyan-400"
+                        >
+                            <option value="users">users (Auth)</option>
+                            {collections.filter(c => c.name !== 'users').map(c => (
+                                <option key={c.name} value={c.name}>{c.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+
+                {/* Array Item Type Selector */}
+                {isArray && (
+                    <div className="flex-1 flex items-center gap-1">
+                        <span className="text-[10px] text-[var(--color-text-muted)]">of</span>
+                        <select
+                            value={field.items?.type || 'String'}
+                            onChange={handleArrayItemTypeChange}
+                            className="input-field w-full text-xs py-1 px-2 h-7"
+                        >
+                            {ARRAY_ITEM_TYPES.map(t => (
+                                <option key={t} value={t}>{t}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+
+                {/* Required Checkbox */}
+                <div className="w-6 text-center">
+                    <input
+                        type="checkbox"
+                        checked={field.required}
+                        onChange={handleRequiredToggle}
+                        disabled={isFixed}
+                        className="cursor-pointer"
+                        title="Required"
+                    />
+                </div>
+
+                {/* Unique Checkbox */}
+                <div className="w-6 text-center">
+                    <input
+                        type="checkbox"
+                        checked={field.unique}
+                        onChange={handleUniqueToggle}
+                        disabled={isFixed || isArray || isObject || isRef}
+                        className="cursor-pointer"
+                        title="Unique"
+                    />
+                </div>
+
+                {/* Remove Field Button */}
+                <div className="w-8 text-right">
+                    {!isFixed && (
+                        <button
+                            type="button"
+                            onClick={() => onRemove(index)}
+                            className="text-red-400 hover:text-red-500 p-1 rounded hover:bg-red-500/10"
+                            title="Remove field"
+                        >
+                            <Trash2 size={13} />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Nested fields for Object */}
+            {isObject && !collapsed && (
+                <div className="pl-6 pr-3 py-2 bg-[var(--color-bg-input)] border-t border-[var(--color-border)] space-y-1.5">
+                    {(field.fields || []).map((subField, subIdx) => (
+                        <FieldRow
+                            key={subField._id}
+                            field={subField}
+                            index={subIdx}
+                            depth={depth + 1}
+                            collections={collections}
+                            collectionsLoading={collectionsLoading}
+                            collectionsError={collectionsError}
+                            onChange={handleSubFieldChange}
+                            onRemove={removeSubField}
+                        />
+                    ))}
+                    {depth < MAX_DEPTH && (
+                        <button
+                            type="button"
+                            onClick={addSubField}
+                            className="text-[11px] text-[var(--color-primary)] hover:underline flex items-center gap-1 pt-1"
+                        >
+                            <Plus size={11} /> Add nested field to {field.key || 'Object'}
+                        </button>
+                    )}
+                </div>
             )}
         </div>
     );
