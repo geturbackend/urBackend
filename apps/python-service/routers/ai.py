@@ -45,6 +45,16 @@ class CollectionField(BaseModel):
     type: str
     required: bool = False
     ref: str | None = None
+    unique: bool = False
+    items: dict | None = None
+    fields: list["CollectionField"] | None = None
+
+    @model_validator(mode='after')
+    def validate_object_fields(self):
+        if self.type == "Object":
+            if self.fields is None or len(self.fields) == 0:
+                raise ValueError("fields must be present and non-empty for Object type")
+        return self
 
 class CollectionSchema(BaseModel):
     collection: str
@@ -171,7 +181,7 @@ async def collection_creator(request: CollectionCreatorRequest, req: Request):
 Rules:
 1. If the description is vague, ask 2-3 specific clarifying questions and set type: "clarify". You MUST set "schema": null. NEVER ask more than 3 at once.
 2. Once you have enough context, propose a schema and set type: "schema".
-3. Only use these field types: String, Number, Boolean, Date, Ref, Array. (For Ref, ALWAYS set 'ref' to the referenced collection name e.g. 'users'. Avoid empty Object types).
+3. Only use these field types: String, Number, Boolean, Date, Ref, Array, Object. For Ref, ALWAYS set 'ref' to the referenced collection name e.g. 'users'. For Array, set 'items' to describe item type e.g. {"type": "String"}. For Object, set 'fields' as a list of sub-fields. Do NOT use Object as a lazy catch-all — prefer specific flat fields when possible.
 4. ALWAYS include "createdAt" (type: Date, required: true) in EVERY collection.
 5. Suggest Ref to "users" where ownership applies (ownerId, authorId, userId, etc.) with 'ref': 'users'.
 6. NEVER generate a collection named "users" — it is reserved for auth.

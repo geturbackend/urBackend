@@ -46,7 +46,7 @@ async def test_byok_key_decrypted_and_used(mock_decrypt):
         mock_decrypt.assert_called_once_with(encrypted_byok["groqKey"])
         MockGroq.assert_called_once_with(
             api_key="gsk_test_byok_key_12345",
-            model_name="llama-3.1-8b-instant",
+            model_name="llama-3.3-70b-versatile",
             temperature=0,
         )
 
@@ -73,7 +73,7 @@ async def test_free_tier_under_limit(mock_redis):
 
         MockGroq.assert_called_once_with(
             api_key=settings.GROQ_API_KEY,
-            model_name="llama-3.1-8b-instant",
+            model_name="llama-3.3-70b-versatile",
             temperature=0,
         )
 
@@ -100,7 +100,7 @@ async def test_pro_tier_under_limit(mock_redis):
 
         MockGroq.assert_called_with(
             api_key=settings.GROQ_API_KEY,
-            model_name="llama-3.1-8b-instant",
+            model_name="llama-3.3-70b-versatile",
             temperature=0,
         )
 
@@ -111,7 +111,7 @@ async def test_pro_tier_under_limit(mock_redis):
         client = await resolve_ai_client("dev123", "pro", None)
         MockGroq.assert_called_with(
             api_key=settings.GROQ_API_KEY,
-            model_name="llama-3.1-8b-instant",
+            model_name="llama-3.3-70b-versatile",
             temperature=0,
         )
 

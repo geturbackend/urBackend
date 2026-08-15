@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const { Project, Developer } = require('@urbackend/common/src/models');
 const { forwardToPythonService } = require('../utils/internalPythonClient');
 const { AppError, ApiResponse, getProjectAccessQuery, resolveEffectivePlan } = require('@urbackend/common');
@@ -13,7 +14,6 @@ const queryBuilder = async (req, res, next) => {
         const { projectId } = req.params;
         const { collectionName, prompt } = req.body;
 
-        const mongoose = require('mongoose');
         if (!mongoose.Types.ObjectId.isValid(projectId)) {
             throw new AppError(400, "Invalid project ID");
         }
@@ -36,11 +36,11 @@ const queryBuilder = async (req, res, next) => {
             throw new AppError(403, "Cannot query the users collection via AI");
         }
 
-        // 1. Load collection and project details
+        // 1. Load collection and project details (including BYOK fields in a single query)
         const project = await Project.findOne({
             _id: projectId,
             ...getProjectAccessQuery(req.user._id)
-        });
+        }).select('+byok.groqKey.encrypted +byok.groqKey.iv +byok.groqKey.tag');
 
         if (!project) {
             throw new AppError(404, "Project not found or access denied");
@@ -80,20 +80,20 @@ const queryBuilder = async (req, res, next) => {
         let resolvedKey = null;
 
         // 1. Check project-level BYOK
-        const projectByok = await Project.findOne({
-            _id: projectId,
-            ...getProjectAccessQuery(req.user._id)
-        })
-            .select('+byok.groqKey.encrypted +byok.groqKey.iv +byok.groqKey.tag')
-            .lean();
-        if (projectByok?.byok?.groqKey?.encrypted) {
-            resolvedKey = decrypt(projectByok.byok.groqKey);
+        if (project.byok?.groqKey?.encrypted) {
+            resolvedKey = decrypt(project.byok.groqKey);
+            if (!resolvedKey) {
+                console.warn(`[QueryBuilder] Project-level BYOK key decryption failed for project ${projectId}`);
+            }
         }
 
         // 2. Fallback to developer-level BYOK
         const dev = await Developer.findById(req.user._id).select('+byok');
         if (!resolvedKey && dev?.byok?.groqKey?.encrypted) {
             resolvedKey = decrypt(dev.byok.groqKey);
+            if (!resolvedKey) {
+                console.warn(`[QueryBuilder] Developer-level BYOK key decryption failed for developer ${req.user._id}`);
+            }
         }
 
         // 3. Encrypt for secure transit to Python
@@ -166,7 +166,33 @@ const ccSessionKey = (projectId, developerId) =>
 const ccIterationsKey = (projectId, developerId) =>
   `ai:cc:iterations:${projectId}:${developerId}`;
 
+const LUA_RESERVE_ITERATION = `
+local sessionExists = redis.call('EXISTS', KEYS[2])
+local current = redis.call('GET', KEYS[1])
+local count = tonumber(current) or 0
+
+if sessionExists == 0 and count > 0 then
+    count = 0
+    redis.call('SET', KEYS[1], '0')
+end
+
+if count >= tonumber(ARGV[1]) then
+    return {0, count}
+end
+
+local nextVal = redis.call('INCR', KEYS[1])
+redis.call('EXPIRE', KEYS[1], ARGV[2])
+if sessionExists == 1 then
+    redis.call('EXPIRE', KEYS[2], ARGV[2])
+end
+return {1, nextVal}
+`;
+
 const collectionCreator = async (req, res, next) => {
+    let reservedIteration = false;
+    let iterKey = null;
+    let hasByok = false;
+
     try {
         const { projectId } = req.params;
         const { userMessage } = req.body;
@@ -179,7 +205,6 @@ const collectionCreator = async (req, res, next) => {
         }
         const safeUserMessage = userMessage.trim();
 
-        const mongoose = require('mongoose');
         if (!mongoose.Types.ObjectId.isValid(projectId)) {
             throw new AppError(400, "Invalid project ID");
         }
@@ -196,11 +221,8 @@ const collectionCreator = async (req, res, next) => {
 
         // 2. Load Redis session
         const sessionKey = ccSessionKey(projectId, req.user._id);
-        const iterKey = ccIterationsKey(projectId, req.user._id);
-        const [sessionStr, iterStr] = await Promise.all([
-            redis.get(sessionKey),
-            redis.get(iterKey)
-        ]);
+        iterKey = ccIterationsKey(projectId, req.user._id);
+        const sessionStr = await redis.get(sessionKey);
 
         let session = { messages: [], hasByok: false };
         try {
@@ -208,26 +230,45 @@ const collectionCreator = async (req, res, next) => {
         } catch (e) {
             console.warn("Invalid session data in Redis, resetting chat transcript");
         }
-        let iterations = iterStr ? parseInt(iterStr, 10) : 0;
 
         // 3. BYOK resolution
         let resolvedKey = null;
         if (project.byok?.groqKey?.encrypted) {
             resolvedKey = decrypt(project.byok.groqKey);
+            if (!resolvedKey) {
+                console.warn(`[CollectionCreator] Project-level BYOK key decryption failed for project ${projectId}`);
+            }
         }
 
         const dev = await Developer.findById(req.user._id).select('+byok +plan +trialEndsAt +subscriptionId');
         if (!resolvedKey && dev?.byok?.groqKey?.encrypted) {
             resolvedKey = decrypt(dev.byok.groqKey);
+            if (!resolvedKey) {
+                console.warn(`[CollectionCreator] Developer-level BYOK key decryption failed for developer ${req.user._id}`);
+            }
         }
 
         const encryptedByok = resolvedKey ? { groqKey: encryptForTransit(resolvedKey) } : null;
-        const hasByok = !!encryptedByok;
+        hasByok = !!encryptedByok;
 
-        // 4. Iteration limit check
+        // 4. Atomic iteration reservation before calling Python service
         const PLATFORM_ITERATION_LIMIT = 3;
-        if (!hasByok && iterations >= PLATFORM_ITERATION_LIMIT) {
-            throw new AppError(403, "AI iteration limit reached (3/3 on platform key). Add your Groq API key in Settings for unlimited usage.");
+        let iterations = 0;
+
+        if (!hasByok) {
+            const [allowed, newCount] = await redis.eval(
+                LUA_RESERVE_ITERATION,
+                2,
+                iterKey,
+                sessionKey,
+                PLATFORM_ITERATION_LIMIT,
+                7200
+            );
+            if (allowed === 0) {
+                throw new AppError(403, "AI iteration limit reached (3/3 on platform key). Add your Groq API key in Settings for unlimited usage.");
+            }
+            reservedIteration = true;
+            iterations = newCount;
         }
 
         // 5. Update session
@@ -251,46 +292,67 @@ const collectionCreator = async (req, res, next) => {
         let safeSchema = null;
         
         if (['schema', 'complete'].includes(aiResponse.type) && Array.isArray(aiResponse.schema)) {
+            const sanitizeFields = (fields) => {
+                return (fields || []).filter(f => f.name && allowedTypes.has(f.type)).map(f => {
+                    const fieldDef = {
+                        name: f.name,
+                        type: f.type,
+                        required: !!f.required
+                    };
+                    if (f.type === 'Ref') {
+                        fieldDef.ref = f.ref || 'users';
+                    } else if (f.type === 'Array') {
+                        if (f.items && typeof f.items === 'object') {
+                            const itemDef = { type: f.items.type || 'String' };
+                            if (f.items.type === 'Ref') {
+                                itemDef.ref = f.items.ref || 'users';
+                            } else if (f.items.type === 'Object' && Array.isArray(f.items.fields) && f.items.fields.length > 0) {
+                                itemDef.fields = sanitizeFields(f.items.fields);
+                            }
+                            fieldDef.items = itemDef;
+                        } else {
+                            fieldDef.items = { type: typeof f.items === 'string' ? f.items : 'String' };
+                        }
+                    } else if (f.type === 'Object' && Array.isArray(f.fields) && f.fields.length > 0) {
+                        fieldDef.fields = sanitizeFields(f.fields);
+                    }
+                    if (f.unique !== undefined && !['Array', 'Object', 'Ref'].includes(f.type)) {
+                        fieldDef.unique = !!f.unique;
+                    }
+                    return fieldDef;
+                });
+            };
+
             safeSchema = aiResponse.schema
                 .filter(c => c.collection && c.collection.toLowerCase() !== 'users')
-                .map(c => {
-                    const sanitizedFields = (c.fields || []).filter(f => f.name && allowedTypes.has(f.type)).map(f => {
-                       const fieldDef = {
-                           name: f.name,
-                           type: f.type,
-                           required: !!f.required
-                       };
-                       if (f.type === 'Ref') {
-                           fieldDef.ref = f.ref || 'users';
-                       } else if (f.type === 'Array') {
-                           fieldDef.items = f.items || { type: 'String' };
-                       }
-                       return fieldDef;
-                    });
-                    return {
-                        collection: c.collection,
-                        fields: sanitizedFields
-                    };
-                })
+                .map(c => ({
+                    collection: c.collection,
+                    fields: sanitizeFields(c.fields)
+                }))
                 .filter(c => c.fields.length > 0);
         }
 
-        // 7. Save session
+        // 7. Save session with TTL
         session.messages.push({ role: "assistant", content: aiResponse.message });
-        if (!hasByok) {
-           iterations += 1;
-           await redis.set(iterKey, iterations.toString());
-        }
         await redis.set(sessionKey, JSON.stringify(session), 'EX', 7200);
 
         return new ApiResponse({
             type: aiResponse.type,
             message: aiResponse.message,
             schema: safeSchema,
-            iterationsLeft: hasByok ? null : Math.max(0, PLATFORM_ITERATION_LIMIT - iterations)
+            iterationsLeft: hasByok ? null : Math.max(0, PLATFORM_ITERATION_LIMIT - iterations),
+            iterationLimit: hasByok ? null : PLATFORM_ITERATION_LIMIT
         }, "Agent responded successfully").send(res);
 
     } catch (error) {
+        // Rollback reserved iteration on error if platform key was used
+        if (!hasByok && reservedIteration && iterKey) {
+            try {
+                await redis.decr(iterKey);
+            } catch (revertErr) {
+                console.warn("[CollectionCreator] Failed to rollback reserved iteration counter", revertErr);
+            }
+        }
         if (error instanceof AppError) {
             return next(error);
         }
@@ -318,7 +380,10 @@ const collectionCreator = async (req, res, next) => {
 const clearCollectionCreatorSession = async (req, res, next) => {
     try {
         const { projectId } = req.params;
-        await redis.del(ccSessionKey(projectId, req.user._id));
+        await Promise.all([
+            redis.del(ccSessionKey(projectId, req.user._id)),
+            redis.del(ccIterationsKey(projectId, req.user._id))
+        ]);
         return new ApiResponse({}, "Session cleared").send(res);
     } catch(err) {
         console.error("clearCollectionCreatorSession error", err);
@@ -331,3 +396,4 @@ module.exports = {
     collectionCreator,
     clearCollectionCreatorSession
 };
+
