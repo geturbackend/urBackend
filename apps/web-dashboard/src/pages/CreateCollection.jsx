@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, Wand2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import CollectionCreatorAgent from '../components/CollectionCreatorAgent';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 
 const MAX_DEPTH = 3;
 
@@ -574,49 +575,17 @@ function CreateCollection() {
                 </div>
                 
                 {initialName !== 'users' && (
-                    <div style={{ display: 'inline-flex', padding: '3px', background: 'var(--color-bg-card)', borderRadius: '10px', border: '1px solid var(--color-border)', gap: '4px' }}>
-                        <button
-                            type="button"
-                            aria-pressed={mode === 'manual'}
-                            onClick={() => setMode('manual')}
-                            style={{
-                                padding: '6px 16px',
-                                fontSize: '0.85rem',
-                                fontWeight: 500,
-                                borderRadius: '7px',
-                                transition: 'all 0.2s ease',
-                                background: mode === 'manual' ? 'var(--color-bg-input)' : 'transparent',
-                                color: mode === 'manual' ? 'var(--color-text-main)' : 'var(--color-text-muted)',
-                                border: '1px solid',
-                                borderColor: mode === 'manual' ? 'var(--color-border)' : 'transparent',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            Manual
-                        </button>
-                        <button
-                            type="button"
-                            aria-pressed={mode === 'ai'}
-                            onClick={() => setMode('ai')}
-                            style={{
-                                padding: '6px 16px',
-                                fontSize: '0.85rem',
-                                fontWeight: 500,
-                                borderRadius: '7px',
-                                transition: 'all 0.2s ease',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                background: mode === 'ai' ? 'var(--color-primary)' : 'transparent',
-                                color: mode === 'ai' ? '#000' : 'var(--color-text-muted)',
-                                border: '1px solid',
-                                borderColor: mode === 'ai' ? 'var(--color-primary)' : 'transparent',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            <Wand2 size={14} /> AI-Assisted
-                        </button>
-                    </div>
+                    <Tabs value={mode} onValueChange={setMode} className="w-auto">
+                        <TabsList className="h-8">
+                            <TabsTrigger value="manual" className="text-xs px-3 py-1">
+                                Manual Builder
+                            </TabsTrigger>
+                            <TabsTrigger value="ai" className="text-xs px-3 py-1 gap-1.5 data-[state=active]:text-[var(--color-primary)]">
+                                <Wand2 size={13} />
+                                <span>AI-Assisted</span>
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
                 )}
             </div>
 
