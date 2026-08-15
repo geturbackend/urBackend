@@ -50,6 +50,7 @@ export default function SchemaCanvasViewer({
       type: f.type,
       required: !!f.required,
       unique: !!f.unique,
+      default: f.default,
       ref: f.ref,
       items: f.items,
       fields: f.fields
@@ -175,7 +176,7 @@ export default function SchemaCanvasViewer({
   return (
     <TooltipProvider>
       <div 
-        className="flex flex-col flex-1 lg:flex-[1.25] h-full min-w-0 rounded-2xl overflow-hidden shadow-sm border border-[var(--color-border)] bg-[var(--color-bg-card)] relative"
+        className="flex flex-col h-full min-w-0 rounded-xl overflow-hidden shadow-sm border border-[var(--color-border)] bg-[var(--color-bg-card)] relative"
       >
         {/* Top Header & Tabs Toolbar (Spacious & Clean) */}
         <div className="p-3 px-5 border-b border-[var(--color-border)] bg-[var(--color-bg-card)] flex justify-between items-center flex-shrink-0 gap-4 flex-wrap z-10 min-h-[56px]">
@@ -291,8 +292,8 @@ export default function SchemaCanvasViewer({
               <p className="text-xs text-[var(--color-text-muted)] max-w-xs leading-relaxed mb-4">
                 Describe your application idea in the chat on the left. The AI architect will design your MongoDB collections and render an interactive canvas here.
               </p>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--color-bg-input)] border border-[var(--color-border)] text-[11px] text-[var(--color-text-muted)] font-mono">
-                <span>Example: "A multi-tenant SaaS with workspaces, projects, and invoices"</span>
+              <div className="text-[11px] text-[var(--color-text-muted)] opacity-70 italic">
+                Example: "A multi-tenant SaaS with workspaces, projects, and invoices"
               </div>
             </div>
           ) : viewMode === 'canvas' ? (

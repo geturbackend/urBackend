@@ -232,14 +232,14 @@ const fieldSchemaZod = buildFieldSchemaZod(1);
 module.exports.createCollectionSchema = z.object({
   projectId: z.string().min(1, "Project ID is required"),
   collectionName: z.string().min(1, "Collection Name is required"),
-  schema: z.array(fieldSchemaZod).optional(),
+  schema: z.array(fieldSchemaZod).min(1, "At least one field is required"),
 });
 
 // SCHEMA - EDIT COLLECTION (DASHBOARD)
 module.exports.editCollectionSchema = z.object({
   projectId: z.string().min(1, "Project ID is required"),
   collectionName: z.string().min(1, "Collection Name is required"),
-  schema: z.array(fieldSchemaZod).optional(),
+  schema: z.array(fieldSchemaZod).min(1, "At least one field is required"),
 });
 
 // SYNC SCHEMA (CLI)

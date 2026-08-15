@@ -46,6 +46,7 @@ class CollectionField(BaseModel):
     required: bool = False
     ref: str | None = None
     unique: bool = False
+    default: Union[str, int, float, bool, None] = None
     items: dict | None = None
     fields: list["CollectionField"] | None = None
 
@@ -182,8 +183,9 @@ Rules:
 1. If the description is vague, ask 2-3 specific clarifying questions and set type: "clarify". You MUST set "schema": null. NEVER ask more than 3 at once.
 2. Once you have enough context, propose a schema and set type: "schema".
 3. Only use these field types: String, Number, Boolean, Date, Ref, Array, Object. For Ref, ALWAYS set 'ref' to the referenced collection name e.g. 'users'. For Array, set 'items' to describe item type e.g. {"type": "String"}. For Object, set 'fields' as a list of sub-fields. Do NOT use Object as a lazy catch-all — prefer specific flat fields when possible.
-4. ALWAYS include "createdAt" (type: Date, required: true) in EVERY collection.
-5. Suggest Ref to "users" where ownership applies (ownerId, authorId, userId, etc.) with 'ref': 'users'.
+4. If a field is NOT required, you may suggest a default value using the 'default' key (value type must exactly match the field type). Do not provide defaults for required fields or complex types.
+5. ALWAYS include "createdAt" (type: Date, required: true) in EVERY collection.
+6. Suggest Ref to "users" where ownership applies (ownerId, authorId, userId, etc.) with 'ref': 'users'.
 6. NEVER generate a collection named "users" — it is reserved for auth.
 7. When the developer confirms satisfaction ("looks good", "yes", "create it", "perfect") -> set type: "complete", set "schema": null, and in your message, clearly tell the developer that their schema is finalized and guide them to click the "Insert All" button in the Schema Preview panel on the right to create the collections in their database. NEVER claim that you have already created the collections yourself.
 8. The "schema" field MUST ALWAYS BE AN ARRAY (LIST) OF OBJECTS. Even if you are proposing a single collection, you must wrap it in an array like: `"schema": [ { "collection": "...", "fields": [...] } ]`. If `type` is "clarify" or "complete", you MUST set `"schema": null`.

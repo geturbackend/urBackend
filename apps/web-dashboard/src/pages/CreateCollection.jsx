@@ -6,6 +6,10 @@ import toast from 'react-hot-toast';
 import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, Wand2 } from 'lucide-react';
 import CollectionCreatorAgent from '../components/CollectionCreatorAgent';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Input } from '../components/ui/input';
+import { Checkbox } from '../components/ui/checkbox';
+import { Button } from '../components/ui/button';
 
 const MAX_DEPTH = 3;
 
@@ -137,6 +141,7 @@ function CreateCollection() {
         const normalizedName = name.trim().toLowerCase();
 
         if (!normalizedName) return toast.error("Collection name is required");
+        if (fields.length === 0) return toast.error("Collection must have at least one field");
         if (fields.some(f => !f.key)) return toast.error("All fields must have a name");
 
         if (normalizedName === 'users') {
@@ -168,7 +173,8 @@ function CreateCollection() {
 
     return (
         <div 
-            className="w-full flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden box-border p-6 lg:p-8"
+            className="w-full flex flex-col overflow-hidden box-border p-4"
+            style={{ height: 'calc(100vh - var(--header-height))' }}
         >
             {/* Top Navigation & Mode Switch Header (Pinned, Non-overlapping) */}
             <div 
@@ -203,51 +209,55 @@ function CreateCollection() {
             </div>
 
             {mode === 'manual' ? (
-                <div className="flex-1 overflow-y-auto custom-scrollbar max-w-6xl mx-auto w-full py-6">
-                    <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-8 shadow-sm">
-                        <div className="form-group mb-8">
-                            <label className="form-label text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3 block">
-                                Collection Name
-                            </label>
-                            <input
-                                type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                disabled={initialName === 'users'}
-                                className="input-field w-full text-base font-mono py-2"
-                                style={{
-                                    cursor: initialName === 'users' ? 'not-allowed' : 'text',
-                                    opacity: initialName === 'users' ? 0.7 : 1
-                                }}
-                                placeholder="e.g. products, orders, articles"
-                                autoFocus={initialName !== 'users'}
-                            />
-                            <small className="text-sm text-[var(--color-text-muted)] mt-2 block">
-                                This will be the name of your collection in the database.
-                            </small>
-                        </div>
-
-                        <div className="mt-8">
-                            <div className="flex justify-between items-center mb-3">
-                                <h3 className="text-sm font-semibold text-[var(--color-text-main)] m-0">Fields</h3>
-                                <button
-                                    type="button"
-                                    onClick={addField}
-                                    className="btn btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5 rounded-md"
-                                >
-                                    <Plus size={13} /> Add Field
-                                </button>
+                <div className="flex-1 overflow-y-auto custom-scrollbar w-full flex flex-col">
+                    <div className="w-full max-w-4xl mx-auto py-8 my-auto flex flex-col justify-center">
+                        <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-2xl p-8 shadow-sm">
+                            <div className="form-group mb-8">
+                                <label className="form-label text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3 block">
+                                    Collection Name
+                                </label>
+                                <Input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    disabled={initialName === 'users'}
+                                    className="w-full text-base font-mono py-5"
+                                    style={{
+                                        cursor: initialName === 'users' ? 'not-allowed' : 'text',
+                                        opacity: initialName === 'users' ? 0.7 : 1
+                                    }}
+                                    placeholder="e.g. products, orders, articles"
+                                    autoFocus={initialName !== 'users'}
+                                />
+                                <small className="text-sm text-[var(--color-text-muted)] mt-2 block">
+                                    This will be the name of your collection in the database.
+                                </small>
                             </div>
 
-                            <div className="flex items-center gap-2 px-3 py-3 mb-2 text-xs font-semibold text-[var(--color-text-muted)] tracking-wider">
-                                <span className="flex-2">NAME</span>
-                                <span className="flex-1">TYPE</span>
-                                <span className="w-6 text-center">REQ</span>
-                                <span className="w-6 text-center">UNIQ</span>
-                                <span className="w-8"></span>
-                            </div>
+                            <div className="mt-8">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-sm font-semibold text-[var(--color-text-main)] m-0">Fields</h3>
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={addField}
+                                        className="text-xs px-3 py-1.5 flex items-center gap-1.5 rounded-md h-8"
+                                    >
+                                        <Plus size={13} /> Add Field
+                                    </Button>
+                                </div>
 
-                            <div className="border border-[var(--color-border)] rounded-lg overflow-hidden bg-[var(--color-bg-input)] divide-y divide-[var(--color-border)]">
+                                <div className="flex items-center gap-3 px-3 py-3 mb-2 text-xs font-semibold text-[var(--color-text-muted)] tracking-wider">
+                                    <span className="flex-[3]">NAME</span>
+                                    <span className="flex-[2]">TYPE</span>
+                                    <span className="flex-[2]">DEFAULT</span>
+                                    <span className="w-12 text-center flex justify-center" title="Required">REQ</span>
+                                    <span className="w-12 text-center flex justify-center" title="Unique">UNIQ</span>
+                                    <span className="w-8"></span>
+                                </div>
+
+                                <div className="space-y-1.5">
                                 {fields.map((field, index) => (
                                     <FieldRow
                                         key={field._id}
@@ -270,18 +280,19 @@ function CreateCollection() {
                         </div>
 
                         <div className="mt-8 pt-4 border-t border-[var(--color-border)] flex justify-end">
-                            <button
+                            <Button
                                 onClick={handleSubmit}
-                                className="btn btn-primary text-xs px-6 py-2 font-semibold"
+                                className="px-6 py-2 h-10 font-semibold"
                                 disabled={loading}
                             >
                                 {loading ? 'Creating...' : 'Save Collection'}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
+            </div>
             ) : (
-                <div className="flex-1 overflow-hidden min-h-0 w-full">
+                <div className="flex-1 overflow-hidden min-h-0 w-full flex flex-col">
                     <CollectionCreatorAgent 
                         projectId={projectId} 
                         onInsertAll={() => {
@@ -332,7 +343,14 @@ function FieldRow({
         onChange(index, nextField);
     };
 
-    const handleRequiredToggle = () => onChange(index, { ...field, required: !field.required });
+    const handleRequiredToggle = (e) => {
+        const checked = e.target.checked;
+        const newField = { ...field, required: checked };
+        if (checked) {
+            delete newField.default;
+        }
+        onChange(index, newField);
+    };
     const handleUniqueToggle = () => onChange(index, { ...field, unique: !field.unique });
     const handleRefChange = (e) => onChange(index, { ...field, ref: e.target.value });
 
@@ -362,9 +380,30 @@ function FieldRow({
         onChange(index, { ...field, items: nextItems });
     };
 
+    const handleDefaultChange = (e) => {
+        let val = e.target.value;
+        const newField = { ...field };
+        
+        if (val === '') {
+            delete newField.default;
+            onChange(index, newField);
+            return;
+        }
+
+        if (field.type === 'Number') {
+            const num = Number(val);
+            newField.default = isNaN(num) ? val : num;
+        } else {
+            newField.default = val;
+        }
+        onChange(index, newField);
+    };
+
+    const isDefaultSupported = !field.required && !isObject && !isArray && !isRef && field.key !== '_id';
+
     return (
-        <div className="text-xs bg-[var(--color-bg-card)]">
-            <div className="flex items-center gap-2 p-2 px-3 hover:bg-[var(--color-surface-hover)] transition-colors">
+        <div className="text-sm bg-transparent">
+            <div className="flex items-center gap-3 p-2 px-3 hover:bg-[var(--color-bg-card)] rounded-lg transition-colors border border-transparent hover:border-[var(--color-border)]">
                 {/* Collapse / Expand icon for complex types */}
                 <div className="w-5 flex items-center justify-center">
                     {(isObject || (isArray && field.items?.type === 'Object')) ? (
@@ -381,83 +420,132 @@ function FieldRow({
                 </div>
 
                 {/* Field Name */}
-                <div className="flex-2">
-                    <input
+                <div className="flex-[3]">
+                    <Input
                         type="text"
                         value={field.key}
                         onChange={handleKeyChange}
                         disabled={isFixed}
                         placeholder="field_name"
-                        className="input-field w-full text-sm font-mono py-2 px-3 h-9"
+                        className="w-full text-sm font-mono h-9"
                     />
                 </div>
 
                 {/* Field Type Selector */}
-                <div className="flex-1">
-                    <select
+                <div className="flex-[2]">
+                    <Select
                         value={field.type}
-                        onChange={handleTypeChange}
+                        onValueChange={(val) => handleTypeChange({ target: { value: val } })}
                         disabled={isFixed}
-                        className="input-field w-full text-sm py-2 px-3 h-9"
                     >
-                        {ALL_TYPES.map(t => (
-                            <option key={t} value={t}>{t}</option>
-                        ))}
-                    </select>
+                        <SelectTrigger className="w-full text-sm h-9">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {ALL_TYPES.map(t => (
+                                <SelectItem key={t} value={t} className="text-sm">{t}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
 
                 {/* Ref Collection Dropdown */}
                 {isRef && (
                     <div className="flex-1">
-                        <select
+                        <Select
                             value={field.ref || 'users'}
-                            onChange={handleRefChange}
-                            className="input-field w-full text-sm py-2 px-3 h-9 font-mono text-cyan-400"
+                            onValueChange={(val) => handleRefChange({ target: { value: val } })}
                         >
-                            <option value="users">users (Auth)</option>
-                            {collections.filter(c => c.name !== 'users').map(c => (
-                                <option key={c.name} value={c.name}>{c.name}</option>
-                            ))}
-                        </select>
+                            <SelectTrigger className="w-full text-sm h-9 font-mono text-cyan-400">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="users" className="font-mono">users (Auth)</SelectItem>
+                                {collections.filter(c => c.name !== 'users').map(c => (
+                                    <SelectItem key={c.name} value={c.name} className="font-mono">{c.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 )}
 
                 {/* Array Item Type Selector */}
                 {isArray && (
-                    <div className="flex-1 flex items-center gap-1.5">
+                    <div className="flex-[2] flex items-center gap-2">
                         <span className="text-[11px] font-semibold text-[var(--color-text-muted)]">OF</span>
-                        <select
+                        <Select
                             value={field.items?.type || 'String'}
-                            onChange={handleArrayItemTypeChange}
-                            className="input-field w-full text-sm py-2 px-3 h-9"
+                            onValueChange={(val) => handleArrayItemTypeChange({ target: { value: val } })}
                         >
-                            {ARRAY_ITEM_TYPES.map(t => (
-                                <option key={t} value={t}>{t}</option>
-                            ))}
-                        </select>
+                            <SelectTrigger className="w-full text-sm h-9">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {ARRAY_ITEM_TYPES.map(t => (
+                                    <SelectItem key={t} value={t} className="text-sm">{t}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 )}
 
+                {/* Default Value Input */}
+                <div className="flex-[2] flex items-center">
+                    {isDefaultSupported ? (
+                        field.type === 'Boolean' ? (
+                            <Select
+                                value={field.default !== undefined ? String(field.default) : 'none'}
+                                onValueChange={(val) => {
+                                    const newField = { ...field };
+                                    if (val === 'none') {
+                                        delete newField.default;
+                                    } else {
+                                        newField.default = val === 'true';
+                                    }
+                                    onChange(index, newField);
+                                }}
+                                disabled={isFixed}
+                            >
+                                <SelectTrigger className="w-full text-sm h-9">
+                                    <SelectValue placeholder="Default" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none" className="text-xs italic text-[var(--color-text-muted)]">No default</SelectItem>
+                                    <SelectItem value="true">true</SelectItem>
+                                    <SelectItem value="false">false</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                            <Input
+                                type={field.type === 'Number' ? 'number' : 'text'}
+                                value={field.default !== undefined ? field.default : ''}
+                                onChange={handleDefaultChange}
+                                disabled={isFixed}
+                                placeholder="Default"
+                                className="w-full text-sm font-mono h-9"
+                            />
+                        )
+                    ) : (
+                        <div className="w-full text-center text-[var(--color-text-muted)] italic text-xs">N/A</div>
+                    )}
+                </div>
+
                 {/* Required Checkbox */}
-                <div className="w-6 text-center">
-                    <input
-                        type="checkbox"
+                <div className="w-12 flex justify-center text-center">
+                    <Checkbox
                         checked={field.required}
-                        onChange={handleRequiredToggle}
+                        onCheckedChange={(checked) => handleRequiredToggle({ target: { checked } })}
                         disabled={isFixed}
-                        className="cursor-pointer"
                         title="Required"
                     />
                 </div>
 
                 {/* Unique Checkbox */}
-                <div className="w-6 text-center">
-                    <input
-                        type="checkbox"
+                <div className="w-12 flex justify-center text-center">
+                    <Checkbox
                         checked={field.unique}
-                        onChange={handleUniqueToggle}
+                        onCheckedChange={(checked) => handleUniqueToggle({ target: { checked } })}
                         disabled={isFixed || isArray || isObject || isRef}
-                        className="cursor-pointer"
                         title="Unique"
                     />
                 </div>
