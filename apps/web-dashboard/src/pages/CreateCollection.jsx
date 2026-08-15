@@ -168,11 +168,11 @@ function CreateCollection() {
 
     return (
         <div 
-            className="w-full flex-1 flex flex-col min-h-0 overflow-hidden box-border p-6 lg:p-8"
+            className="w-full flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden box-border p-6 lg:p-8"
         >
             {/* Top Navigation & Mode Switch Header (Pinned, Non-overlapping) */}
             <div 
-                className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-[var(--color-border)] flex-shrink-0 gap-6"
+                className="flex flex-wrap items-center justify-between pb-3.5 mb-3.5 border-b border-[var(--color-border)] flex-shrink-0 gap-6"
             >
                 <div className="flex items-center gap-3.5">
                     <button
@@ -202,9 +202,8 @@ function CreateCollection() {
                 )}
             </div>
 
-            {/* Main Area */}
             {mode === 'manual' ? (
-                <div className="flex-1 overflow-y-auto custom-scrollbar max-w-4xl mx-auto w-full py-4">
+                <div className="flex-1 overflow-y-auto custom-scrollbar max-w-6xl mx-auto w-full py-4">
                     <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-6 shadow-sm">
                         <div className="form-group mb-6">
                             <label className="form-label text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5 block">
