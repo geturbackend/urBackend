@@ -203,10 +203,10 @@ function CreateCollection() {
             </div>
 
             {mode === 'manual' ? (
-                <div className="flex-1 overflow-y-auto custom-scrollbar max-w-6xl mx-auto w-full py-4">
-                    <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-6 shadow-sm">
-                        <div className="form-group mb-6">
-                            <label className="form-label text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5 block">
+                <div className="flex-1 overflow-y-auto custom-scrollbar max-w-6xl mx-auto w-full py-6">
+                    <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-8 shadow-sm">
+                        <div className="form-group mb-8">
+                            <label className="form-label text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3 block">
                                 Collection Name
                             </label>
                             <input
@@ -214,7 +214,7 @@ function CreateCollection() {
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 disabled={initialName === 'users'}
-                                className="input-field w-full text-sm font-mono"
+                                className="input-field w-full text-base font-mono py-2"
                                 style={{
                                     cursor: initialName === 'users' ? 'not-allowed' : 'text',
                                     opacity: initialName === 'users' ? 0.7 : 1
@@ -222,12 +222,12 @@ function CreateCollection() {
                                 placeholder="e.g. products, orders, articles"
                                 autoFocus={initialName !== 'users'}
                             />
-                            <small className="text-xs text-[var(--color-text-muted)] mt-1.5 block">
+                            <small className="text-sm text-[var(--color-text-muted)] mt-2 block">
                                 This will be the name of your collection in the database.
                             </small>
                         </div>
 
-                        <div className="mt-6">
+                        <div className="mt-8">
                             <div className="flex justify-between items-center mb-3">
                                 <h3 className="text-sm font-semibold text-[var(--color-text-main)] m-0">Fields</h3>
                                 <button
@@ -239,7 +239,7 @@ function CreateCollection() {
                                 </button>
                             </div>
 
-                            <div className="flex items-center gap-2 px-3 py-1.5 mb-1 text-[10px] font-semibold text-[var(--color-text-muted)] tracking-wider">
+                            <div className="flex items-center gap-2 px-3 py-3 mb-2 text-xs font-semibold text-[var(--color-text-muted)] tracking-wider">
                                 <span className="flex-2">NAME</span>
                                 <span className="flex-1">TYPE</span>
                                 <span className="w-6 text-center">REQ</span>
@@ -388,7 +388,7 @@ function FieldRow({
                         onChange={handleKeyChange}
                         disabled={isFixed}
                         placeholder="field_name"
-                        className="input-field w-full text-xs font-mono py-1 px-2 h-7"
+                        className="input-field w-full text-sm font-mono py-2 px-3 h-9"
                     />
                 </div>
 
@@ -398,7 +398,7 @@ function FieldRow({
                         value={field.type}
                         onChange={handleTypeChange}
                         disabled={isFixed}
-                        className="input-field w-full text-xs py-1 px-2 h-7"
+                        className="input-field w-full text-sm py-2 px-3 h-9"
                     >
                         {ALL_TYPES.map(t => (
                             <option key={t} value={t}>{t}</option>
@@ -412,7 +412,7 @@ function FieldRow({
                         <select
                             value={field.ref || 'users'}
                             onChange={handleRefChange}
-                            className="input-field w-full text-xs py-1 px-2 h-7 font-mono text-cyan-400"
+                            className="input-field w-full text-sm py-2 px-3 h-9 font-mono text-cyan-400"
                         >
                             <option value="users">users (Auth)</option>
                             {collections.filter(c => c.name !== 'users').map(c => (
@@ -424,12 +424,12 @@ function FieldRow({
 
                 {/* Array Item Type Selector */}
                 {isArray && (
-                    <div className="flex-1 flex items-center gap-1">
-                        <span className="text-[10px] text-[var(--color-text-muted)]">of</span>
+                    <div className="flex-1 flex items-center gap-1.5">
+                        <span className="text-[11px] font-semibold text-[var(--color-text-muted)]">OF</span>
                         <select
                             value={field.items?.type || 'String'}
                             onChange={handleArrayItemTypeChange}
-                            className="input-field w-full text-xs py-1 px-2 h-7"
+                            className="input-field w-full text-sm py-2 px-3 h-9"
                         >
                             {ARRAY_ITEM_TYPES.map(t => (
                                 <option key={t} value={t}>{t}</option>
