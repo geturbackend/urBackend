@@ -126,3 +126,39 @@ async def test_collection_creator_timeout():
             )
             
             assert response.status_code == 504
+
+def test_collection_field_object_validation():
+    from routers.ai import CollectionField
+    from pydantic import ValidationError
+
+    # 1. Reject missing fields on Object
+    with pytest.raises(ValidationError) as exc:
+        CollectionField(name="profile", type="Object")
+    assert "fields must be present and non-empty for Object type" in str(exc.value)
+
+    # 2. Reject None fields on Object
+    with pytest.raises(ValidationError) as exc:
+        CollectionField(name="profile", type="Object", fields=None)
+    assert "fields must be present and non-empty for Object type" in str(exc.value)
+
+    # 3. Reject empty fields list on Object
+    with pytest.raises(ValidationError) as exc:
+        CollectionField(name="profile", type="Object", fields=[])
+    assert "fields must be present and non-empty for Object type" in str(exc.value)
+
+    # 4. Valid Object with non-empty fields
+    valid_field = CollectionField(
+        name="profile",
+        type="Object",
+        fields=[CollectionField(name="bio", type="String", required=True)]
+    )
+    assert valid_field.name == "profile"
+    assert valid_field.type == "Object"
+    assert len(valid_field.fields) == 1
+    assert valid_field.fields[0].name == "bio"
+
+    # 5. Non-Object fields do not require fields
+    valid_string = CollectionField(name="title", type="String")
+    assert valid_string.name == "title"
+    assert valid_string.fields is None
+

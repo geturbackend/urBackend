@@ -166,7 +166,33 @@ const ccSessionKey = (projectId, developerId) =>
 const ccIterationsKey = (projectId, developerId) =>
   `ai:cc:iterations:${projectId}:${developerId}`;
 
+const LUA_RESERVE_ITERATION = `
+local sessionExists = redis.call('EXISTS', KEYS[2])
+local current = redis.call('GET', KEYS[1])
+local count = tonumber(current) or 0
+
+if sessionExists == 0 and count > 0 then
+    count = 0
+    redis.call('SET', KEYS[1], '0')
+end
+
+if count >= tonumber(ARGV[1]) then
+    return {0, count}
+end
+
+local nextVal = redis.call('INCR', KEYS[1])
+redis.call('EXPIRE', KEYS[1], ARGV[2])
+if sessionExists == 1 then
+    redis.call('EXPIRE', KEYS[2], ARGV[2])
+end
+return {1, nextVal}
+`;
+
 const collectionCreator = async (req, res, next) => {
+    let reservedIteration = false;
+    let iterKey = null;
+    let hasByok = false;
+
     try {
         const { projectId } = req.params;
         const { userMessage } = req.body;
@@ -195,26 +221,14 @@ const collectionCreator = async (req, res, next) => {
 
         // 2. Load Redis session
         const sessionKey = ccSessionKey(projectId, req.user._id);
-        const iterKey = ccIterationsKey(projectId, req.user._id);
-        const [sessionStr, iterStr] = await Promise.all([
-            redis.get(sessionKey),
-            redis.get(iterKey)
-        ]);
+        iterKey = ccIterationsKey(projectId, req.user._id);
+        const sessionStr = await redis.get(sessionKey);
 
         let session = { messages: [], hasByok: false };
         try {
             if (sessionStr) session = JSON.parse(sessionStr);
         } catch (e) {
             console.warn("Invalid session data in Redis, resetting chat transcript");
-        }
-
-        // Reset stale iteration counter if session has expired
-        let iterations = 0;
-        if (sessionStr && iterStr) {
-            iterations = parseInt(iterStr, 10) || 0;
-        } else if (iterStr && !sessionStr) {
-            await redis.del(iterKey);
-            iterations = 0;
         }
 
         // 3. BYOK resolution
@@ -235,12 +249,26 @@ const collectionCreator = async (req, res, next) => {
         }
 
         const encryptedByok = resolvedKey ? { groqKey: encryptForTransit(resolvedKey) } : null;
-        const hasByok = !!encryptedByok;
+        hasByok = !!encryptedByok;
 
-        // 4. Iteration limit check
+        // 4. Atomic iteration reservation before calling Python service
         const PLATFORM_ITERATION_LIMIT = 3;
-        if (!hasByok && iterations >= PLATFORM_ITERATION_LIMIT) {
-            throw new AppError(403, "AI iteration limit reached (3/3 on platform key). Add your Groq API key in Settings for unlimited usage.");
+        let iterations = 0;
+
+        if (!hasByok) {
+            const [allowed, newCount] = await redis.eval(
+                LUA_RESERVE_ITERATION,
+                2,
+                iterKey,
+                sessionKey,
+                PLATFORM_ITERATION_LIMIT,
+                7200
+            );
+            if (allowed === 0) {
+                throw new AppError(403, "AI iteration limit reached (3/3 on platform key). Add your Groq API key in Settings for unlimited usage.");
+            }
+            reservedIteration = true;
+            iterations = newCount;
         }
 
         // 5. Update session
@@ -274,7 +302,17 @@ const collectionCreator = async (req, res, next) => {
                     if (f.type === 'Ref') {
                         fieldDef.ref = f.ref || 'users';
                     } else if (f.type === 'Array') {
-                        fieldDef.items = f.items || { type: 'String' };
+                        if (f.items && typeof f.items === 'object') {
+                            const itemDef = { type: f.items.type || 'String' };
+                            if (f.items.type === 'Ref') {
+                                itemDef.ref = f.items.ref || 'users';
+                            } else if (f.items.type === 'Object' && Array.isArray(f.items.fields) && f.items.fields.length > 0) {
+                                itemDef.fields = sanitizeFields(f.items.fields);
+                            }
+                            fieldDef.items = itemDef;
+                        } else {
+                            fieldDef.items = { type: typeof f.items === 'string' ? f.items : 'String' };
+                        }
                     } else if (f.type === 'Object' && Array.isArray(f.fields) && f.fields.length > 0) {
                         fieldDef.fields = sanitizeFields(f.fields);
                     }
@@ -294,12 +332,8 @@ const collectionCreator = async (req, res, next) => {
                 .filter(c => c.fields.length > 0);
         }
 
-        // 7. Save session & counter with TTL
+        // 7. Save session with TTL
         session.messages.push({ role: "assistant", content: aiResponse.message });
-        if (!hasByok) {
-           iterations += 1;
-           await redis.set(iterKey, iterations.toString(), 'EX', 7200);
-        }
         await redis.set(sessionKey, JSON.stringify(session), 'EX', 7200);
 
         return new ApiResponse({
@@ -311,6 +345,14 @@ const collectionCreator = async (req, res, next) => {
         }, "Agent responded successfully").send(res);
 
     } catch (error) {
+        // Rollback reserved iteration on error if platform key was used
+        if (!hasByok && reservedIteration && iterKey) {
+            try {
+                await redis.decr(iterKey);
+            } catch (revertErr) {
+                console.warn("[CollectionCreator] Failed to rollback reserved iteration counter", revertErr);
+            }
+        }
         if (error instanceof AppError) {
             return next(error);
         }

@@ -50,7 +50,6 @@ export default function SchemaCanvasViewer({
 
   // Mouse pan handlers
   const handleMouseDown = (e) => {
-    // Only pan if clicking on canvas background or dragging
     if (e.target.closest('.canvas-node') || e.target.closest('button')) return;
     setIsPanning(true);
     setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
@@ -116,6 +115,93 @@ export default function SchemaCanvasViewer({
       >
         {displayLabel}
       </span>
+    );
+  };
+
+  /**
+   * Unified recursive field renderer for both Canvas and Table views.
+   * Handles nested Object fields at every depth with consistent styling and badges.
+   */
+  const renderFieldTree = (field, depth = 0, isLast = false, viewType = 'canvas', keyPrefix = '') => {
+    const isTable = viewType === 'list';
+    const indentPadding = isTable ? 18 + depth * 16 : 16 + depth * 14;
+    const nodeKey = `${keyPrefix}_${depth}_${field.name || 'field'}`;
+
+    return (
+      <React.Fragment key={nodeKey}>
+        <div
+          style={{
+            display: 'flex',
+            width: '100%',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: isTable ? `10px 18px 10px ${indentPadding}px` : `7px 16px 7px ${indentPadding}px`,
+            borderBottom: isTable || !isLast ? '1px solid var(--color-border)' : 'none',
+            fontSize: '0.8rem',
+            borderLeft: depth > 0 ? '2px solid rgba(62, 207, 142, 0.35)' : 'none',
+            backgroundColor: depth > 0 ? 'rgba(255, 255, 255, 0.015)' : 'transparent',
+            transition: 'background-color 0.15s ease'
+          }}
+        >
+          {/* Field Name & Required/Unique Badges */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, overflow: 'hidden' }}>
+            <span
+              style={{
+                fontFamily: 'monospace',
+                color: depth > 0 ? 'var(--color-text-muted)' : 'var(--color-text-main)',
+                fontWeight: field.required ? 600 : 400,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+            >
+              {field.name}
+            </span>
+            {field.required && (
+              <span style={{ color: 'var(--color-danger)', fontWeight: 700, fontSize: '0.85rem' }} title="Required">*</span>
+            )}
+            {field.unique && (
+              <span style={{ fontSize: '0.6rem', color: 'var(--color-primary)', border: '1px solid var(--color-primary)', padding: '0 3px', borderRadius: '2px', fontWeight: 700 }}>U</span>
+            )}
+          </div>
+
+          {/* Type Badge & Ref Links */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {renderTypeBadge(field)}
+            {field.type === 'Ref' && field.ref && (
+              <span
+                onMouseEnter={() => setHoveredRef(field.ref)}
+                onMouseLeave={() => setHoveredRef(null)}
+                style={{
+                  fontSize: '0.7rem',
+                  color: 'var(--color-primary)',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '2px'
+                }}
+                title={`References collection '${field.ref}'`}
+              >
+                → {field.ref}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Recurse through nested Object fields at every depth */}
+        {field.fields && field.fields.length > 0 && (
+          field.fields.map((subField, subIdx) => 
+            renderFieldTree(
+              subField, 
+              depth + 1, 
+              isLast && subIdx === field.fields.length - 1, 
+              viewType,
+              `${nodeKey}_${subIdx}`
+            )
+          )
+        )}
+      </React.Fragment>
     );
   };
 
@@ -456,65 +542,10 @@ export default function SchemaCanvasViewer({
                       </span>
                     </div>
 
-                    {/* Explicit Collection Fields */}
-                    {col.fields?.map((f, fIdx) => (
-                      <div 
-                        key={fIdx}
-                        style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'space-between',
-                          padding: '7px 16px',
-                          borderBottom: fIdx < col.fields.length - 1 ? '1px solid rgba(255, 255, 255, 0.04)' : 'none',
-                          fontSize: '0.8rem'
-                        }}
-                      >
-                        {/* Field Name + Indicators */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, overflow: 'hidden' }}>
-                          <span 
-                            style={{ 
-                              fontFamily: 'monospace', 
-                              color: 'var(--color-text-main)',
-                              fontWeight: f.required ? 500 : 400,
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis'
-                            }}
-                          >
-                            {f.name}
-                          </span>
-                          {f.required && (
-                            <span style={{ color: 'var(--color-danger)', fontWeight: 700, fontSize: '0.85rem' }} title="Required">*</span>
-                          )}
-                          {f.unique && (
-                            <span style={{ fontSize: '0.6rem', color: 'var(--color-primary)', border: '1px solid var(--color-primary)', padding: '0 3px', borderRadius: '2px', fontWeight: 700 }}>U</span>
-                          )}
-                        </div>
-
-                        {/* Field Type Badge & Ref Link */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {renderTypeBadge(f)}
-                          {f.type === 'Ref' && f.ref && (
-                            <span
-                              onMouseEnter={() => setHoveredRef(f.ref)}
-                              onMouseLeave={() => setHoveredRef(null)}
-                              style={{
-                                fontSize: '0.7rem',
-                                color: 'var(--color-primary)',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '2px'
-                              }}
-                              title={`References collection '${f.ref}'`}
-                            >
-                              → {f.ref}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                    {/* Explicit Collection Fields (Recursive) */}
+                    {col.fields?.map((f, fIdx) => 
+                      renderFieldTree(f, 0, fIdx === col.fields.length - 1, 'canvas', `canvas_${col.collection}_${fIdx}`)
+                    )}
                   </div>
                 </div>
               );
@@ -559,38 +590,46 @@ export default function SchemaCanvasViewer({
                   {col.collection}
                 </div>
                 <div>
-                  <table style={{ width: '100%', textAlign: 'left', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
-                    <tbody style={{ display: 'block', width: '100%' }}>
-                      {col.fields?.map((f, i) => (
-                        <tr key={i} style={{ display: 'flex', width: '100%', borderBottom: i < col.fields.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
-                          <td style={{ padding: '12px 18px', fontFamily: 'monospace', color: 'var(--color-text-main)', width: '50%', borderRight: '1px solid var(--color-border)' }}>
-                            {f.name}
-                            {f.fields && f.fields.length > 0 && (
-                              <div style={{ marginTop: '6px', paddingLeft: '12px', borderLeft: '2px solid rgba(62,207,142,0.3)', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                                {f.fields.map((sub, sIdx) => (
-                                  <div key={sIdx} style={{ padding: '2px 0' }}>
-                                    <code>{sub.name}</code>: <span style={{ opacity: 0.8 }}>{sub.type}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </td>
-                          <td style={{ padding: '12px 18px', color: 'var(--color-text-muted)', width: '50%', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                            {renderTypeBadge(f)}
-                            {f.type === 'Ref' && f.ref && (
-                              <span style={{ fontSize: '0.7rem', color: 'var(--color-primary)', fontWeight: 500 }}>→ {f.ref}</span>
-                            )}
-                            {f.unique && (
-                              <span style={{ fontSize: '0.65rem', color: 'var(--color-primary)', border: '1px solid var(--color-primary)', padding: '1px 5px', borderRadius: '3px', fontWeight: 600 }}>UNIQUE</span>
-                            )}
-                            {f.required && (
-                              <span style={{ color: 'var(--color-danger)', marginLeft: 'auto', fontWeight: 700, fontSize: '0.9rem' }} title="Required">*</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <div style={{ width: '100%' }}>
+                    {/* Implicit _id Primary Key */}
+                    <div 
+                      style={{ 
+                        display: 'flex', 
+                        width: '100%',
+                        alignItems: 'center', 
+                        justifyContent: 'space-between',
+                        padding: '10px 18px',
+                        borderBottom: '1px solid var(--color-border)',
+                        fontSize: '0.8rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Key size={11} style={{ color: '#fbbf24' }} title="Primary Key" />
+                        <span style={{ fontFamily: 'monospace', color: 'var(--color-text-main)', fontWeight: 600 }}>
+                          _id
+                        </span>
+                      </div>
+                      <span
+                        style={{
+                          backgroundColor: 'rgba(251, 191, 36, 0.12)',
+                          color: '#fbbf24',
+                          border: '1px solid rgba(251, 191, 36, 0.25)',
+                          borderRadius: '4px',
+                          padding: '1px 6px',
+                          fontSize: '0.65rem',
+                          fontFamily: 'monospace',
+                          fontWeight: 600
+                        }}
+                      >
+                        ObjectId
+                      </span>
+                    </div>
+
+                    {/* Explicit Collection Fields (Recursive) */}
+                    {col.fields?.map((f, fIdx) => 
+                      renderFieldTree(f, 0, fIdx === col.fields.length - 1, 'list', `list_${col.collection}_${fIdx}`)
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

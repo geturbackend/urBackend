@@ -49,6 +49,13 @@ class CollectionField(BaseModel):
     items: dict | None = None
     fields: list["CollectionField"] | None = None
 
+    @model_validator(mode='after')
+    def validate_object_fields(self):
+        if self.type == "Object":
+            if self.fields is None or len(self.fields) == 0:
+                raise ValueError("fields must be present and non-empty for Object type")
+        return self
+
 class CollectionSchema(BaseModel):
     collection: str
     fields: list[CollectionField]

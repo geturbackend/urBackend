@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../utils/api';
 import { toast } from 'react-hot-toast';
-import { Send, Sparkles, RotateCcw, ArrowRight } from 'lucide-react';
+import { Send, ArrowRight } from 'lucide-react';
 import SchemaCanvasViewer from './SchemaCanvasViewer';
 
 const SUGGESTIONS = [
@@ -105,18 +105,20 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
     if (aiStatus === 'loading') return;
     try {
       await api.delete(`/api/projects/${projectId}/ai/collection-creator/session`);
+      setMessages([
+        createMsg('assistant', "Hi! Tell me what you're building — for example: 'a food delivery app' or 'a SaaS project management tool' — and I'll design a MongoDB schema for you.")
+      ]);
+      setSchema(null);
+      setInsertResults(null);
+      setIterationsLeft(null);
+      setIterationLimit(null);
+      setInputValue('');
+      toast.success("Chat reset");
     } catch (e) {
-      console.warn("Failed to delete session on server", e);
+      console.error("Failed to delete session on server", e);
+      const detail = e.response?.data?.message || e.response?.data?.error || "Failed to reset chat session. Please try again.";
+      toast.error(detail);
     }
-    setMessages([
-      createMsg('assistant', "Hi! Tell me what you're building — for example: 'a food delivery app' or 'a SaaS project management tool' — and I'll design a MongoDB schema for you.")
-    ]);
-    setSchema(null);
-    setInsertResults(null);
-    setIterationsLeft(null);
-    setIterationLimit(null);
-    setInputValue('');
-    toast.success("Chat reset");
   };
 
   const handleKeyDown = (e) => {
@@ -138,12 +140,24 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
         if (!fields) return [];
         return fields.map(f => {
           const fieldDef = {
-            key: f.name,
+            key: f.name || f.key,
             type: f.type,
             required: !!f.required
           };
           if (f.type === 'Array') {
-            fieldDef.items = f.items ? (typeof f.items === 'object' ? f.items : { type: f.items }) : { type: 'String' };
+            if (f.items && typeof f.items === 'object') {
+              const itemDef = { type: f.items.type || 'String' };
+              if (f.items.type === 'Ref') {
+                itemDef.ref = f.items.ref || 'users';
+              } else if (f.items.type === 'Object') {
+                itemDef.fields = f.items.fields?.length
+                  ? mapSchemaFields(f.items.fields)
+                  : [{ key: 'data', type: 'String', required: false }];
+              }
+              fieldDef.items = itemDef;
+            } else {
+              fieldDef.items = { type: typeof f.items === 'string' ? f.items : 'String' };
+            }
           } else if (f.type === 'Object') {
             fieldDef.fields = f.fields?.length ? mapSchemaFields(f.fields) : [{ key: 'data', type: 'String', required: false }];
           } else if (f.type === 'Ref') {
@@ -251,7 +265,7 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
                     key={i}
                     type="button"
                     onClick={() => sendMessage(null, s.prompt)}
-                    disabled={aiStatus === 'loading'}
+                    disabled={aiStatus === 'loading' || iterationsLeft === 0}
                     style={{
                       textAlign: 'left',
                       padding: '10px 14px',
@@ -260,15 +274,24 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
                       borderRadius: '12px',
                       fontSize: '0.825rem',
                       color: 'var(--color-text-main)',
-                      cursor: 'pointer',
+                      cursor: (aiStatus === 'loading' || iterationsLeft === 0) ? 'not-allowed' : 'pointer',
+                      opacity: (aiStatus === 'loading' || iterationsLeft === 0) ? 0.45 : 1,
                       transition: 'all 0.2s ease',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       gap: '8px'
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                    onMouseEnter={(e) => {
+                      if (aiStatus !== 'loading' && iterationsLeft !== 0) {
+                        e.currentTarget.style.borderColor = 'var(--color-primary)';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--color-border)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
                   >
                     <span>{s.label}</span>
                     <ArrowRight size={13} style={{ opacity: 0.6, flexShrink: 0 }} />
@@ -369,6 +392,7 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
         </div>
       </div>
 
+      {/* Floating Schema Canvas Visualizer Panel - Right */}
       <SchemaCanvasViewer 
         schema={schema}
         messages={messages}
