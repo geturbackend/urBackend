@@ -33,6 +33,7 @@ jest.mock('../controllers/auth.controller', () => ({
     logout: jest.fn((_req, res) => res.json({ message: 'logged out' })),
     refreshToken: jest.fn((_req, res) => res.json({ token: 'new-token' })),
     getMe: jest.fn((_req, res) => res.json({ user: {} })),
+    updateByok: jest.fn((_req, res) => res.json({ message: 'byok updated' })),
     startGithubAuth: jest.fn((_req, res) => res.redirect('https://github.com/login/oauth/authorize')),
     handleGithubCallback: jest.fn((_req, res) => res.redirect('http://localhost:5173/dashboard')),
 }));
@@ -202,6 +203,18 @@ describe('auth routes', () => {
             expect(res.status).toBe(200);
             expect(authMiddleware).toHaveBeenCalled();
             expect(authController.getMe).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('PUT /api/auth/me/byok', () => {
+        test('is wired and protected by authMiddleware', async () => {
+            const res = await request(app)
+                .put('/api/auth/me/byok')
+                .send({ groqKey: 'gsk_test123' });
+
+            expect(res.status).toBe(200);
+            expect(authMiddleware).toHaveBeenCalled();
+            expect(authController.updateByok).toHaveBeenCalledTimes(1);
         });
     });
 

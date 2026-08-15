@@ -56,6 +56,19 @@ export default function Database() {
   const [isRlsDialogOpen, setIsRlsDialogOpen] = useState(false);
   const [loadingProject, setLoadingProject] = useState(true);
 
+  const handleSelectCollection = useCallback((col) => {
+    setActiveCollection(col);
+    setQueryParams(prev => ({ ...prev, page: 1, filters: [] }));
+  }, []);
+
+  const handleOpenRlsDialog = () => {
+    if (!activeCollection) return;
+    setRlsEnabled(activeCollection.rls?.enabled || false);
+    setRlsMode(activeCollection.rls?.mode || 'public-read');
+    setRlsOwnerField(activeCollection.rls?.ownerField || 'userId');
+    setIsRlsDialogOpen(true);
+  };
+
   useEffect(() => {
     let isMounted = true;
     const fetchProject = async () => {
@@ -90,19 +103,8 @@ export default function Database() {
     };
     fetchProject();
     return () => { isMounted = false; };
-  }, [projectId, user, searchParams]);
-
-  // Sync RLS states with active collection
-  useEffect(() => {
-    if (activeCollection) {
-      Promise.resolve().then(() => {
-        setRlsEnabled(activeCollection.rls?.enabled || false);
-        setRlsMode(activeCollection.rls?.mode || 'public-read');
-        setRlsOwnerField(activeCollection.rls?.ownerField || 'userId');
-        setQueryParams(p => ({ ...p, page: 1, filters: [] }));
-      });
-    }
-  }, [activeCollection]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, user]);
 
   const fetchData = useCallback(async () => {
     if (!activeCollection) return;
@@ -138,7 +140,7 @@ export default function Database() {
     if (queryParams.limit !== 50) newParams.limit = queryParams.limit;
     if (queryParams.sort !== '-createdAt') newParams.sort = queryParams.sort;
     
-    setSearchParams(newParams);
+    setSearchParams(newParams, { replace: true });
     
     let isMounted = true;
     Promise.resolve().then(() => {
@@ -264,7 +266,7 @@ export default function Database() {
         setIsSidebarOpen={setIsSidebarOpen}
         collections={collections.filter(c => c.name !== 'users')}
         activeCollection={activeCollection}
-        setActiveCollection={setActiveCollection}
+        setActiveCollection={handleSelectCollection}
         project={project}
         navigate={navigate}
         projectId={projectId}
@@ -285,7 +287,7 @@ export default function Database() {
               setShowFilterMenu={setShowFilterMenu}
               filtersCount={queryParams.filters.length}
               onRefresh={fetchData}
-              onRlsClick={() => setIsRlsDialogOpen(true)}
+              onRlsClick={handleOpenRlsDialog}
               onEditSchemaClick={() => navigate(`/project/${projectId}/edit-collection/${activeCollection.name}`)}
               onAddRecord={() => {
                 if (activeCollection?.name === 'users') {

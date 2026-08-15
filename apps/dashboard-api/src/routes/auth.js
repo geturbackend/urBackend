@@ -13,6 +13,7 @@ const {
     logout,
     refreshToken,
     getMe,
+    updateByok,
     startGithubAuth,
     handleGithubCallback
 } = require('../controllers/auth.controller');
@@ -44,6 +45,7 @@ router.post('/refresh-token', refreshToken);
 router.post('/logout', authorization, logout);
 
 router.get('/me', authorization, getMe);
+router.put('/me/byok', authorization, updateByok);
 
 router.get('/csrf-token', (req, res) => {
     res.json({ csrfToken: req.csrfToken() });

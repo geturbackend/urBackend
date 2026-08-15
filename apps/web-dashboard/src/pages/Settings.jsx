@@ -73,7 +73,7 @@ export default function Settings() {
 
         setLoadingByok(true);
         try {
-            const res = await api.put('/api/auth/me/byok', { groqKey: payloadKey });
+            const res = await api.put('/api/user/me/byok', { groqKey: payloadKey });
             if (res.data?.success) {
                 updateUser((curr) => ({ ...curr, hasGroqKey: res.data.data.hasGroqKey }));
                 if (clear) {
