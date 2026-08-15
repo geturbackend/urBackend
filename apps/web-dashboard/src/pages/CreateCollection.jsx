@@ -108,6 +108,10 @@ function CreateCollection() {
                 required: !!f.required,
             };
 
+            if (f.default !== undefined) {
+                cleaned.default = f.default;
+            }
+
             if (f.unique && !['Array', 'Object', 'Ref'].includes(f.type)) {
                 cleaned.unique = true;
             }
@@ -327,6 +331,7 @@ function FieldRow({
     const handleTypeChange = (e) => {
         const nextType = e.target.value;
         const nextField = { ...field, type: nextType };
+        delete nextField.default;
         if (nextType === 'Object' && (!field.fields || field.fields.length === 0)) {
             nextField.fields = [createEmptyField()];
         }
@@ -399,7 +404,7 @@ function FieldRow({
         onChange(index, newField);
     };
 
-    const isDefaultSupported = !field.required && !isObject && !isArray && !isRef && field.key !== '_id';
+    const isDefaultSupported = !field.required && ['String', 'Number', 'Boolean'].includes(field.type) && field.key !== '_id';
 
     return (
         <div className="text-sm bg-transparent">

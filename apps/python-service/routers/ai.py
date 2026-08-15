@@ -51,10 +51,24 @@ class CollectionField(BaseModel):
     fields: list["CollectionField"] | None = None
 
     @model_validator(mode='after')
-    def validate_object_fields(self):
+    def validate_field(self):
         if self.type == "Object":
             if self.fields is None or len(self.fields) == 0:
                 raise ValueError("fields must be present and non-empty for Object type")
+        
+        if self.default is not None:
+            if self.required:
+                raise ValueError("default is not allowed on required fields")
+            if self.type not in ["String", "Number", "Boolean"]:
+                raise ValueError(f"default is not allowed on {self.type} fields")
+                
+            if self.type == "Boolean" and not isinstance(self.default, bool):
+                raise ValueError("default must be boolean for Boolean fields")
+            elif self.type == "Number" and not (isinstance(self.default, (int, float)) and not isinstance(self.default, bool)):
+                raise ValueError("default must be numeric for Number fields")
+            elif self.type == "String" and not isinstance(self.default, str):
+                raise ValueError("default must be string for String fields")
+                
         return self
 
 class CollectionSchema(BaseModel):

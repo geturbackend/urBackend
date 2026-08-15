@@ -166,6 +166,9 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
           if (f.unique !== undefined && !['Array', 'Object', 'Ref'].includes(f.type)) {
             fieldDef.unique = !!f.unique;
           }
+          if (f.default !== undefined) {
+            fieldDef.default = f.default;
+          }
           return fieldDef;
         });
       };
