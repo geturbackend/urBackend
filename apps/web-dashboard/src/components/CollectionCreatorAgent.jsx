@@ -214,30 +214,30 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-5 h-full w-full font-sans overflow-hidden">
+    <div className="flex flex-col lg:flex-row gap-8 h-full w-full font-sans overflow-hidden">
       
       {/* Open Chat Stream & Pinned Composer - Left */}
       <div className="flex flex-col flex-1 h-full min-w-0 overflow-hidden relative">
         
         {/* Messages Stream (Only this scrolls) */}
         <div 
-          className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-3 min-h-0"
+          className="flex-1 overflow-y-auto custom-scrollbar pr-3 flex flex-col gap-4 min-h-0"
         >
           {messages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div 
                 style={{ 
                   maxWidth: '85%', 
-                  padding: '10px 16px', 
-                  fontSize: '0.85rem',
-                  lineHeight: '1.55',
-                  borderRadius: '14px',
-                  borderBottomRightRadius: msg.role === 'user' ? '3px' : '14px',
-                  borderBottomLeftRadius: msg.role === 'assistant' ? '3px' : '14px',
+                  padding: '12px 18px', 
+                  fontSize: '0.875rem',
+                  lineHeight: '1.6',
+                  borderRadius: '16px',
+                  borderBottomRightRadius: msg.role === 'user' ? '4px' : '16px',
+                  borderBottomLeftRadius: msg.role === 'assistant' ? '4px' : '16px',
                   backgroundColor: msg.role === 'user' ? 'var(--color-primary)' : 'var(--color-bg-card)',
                   color: msg.role === 'user' ? '#000' : 'var(--color-text-main)',
                   border: msg.role === 'assistant' ? '1px solid var(--color-border)' : 'none',
-                  boxShadow: msg.role === 'assistant' ? '0 1px 4px rgba(0,0,0,0.05)' : '0 2px 8px rgba(62,207,142,0.2)',
+                  boxShadow: msg.role === 'assistant' ? '0 2px 8px rgba(0,0,0,0.06)' : '0 3px 12px rgba(62,207,142,0.22)',
                   whiteSpace: 'pre-wrap'
                 }}
               >
@@ -248,21 +248,21 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
 
           {/* Quick Start Suggestions on empty chat */}
           {messages.length <= 1 && !schema && (
-            <div className="mt-1 flex flex-col gap-2">
-              <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider pl-1">
+            <div className="mt-2 flex flex-col gap-2.5">
+              <span className="text-[11px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider pl-1">
                 Quick Start Ideas
               </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {SUGGESTIONS.map((s, i) => (
                   <button
                     key={i}
                     type="button"
                     onClick={() => sendMessage(null, s.prompt)}
                     disabled={aiStatus === 'loading' || iterationsLeft === 0}
-                    className="text-left p-2.5 px-3 bg-[var(--color-bg-card)] border border-[var(--color-border)] hover:border-[var(--color-primary)] rounded-lg text-xs text-[var(--color-text-main)] flex items-center justify-between gap-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="text-left p-3 px-3.5 bg-[var(--color-bg-card)] border border-[var(--color-border)] hover:border-[var(--color-primary)] rounded-xl text-xs font-medium text-[var(--color-text-main)] flex items-center justify-between gap-3 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow"
                   >
                     <span className="truncate">{s.label}</span>
-                    <ArrowRight size={12} className="opacity-50 shrink-0" />
+                    <ArrowRight size={13} className="opacity-50 shrink-0" />
                   </button>
                 ))}
               </div>
@@ -271,8 +271,8 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
 
           {aiStatus === 'loading' && (
             <div className="flex justify-start">
-              <div className="bg-[var(--color-bg-card)] p-2.5 px-4 rounded-xl rounded-bl-sm border border-[var(--color-border)] flex items-center gap-2.5 shadow-sm">
-                <div className="spinner-small w-3.5 h-3.5 border-t-[var(--color-primary)]"></div>
+              <div className="bg-[var(--color-bg-card)] p-3 px-4 rounded-xl rounded-bl-sm border border-[var(--color-border)] flex items-center gap-3 shadow-sm">
+                <div className="spinner-small w-4 h-4 border-t-[var(--color-primary)]"></div>
                 <span className="text-xs text-[var(--color-text-muted)] font-medium">
                   AI is designing your schema...
                 </span>
@@ -283,9 +283,9 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
         </div>
         
         {/* Pinned Bottom Composer */}
-        <div className="mt-auto pt-2 flex-shrink-0">
+        <div className="mt-auto pt-3 flex-shrink-0">
           <div 
-            className="relative flex items-end bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-2 px-3 shadow-lg transition-all focus-within:border-[var(--color-primary)]"
+            className="relative flex items-end bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-2.5 px-4 shadow-lg transition-all focus-within:border-[var(--color-primary)] focus-within:ring-1 focus-within:ring-[var(--color-primary)]/30"
           >
             <textarea 
               ref={textareaRef}
@@ -296,16 +296,16 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
               placeholder={iterationsLeft === 0 ? "Turn limit reached. Add Groq key in Settings." : "Describe your app (e.g. e-commerce store, booking system, CRM...)"}
               aria-label="Message the schema assistant"
               rows={1}
-              className="w-full bg-transparent border-0 outline-none text-[var(--color-text-main)] text-xs leading-relaxed resize-none max-h-[100px] min-h-[24px] py-1 placeholder:text-[var(--color-text-muted)]"
+              className="w-full bg-transparent border-0 outline-none text-[var(--color-text-main)] text-sm leading-relaxed resize-none max-h-[110px] min-h-[26px] py-1 placeholder:text-[var(--color-text-muted)]"
             />
             <button 
               type="button"
               onClick={sendMessage}
               disabled={!inputValue.trim() || aiStatus === 'loading' || (iterationsLeft === 0)}
-              className="flex items-center justify-center w-7 h-7 rounded-lg bg-[var(--color-primary)] text-black border-0 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed transition-all shrink-0 ml-2"
+              className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--color-primary)] text-black border-0 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed transition-all shrink-0 ml-2.5 font-semibold"
               title="Send message (Enter)"
             >
-              <Send size={13} />
+              <Send size={14} />
             </button>
           </div>
           {getIterationsBadge()}

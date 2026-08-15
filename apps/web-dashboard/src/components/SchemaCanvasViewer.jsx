@@ -175,29 +175,29 @@ export default function SchemaCanvasViewer({
   return (
     <TooltipProvider>
       <div 
-        className="flex flex-col flex-1 lg:flex-[1.25] h-full min-w-0 rounded-xl overflow-hidden shadow-sm border border-[var(--color-border)] bg-[var(--color-bg-card)] relative"
+        className="flex flex-col flex-1 lg:flex-[1.25] h-full min-w-0 rounded-2xl overflow-hidden shadow-sm border border-[var(--color-border)] bg-[var(--color-bg-card)] relative"
       >
-        {/* Top Header & Tabs Toolbar */}
-        <div className="p-3 px-4 border-b border-[var(--color-border)] bg-[var(--color-bg-card)] flex justify-between items-center flex-shrink-0 gap-3 flex-wrap z-10">
+        {/* Top Header & Tabs Toolbar (Spacious & Clean) */}
+        <div className="p-3 px-5 border-b border-[var(--color-border)] bg-[var(--color-bg-card)] flex justify-between items-center flex-shrink-0 gap-4 flex-wrap z-10 min-h-[56px]">
           {/* Title & Mode Switcher */}
-          <div className="flex items-center gap-3">
-            <h3 className="text-sm font-semibold text-[var(--color-text-main)] flex items-center gap-2 m-0">
-              <Sparkles size={15} className="text-[var(--color-primary)]" />
+          <div className="flex items-center gap-4">
+            <h3 className="text-sm font-semibold text-[var(--color-text-main)] flex items-center gap-2.5 m-0">
+              <Sparkles size={16} className="text-[var(--color-primary)]" />
               <span>Schema Architect</span>
             </h3>
             
             {schema && schema.length > 0 && (
               <Tabs value={viewMode} onValueChange={setViewMode} className="w-auto">
-                <TabsList className="h-7">
-                  <TabsTrigger value="canvas" className="text-xs px-2.5 py-0.5 gap-1.5">
+                <TabsList className="h-8 p-1 bg-[var(--color-bg-input)] border border-[var(--color-border)]">
+                  <TabsTrigger value="canvas" className="text-xs px-3 py-1 gap-1.5 font-medium">
                     <LayoutGrid size={12} />
                     <span>Visual Canvas</span>
                   </TabsTrigger>
-                  <TabsTrigger value="list" className="text-xs px-2.5 py-0.5 gap-1.5">
+                  <TabsTrigger value="list" className="text-xs px-3 py-1 gap-1.5 font-medium">
                     <List size={12} />
                     <span>Tree List</span>
                   </TabsTrigger>
-                  <TabsTrigger value="json" className="text-xs px-2.5 py-0.5 gap-1.5">
+                  <TabsTrigger value="json" className="text-xs px-3 py-1 gap-1.5 font-medium">
                     <Code size={12} />
                     <span>JSON</span>
                   </TabsTrigger>
@@ -207,7 +207,7 @@ export default function SchemaCanvasViewer({
           </div>
 
           {/* Right Action Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             {messages.length > 1 && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -215,9 +215,9 @@ export default function SchemaCanvasViewer({
                     variant="secondary"
                     size="sm"
                     onClick={onResetChat}
-                    className="gap-1 text-xs h-7"
+                    className="gap-1.5 text-xs h-8 px-3 font-medium"
                   >
-                    <RotateCcw size={12} />
+                    <RotateCcw size={13} />
                     <span>Reset</span>
                   </Button>
                 </TooltipTrigger>
@@ -230,9 +230,9 @@ export default function SchemaCanvasViewer({
                 variant="outline"
                 size="sm"
                 onClick={handleCopyJson}
-                className="gap-1 text-xs h-7"
+                className="gap-1.5 text-xs h-8 px-3.5"
               >
-                {copiedJson ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                {copiedJson ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
                 <span>{copiedJson ? "Copied" : "Copy JSON"}</span>
               </Button>
             )}
@@ -243,9 +243,9 @@ export default function SchemaCanvasViewer({
                 size="sm"
                 onClick={() => setIsConfirmOpen(true)}
                 disabled={isInserting}
-                className="gap-1.5 text-xs font-semibold h-7"
+                className="gap-2 text-xs font-semibold h-8 px-4 shadow-sm"
               >
-                <Plus size={13} strokeWidth={2.5} />
+                <Plus size={14} strokeWidth={2.5} />
                 <span>Create Collections ({schema.length})</span>
               </Button>
             )}

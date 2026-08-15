@@ -27,15 +27,15 @@ export default function SchemaCanvas({ collections = [], isAiAssisted = false })
     let relationCount = 0;
 
     const COLS = collections.length > 3 ? 3 : 2;
-    const X_GAP = 420;
-    const Y_GAP = 360;
+    const X_GAP = 480;
+    const Y_GAP = 420;
 
     // Index map for smart routing
     const colIndexMap = {};
     collections.forEach((col, idx) => {
       colIndexMap[col.name] = {
-        colX: (idx % COLS) * X_GAP + 50,
-        colY: Math.floor(idx / COLS) * Y_GAP + 50,
+        colX: (idx % COLS) * X_GAP + 60,
+        colY: Math.floor(idx / COLS) * Y_GAP + 60,
         index: idx,
         col: idx % COLS,
         row: Math.floor(idx / COLS)
@@ -43,7 +43,7 @@ export default function SchemaCanvas({ collections = [], isAiAssisted = false })
     });
 
     collections.forEach((col, idx) => {
-      const pos = colIndexMap[col.name] || { colX: (idx % COLS) * X_GAP + 50, colY: Math.floor(idx / COLS) * Y_GAP + 50 };
+      const pos = colIndexMap[col.name] || { colX: (idx % COLS) * X_GAP + 60, colY: Math.floor(idx / COLS) * Y_GAP + 60 };
       const fields = col.model || col.fields || [];
       fieldCount += fields.length;
 
@@ -78,8 +78,8 @@ export default function SchemaCanvas({ collections = [], isAiAssisted = false })
             type: 'smoothstep',
             animated: true,
             pathOptions: {
-              borderRadius: 16,
-              offset: 24,
+              borderRadius: 20,
+              offset: 32,
             },
             label: `${field.key} → ${targetRef}`,
             labelStyle: { fill: 'var(--color-text-main)', fontSize: 10, fontFamily: 'monospace', fontWeight: 600 },

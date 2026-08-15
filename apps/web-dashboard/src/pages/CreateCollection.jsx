@@ -168,20 +168,16 @@ function CreateCollection() {
 
     return (
         <div 
-            className="w-full h-[calc(100vh-64px)] flex flex-col overflow-hidden"
-            style={{ 
-                padding: '1rem 1.5rem',
-                boxSizing: 'border-box'
-            }}
+            className="w-full h-[calc(100vh-var(--header-height))] flex flex-col overflow-hidden px-6 lg:px-8 py-4 box-border"
         >
             {/* Top Navigation & Mode Switch Header (Pinned, Non-overlapping) */}
             <div 
-                className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--color-border)] flex-shrink-0 gap-4"
+                className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-[var(--color-border)] flex-shrink-0 gap-6"
             >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3.5">
                     <button
                         onClick={() => navigate(`/project/${projectId}`)}
-                        className="btn btn-ghost text-xs px-2.5 py-1.5 flex items-center gap-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] rounded-md border border-[var(--color-border)]"
+                        className="btn btn-ghost text-xs px-3 py-1.5 flex items-center gap-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] rounded-lg border border-[var(--color-border)]"
                     >
                         <ArrowLeft size={14} /> Cancel & Back
                     </button>
@@ -194,10 +190,10 @@ function CreateCollection() {
                 {initialName !== 'users' && (
                     <Tabs value={mode} onValueChange={setMode} className="w-auto shrink-0">
                         <TabsList className="h-8 p-1 bg-[var(--color-bg-input)] border border-[var(--color-border)]">
-                            <TabsTrigger value="manual" className="text-xs px-3 py-1 font-medium">
+                            <TabsTrigger value="manual" className="text-xs px-3.5 py-1 font-medium">
                                 Manual Builder
                             </TabsTrigger>
-                            <TabsTrigger value="ai" className="text-xs px-3 py-1 gap-1.5 font-medium data-[state=active]:text-[var(--color-primary)]">
+                            <TabsTrigger value="ai" className="text-xs px-3.5 py-1 gap-1.5 font-medium data-[state=active]:text-[var(--color-primary)]">
                                 <Wand2 size={13} className="text-[var(--color-primary)]" />
                                 <span>AI-Assisted</span>
                             </TabsTrigger>

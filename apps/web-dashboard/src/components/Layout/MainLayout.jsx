@@ -70,7 +70,7 @@ function MainLayout({ children }) {
                     className="content-wrapper"
                     style={{
                         marginTop: 0,
-                        padding: isProjectRoute && location.pathname.includes('/database') ? 0 : undefined
+                        padding: isProjectRoute && (location.pathname.includes('/database') || location.pathname.includes('/create-collection')) ? 0 : undefined
                     }}
                 >
                     {children}
