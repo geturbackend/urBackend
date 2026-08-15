@@ -214,10 +214,10 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 md:gap-8 min-h-[800px] md:min-h-0 md:h-full w-full font-sans overflow-hidden md:overflow-visible">
+    <div className="flex flex-col lg:flex-row gap-8 h-full w-full font-sans overflow-hidden">
       
       {/* Open Chat Stream & Pinned Composer - Left */}
-      <div className="flex flex-col flex-1 h-[400px] md:h-full min-w-0 overflow-hidden relative">
+      <div className="flex flex-col flex-1 h-full min-w-0 overflow-hidden relative">
         
         {/* Messages Stream (Only this scrolls) */}
         <div 
