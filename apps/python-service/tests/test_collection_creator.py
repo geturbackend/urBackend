@@ -46,8 +46,8 @@ async def test_collection_creator_schema_validation_rejection():
             headers={"X-Internal-Signature": "fake_sig"}
         )
         
-        # Pydantic validation errors from Langchain result in an unhandled exception (500)
-        assert response.status_code == 500
+        # Pydantic validation errors from Langchain result in 400 Bad Request
+        assert response.status_code == 400
 
 @pytest.mark.asyncio
 async def test_collection_creator_success():

@@ -1,15 +1,29 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../utils/api';
 import { toast } from 'react-hot-toast';
-import { Send, Sparkles } from 'lucide-react';
+import { Send, Sparkles, RotateCcw, ArrowRight } from 'lucide-react';
+
+const SUGGESTIONS = [
+  { label: '🛒 E-commerce store', prompt: 'Create an e-commerce platform with products, categories, orders, and customer reviews' },
+  { label: '📋 Project management', prompt: 'Build a project management tool with workspaces, tasks, milestones, and time tracking' },
+  { label: '📝 Blog platform', prompt: 'Design a blog with posts, authors, tags, comments, and draft management' },
+  { label: '🎓 Learning platform', prompt: 'Create a learning platform with courses, modules, lessons, quizzes, and student enrollments' },
+];
+
+const createMsg = (role, content) => ({
+  id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+  role,
+  content
+});
 
 export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hi! Tell me what you're building — for example: 'a food delivery app' or 'a SaaS project management tool' — and I'll design a MongoDB schema for you." }
+    createMsg('assistant', "Hi! Tell me what you're building — for example: 'a food delivery app' or 'a SaaS project management tool' — and I'll design a MongoDB schema for you.")
   ]);
   const [aiStatus, setAiStatus] = useState('idle'); // 'idle' | 'loading' | 'error'
   const [schema, setSchema] = useState(null);
   const [iterationsLeft, setIterationsLeft] = useState(null);
+  const [iterationLimit, setIterationLimit] = useState(null);
   const [inputValue, setInputValue] = useState('');
   const [isInserting, setIsInserting] = useState(false);
   const [insertResults, setInsertResults] = useState(null);
@@ -37,31 +51,31 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 130)}px`;
     }
   }, [inputValue]);
 
-  const sendMessage = async (e) => {
+  const sendMessage = useCallback(async (e, overrideText) => {
     if (e) e.preventDefault();
-    if (!inputValue.trim() || aiStatus === 'loading' || iterationsLeft === 0) return;
+    const textToSend = (overrideText || inputValue).trim();
+    if (!textToSend || aiStatus === 'loading' || iterationsLeft === 0) return;
     
-    const userText = inputValue.trim();
     setInputValue('');
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-    setMessages(prev => [...prev, { role: 'user', content: userText }]);
+    setMessages(prev => [...prev, createMsg('user', textToSend)]);
     setAiStatus('loading');
     setInsertResults(null);
     
     try {
       const res = await api.post(`/api/projects/${projectId}/ai/collection-creator`, {
-        userMessage: userText
+        userMessage: textToSend
       });
       
-      const { message, schema: newSchema, iterationsLeft: left } = res.data.data;
+      const { message, schema: newSchema, iterationsLeft: left, iterationLimit: limit } = res.data.data;
       
-      setMessages(prev => [...prev, { role: 'assistant', content: message }]);
+      setMessages(prev => [...prev, createMsg('assistant', message)]);
       
       if (newSchema?.length) {
         setSchema(newSchema);
@@ -70,18 +84,38 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
       if (left !== undefined) {
         setIterationsLeft(left);
       }
+      if (limit !== undefined) {
+        setIterationLimit(limit);
+      }
       setAiStatus('idle');
     } catch (err) {
       const detail = err.response?.data?.message || err.response?.data?.error || "AI request failed. Please try again.";
       setAiStatus('error');
       toast.error(detail);
       
-      // Automatically clear the error status after a short delay so they can type again
       const timer = setTimeout(() => {
           setAiStatus(prev => prev === 'error' ? 'idle' : prev);
       }, 2000);
       timersRef.current.push(timer);
     }
+  }, [inputValue, aiStatus, iterationsLeft, projectId]);
+
+  const handleResetChat = async () => {
+    if (aiStatus === 'loading') return;
+    try {
+      await api.delete(`/api/projects/${projectId}/ai/collection-creator/session`);
+    } catch (e) {
+      console.warn("Failed to delete session on server", e);
+    }
+    setMessages([
+      createMsg('assistant', "Hi! Tell me what you're building — for example: 'a food delivery app' or 'a SaaS project management tool' — and I'll design a MongoDB schema for you.")
+    ]);
+    setSchema(null);
+    setInsertResults(null);
+    setIterationsLeft(null);
+    setIterationLimit(null);
+    setInputValue('');
+    toast.success("Chat reset");
   };
 
   const handleKeyDown = (e) => {
@@ -92,6 +126,10 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
   };
 
   const handleInsertAll = async () => {
+    if (!schema || schema.length === 0) return;
+    const confirmed = window.confirm(`Are you sure you want to create ${schema.length} collection(s) in your database?`);
+    if (!confirmed) return;
+
     setIsInserting(true);
     setInsertResults(null);
     try {
@@ -135,13 +173,12 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
 
       if (failed === 0) {
         toast.success(`${created} collection(s) created successfully!`);
-        timersRef.current.push(setTimeout(() => onInsertAll(), 1500));
       } else {
         toast.error(`${failed} collection(s) failed. ${created} created successfully.`);
-        timersRef.current.push(setTimeout(() => onInsertAll(), 4000));
       }
     } catch (err) {
       toast.error(err.response?.data?.message || err.response?.data?.error || "Bulk insert failed");
+    } finally {
       setIsInserting(false);
     }
   };
@@ -149,12 +186,13 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
   const getIterationsBadge = () => {
     if (iterationsLeft === null) return null; // BYOK
     
-    const used = 3 - iterationsLeft;
-    const dots = Array(3).fill(0).map((_, i) => i < used ? '●' : '○').join('');
+    const limit = iterationLimit || 3;
+    const used = Math.max(0, limit - iterationsLeft);
+    const dots = Array(limit).fill(0).map((_, i) => i < used ? '●' : '○').join('');
     
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', padding: '0 4px', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-        <span>{used} of 3 AI turns used <span style={{ marginLeft: '6px', letterSpacing: '0.1em' }}>{dots}</span></span>
+        <span>{used} of {limit} AI turns used <span style={{ marginLeft: '6px', letterSpacing: '0.1em' }}>{dots}</span></span>
         {iterationsLeft === 0 && <span style={{ color: 'var(--color-danger)', fontWeight: 600 }}>Add Groq API key in Settings for unlimited</span>}
       </div>
     );
@@ -177,8 +215,8 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
             gap: '1.25rem'
           }}
         >
-          {messages.map((msg, idx) => (
-            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+          {messages.map((msg) => (
+            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div 
                 style={{ 
                   maxWidth: '85%', 
@@ -199,6 +237,46 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
               </div>
             </div>
           ))}
+
+          {/* Quick Start Suggestions on empty chat */}
+          {messages.length <= 1 && !schema && (
+            <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', paddingLeft: '4px' }}>
+                Quick Start Ideas
+              </span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '8px' }}>
+                {SUGGESTIONS.map((s, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => sendMessage(null, s.prompt)}
+                    disabled={aiStatus === 'loading'}
+                    style={{
+                      textAlign: 'left',
+                      padding: '10px 14px',
+                      backgroundColor: 'var(--color-bg-card)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: '12px',
+                      fontSize: '0.825rem',
+                      color: 'var(--color-text-main)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '8px'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                  >
+                    <span>{s.label}</span>
+                    <ArrowRight size={13} style={{ opacity: 0.6, flexShrink: 0 }} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {aiStatus === 'loading' && (
             <div className="flex justify-start">
               <div 
@@ -300,9 +378,23 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
         }}
       >
         <div style={{ padding: '1.1rem 1.5rem', borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg-card)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-            <Sparkles size={16} style={{ color: 'var(--color-primary)' }} /> Schema Preview
-          </h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <Sparkles size={16} style={{ color: 'var(--color-primary)' }} /> Schema Preview
+            </h3>
+            {messages.length > 1 && (
+              <button
+                type="button"
+                onClick={handleResetChat}
+                className="btn btn-ghost"
+                style={{ padding: '4px 8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-text-muted)', borderRadius: '6px' }}
+                title="Reset conversation"
+              >
+                <RotateCcw size={12} /> New Chat
+              </button>
+            )}
+          </div>
+
           {schema && schema.length > 0 && (
             <button
               onClick={handleInsertAll}
@@ -329,13 +421,23 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
                 </svg>
               </div>
               <p style={{ fontSize: '0.9rem', color: 'var(--color-text-main)', fontWeight: 500, margin: 0 }}>Your generated schema will appear here.</p>
-              <p style={{ fontSize: '0.8rem', opacity: 0.8, marginTop: '6px', margin: 0 }}>Start by chatting with the AI.</p>
+              <p style={{ fontSize: '0.8rem', opacity: 0.8, marginTop: '6px', margin: 0 }}>Start by chatting with the AI or clicking a suggestion above.</p>
             </div>
           ) : (
             <div className="space-y-6">
               {insertResults && (
                 <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '10px', animation: 'fadeIn 0.3s ease-out' }}>
-                  <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-main)', marginBottom: '12px' }}>Insert Results</p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-main)', margin: 0 }}>Insert Results</p>
+                    <button
+                      type="button"
+                      onClick={() => onInsertAll && onInsertAll()}
+                      className="btn btn-primary"
+                      style={{ padding: '4px 12px', fontSize: '0.75rem', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      Continue to Database <ArrowRight size={12} />
+                    </button>
+                  </div>
                   <ul className="space-y-3">
                     {insertResults.map((r, i) => (
                       <li key={i} style={{ display: 'flex', alignItems: 'start', gap: '10px', fontSize: '0.8rem', color: r.success ? 'var(--color-success)' : 'var(--color-danger)' }}>
@@ -361,7 +463,18 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
                       <tbody style={{ display: 'block', width: '100%' }}>
                         {col.fields?.map((f, i) => (
                           <tr key={i} style={{ display: 'flex', width: '100%', borderBottom: i < col.fields.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
-                            <td style={{ padding: '12px 18px', fontFamily: 'monospace', color: 'var(--color-text-main)', width: '50%', borderRight: '1px solid var(--color-border)' }}>{f.name}</td>
+                            <td style={{ padding: '12px 18px', fontFamily: 'monospace', color: 'var(--color-text-main)', width: '50%', borderRight: '1px solid var(--color-border)' }}>
+                              {f.name}
+                              {f.fields && f.fields.length > 0 && (
+                                <div style={{ marginTop: '6px', paddingLeft: '12px', borderLeft: '2px solid rgba(62,207,142,0.3)', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                                  {f.fields.map((sub, sIdx) => (
+                                    <div key={sIdx} style={{ padding: '2px 0' }}>
+                                      <code>{sub.name}</code>: <span style={{ opacity: 0.8 }}>{sub.type}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
                             <td style={{ padding: '12px 18px', color: 'var(--color-text-muted)', width: '50%', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                               <span className="badge" style={{ 
                                 backgroundColor: 'var(--color-bg-card)', 
@@ -371,10 +484,13 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
                                 padding: '3px 8px',
                                 borderRadius: '4px'
                               }}>
-                                {f.type}
+                                {f.type === 'Array' && f.items?.type ? `Array<${f.items.type}>` : f.type}
                               </span>
                               {f.type === 'Ref' && f.ref && (
                                 <span style={{ fontSize: '0.7rem', color: 'var(--color-primary)', fontWeight: 500 }}>→ {f.ref}</span>
+                              )}
+                              {f.unique && (
+                                <span style={{ fontSize: '0.65rem', color: 'var(--color-primary)', border: '1px solid var(--color-primary)', padding: '1px 5px', borderRadius: '3px', fontWeight: 600 }}>UNIQUE</span>
                               )}
                               {f.required && (
                                 <span style={{ color: 'var(--color-danger)', marginLeft: 'auto', fontWeight: 700, fontSize: '0.9rem' }} title="Required">*</span>
