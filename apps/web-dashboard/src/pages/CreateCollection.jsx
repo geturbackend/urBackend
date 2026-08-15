@@ -168,7 +168,7 @@ function CreateCollection() {
 
     return (
         <div 
-            className="w-full flex-1 flex flex-col min-h-0 overflow-hidden box-border"
+            className="w-full flex-1 flex flex-col min-h-0 overflow-hidden box-border p-6 lg:p-8"
         >
             {/* Top Navigation & Mode Switch Header (Pinned, Non-overlapping) */}
             <div 
