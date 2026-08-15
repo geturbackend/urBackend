@@ -9,7 +9,7 @@ import CollectionTable from "../components/CollectionTable";
 import DatabaseSidebar from "../components/DatabaseSidebar";
 import RowDetailDrawer from "../components/RowDetailDrawer";
 import RecordList from "../components/RecordList";
-import { Database as DbIcon, FileText, Shield, X } from "lucide-react";
+import { Database as DbIcon, FileText, Shield, X, Copy } from "lucide-react";
 import { PUBLIC_API_URL } from '../config';
 
 import DatabaseHeader from "../components/Database/DatabaseHeader";
@@ -27,7 +27,7 @@ export default function Database() {
   const [activeCollection, setActiveCollection] = useState(null);
   const [data, setData] = useState([]);
   const [loadingData, setLoadingData] = useState(false);
-  const [viewMode, setViewMode] = useState("table"); // Default to table for pro feel
+  const [viewMode, setViewMode] = useState("table");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -56,57 +56,53 @@ export default function Database() {
   const [isRlsDialogOpen, setIsRlsDialogOpen] = useState(false);
   const [loadingProject, setLoadingProject] = useState(true);
 
-  // ... (Keeping core logic: fetchProject, fetchData, handleSaveRls, etc. - mapped to new components)
-
-    useEffect(() => {
-      let isMounted = true;
-      const fetchProject = async () => {
-        try {
-          const res = await api.get(`/api/projects/${projectId}`);
-          const projectData = res.data?.data || res.data;
-          const withRlsDefaults = (projectData?.collections || []).map(c => ({
-              ...c,
-              rls: {
-                enabled: typeof c.rls?.enabled === 'boolean' ? c.rls.enabled : false,
-                mode: c.rls?.mode === 'owner-write-only' ? 'public-read' : (c.rls?.mode || 'public-read'),
-                ownerField: c.rls?.ownerField || 'userId',
-                requireAuthForWrite: typeof c.rls?.requireAuthForWrite === 'boolean' ? c.rls.requireAuthForWrite : true
-              }
-          }));
-          if (isMounted) {
-            setProject(projectData);
-            setCollections(withRlsDefaults);
-            const queryCol = searchParams.get("collection");
-            if (queryCol) {
-              const found = withRlsDefaults.find(c => c.name === queryCol);
-              if (found) setActiveCollection(found);
-            } else if (withRlsDefaults.length > 0) {
-              setActiveCollection(withRlsDefaults.find(c => c.name !== 'users') || withRlsDefaults[0]);
+  useEffect(() => {
+    let isMounted = true;
+    const fetchProject = async () => {
+      try {
+        const res = await api.get(`/api/projects/${projectId}`);
+        const projectData = res.data?.data || res.data;
+        const withRlsDefaults = (projectData?.collections || []).map(c => ({
+            ...c,
+            rls: {
+              enabled: typeof c.rls?.enabled === 'boolean' ? c.rls.enabled : false,
+              mode: c.rls?.mode === 'owner-write-only' ? 'public-read' : (c.rls?.mode || 'public-read'),
+              ownerField: c.rls?.ownerField || 'userId',
+              requireAuthForWrite: typeof c.rls?.requireAuthForWrite === 'boolean' ? c.rls.requireAuthForWrite : true
             }
+        }));
+        if (isMounted) {
+          setProject(projectData);
+          setCollections(withRlsDefaults);
+          const queryCol = searchParams.get("collection");
+          if (queryCol) {
+            const found = withRlsDefaults.find(c => c.name === queryCol);
+            if (found) setActiveCollection(found);
+          } else if (withRlsDefaults.length > 0) {
+            setActiveCollection(withRlsDefaults.find(c => c.name !== 'users') || withRlsDefaults[0]);
           }
-        } catch { 
-          toast.error("Failed to load project"); 
-        } finally {
-          if (isMounted) setLoadingProject(false);
         }
-      };
-      fetchProject();
-      return () => { isMounted = false; };
-    }, [projectId, user, searchParams]);
-
-    // Sync RLS states with active collection
-    useEffect(() => {
-      if (activeCollection) {
-        Promise.resolve().then(() => {
-          setRlsEnabled(activeCollection.rls?.enabled || false);
-          setRlsMode(activeCollection.rls?.mode || 'public-read');
-          setRlsOwnerField(activeCollection.rls?.ownerField || 'userId');
-          
-          // Reset filters when switching collections to prevent invalid field queries
-          setQueryParams(p => ({ ...p, page: 1, filters: [] }));
-        });
+      } catch { 
+        toast.error("Failed to load project"); 
+      } finally {
+        if (isMounted) setLoadingProject(false);
       }
-    }, [activeCollection]);
+    };
+    fetchProject();
+    return () => { isMounted = false; };
+  }, [projectId, user, searchParams]);
+
+  // Sync RLS states with active collection
+  useEffect(() => {
+    if (activeCollection) {
+      Promise.resolve().then(() => {
+        setRlsEnabled(activeCollection.rls?.enabled || false);
+        setRlsMode(activeCollection.rls?.mode || 'public-read');
+        setRlsOwnerField(activeCollection.rls?.ownerField || 'userId');
+        setQueryParams(p => ({ ...p, page: 1, filters: [] }));
+      });
+    }
+  }, [activeCollection]);
 
   const fetchData = useCallback(async () => {
     if (!activeCollection) return;
@@ -120,18 +116,13 @@ export default function Database() {
          if (f.field && f.value !== '') queryStr += `&${f.field}${f.operator === '=' ? '' : f.operator}=${encodeURIComponent(f.value)}`;
       });
       const res = await api.get(`/api/projects/${projectId}/collections/${activeCollection.name}/data${queryStr}`);
-      // Handle standard API response format { success, data: { items, total } }
       if (res.data?.success && res.data?.data?.items) {
         setData(res.data.data.items);
         setTotalRecords(res.data.data.total || 0);
-      } 
-      // Handle legacy metadata response { items, total }
-      else if (res.data && res.data.items) {
+      } else if (res.data && res.data.items) {
         setData(res.data.items);
         setTotalRecords(res.data.total || 0);
-      } 
-      // Fallback
-      else {
+      } else {
         setData(res.data || []);
         setTotalRecords(Array.isArray(res.data) ? res.data.length : 0);
       }
@@ -142,7 +133,6 @@ export default function Database() {
   useEffect(() => {
     if (!activeCollection) return;
     
-    // Sync URL with current page and limit
     const newParams = { collection: activeCollection.name };
     if (queryParams.page > 1) newParams.page = queryParams.page;
     if (queryParams.limit !== 50) newParams.limit = queryParams.limit;
@@ -167,10 +157,6 @@ export default function Database() {
     } catch { toast.error("Failed to save RLS"); return false; }
   };
 
-  /**
-   * Deletes a record from the active collection.
-   * @param {string} id - The ID of the record to delete.
-   */
   const handleDeleteRecord = async (id) => {
     try {
       await api.delete(`/api/projects/${projectId}/collections/${activeCollection.name}/data/${id}`);
@@ -205,17 +191,12 @@ export default function Database() {
       }
   };
 
-  /**
-   * Restores a soft-deleted record from the trash for the active collection.
-   * @param {string} id - The ID of the record to recover.
-   */
   const handleRecoverRecord = async (id) => {
     const originalRecord = data.find(item => item._id === id);
     if (!originalRecord) return;
 
     setRecoveringIds(prev => new Set(prev).add(id));
     
-    // Optimistic Update: clear isDeleted flag locally
     setData(prev => prev.map(item => 
       item._id === id ? { ...item, isDeleted: false, deletedAt: null } : item
     ));
@@ -224,11 +205,9 @@ export default function Database() {
       await api.patch(`/api/projects/${projectId}/collections/${activeCollection.name}/data/${id}/recover`);
       toast.success("Document restored successfully");
     } catch (err) {
-      // Rollback to original state on failure
       setData(prev => prev.map(item => 
         item._id === id ? originalRecord : item
       ));
-      
       const errMsg = err.response?.data?.message || err.response?.data?.error || err.message;
       toast.error(errMsg ? `Failed to restore document: ${errMsg}` : "Failed to restore document");
     } finally {
@@ -240,11 +219,6 @@ export default function Database() {
     }
   };
 
-  /**
-   * Generates an RLS-aware cURL snippet for the active collection.
-   * Uses the secret key if RLS is disabled, or the publishable key with a JWT if RLS is enabled.
-   * @returns {string} The cURL command snippet
-   */
   const getCurlSnippet = () => {
     if (!activeCollection) return '';
     return activeCollection.rls?.enabled
@@ -254,32 +228,28 @@ export default function Database() {
 
   if (loadingProject) {
     return (
-      <div className="db-layout" style={{ height: 'calc(100vh - var(--header-height))', display: 'flex', background: 'var(--color-bg-main)' }}>
-        {/* Database Sidebar Skeleton */}
-        <aside className="db-sidebar" style={{ background: 'var(--color-bg-sidebar)', borderRight: '1px solid var(--color-border)', width: '280px', display: 'flex', flexDirection: 'column', padding: '1.5rem' }}>
-          <div className="skeleton" style={{ width: '100px', height: '16px', marginBottom: '1.5rem', borderRadius: '4px' }} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
+      <div className="db-layout" style={{ height: 'calc(100vh - var(--header-height))', display: 'flex', background: 'var(--color-bg-main)', overflow: 'hidden' }}>
+        <aside className="db-sidebar" style={{ background: 'var(--color-bg-sidebar)', borderRight: '1px solid var(--color-border)', width: '230px', minWidth: '230px', display: 'flex', flexDirection: 'column', padding: '1rem' }}>
+          <div className="skeleton" style={{ width: '80px', height: '14px', marginBottom: '1rem', borderRadius: '4px' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="skeleton" style={{ width: '80%', height: '24px', borderRadius: '4px' }} />
+              <div key={i} className="skeleton" style={{ width: '90%', height: '22px', borderRadius: '4px' }} />
             ))}
           </div>
         </aside>
 
-        {/* Database Main Skeleton */}
-        <main className="db-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: '12px', border: '1px solid var(--color-border)', borderRadius: '8px', background: 'var(--color-bg-card)', padding: '1.5rem' }}>
-          {/* Header skeleton */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <div className="skeleton" style={{ width: '120px', height: '20px', borderRadius: '4px' }} />
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <div className="skeleton" style={{ width: '120px', height: '32px', borderRadius: '6px' }} />
-              <div className="skeleton" style={{ width: '80px', height: '32px', borderRadius: '6px' }} />
+        <main className="db-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--color-bg-card)', padding: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <div className="skeleton" style={{ width: '100px', height: '18px', borderRadius: '4px' }} />
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <div className="skeleton" style={{ width: '100px', height: '28px', borderRadius: '4px' }} />
+              <div className="skeleton" style={{ width: '70px', height: '28px', borderRadius: '4px' }} />
             </div>
           </div>
-          {/* Table skeleton */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
-            <div className="skeleton" style={{ width: '100%', height: '40px', borderRadius: '4px' }} />
-            {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="skeleton" style={{ width: '100%', height: '32px', borderRadius: '4px' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+            <div className="skeleton" style={{ width: '100%', height: '32px', borderRadius: '4px' }} />
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="skeleton" style={{ width: '100%', height: '28px', borderRadius: '4px' }} />
             ))}
           </div>
         </main>
@@ -288,7 +258,7 @@ export default function Database() {
   }
 
   return (
-    <div className="db-layout" style={{ height: 'calc(100vh - var(--header-height))', display: 'flex', background: 'var(--color-bg-main)' }}>
+    <div className="db-layout" style={{ height: 'calc(100vh - var(--header-height))', display: 'flex', background: 'var(--color-bg-main)', overflow: 'hidden' }}>
       <DatabaseSidebar
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
@@ -302,7 +272,7 @@ export default function Database() {
         isViewer={isViewer}
       />
 
-      <main className="db-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', margin: '12px 12px 12px 0', border: '1px solid var(--color-border)', borderRadius: '8px', background: 'var(--color-bg-card)' }}>
+      <main className="db-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: 'var(--color-bg-card)' }}>
         {activeCollection ? (
           <>
             <DatabaseHeader 
@@ -345,20 +315,20 @@ export default function Database() {
 
               <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
                 {loadingData ? (
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                     <div className="spinner"></div>
                   </div>
                 ) : data.length === 0 ? (
-                  <div className="empty-state" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ padding: '2.5rem', background: 'rgba(0,0,0,0.1)', border: '1px dashed var(--color-border)', borderRadius: '12px', textAlign: 'center', maxWidth: '600px', width: '100%' }}>
-                        <FileText size={40} style={{ opacity: 0.4, marginBottom: '1rem', display: 'inline-block' }} />
-                        <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', fontWeight: 600 }}>No records found</h3>
-                        <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                            Your collection is empty. You can add a record manually or make your first API call!
+                  <div className="empty-state" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', overflowY: 'auto' }}>
+                    <div style={{ padding: '1.5rem', background: 'var(--color-bg-card)', border: '1px dashed var(--color-border)', borderRadius: '8px', textAlign: 'center', maxWidth: '520px', width: '100%' }}>
+                        <FileText size={32} style={{ opacity: 0.3, marginBottom: '0.75rem', display: 'inline-block', color: 'var(--color-primary)' }} />
+                        <h3 style={{ fontSize: '1rem', marginBottom: '0.35rem', fontWeight: 600, color: 'var(--color-text-main)' }}>No records found</h3>
+                        <p style={{ color: 'var(--color-text-muted)', marginBottom: '1rem', fontSize: '0.8rem', lineHeight: '1.4' }}>
+                            Collection is empty. Insert a record or make an API request.
                         </p>
                         
-                        <div style={{ background: '#111', padding: '1rem', borderRadius: '8px', textAlign: 'left', border: '1px solid var(--color-border)', position: 'relative' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+                        <div style={{ background: 'var(--color-bg-input)', padding: '0.75rem', borderRadius: '6px', textAlign: 'left', border: '1px solid var(--color-border)', position: 'relative' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.65rem', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
                                 <span>Example POST Request</span>
                                 <button 
                                     onClick={async () => { 
@@ -369,31 +339,18 @@ export default function Database() {
                                             toast.error('Failed to copy snippet');
                                         }
                                     }} 
-                                    style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer' }}
+                                    style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.7rem' }}
                                 >
-                                    Copy
+                                    <Copy size={11} /> Copy
                                 </button>
                             </div>
-                            {activeCollection?.rls?.enabled ? (
-                            <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '0.85rem', color: '#e2e8f0', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
-<span style={{ color: '#f59e0b' }}>curl</span> -X POST https://api.urbackend.com/api/data/{activeCollection.name} \
-  -H <span style={{ color: '#10b981' }}>"x-api-key: &lt;YOUR_PUBLISHABLE_KEY&gt;"</span> \
-  -H <span style={{ color: '#10b981' }}>"Authorization: Bearer &lt;USER_JWT&gt;"</span> \
-  -H <span style={{ color: '#10b981' }}>"Content-Type: application/json"</span> \
-  -d <span style={{ color: '#10b981' }}>'&#123;&#125;'</span>
+                            <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--color-text-main)', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+{getCurlSnippet()}
                             </pre>
-                            ) : (
-                            <pre style={{ margin: 0, fontFamily: 'monospace', fontSize: '0.85rem', color: '#e2e8f0', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
-<span style={{ color: '#f59e0b' }}>curl</span> -X POST https://api.urbackend.com/api/data/{activeCollection.name} \
-  -H <span style={{ color: '#10b981' }}>"x-api-key: &lt;YOUR_SECRET_KEY&gt;"</span> \
-  -H <span style={{ color: '#10b981' }}>"Content-Type: application/json"</span> \
-  -d <span style={{ color: '#10b981' }}>'&#123;&#125;'</span>
-                            </pre>
-                            )}
                         </div>
-                        <div style={{ marginTop: '1.5rem' }}>
+                        <div style={{ marginTop: '1rem' }}>
                             {!isViewer && (
-                                <button className="btn btn-primary" onClick={() => setIsAddModalOpen(true)}>Add Record Manually</button>
+                                <button className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '0.775rem' }} onClick={() => setIsAddModalOpen(true)}>Add Record Manually</button>
                             )}
                         </div>
                     </div>
@@ -419,7 +376,7 @@ export default function Database() {
                     isViewer={isViewer}
                   />
                 ) : (
-                  <div style={{ height: '100%', overflow: 'auto', padding: '1.5rem', background: '#050505', color: 'var(--color-primary)', fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                  <div style={{ height: '100%', overflow: 'auto', padding: '1rem', background: 'var(--color-bg-input)', color: 'var(--color-primary)', fontFamily: 'monospace', fontSize: '0.75rem' }}>
                     <pre>{JSON.stringify(data, null, 2)}</pre>
                   </div>
                 )}
@@ -435,14 +392,14 @@ export default function Database() {
             </div>
           </>
         ) : (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-card)', padding: '2rem' }}>
-            <DbIcon size={64} style={{ opacity: 0.2, marginBottom: '1.5rem' }} color="var(--color-primary)" />
-            <h3 style={{ fontSize: '1.4rem', fontWeight: 600, marginBottom: '0.5rem' }}>No collections found</h3>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', marginBottom: '2rem', maxWidth: '400px', textAlign: 'center', lineHeight: '1.5' }}>
-              Collections (or Tables) are where your project's data is stored. {isViewer ? 'The project owner has not created any collections yet.' : 'Create your first collection to start saving data.'}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-card)', padding: '1.5rem' }}>
+            <DbIcon size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} color="var(--color-primary)" />
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.35rem', color: 'var(--color-text-main)' }}>No collections found</h3>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.825rem', marginBottom: '1.25rem', maxWidth: '340px', textAlign: 'center', lineHeight: '1.4' }}>
+              {isViewer ? 'The project owner has not created any collections yet.' : 'Create your first collection to start saving data.'}
             </p>
             {!isViewer && (
-              <button className="btn btn-primary" style={{ padding: '12px 24px', fontSize: '1rem' }} onClick={() => navigate(`/project/${projectId}/create-collection`)}>
+              <button className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.825rem' }} onClick={() => navigate(`/project/${projectId}/create-collection`)}>
                 Create Collection
               </button>
             )}
@@ -480,90 +437,60 @@ export default function Database() {
 
       {/* RLS Dialog */}
       {isRlsDialogOpen && (
-        <div className="rls-dialog-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-          <div style={{ width: '480px', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--color-border)', background: 'var(--color-bg-card)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Shield size={20} color="var(--color-primary)" />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Row Level Security (RLS)</h3>
-                        <a 
-                            href="/docs#rls" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            style={{ 
-                                display: 'inline-flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center', 
-                                width: '16px', 
-                                height: '16px', 
-                                borderRadius: '50%', 
-                                background: 'var(--color-surface-hover)', 
-                                color: 'var(--color-text-muted)', 
-                                fontSize: '0.65rem', 
-                                fontWeight: 'bold', 
-                                textDecoration: 'none', 
-                                cursor: 'help' 
-                            }}
-                            title="Row Level Security restricts which users can access data. Click to read the docs."
-                        >
-                            ?
-                        </a>
-                    </div>
+        <div className="rls-dialog-overlay" style={{ position: 'fixed', inset: 0, background: 'var(--color-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
+          <div style={{ width: '420px', maxWidth: '90vw', padding: '1.25rem', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-bg-card)', boxShadow: '0 12px 32px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Shield size={18} color="var(--color-primary)" />
+                    <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, color: 'var(--color-text-main)' }}>Row Level Security (RLS)</h3>
                 </div>
                 <button 
                   onClick={() => setIsRlsDialogOpen(false)} 
                   className="btn-icon" 
-                  style={{ background: 'var(--color-bg-input)', borderRadius: '50%', padding: '6px', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ borderRadius: '50%', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
-                    <X size={18} />
+                    <X size={15} />
                 </button>
             </div>
  
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              
-              <div style={{ padding: '12px', background: 'var(--color-bg-input)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ padding: '10px', background: 'var(--color-bg-input)', borderRadius: '6px', border: '1px solid var(--color-border)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', fontWeight: 600, cursor: 'pointer', color: 'var(--color-text-main)' }}>
                     <input 
                       type="checkbox" 
-                      style={{ width: '18px', height: '18px' }}
+                      style={{ width: '16px', height: '16px' }}
                       checked={rlsEnabled} 
                       onChange={e => setRlsEnabled(e.target.checked)} 
                     /> 
                     Enable Rules for "{activeCollection?.name}"
                   </label>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '6px', marginLeft: '28px' }}>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '4px', marginLeft: '24px' }}>
                       When enabled, access to data is restricted based on the rules below.
                   </p>
               </div>
 
               {rlsEnabled && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} className="fade-in">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       <div>
-                          <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase' }}>Security Mode</label>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Security Mode</label>
                           <select 
                             className="input-field" 
                             value={rlsMode} 
                             onChange={e => setRlsMode(e.target.value)} 
-                            style={{ width: '100%', height: '40px', fontSize: '0.85rem' }}
+                            style={{ width: '100%', height: '32px', fontSize: '0.775rem' }}
                           >
                             <option value="public-read">Public Read (Anyone can read, Owner can write)</option>
                             <option value="private">Private (Only Owner can read and write)</option>
                           </select>
-                          <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '8px', lineHeight: 1.4 }}>
-                              {rlsMode === 'public-read' 
-                                ? '✓ Perfect for public content like blog posts or reviews. Users can read anything but only edit their own data.' 
-                                : '✓ Perfect for sensitive data like user profiles or personal notes. Only the creator can access the record.'}
-                          </p>
                       </div>
 
                       <div>
-                          <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase' }}>Ownership Field</label>
+                          <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase' }}>Ownership Field</label>
                           <select 
                             className="input-field" 
                             value={rlsOwnerField} 
                             onChange={e => setRlsOwnerField(e.target.value)} 
-                            style={{ width: '100%', height: '40px', fontSize: '0.85rem' }}
+                            style={{ width: '100%', height: '32px', fontSize: '0.775rem' }}
                           >
                               <option value="userId">userId (Default)</option>
                                 {activeCollection?.model
@@ -572,24 +499,21 @@ export default function Database() {
                                     <option key={f.key} value={f.key}>{f.key}</option>
                                 ))}
                           </select>
-                          <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '8px' }}>
-                              The field in your document that stores the creator's user ID.
-                          </p>
                       </div>
                   </div>
               )}
 
-              <div style={{ display: 'flex', gap: '10px', marginTop: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '0.25rem' }}>
                   <button 
                     className="btn btn-secondary" 
-                    style={{ flex: 1, height: '42px' }} 
+                    style={{ flex: 1, height: '32px', fontSize: '0.75rem' }} 
                     onClick={() => setIsRlsDialogOpen(false)}
                   >
                       Cancel
                   </button>
                   <button 
                     className="btn btn-primary" 
-                    style={{ flex: 2, height: '42px' }} 
+                    style={{ flex: 2, height: '32px', fontSize: '0.75rem', fontWeight: 600 }} 
                     onClick={async () => { 
                         if (await handleSaveRls()) setIsRlsDialogOpen(false); 
                     }}

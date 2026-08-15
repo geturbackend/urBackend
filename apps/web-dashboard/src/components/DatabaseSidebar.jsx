@@ -1,3 +1,4 @@
+import React from "react";
 import {
     Plus,
     X,
@@ -34,7 +35,7 @@ export default function DatabaseSidebar({
                         aria-label="Close sidebar"
                         onClick={() => setIsSidebarOpen(false)}
                     >
-                        <X size={18} />
+                        <X size={16} />
                     </button>
                     {!isViewer && (
                         <button
@@ -43,16 +44,16 @@ export default function DatabaseSidebar({
                             onClick={() => navigate(`/project/${projectId}/create-collection`)}
                             title="New Collection"
                         >
-                            <Plus size={18} />
+                            <Plus size={16} />
                         </button>
                     )}
                 </div>
             </div>
 
-            <div className="collection-list">
+            <div className="collection-list custom-scrollbar">
                 {visibleCollections.length === 0 ? (
                     <div className="empty-sidebar">
-                        <p>No collections yet.</p>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '8px' }}>No collections yet.</p>
                         {!isViewer && (
                             <button
                                 className="btn btn-secondary btn-sm"
@@ -60,6 +61,7 @@ export default function DatabaseSidebar({
                                 onClick={() =>
                                     navigate(`/project/${projectId}/create-collection`)
                                 }
+                                style={{ fontSize: '0.75rem', padding: '4px 8px' }}
                             >
                                 Create One
                             </button>
@@ -70,14 +72,13 @@ export default function DatabaseSidebar({
                         <div
                             key={c._id}
                             onClick={() => setActiveCollection(c)}
-                            className={`collection-item ${activeCollection?._id === c._id ? "active" : ""
-                                }`}
+                            className={`collection-item ${activeCollection?._id === c._id ? "active" : ""}`}
                         >
-                            <div className="flex items-center gap-3 overflow-hidden" style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
-                                <DbIcon size={16} className="col-icon shrink-0" />
-                                <span className="col-name truncate" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', minWidth: 0 }}>
+                                <DbIcon size={14} className="col-icon" style={{ flexShrink: 0, opacity: activeCollection?._id === c._id ? 1 : 0.6 }} />
+                                <span className="col-name truncate" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.8125rem' }}>{c.name}</span>
                             </div>
-                            <div className="flex items-center gap-2 ml-auto" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto', flexShrink: 0 }}>
                                 {!isViewer && (
                                     <button
                                         className="btn-icon delete-btn"
@@ -88,11 +89,11 @@ export default function DatabaseSidebar({
                                         }}
                                         title="Delete Collection"
                                     >
-                                        <Trash2 size={14} />
+                                        <Trash2 size={13} />
                                     </button>
                                 )}
                                 {activeCollection?._id === c._id && (
-                                    <ChevronRight size={14} className="active-indicator shrink-0" />
+                                    <ChevronRight size={13} className="active-indicator" style={{ color: 'var(--color-primary)' }} />
                                 )}
                             </div>
                         </div>
@@ -107,60 +108,65 @@ export default function DatabaseSidebar({
             </div>
 
             <style>{`
-                /* Sidebar Styles - Scoped */
-                 .db-sidebar {
-                    width: 280px;
+                /* Sidebar Styles - Scoped & Compact */
+                .db-sidebar {
+                    width: 230px;
+                    min-width: 230px;
                     background: var(--color-bg-sidebar); 
                     border-right: 1px solid var(--color-border);
                     display: flex;
                     flex-direction: column;
                     z-index: 100;
+                    height: 100%;
                     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                 }
 
                 .sidebar-header-area {
-                    padding: 1.5rem;
+                    padding: 0.65rem 0.85rem;
                     border-bottom: 1px solid var(--color-border);
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
+                    min-height: 42px;
                 }
 
                 .section-title {
-                    font-size: 0.75rem;
+                    font-size: 0.7rem;
                     font-weight: 700;
                     color: var(--color-text-muted);
                     letter-spacing: 0.05em;
                     display: flex;
                     align-items: center;
-                    gap: 8px;
+                    gap: 6px;
+                    margin: 0;
                 }
 
                 .badge {
                     background: var(--color-surface-hover-strong);
                     border: 1px solid var(--color-border);
-                    padding: 2px 6px;
-                    border-radius: 12px;
+                    padding: 1px 5px;
+                    border-radius: 10px;
                     color: var(--color-text-main);
-                    font-size: 0.7rem;
+                    font-size: 0.65rem;
+                    font-weight: 600;
                 }
                 
                 .collection-list {
                     flex: 1;
                     overflow-y: auto;
-                    padding: 1rem;
+                    padding: 0.4rem;
                 }
 
                 .collection-item {
-                    padding: 8px 12px;
-                    margin-bottom: 4px;
-                    border-radius: 6px;
+                    padding: 5px 8px;
+                    margin-bottom: 2px;
+                    border-radius: 5px;
                     cursor: pointer;
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
                     color: var(--color-text-muted);
-                    transition: all 0.2s;
+                    transition: background-color 0.15s, color 0.15s;
                     border: 1px solid transparent;
                 }
 
@@ -175,42 +181,54 @@ export default function DatabaseSidebar({
 
                 .delete-btn {
                     opacity: 0;
-                    padding: 4px;
+                    padding: 3px;
                     color: var(--color-text-muted);
-                    transition: all 0.2s;
+                    border-radius: 4px;
+                    transition: opacity 0.15s, color 0.15s, background-color 0.15s;
                 }
 
                 .delete-btn:hover {
-                    color: #ef4444; /* Red-500 */
-                    background: rgba(239, 68, 68, 0.1);
+                    color: var(--color-danger);
+                    background: rgba(234, 84, 85, 0.12);
                 }
 
                 .collection-item.active {
-                    background: rgba(62, 207, 142, 0.1);
+                    background: rgba(62, 207, 142, 0.08);
                     color: var(--color-primary);
                     border-color: rgba(62, 207, 142, 0.2);
+                    font-weight: 500;
                 }
 
                 .sidebar-footer {
-                    padding: 1rem;
+                    padding: 0.65rem 0.85rem;
                     border-top: 1px solid var(--color-border);
+                    background: var(--color-bg-sidebar);
                 }
 
                 .project-info {
                     display: flex;
                     align-items: center;
-                    gap: 8px;
-                    font-size: 0.85rem;
+                    gap: 6px;
+                    font-size: 0.75rem;
                     color: var(--color-text-muted);
                     font-weight: 500;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
                 }
 
                 .dot {
-                    width: 8px;
-                    height: 8px;
-                    background: #3ECF8E; /* Success/Brand color */
+                    width: 7px;
+                    height: 7px;
+                    background: var(--color-primary);
                     border-radius: 50%;
-                    box-shadow: 0 0 8px rgba(62, 207, 142, 0.4);
+                    flex-shrink: 0;
+                    box-shadow: 0 0 6px rgba(62, 207, 142, 0.4);
+                }
+
+                .empty-sidebar {
+                    padding: 1.5rem 0.5rem;
+                    text-align: center;
                 }
 
                 /* Mobile Response */

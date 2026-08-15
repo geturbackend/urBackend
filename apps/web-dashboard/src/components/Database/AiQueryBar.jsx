@@ -44,43 +44,44 @@ const AiQueryBar = ({ projectId, activeCollection, onFiltersGenerated }) => {
             style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
-                gap: '8px', 
-                background: isLoading ? 'linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 100%)' : 'rgba(255,255,255,0.03)',
-                backgroundSize: '200% 100%',
-                animation: isLoading ? 'shimmer 2s infinite linear' : 'none',
+                gap: '6px', 
+                background: 'var(--color-bg-input)',
                 border: '1px solid var(--color-border)', 
-                borderRadius: '8px', 
-                padding: '4px 12px',
-                width: '300px',
-                transition: 'all 0.3s ease'
+                borderRadius: '6px', 
+                padding: '2px 8px',
+                height: '28px',
+                width: '220px',
+                transition: 'all 0.2s ease'
             }}
         >
-            <Sparkles size={16} color="var(--color-primary)" />
+            <Sparkles size={13} color="var(--color-primary)" style={{ flexShrink: 0 }} />
             <input 
                 type="text" 
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Ask AI to filter data..."
+                placeholder="Ask AI to filter..."
                 aria-label="Ask AI to filter data"
                 disabled={isLoading || !activeCollection || !projectId}
                 style={{ 
                     background: 'transparent', 
                     border: 'none', 
-                    color: '#fff', 
+                    color: 'var(--color-text-main)', 
                     flex: 1, 
-                    fontSize: '0.85rem',
-                    outline: 'none'
+                    fontSize: '0.75rem',
+                    outline: 'none',
+                    minWidth: 0
                 }}
             />
-            {isLoading && <Loader2 size={16} className="spinner" style={{ color: 'var(--color-text-muted)' }} />}
+            {isLoading && <Loader2 size={13} className="spinner" style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />}
             <style>{`
-                @keyframes shimmer {
-                    0% { background-position: -200% 0; }
-                    100% { background-position: 200% 0; }
-                }
                 .ai-query-bar:focus-within {
                     border-color: var(--color-primary);
-                    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+                    box-shadow: 0 0 0 1px rgba(62, 207, 142, 0.25);
+                    width: 260px;
+                }
+                .ai-query-bar input::placeholder {
+                    color: var(--color-text-muted);
+                    opacity: 0.7;
                 }
             `}</style>
         </form>

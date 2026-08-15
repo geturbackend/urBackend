@@ -12,72 +12,83 @@ const DatabaseHeader = ({
   showDeleted, setShowDeleted, onFiltersGenerated, onExport, isExporting, isViewer
 }) => {
   return (
-    <header className="db-header glass-panel" style={{ 
-      padding: '0.75rem 1.5rem', 
+    <header className="db-header" style={{ 
+      padding: '0.4rem 0.85rem', 
       display: 'flex', 
-      flexWrap: 'wrap',
-      gap: '1rem',
+      flexWrap: 'nowrap',
+      gap: '0.75rem',
       justifyContent: 'space-between', 
       alignItems: 'center',
       borderBottom: '1px solid var(--color-border)',
-      minHeight: 'var(--header-height)',
-      height: 'auto'
+      background: 'var(--color-bg-card)',
+      minHeight: '44px',
+      height: '44px',
+      flexShrink: 0
     }}>
-      <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0 }}>
         <button
           className="btn-icon hide-desktop menu-trigger"
           onClick={onOpenSidebar}
-          style={{ background: 'none', border: 'none', color: 'var(--color-text-main)', cursor: 'pointer' }}
+          aria-label="Open sidebar"
+          style={{ padding: '4px', color: 'var(--color-text-main)', cursor: 'pointer' }}
         >
-          <Menu size={18} />
+          <Menu size={16} />
         </button>
-        <div>
-          <div className="breadcrumbs" style={{ display: 'flex', gap: '6px', fontSize: '0.7rem', color: 'var(--color-text-muted)', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            <span>{project?.name}</span>
-            <span>/</span>
-            <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{activeCollection?.name}</span>
-          </div>
-          <h1 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{activeCollection?.name}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'none' }} className="sm-show">
+            {project?.name} /
+          </span>
+          <h1 style={{ fontSize: '0.925rem', fontWeight: 700, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--color-text-main)' }}>
+            {activeCollection?.name}
+          </h1>
+          <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', background: 'var(--color-bg-input)', padding: '1px 6px', borderRadius: '10px', border: '1px solid var(--color-border)', marginLeft: '4px', whiteSpace: 'nowrap' }}>
+            {dataLength} rows
+          </span>
         </div>
       </div>
  
-      <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+      <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
         {activeCollection?.name !== 'users' && (
-          <div style={{ marginRight: '10px' }}>
-            <AiQueryBar 
-              projectId={project?._id} 
-              activeCollection={activeCollection} 
-              onFiltersGenerated={onFiltersGenerated} 
-            />
-          </div>
+          <AiQueryBar 
+            projectId={project?._id} 
+            activeCollection={activeCollection} 
+            onFiltersGenerated={onFiltersGenerated} 
+          />
         )}
-        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginRight: '10px' }}>{dataLength} Records</span>
 
         {/* Soft Delete Toggle */}
-        <label style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', marginRight: '10px' }}>
-            <input type="checkbox" checked={showDeleted} onChange={(e) => setShowDeleted(e.target.checked)} />
-            Show Deleted
+        <label style={{ fontSize: '0.725rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', userSelect: 'none', marginLeft: '2px', marginRight: '4px' }}>
+            <input type="checkbox" checked={showDeleted} onChange={(e) => setShowDeleted(e.target.checked)} style={{ cursor: 'pointer' }} />
+            Trash
         </label>
 
         {/* View Toggles */}
-        <div className="view-toggle" style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', padding: '2px', borderRadius: '6px', gap: '2px' }}>
+        <div className="view-toggle" style={{ display: 'flex', background: 'var(--color-bg-input)', padding: '2px', borderRadius: '6px', border: '1px solid var(--color-border)', gap: '1px' }}>
           {[
-            { id: 'list', icon: ListIcon, title: 'List' },
             { id: 'table', icon: TableIcon, title: 'Table' },
+            { id: 'list', icon: ListIcon, title: 'List' },
             { id: 'json', icon: Code, title: 'JSON' }
           ].map(mode => (
             <button
               key={mode.id}
               className={`toggle-btn ${viewMode === mode.id ? 'active' : ''}`}
               onClick={() => setViewMode(mode.id)}
+              title={mode.title}
               style={{ 
-                padding: '4px 8px', border: 'none', borderRadius: '4px', cursor: 'pointer',
+                padding: '3px 6px', 
+                border: 'none', 
+                borderRadius: '4px', 
+                cursor: 'pointer',
                 background: viewMode === mode.id ? 'var(--color-bg-card)' : 'transparent',
-                color: viewMode === mode.id ? '#fff' : 'var(--color-text-muted)',
-                display: 'flex'
+                color: viewMode === mode.id ? 'var(--color-text-main)' : 'var(--color-text-muted)',
+                boxShadow: viewMode === mode.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.15s ease'
               }}
             >
-              <mode.icon size={14} />
+              <mode.icon size={13} />
             </button>
           ))}
         </div>
@@ -86,46 +97,43 @@ const DatabaseHeader = ({
         <button
           className={`btn ${showFilterMenu ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setShowFilterMenu(!showFilterMenu)}
-          style={{ padding: '6px 10px', height: '32px', position: 'relative' }}
+          style={{ padding: '4px 8px', height: '28px', position: 'relative', fontSize: '0.75rem' }}
+          title="Filter & Sort"
         >
-          <Filter size={14} />
+          <Filter size={13} />
           {filtersCount > 0 && (
             <span style={{ 
-              position: 'absolute', top: '-5px', right: '-5px', background: 'var(--color-primary)', 
-              color: '#000', fontSize: '0.6rem', fontWeight: 800, width: '14px', height: '14px', 
+              position: 'absolute', top: '-4px', right: '-4px', background: 'var(--color-primary)', 
+              color: '#000', fontSize: '0.55rem', fontWeight: 800, width: '13px', height: '13px', 
               borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' 
             }}>{filtersCount}</span>
           )}
         </button>
 
-        <button onClick={onRefresh} className="btn btn-secondary" style={{ padding: '6px 10px', height: '32px' }}>
-          <RefreshCw size={14} />
+        <button onClick={onRefresh} className="btn btn-secondary" style={{ padding: '4px 8px', height: '28px' }} title="Refresh">
+          <RefreshCw size={13} />
         </button>
 
         {activeCollection?.name !== 'users' && !isViewer && (
           <>
-            <button onClick={onEditSchemaClick} className="btn btn-secondary" style={{ padding: '6px 12px', height: '32px', gap: '6px', fontSize: '0.75rem' }}>
-              Edit Schema
+            <button onClick={onEditSchemaClick} className="btn btn-secondary" style={{ padding: '4px 8px', height: '28px', fontSize: '0.75rem' }}>
+              Schema
             </button>
-            <button onClick={onRlsClick} className="btn btn-secondary" style={{ padding: '6px 12px', height: '32px', gap: '6px', fontSize: '0.75rem' }}>
-              <Shield size={14} /> RLS
+            <button onClick={onRlsClick} className="btn btn-secondary" style={{ padding: '4px 8px', height: '28px', gap: '4px', fontSize: '0.75rem' }}>
+              <Shield size={13} /> RLS
             </button>
           </>
         )}
 
-        
         {activeCollection?.name !== 'users' && (
-          <button onClick={onExport} disabled={isExporting} className="btn btn-secondary" style={{ padding: '6px 12px', height: '32px', gap: '6px', fontSize: '0.75rem' }}>
-            <Download size={14} /> Export
+          <button onClick={onExport} disabled={isExporting} className="btn btn-secondary" style={{ padding: '4px 8px', height: '28px', gap: '4px', fontSize: '0.75rem' }} title="Export Data">
+            <Download size={13} />
           </button>
-      
         )}
 
-        
-
         {activeCollection?.name !== 'users' && !isViewer && (
-          <button onClick={onAddRecord} className="btn btn-primary" style={{ padding: '6px 12px', height: '32px', gap: '6px', fontSize: '0.75rem' }}>
-            <Plus size={14} /> Add Record
+          <button onClick={onAddRecord} className="btn btn-primary" style={{ padding: '4px 10px', height: '28px', gap: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
+            <Plus size={13} /> Insert
           </button>
         )}
       </div>

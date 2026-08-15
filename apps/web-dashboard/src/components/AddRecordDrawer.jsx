@@ -4,7 +4,7 @@ import { X, Check, AlertCircle, Plus, Trash2 } from "lucide-react";
 /**
  * AddRecordDrawer
  * A slide-over drawer component for adding/editing records.
- * Supports nested Object, Array, and Ref field types.
+ * Supports nested Object, Array, and Ref field types with compact UI and theme safety.
  */
 export default function AddRecordDrawer({
   isOpen,
@@ -66,8 +66,6 @@ export default function AddRecordDrawer({
       if (field.type === "Date" && val) {
         formattedData[field.key] = new Date(val).toISOString();
       }
-
-      // Object and Array are set directly by their sub-components
     });
 
     if (Object.keys(newErrors).length > 0) {
@@ -90,50 +88,51 @@ export default function AddRecordDrawer({
         onClick={onClose}
         style={{
           position: "fixed", inset: 0,
-          background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
-          zIndex: 999, animation: "fadeIn 0.2s ease-out"
+          background: "var(--color-overlay)",
+          zIndex: 999, animation: "fadeIn 0.15s ease-out"
         }}
       />
 
       {/* Drawer Panel */}
       <div
-        className="drawer-panel glass-panel"
+        className="drawer-panel"
         style={{
           position: "fixed", top: 0, right: 0, bottom: 0,
-          width: isWideForm ? "600px" : "500px", maxWidth: "100%",
+          width: isWideForm ? "520px" : "420px", maxWidth: "100%",
           zIndex: 1000, display: "flex", flexDirection: "column",
           transform: isOpen ? "translateX(0)" : "translateX(100%)",
-          animation: "slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+          animation: "slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
           borderLeft: "1px solid var(--color-border)",
           background: "var(--color-bg-card)",
-          boxShadow: "-10px 0 30px rgba(0,0,0,0.3)"
+          boxShadow: "-8px 0 24px rgba(0,0,0,0.25)"
         }}
       >
         {/* Header */}
         <div style={{
-          padding: "1.5rem", borderBottom: "1px solid var(--color-border)",
-          display: "flex", justifyContent: "space-between", alignItems: "center"
+          padding: "0.85rem 1.15rem", borderBottom: "1px solid var(--color-border)",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          background: "var(--color-bg-card)", flexShrink: 0
         }}>
           <div>
-            <h2 style={{ fontSize: "1.25rem", fontWeight: 600, margin: 0 }}>
+            <h2 style={{ fontSize: "1rem", fontWeight: 700, margin: 0, color: "var(--color-text-main)" }}>
               {initialData ? "Edit Record" : "Add New Record"}
             </h2>
-            <p style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", margin: "4px 0 0 0" }}>
+            <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: "2px 0 0 0" }}>
               {initialData ? "Update the details for this document." : "Fill in the details for the new document."}
             </p>
           </div>
-          <button onClick={onClose} className="btn-icon" style={{ color: "var(--color-text-muted)" }}>
-            <X size={20} />
+          <button onClick={onClose} className="btn-icon" style={{ color: "var(--color-text-muted)", padding: "4px" }}>
+            <X size={16} />
           </button>
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "1.5rem" }}>
+        <div className="custom-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "1rem 1.15rem" }}>
           <form id="add-record-form" onSubmit={handleSubmit}>
             <div style={{
               display: "grid",
               gridTemplateColumns: isWideForm ? "repeat(2, 1fr)" : "1fr",
-              gap: "1.25rem",
+              gap: "0.85rem",
             }}>
               {fields.map((field) => (
                 <div
@@ -145,16 +144,16 @@ export default function AddRecordDrawer({
                 >
                   <label className="form-label" style={{
                     display: "flex", justifyContent: "space-between",
-                    marginBottom: "0.5rem", fontSize: "0.9rem",
-                    color: "var(--color-text-secondary)"
+                    marginBottom: "0.3rem", fontSize: "0.75rem", fontWeight: 600,
+                    color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.03em"
                   }}>
                     <span>
                       {field.key}
-                      {field.required && <span className="text-danger" style={{ marginLeft: "4px" }}>*</span>}
+                      {field.required && <span style={{ color: "var(--color-danger)", marginLeft: "2px" }}>*</span>}
                     </span>
                     <span style={{
-                      fontSize: "0.7rem", color: "var(--color-text-muted)",
-                      background: "rgba(255,255,255,0.05)", padding: "2px 6px", borderRadius: "4px"
+                      fontSize: "0.65rem", color: "var(--color-text-muted)",
+                      background: "var(--color-bg-input)", padding: "1px 5px", borderRadius: "3px", border: "1px solid var(--color-border)"
                     }}>{field.type}{field.type === 'Ref' && field.ref ? ` → ${field.ref}` : ''}</span>
                   </label>
 
@@ -162,10 +161,10 @@ export default function AddRecordDrawer({
 
                   {errors[field.key] && (
                     <div style={{
-                      color: "#ef4444", fontSize: "0.8rem", marginTop: "6px",
+                      color: "var(--color-danger)", fontSize: "0.75rem", marginTop: "4px",
                       display: "flex", alignItems: "center", gap: "4px"
                     }}>
-                      <AlertCircle size={12} />
+                      <AlertCircle size={11} />
                       {errors[field.key]}
                     </div>
                   )}
@@ -177,20 +176,20 @@ export default function AddRecordDrawer({
 
         {/* Footer */}
         <div style={{
-          padding: "1.25rem 1.5rem", borderTop: "1px solid var(--color-border)",
-          display: "flex", justifyContent: "flex-end", gap: "1rem",
-          background: "rgba(0,0,0,0.2)"
+          padding: "0.75rem 1.15rem", borderTop: "1px solid var(--color-border)",
+          display: "flex", justifyContent: "flex-end", gap: "0.65rem",
+          background: "var(--color-bg-card)", flexShrink: 0
         }}>
-          <button type="button" onClick={onClose} className="btn btn-ghost" disabled={isSubmitting}>
+          <button type="button" onClick={onClose} className="btn btn-ghost" disabled={isSubmitting} style={{ height: "30px", fontSize: "0.75rem" }}>
             Cancel
           </button>
           <button type="submit" form="add-record-form" className="btn btn-primary"
-            disabled={isSubmitting} style={{ minWidth: "120px" }}>
+            disabled={isSubmitting} style={{ minWidth: "100px", height: "30px", fontSize: "0.75rem", fontWeight: 600 }}>
             {isSubmitting ? (
-              <span className="animate-spin" style={{ display: "inline-block", border: "2px solid transparent", borderTopColor: "currentColor", borderRadius: "50%", width: "16px", height: "16px" }}></span>
+              <span className="spinner-small" style={{ width: "12px", height: "12px" }}></span>
             ) : (
               <>
-                <Check size={18} />
+                <Check size={14} />
                 <span>{initialData ? "Update" : "Save Record"}</span>
               </>
             )}
@@ -209,45 +208,45 @@ export default function AddRecordDrawer({
         }
         .form-input {
             width: 100%;
-            background: rgba(0, 0, 0, 0.2);
+            background: var(--color-bg-input);
             border: 1px solid var(--color-border);
-            padding: 10px 12px;
-            border-radius: 6px;
+            padding: 5px 8px;
+            border-radius: 5px;
             color: var(--color-text-main);
-            font-size: 0.95rem;
-            transition: all 0.2s;
+            font-size: 0.8125rem;
+            height: 30px;
+            transition: border-color 0.15s;
+            outline: none;
         }
         .form-input:focus {
-            outline: none;
             border-color: var(--color-primary);
-            background: rgba(0, 0, 0, 0.3);
-            box-shadow: 0 0 0 2px rgba(62, 207, 142, 0.1);
         }
         .form-select {
             width: 100%;
-            background: rgba(0, 0, 0, 0.2);
+            background: var(--color-bg-input);
             border: 1px solid var(--color-border);
-            padding: 10px 12px;
-            border-radius: 6px;
+            padding: 4px 8px;
+            border-radius: 5px;
             color: var(--color-text-main);
-            appearance: none;
-            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23aaaaaa%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
-            background-repeat: no-repeat;
-            background-position: right 12px top 50%;
-            background-size: 10px auto;
+            font-size: 0.8125rem;
+            height: 30px;
+            outline: none;
+        }
+        .form-select:focus {
+            border-color: var(--color-primary);
         }
         .nested-fieldset {
-            border: 1px solid rgba(62, 207, 142, 0.15);
-            border-radius: 8px;
-            padding: 12px;
-            background: rgba(0,0,0,0.1);
-            margin-top: 4px;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 8px;
+            background: var(--color-bg-input);
+            margin-top: 3px;
         }
         .array-item-row {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             align-items: flex-start;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
       `}</style>
     </>
@@ -265,7 +264,7 @@ function renderInput(field, value, onChange, error) {
         className="form-select"
         value={val === "" ? "" : String(val)}
         onChange={(e) => onChange(field.key, e.target.value, "Boolean")}
-        style={error ? { borderColor: "#ef4444" } : {}}
+        style={error ? { borderColor: "var(--color-danger)" } : {}}
       >
         <option value="">Select...</option>
         <option value="true">True</option>
@@ -282,8 +281,9 @@ function renderInput(field, value, onChange, error) {
         className="form-input"
         value={val}
         onChange={(e) => onChange(field.key, e.target.value, "Date")}
-        style={error ? { borderColor: "#ef4444" } : {}}
-      />
+        style={error ? { borderColor: "var(--color-danger)" } : {}}
+      >
+      </input>
     );
   }
 
@@ -296,7 +296,7 @@ function renderInput(field, value, onChange, error) {
         placeholder={`Enter _id from ${field.ref || 'collection'}`}
         value={val}
         onChange={(e) => onChange(field.key, e.target.value)}
-        style={error ? { borderColor: "#ef4444" } : {}}
+        style={error ? { borderColor: "var(--color-danger)" } : {}}
       />
     );
   }
@@ -307,13 +307,13 @@ function renderInput(field, value, onChange, error) {
     return (
       <div className="nested-fieldset">
         {field.fields.map(subField => (
-          <div key={subField.key} style={{ marginBottom: '10px' }}>
+          <div key={subField.key} style={{ marginBottom: '6px' }}>
             <label style={{
               display: 'flex', justifyContent: 'space-between',
-              fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '4px'
+              fontSize: '0.725rem', color: 'var(--color-text-muted)', marginBottom: '2px'
             }}>
-              <span>{subField.key}{subField.required && <span style={{ color: '#ef4444' }}> *</span>}</span>
-              <span style={{ fontSize: '0.65rem', opacity: 0.6 }}>{subField.type}</span>
+              <span>{subField.key}{subField.required && <span style={{ color: 'var(--color-danger)' }}> *</span>}</span>
+              <span style={{ fontSize: '0.6rem', opacity: 0.6 }}>{subField.type}</span>
             </label>
             {renderInput(
               subField,
@@ -354,21 +354,20 @@ function renderInput(field, value, onChange, error) {
       <div className="nested-fieldset">
         {arrVal.map((item, idx) => (
           <div key={idx} className="array-item-row">
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', minWidth: '20px', paddingTop: '10px' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', minWidth: '16px', paddingTop: '6px' }}>
               {idx}
             </span>
             <div style={{ flex: 1 }}>
               {itemType === 'Object' && field.items?.fields ? (
-                // Array of objects
-                <div className="nested-fieldset" style={{ padding: '8px' }}>
+                <div className="nested-fieldset" style={{ padding: '6px' }}>
                   {field.items.fields.map(subField => (
-                    <div key={subField.key} style={{ marginBottom: '8px' }}>
+                    <div key={subField.key} style={{ marginBottom: '4px' }}>
                       <label style={{
                         display: 'flex', justifyContent: 'space-between',
-                        fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '3px'
+                        fontSize: '0.7rem', color: 'var(--color-text-muted)', marginBottom: '2px'
                       }}>
                         <span>{subField.key}</span>
-                        <span style={{ fontSize: '0.6rem', opacity: 0.6 }}>{subField.type}</span>
+                        <span style={{ fontSize: '0.55rem', opacity: 0.6 }}>{subField.type}</span>
                       </label>
                       {renderInput(
                         subField,
@@ -424,9 +423,9 @@ function renderInput(field, value, onChange, error) {
               type="button"
               onClick={() => removeItem(idx)}
               className="btn-icon"
-              style={{ color: 'var(--color-text-muted)', paddingTop: '8px', flexShrink: 0 }}
+              style={{ color: 'var(--color-text-muted)', paddingTop: '4px', flexShrink: 0 }}
             >
-              <Trash2 size={14} />
+              <Trash2 size={13} />
             </button>
           </div>
         ))}
@@ -434,9 +433,9 @@ function renderInput(field, value, onChange, error) {
           type="button"
           onClick={addItem}
           className="btn btn-secondary"
-          style={{ fontSize: '0.8rem', width: '100%', marginTop: '4px' }}
+          style={{ fontSize: '0.725rem', width: '100%', marginTop: '3px', height: '26px', padding: '0 8px', gap: '4px' }}
         >
-          <Plus size={14} /> Add Item
+          <Plus size={12} /> Add Item
         </button>
       </div>
     );
@@ -451,7 +450,7 @@ function renderInput(field, value, onChange, error) {
       value={val}
       onChange={(e) => onChange(field.key, e.target.value, field.type)}
       step={field.type === "Number" ? "any" : undefined}
-      style={error ? { borderColor: "#ef4444" } : {}}
+      style={error ? { borderColor: "var(--color-danger)" } : {}}
     />
   );
 }

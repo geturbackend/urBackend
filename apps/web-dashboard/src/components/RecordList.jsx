@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { List, MoreHorizontal, Calendar, ArrowRight, RotateCcw } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { ArrowRight, RotateCcw } from "lucide-react";
 
 const formatDate = (val) => {
     if (!val || typeof val !== 'string') return val;
@@ -21,16 +21,12 @@ export default function RecordList({ data, activeCollection, onView, onRecover, 
     const [now, setNow] = useState(null);
 
     useEffect(() => {
-        // Use setTimeout to avoid synchronous cascading render warning
         const timer = setTimeout(() => setNow(Date.now()), 0);
         return () => clearTimeout(timer);
     }, []);
 
-
-    // Helper to get important fields (skip _id and system fields)
     const getPreviewFields = (record) => {
         if (!activeCollection?.model) return [];
-        // Take first 3 fields from model
         return activeCollection.model.slice(0, 3).map(field => {
             const val = record[field.key];
             return {
@@ -41,11 +37,6 @@ export default function RecordList({ data, activeCollection, onView, onRecover, 
         });
     };
 
-    /**
-     * Generates a tooltip message for a deleted record, including deletion date and time remaining.
-     * @param {string|Date} deletedAt - The timestamp when the record was deleted.
-     * @returns {string} The formatted tooltip message.
-     */
     const getDeletionTooltip = (deletedAt) => {
         if (!deletedAt || !now) return "";
         const daysRemaining = Math.max(0, 30 - Math.floor((now - new Date(deletedAt).getTime()) / (1000 * 60 * 60 * 24)));
@@ -61,12 +52,12 @@ export default function RecordList({ data, activeCollection, onView, onRecover, 
                     return (
                         <div
                             key={record._id}
-                            className={`record-card glass-panel ${record.isDeleted ? 'record-deleted' : ''}`}
+                            className={`record-card ${record.isDeleted ? 'record-deleted' : ''}`}
                             aria-label={`View details for record ${record._id}`}
                             onClick={() => onView(record)}
                             style={{
                                 opacity: record.isDeleted ? 0.6 : 1,
-                                background: record.isDeleted ? 'rgba(239, 68, 68, 0.03)' : 'rgba(255,255,255,0.02)',
+                                background: record.isDeleted ? 'rgba(234, 84, 85, 0.04)' : 'var(--color-bg-card)',
                                 borderLeft: record.isDeleted ? '3px solid var(--color-danger)' : '1px solid var(--color-border)'
                             }}
                         >
@@ -77,7 +68,7 @@ export default function RecordList({ data, activeCollection, onView, onRecover, 
                                     {record.isDeleted && (
                                         <span className="badge badge-danger" 
                                               title={getDeletionTooltip(record.deletedAt)}
-                                              style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', cursor: 'default' }}>
+                                              style={{ fontSize: '0.6rem', padding: '1px 5px', borderRadius: '3px', cursor: 'default' }}>
                                             DELETED
                                         </span>
                                     )}
@@ -114,12 +105,12 @@ export default function RecordList({ data, activeCollection, onView, onRecover, 
                                         {recoveringIds.has(record._id) ? (
                                             <div className="spinner-small"></div>
                                         ) : (
-                                            <RotateCcw size={18} color="var(--color-primary)" />
+                                            <RotateCcw size={15} color="var(--color-primary)" />
                                         )}
                                     </button>
                                 ) : (
                                     <button className="btn-icon" aria-label={`Open record ${record._id}`}>
-                                        <ArrowRight size={18} />
+                                        <ArrowRight size={15} />
                                     </button>
                                 )}
                             </div>
@@ -132,14 +123,14 @@ export default function RecordList({ data, activeCollection, onView, onRecover, 
                 .record-list-container {
                     height: 100%;
                     overflow-y: auto;
-                    padding: 1.5rem;
+                    padding: 0.85rem;
                     background: var(--color-bg-main);
                 }
                 
                 .record-list-wrapper {
                     display: flex;
                     flex-direction: column;
-                    gap: 12px;
+                    gap: 8px;
                     max-width: 800px;
                     margin: 0 auto;
                 }
@@ -148,19 +139,19 @@ export default function RecordList({ data, activeCollection, onView, onRecover, 
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
-                    padding: 1rem 1.5rem;
+                    padding: 0.65rem 1rem;
                     border: 1px solid var(--color-border);
-                    border-radius: 12px;
+                    border-radius: 8px;
                     cursor: pointer;
-                    transition: all 0.2s ease;
-                    background: rgba(255,255,255,0.02);
+                    transition: all 0.15s ease;
+                    background: var(--color-bg-card);
                 }
                 
                 .record-card:hover {
-                    background: rgba(255,255,255,0.05);
+                    background: var(--color-surface-hover);
                     border-color: var(--color-primary);
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
                 }
                 
                 .record-main-info {
@@ -171,68 +162,67 @@ export default function RecordList({ data, activeCollection, onView, onRecover, 
                 .record-header {
                     display: flex;
                     align-items: center;
-                    gap: 10px;
-                    margin-bottom: 0.75rem;
+                    gap: 8px;
+                    margin-bottom: 0.4rem;
                 }
                 
                 .record-index {
-                    font-size: 0.8rem;
+                    font-size: 0.725rem;
                     color: var(--color-text-muted);
                     font-weight: 600;
-                    background: rgba(255,255,255,0.05);
-                    padding: 2px 6px;
+                    background: var(--color-bg-input);
+                    padding: 1px 5px;
                     border-radius: 4px;
                 }
                 
                 .record-id {
-                    font-size: 0.8rem;
+                    font-size: 0.75rem;
                     color: var(--color-primary);
-                    opacity: 0.8;
                 }
                 
                 .record-preview-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-                    gap: 1rem;
+                    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+                    gap: 0.65rem;
                 }
                 
                 .preview-field {
                     display: flex;
                     flex-direction: column;
-                    gap: 4px;
+                    gap: 2px;
                 }
                 
                 .field-label {
-                    font-size: 0.7rem;
+                    font-size: 0.65rem;
                     text-transform: uppercase;
                     letter-spacing: 0.05em;
-                    color: #666;
+                    color: var(--color-text-muted);
                     font-weight: 600;
                 }
                 
                 .field-value {
-                    font-size: 0.9rem;
-                    color: #eee;
+                    font-size: 0.8125rem;
+                    color: var(--color-text-main);
                     white-space: nowrap;
                     overflow: hidden;
                     text-overflow: ellipsis;
                 }
                 
                 .record-actions {
-                    padding-left: 1.5rem;
+                    padding-left: 1rem;
                     border-left: 1px solid var(--color-border);
-                    margin-left: 1.5rem;
+                    margin-left: 1rem;
                     color: var(--color-text-muted);
                 }
                 
                 .record-card:hover .record-actions {
-                    color: white;
+                    color: var(--color-text-main);
                 }
                 
                 .spinner-small {
-                    width: 14px;
-                    height: 14px;
-                    border: 2px solid rgba(255, 255, 255, 0.1);
+                    width: 13px;
+                    height: 13px;
+                    border: 2px solid var(--color-border);
                     border-top: 2px solid var(--color-primary);
                     border-radius: 50%;
                     animation: spin 0.8s linear infinite;
@@ -246,12 +236,11 @@ export default function RecordList({ data, activeCollection, onView, onRecover, 
                     opacity: 0.7;
                 }
                 
-                /* Mobile optimization */
                 @media (max-width: 600px) {
                     .record-card {
                         flex-direction: column;
                         align-items: flex-start;
-                        padding: 1rem;
+                        padding: 0.75rem;
                     }
                     .record-actions {
                         display: none;
