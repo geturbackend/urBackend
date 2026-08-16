@@ -357,14 +357,36 @@ export default function Onboarding() {
         }
     };
 
-    const handleFinishOnboarding = async () => {
+    const handleCompleteStep3 = async () => {
+        try {
+            await api.patch('/api/user/onboarding', {
+                steps: { firstApiCall: true },
+                completed: true
+            });
+            const updatedUser = { ...user };
+            updatedUser.onboarding.steps.firstApiCall = true;
+            updatedUser.onboarding.completed = true;
+            login(updatedUser);
+            navigate('/dashboard');
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to finish onboarding. Moving to dashboard anyway.");
+            navigate('/dashboard');
+        }
+    };
+
+    const handleSkipOnboarding = async () => {
         try {
             await api.patch('/api/user/onboarding', { completed: true });
-        } catch (e) {
-            console.error("Failed to mark onboarding as completed", e);
+            const updatedUser = { ...user };
+            if (!updatedUser.onboarding) updatedUser.onboarding = { steps: {} };
+            updatedUser.onboarding.completed = true;
+            login(updatedUser);
+            navigate('/dashboard');
+        } catch (err) {
+            console.error(err);
+            toast.error('Failed to skip onboarding');
         }
-        await refreshUser();
-        navigate('/dashboard');
     };
 
     const copyToClipboard = (text) => {
@@ -590,6 +612,14 @@ export default function Onboarding() {
                                         style={{ marginTop: '0.75rem', height: '44px' }}
                                     >
                                         {projectLoading ? <RefreshCw className="animate-spin" size={16} /> : 'Create & Continue'}
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleSkipOnboarding}
+                                        style={{ marginTop: '0.5rem', background: 'transparent', color: 'var(--color-text-muted)', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
+                                    >
+                                        Skip onboarding and go to dashboard
                                     </button>
                                 </form>
                             )}
@@ -835,7 +865,7 @@ export default function Onboarding() {
                                         {!testSuccess ? (
                                             <button
                                                 type="button"
-                                                onClick={handleFinishOnboarding}
+                                                onClick={handleCompleteStep3}
                                                 style={{ background: 'transparent', color: 'var(--color-text-muted)', border: 'none', cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'underline' }}
                                             >
                                                 Skip & Launch Dashboard
@@ -843,7 +873,7 @@ export default function Onboarding() {
                                         ) : <div />}
                                         <button
                                             type="button"
-                                            onClick={handleFinishOnboarding}
+                                            onClick={handleCompleteStep3}
                                             className="btn-primary"
                                         >
                                             Launch Dashboard <Rocket size={18} />
