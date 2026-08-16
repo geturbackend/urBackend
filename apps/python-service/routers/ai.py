@@ -115,7 +115,7 @@ async def query_builder(request: QueryBuilderRequest, req: Request):
         )
 
         # Enforce structured output based on our Pydantic schema
-        structured_llm = llm.with_structured_output(QueryResult, method="json_mode")
+        structured_llm = llm.with_structured_output(QueryResult)
 
         # Build the system prompt
         system_prompt = """You are a highly intelligent database query builder for a MongoDB-based BaaS called urBackend.
@@ -168,6 +168,8 @@ Schema Fields: {schema}"""
     except Exception as e:
         error_name = e.__class__.__name__
         logger.error("[Trace: %s] ❌ AI Query Builder unhandled failure for developer_id=%s: %s", trace_id, request.developer_id, e, exc_info=True)
+        if "Tool use is not supported" in str(e) or "tools" in str(e).lower():
+            raise HTTPException(status_code=400, detail="This model doesn't support complex structured outputs. Please switch to llama-3.3-70b-versatile.") from e
         if "BadRequest" in error_name or "Validation" in error_name:
             raise HTTPException(status_code=400, detail="The AI generated an invalid query format. Please rephrase or simplify your prompt.") from e
         raise HTTPException(status_code=500, detail="Internal server error") from e
@@ -193,10 +195,9 @@ async def collection_creator(request: CollectionCreatorRequest, req: Request):
             model=request.model,
         )
 
-        structured_llm = llm.with_structured_output(CollectionCreatorResponse, method="json_mode")
+        structured_llm = llm.with_structured_output(CollectionCreatorResponse)
 
         system_prompt = """You are a MongoDB schema designer for urBackend, a Backend-as-a-Service platform.
-You MUST output valid JSON only.
 
 Rules:
 1. If the description is vague, ask 2-3 specific clarifying questions and set type: "clarify". You MUST set "schema": null. NEVER ask more than 3 at once.
@@ -243,6 +244,8 @@ Rules:
     except Exception as e:
         error_name = e.__class__.__name__
         logger.error("[Trace: %s] ❌ AI Collection Creator unhandled failure for developer_id=%s: %s", trace_id, request.developer_id, e, exc_info=True)
+        if "Tool use is not supported" in str(e) or "tools" in str(e).lower():
+            raise HTTPException(status_code=400, detail="This model doesn't support complex structured outputs. Please switch to llama-3.3-70b-versatile.") from e
         if "BadRequest" in error_name or "Validation" in error_name:
             raise HTTPException(status_code=400, detail="The AI generated an invalid response format. Please rephrase or simplify your prompt.") from e
         raise HTTPException(status_code=500, detail="Internal server error") from e
