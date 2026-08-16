@@ -103,7 +103,8 @@ exports.checkCollectionLimit = async function(req, res, next) {
         if (isAdminRequest(req)) return next();
         if (!req.developer?.isVerified) return next();
         
-        const cleanProjectId = sanitizeObjectId(req.body.projectId);
+        const rawProjectId = req.params.projectId || req.body.projectId || req.query.projectId;
+        const cleanProjectId = sanitizeObjectId(rawProjectId);
         if (!cleanProjectId) return next(new AppError(400, 'Invalid or missing projectId'));
 
         const project = await Project.findOne({
