@@ -357,16 +357,21 @@ const GlobalSpotlight = ({
     document.body.appendChild(spotlight);
     spotlightRef.current = spotlight;
 
+    let rAF = null;
+
     const handleMouseMove = e => {
-      if (!spotlightRef.current || !gridRef.current) return;
+      if (rAF) cancelAnimationFrame(rAF);
+      
+      rAF = requestAnimationFrame(() => {
+        if (!spotlightRef.current || !gridRef.current) return;
 
-      const section = gridRef.current.closest('.bento-section');
-      const rect = section?.getBoundingClientRect();
-      const mouseInside =
-        rect && e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+        const section = gridRef.current.closest('.bento-section');
+        const rect = section?.getBoundingClientRect();
+        const mouseInside =
+          rect && e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
 
-      isInsideSection.current = mouseInside || false;
-      const cards = gridRef.current.querySelectorAll('.magic-bento-card');
+        isInsideSection.current = mouseInside || false;
+        const cards = gridRef.current.querySelectorAll('.magic-bento-card');
 
       if (!mouseInside) {
         gsap.to(spotlightRef.current, {
@@ -422,6 +427,7 @@ const GlobalSpotlight = ({
         opacity: targetOpacity,
         duration: targetOpacity > 0 ? 0.2 : 0.5,
         ease: 'power2.out'
+      });
       });
     };
 
