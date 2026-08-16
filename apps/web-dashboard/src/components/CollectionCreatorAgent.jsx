@@ -11,6 +11,19 @@ const SUGGESTIONS = [
   { label: 'Content Management (CMS)', prompt: 'Design a headless CMS with articles, authors, categories, media assets, and publishing revisions' },
 ];
 
+const MODELS = [
+  'llama-3.3-70b-versatile',
+  'llama-3.1-8b-instant',
+  'qwen/qwen3.6-27b',
+  'openai/gpt-oss-120b',
+  'openai/gpt-oss-20b',
+  'openai/gpt-oss-safeguard-20b',
+  'canopylabs/orpheus-v1-english',
+  'canopylabs/orpheus-arabic-saudi',
+  'groq/compound',
+  'groq/compound-mini'
+];
+
 const createMsg = (role, content) => ({
   id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
   role,
@@ -28,6 +41,7 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
   const [inputValue, setInputValue] = useState('');
   const [isInserting, setIsInserting] = useState(false);
   const [insertResults, setInsertResults] = useState(null);
+  const [selectedModel, setSelectedModel] = useState(MODELS[0]);
   
   const messagesEndRef = useRef(null);
   const timersRef = useRef([]);
@@ -71,7 +85,8 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
     
     try {
       const res = await api.post(`/api/projects/${projectId}/ai/collection-creator`, {
-        userMessage: textToSend
+        userMessage: textToSend,
+        model: selectedModel
       });
       
       const { message, schema: newSchema, iterationsLeft: left, iterationLimit: limit } = res.data.data;
@@ -228,6 +243,15 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
             <Bot size={16} className="text-[var(--color-primary)]" />
             <span>AI Schema Assistant</span>
           </h3>
+          <select 
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            className="text-xs py-1 px-2 rounded-md border border-[var(--color-border)] bg-[var(--color-bg-input)] text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-primary)] max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap"
+          >
+            {MODELS.map(m => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
         </div>
 
         {/* Messages Stream (Only this scrolls) */}

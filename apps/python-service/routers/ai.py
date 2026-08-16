@@ -80,6 +80,7 @@ class CollectionCreatorRequest(BaseModel):
     developer_id: str
     plan: str = "free"
     encrypted_byok: EncryptedByok | None = None
+    model: str = "llama-3.3-70b-versatile"
 
 class CollectionCreatorResponse(BaseModel):
     type: Literal["clarify", "schema", "complete"]
@@ -189,6 +190,7 @@ async def collection_creator(request: CollectionCreatorRequest, req: Request):
             encrypted_byok=request.encrypted_byok.model_dump() if request.encrypted_byok else None,
             feature="collection-creator",
             increment=(len(request.messages) == 1),
+            model=request.model,
         )
 
         structured_llm = llm.with_structured_output(CollectionCreatorResponse)

@@ -169,7 +169,7 @@ const collectionCreator = async (req, res, next) => {
 
     try {
         const { projectId } = req.params;
-        const { userMessage } = req.body;
+        const { userMessage, model } = req.body;
 
         if (typeof userMessage !== 'string' || userMessage.trim().length === 0) {
             throw new AppError(400, "User message is required");
@@ -245,7 +245,8 @@ const collectionCreator = async (req, res, next) => {
             messages: session.messages,
             developer_id: req.user._id.toString(),
             plan: effectivePlan,
-            encrypted_byok: encryptedByok
+            encrypted_byok: encryptedByok,
+            model: model || 'llama-3.3-70b-versatile'
         });
 
         const allowedTypes = new Set(['String', 'Number', 'Boolean', 'Date', 'Object', 'Array', 'Ref']);

@@ -41,6 +41,7 @@ async def resolve_ai_client(
     encrypted_byok: dict | None,
     feature: str = "query-builder",
     increment: bool = True,
+    model: str = "llama-3.3-70b-versatile",
 ) -> ChatGroq:
     """Resolve the appropriate AI client based on BYOK and plan.
 
@@ -69,10 +70,10 @@ async def resolve_ai_client(
         logger.info("🔑 Attempting to decrypt BYOK Groq key for developer_id=%s...", developer_id)
         try:
             decrypted_key = decrypt_transit(encrypted_byok["groqKey"])
-            logger.info("✅ BYOK Groq key decrypted successfully. Initializing ChatGroq client (model=llama-3.3-70b-versatile)...")
+            logger.info("✅ BYOK Groq key decrypted successfully. Initializing ChatGroq client (model=%s)...", model)
             return ChatGroq(
                 api_key=decrypted_key,
-                model_name="llama-3.3-70b-versatile",
+                model_name=model,
                 temperature=0,
             )
         except Exception as e:
@@ -135,10 +136,10 @@ async def resolve_ai_client(
         )
 
     # ── 4. Return platform client ──
-    logger.info("✅ Rate limit check passed for developer_id=%s. Initializing Platform ChatGroq client (model=llama-3.3-70b-versatile)...", developer_id)
+    logger.info("✅ Rate limit check passed for developer_id=%s. Initializing Platform ChatGroq client (model=%s)...", developer_id, model)
     return ChatGroq(
         api_key=settings.GROQ_API_KEY,
-        model_name="llama-3.3-70b-versatile",
+        model_name=model,
         temperature=0,
     )
 
