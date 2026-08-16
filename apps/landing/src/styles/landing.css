@@ -1518,6 +1518,7 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .orbit-sun-ring-1 {
+    border-radius: 50%;
     width: 140px;
     height: 140px;
     border: 1px dashed rgba(0, 245, 212, 0.2);
@@ -1525,6 +1526,7 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .orbit-sun-ring-2 {
+    border-radius: 50%;
     width: 185px;
     height: 185px;
     border: 1px dashed rgba(0, 245, 212, 0.09);
@@ -1639,6 +1641,7 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .orbit-inner-wrapper {
+    border-radius: 50%;
     --orbit-radius: var(--radius-inner);
     animation: orbitMove 20s linear infinite;
 }
@@ -1648,6 +1651,7 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .orbit-mid-wrapper {
+    border-radius: 50%;
     --orbit-radius: var(--radius-mid);
     animation: orbitMove 32s linear infinite;
 }
@@ -1657,6 +1661,7 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .orbit-outer-wrapper {
+    border-radius: 50%;
     --orbit-radius: var(--radius-outer);
     animation: orbitMove 48s linear infinite;
 }
@@ -1716,6 +1721,7 @@ body:has(.landing-page)::-webkit-scrollbar {
 
 /* Data pulse animation on the connection line */
 .orbit-connect-line::after {
+    border-radius: 50%;
     content: '';
     position: absolute;
     top: 0;
@@ -2263,6 +2269,7 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .byom-pipe-particle {
+    border-radius: 50%;
     position: absolute;
     top: 50%;
     left: -4px;
