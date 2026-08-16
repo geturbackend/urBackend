@@ -56,7 +56,7 @@ const FAQ_ITEMS = [
 
 <BaseLayout 
   title="urBackend | MongoDB-Native Backend-as-a-Service" 
-  description="Supabase for NoSQL. Turn your MongoDB into a production-ready backend with REST APIs, authentication, file storage, and email — zero backend code."
+  description="Your MongoDB, Supercharged. Turn your MongoDB into a production-ready backend with REST APIs, authentication, file storage, and email — zero backend code."
 >
   <div class="landing-page">
     <!-- Grid Background -->
@@ -77,28 +77,29 @@ const FAQ_ITEMS = [
     <Navbar />
 
     <!-- Hero Section -->
-    <div class="hero-section">
+    <div class="hero-section" style="position: relative; overflow: hidden;">
       <div class="hyperspeed-wrapper">
         <Hyperspeed client:load effectOptions={HYPERSPEED_OPTIONS} />
       </div>
       <div class="hero-glow"></div>
 
-      <div class="hero-split">
+      <div class="hero-split" style="position: relative; z-index: 1;">
         <div class="hero-split-left">
-          <div class="status-pill">
-            <div class="status-dot"></div>
-            <span>v0.17.0 &mdash; In Active Development</span>
+          <div class="status-pill" style="border-radius: 0; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <div class="status-dot" style="border-radius: 0;"></div>
+            <span style="font-family: monospace; font-size: 11px; letter-spacing: 0.1em;">[ v0.17.0 // ACTIVE BETA ]</span>
           </div>
 
           <h1 class="hero-heading">
-            <span class="text-gradient-primary">Supabase</span> for NoSQL.
+            Your <span class="text-gradient-primary">MongoDB</span>,
             <br />
-            Bring your MongoDB, get instant APIs.
+            Supercharged.
           </h1>
 
           <p class="hero-sub">
-            urBackend is an open-source BaaS that turns your MongoDB into a production-ready backend
-            with <strong>REST APIs</strong>, <strong>authentication</strong>, <strong>file storage</strong>, and <strong>email</strong> — zero backend code.
+            Instant <strong>REST APIs</strong>, <strong>Auth</strong>, and <strong>Storage</strong> — zero backend code.
+            <br />
+            urBackend is an open-source BaaS that turns your database into a production-ready backend.
           </p>
 
           <div class="hero-ctas" style="margin-bottom: 2.5rem;">
@@ -138,7 +139,7 @@ const FAQ_ITEMS = [
           enableMagnetism={true}
           clickEffect={true}
           spotlightRadius={300}
-          particleCount={12}
+          particleCount={0}
           glowColor="0, 245, 212"
         />
       </div>

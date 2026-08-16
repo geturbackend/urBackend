@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://urbackend.bitbros.in/sitemap-index.xml

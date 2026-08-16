@@ -1,4 +1,12 @@
 /* --- GLOBAL & LANDING STYLES --- */
+:root {
+  --radius-none: 0px;
+  --border-sharp: 1px solid rgba(255, 255, 255, 0.1);
+  --border-sharp-hover: 1px solid #00f5d4;
+  --bg-sharp-surface: #050505;
+  --bg-sharp-elevated: #0a0a0a;
+  --accent-cyan: #00f5d4;
+}
 body {
     margin: 0;
     padding: 0;
@@ -79,6 +87,7 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .hero-glow {
+    border-radius: 50%;
     position: absolute;
     top: -15%;
     left: 50%;
@@ -86,7 +95,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     width: 900px;
     height: 900px;
     background: radial-gradient(circle, rgba(0, 245, 212, 0.06) 0%, rgba(0, 200, 180, 0.03) 40%, transparent 70%);
-    border-radius: 50%;
     filter: blur(120px);
     z-index: 0;
     pointer-events: none;
@@ -98,7 +106,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     width: 800px;
     height: 800px;
     background: radial-gradient(circle, rgba(0, 245, 212, 0.08) 0%, transparent 70%);
-    border-radius: 50%;
     filter: blur(100px);
     z-index: 0;
     pointer-events: none;
@@ -123,7 +130,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
     width: calc(100% - 3rem);
     max-width: 1200px;
-    border-radius: 99px;
     box-shadow: 
         0 10px 40px rgba(0, 0, 0, 0.5), 
         inset 0 1px 0 rgba(255, 255, 255, 0.15), 
@@ -212,7 +218,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     text-decoration: none;
     font-size: 0.88rem;
     font-weight: 500;
-    border-radius: 99px;
     border: 1px solid transparent;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -261,7 +266,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     text-decoration: none;
     font-size: 0.88rem;
     font-weight: 500;
-    border-radius: 99px;
     border: 1px solid transparent;
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -282,7 +286,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     text-decoration: none;
     font-size: 0.88rem;
     font-weight: 600;
-    border-radius: 99px;
     border: none;
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -373,7 +376,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     padding: 0.35rem 0.9rem;
     background: rgba(0,245,212,0.06);
     border: 1px solid rgba(0,245,212,0.12);
-    border-radius: 20px;
     font-size: 0.72rem;
     font-weight: 600;
     color: #00f5d4;
@@ -408,7 +410,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     color: #000;
     padding: 0.85rem 2.5rem;
     font-size: 1.05rem;
-    border-radius: 99px;
     font-weight: 600;
     text-decoration: none;
     display: flex;
@@ -431,7 +432,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     color: #fff;
     padding: 0.85rem 2.5rem;
     font-size: 1.05rem;
-    border-radius: 99px;
     font-weight: 600;
     text-decoration: none;
     display: flex;
@@ -460,7 +460,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 .btn-hero-login {
     padding: 0.85rem 2rem;
     font-size: 1.05rem;
-    border-radius: 99px;
     font-weight: 600;
     text-decoration: none;
     display: flex;
@@ -482,7 +481,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 .btn-hero-ghost {
     padding: 0.85rem 1.5rem;
     font-size: 1rem;
-    border-radius: 99px;
     font-weight: 500;
     text-decoration: none;
     display: flex;
@@ -583,7 +581,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 .hero-auth-card {
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 16px;
     padding: 1.75rem;
     box-shadow: 0 24px 48px -12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
     backdrop-filter: blur(12px);
@@ -592,7 +589,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 .hero-auth-tabs {
     display: flex;
     background: rgba(255,255,255,0.04);
-    border-radius: 10px;
     padding: 3px;
     margin-bottom: 1.5rem;
     border: 1px solid rgba(255,255,255,0.06);
@@ -602,7 +598,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     flex: 1;
     padding: 0.6rem 1rem;
     border: none;
-    border-radius: 8px;
     background: transparent;
     color: #888;
     font-size: 0.9rem;
@@ -626,7 +621,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 .hero-auth-github {
     width: 100%;
     padding: 0.7rem 1rem;
-    border-radius: 10px;
     border: 1px solid rgba(255,255,255,0.12);
     background: rgba(255,255,255,0.04);
     color: #fff;
@@ -696,7 +690,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 .hero-auth-input-wrap input {
     width: 100%;
     padding: 0.7rem 2.4rem 0.7rem 2.3rem;
-    border-radius: 10px;
     border: 1px solid rgba(255,255,255,0.1);
     background: rgba(0,0,0,0.3);
     color: #fff;
@@ -723,7 +716,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     align-items: center;
     justify-content: center;
     border: none;
-    border-radius: 6px;
     background: transparent;
     color: #666;
     cursor: pointer;
@@ -751,7 +743,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 .hero-auth-submit {
     width: 100%;
     padding: 0.75rem 1rem;
-    border-radius: 10px;
     border: none;
     background: linear-gradient(135deg, #00f5d4 0%, #00c9a7 100%);
     color: #000;
@@ -816,7 +807,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.12);
     padding: 8px 18px;
-    border-radius: 9999px;
     font-family: inherit;
     font-size: 0.75rem;
     color: #999;
@@ -833,7 +823,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     width: 8px;
     height: 8px;
     background: #4ade80;
-    border-radius: 50%;
     box-shadow: 0 0 10px #4ade80;
     animation: pulse-dot 2s infinite;
 }
@@ -905,7 +894,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     padding: 1.25rem 1.5rem;
     background: rgba(255,255,255,0.02);
     border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 14px;
     transition: all 0.4s ease;
     flex: 1;
     min-width: 0;
@@ -938,7 +926,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     justify-content: center;
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 12px;
     color: #00f5d4;
 }
 
@@ -977,7 +964,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     width: 8px;
     height: 8px;
     background: #00f5d4;
-    border-radius: 50%;
     transform: translateY(-50%);
     box-shadow: 0 0 10px rgba(0, 245, 212, 0.6);
     animation: hfDotMove 2s ease-in-out infinite;
@@ -1020,7 +1006,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     padding: 1.5rem 2rem;
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     min-width: 140px;
 }
@@ -1050,7 +1035,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     justify-content: center;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
     color: #fff;
 }
 
@@ -1102,7 +1086,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     width: 8px;
     height: 8px;
     background: #00f5d4;
-    border-radius: 50%;
     box-shadow: 0 0 10px rgba(0, 245, 212, 0.8);
     animation: flowDot 2s linear infinite;
 }
@@ -1148,7 +1131,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     padding: 0.5rem 1rem;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 999px;
     font-size: 0.875rem;
     color: #a1a1aa;
     transition: all 0.3s ease;
@@ -1171,7 +1153,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     width: 100%;
     background: #000;
     border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 16px;
     box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255,255,255,0.01) inset;
     overflow: hidden;
     animation: fadeInUp 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -1193,7 +1174,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     color: #a1a1aa;
     font-family: 'JetBrains Mono', monospace;
     padding: 6px 12px;
-    border-radius: 6px;
     font-size: 0.8125rem;
     display: flex;
     justify-content: space-between;
@@ -1233,7 +1213,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     color: #000;
     border: none;
     padding: 8px 16px;
-    border-radius: 6px;
     font-weight: 600;
     font-size: 0.85rem;
     cursor: pointer;
@@ -1263,7 +1242,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     color: #888;
     cursor: pointer;
     transition: all 0.2s ease;
-    border-radius: 6px;
     margin-bottom: 4px;
     font-size: 0.9rem;
     font-weight: 500;
@@ -1287,7 +1265,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     height: 16px;
     border: 2px solid rgba(0, 245, 212, 0.2);
     border-top-color: #00f5d4;
-    border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
 
@@ -1296,9 +1273,9 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .dot {
+    border-radius: 50%;
     width: 12px;
     height: 12px;
-    border-radius: 50%;
     box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3), 0 0 4px rgba(0,0,0,0.5);
 }
 
@@ -1311,7 +1288,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     padding: 2.5rem;
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 16px;
     position: relative;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 30px -10px rgba(0,0,0,0.5);
     transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
@@ -1329,7 +1305,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     background: linear-gradient(145deg, rgba(0, 245, 212, 0.2) 0%, rgba(0, 245, 212, 0.05) 100%);
     border: 1px solid rgba(0, 245, 212, 0.3);
     box-shadow: 0 0 15px rgba(0, 245, 212, 0.2);
-    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1345,7 +1320,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     width: 48px;
     height: 48px;
     background: rgba(255, 255, 255, 0.03);
-    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1373,7 +1347,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
     border: 1px solid rgba(255, 255, 255, 0.06);
     padding: 2.5rem;
-    border-radius: 16px;
     text-align: left;
     transition: all 0.3s;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 10px 30px -10px rgba(0,0,0,0.5);
@@ -1510,9 +1483,9 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .orbit-sun-logo {
+    border-radius: 50%;
     width: 80px;
     height: 80px;
-    border-radius: 50%;
     border: 2px solid rgba(0, 245, 212, 0.4);
     box-shadow: 0 0 30px rgba(0, 245, 212, 0.4);
     z-index: 2;
@@ -1521,10 +1494,10 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .orbit-sun-glow {
+    border-radius: 50%;
     position: absolute;
     width: 120px;
     height: 120px;
-    border-radius: 50%;
     background: radial-gradient(circle, rgba(0, 245, 212, 0.35) 0%, transparent 70%);
     filter: blur(10px);
     z-index: 1;
@@ -1537,14 +1510,15 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .orbit-sun-ring-dec {
-    position: absolute;
     border-radius: 50%;
+    position: absolute;
     border: 1px solid rgba(0, 245, 212, 0.15);
     transform: rotateX(65deg) rotateY(-10deg);
     pointer-events: none;
 }
 
 .orbit-sun-ring-1 {
+    border-radius: 50%;
     width: 140px;
     height: 140px;
     border: 1px dashed rgba(0, 245, 212, 0.2);
@@ -1552,6 +1526,7 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .orbit-sun-ring-2 {
+    border-radius: 50%;
     width: 185px;
     height: 185px;
     border: 1px dashed rgba(0, 245, 212, 0.09);
@@ -1569,8 +1544,8 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .orbit-ring {
-    position: absolute;
     border-radius: 50%;
+    position: absolute;
     border: 1.5px dashed rgba(255, 255, 255, 0.15);
     pointer-events: none;
     transform-style: preserve-3d;
@@ -1593,13 +1568,13 @@ body:has(.landing-page)::-webkit-scrollbar {
 
 /* Cosmic Orbit Dust */
 .orbit-dust {
+    border-radius: 50%;
     position: absolute;
     left: 50%;
     top: 50%;
     width: 3px;
     height: 3px;
     background: var(--dust-color, #00f5d4);
-    border-radius: 50%;
     box-shadow: 0 0 6px var(--dust-color, #00f5d4);
     opacity: 0.35;
     pointer-events: none;
@@ -1630,7 +1605,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 100px;
     font-weight: 600;
     color: #a1a1aa;
     white-space: nowrap;
@@ -1667,6 +1641,7 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .orbit-inner-wrapper {
+    border-radius: 50%;
     --orbit-radius: var(--radius-inner);
     animation: orbitMove 20s linear infinite;
 }
@@ -1676,6 +1651,7 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .orbit-mid-wrapper {
+    border-radius: 50%;
     --orbit-radius: var(--radius-mid);
     animation: orbitMove 32s linear infinite;
 }
@@ -1685,6 +1661,7 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .orbit-outer-wrapper {
+    border-radius: 50%;
     --orbit-radius: var(--radius-outer);
     animation: orbitMove 48s linear infinite;
 }
@@ -1744,6 +1721,7 @@ body:has(.landing-page)::-webkit-scrollbar {
 
 /* Data pulse animation on the connection line */
 .orbit-connect-line::after {
+    border-radius: 50%;
     content: '';
     position: absolute;
     top: 0;
@@ -1775,7 +1753,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 
 .demo-main pre::-webkit-scrollbar-thumb {
     background: #333;
-    border-radius: 10px;
 }
 
 .demo-main pre::-webkit-scrollbar-track {
@@ -1913,7 +1890,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     padding: 0.5rem 1.25rem;
     background: rgba(0, 245, 212, 0.08);
     border: 1px solid rgba(0, 245, 212, 0.2);
-    border-radius: 999px;
     color: #00f5d4;
     font-size: 0.875rem;
     font-weight: 600;
@@ -1963,7 +1939,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     color: #000;
     font-size: 1.1rem;
     font-weight: 700;
-    border-radius: 99px;
     text-decoration: none;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     box-shadow: 0 4px 24px rgba(0, 245, 212, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.3);
@@ -2000,7 +1975,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     color: #fff;
     font-size: 1.1rem;
     font-weight: 600;
-    border-radius: 99px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     text-decoration: none;
     transition: all 0.3s ease;
@@ -2089,7 +2063,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     color: #fff;
     text-decoration: none;
     padding: 0.35rem 0.5rem;
-    border-radius: 8px;
     transition: color 0.2s ease;
 }
 
@@ -2176,7 +2149,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     padding: 1.6rem 2rem;
     background: rgba(255,255,255,0.02);
     border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 16px;
     min-width: 170px;
     z-index: 2;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2194,7 +2166,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 14px;
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.08);
     color: #00f5d4;
@@ -2225,7 +2196,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 .byom-pipe-glow {
     position: absolute;
     inset: -1px;
-    border-radius: 16px;
     background: linear-gradient(135deg, rgba(0,245,212,0.06), transparent 50%, rgba(0,245,212,0.02));
     pointer-events: none;
     opacity: 0;
@@ -2258,7 +2228,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 .byom-pipe-ring {
     position: absolute;
     inset: -3px;
-    border-radius: 18px;
     border: 1px solid transparent;
     background: linear-gradient(135deg, rgba(0,245,212,0.3), transparent 40%, transparent 60%, rgba(0,245,212,0.15)) border-box;
     -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
@@ -2300,13 +2269,13 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .byom-pipe-particle {
+    border-radius: 50%;
     position: absolute;
     top: 50%;
     left: -4px;
     width: 4px;
     height: 4px;
     background: #00f5d4;
-    border-radius: 50%;
     box-shadow: 0 0 6px #00f5d4, 0 0 12px rgba(0,245,212,0.3);
     transform: translateY(-50%);
     animation: byomParticle 2.4s ease-in-out infinite;
@@ -2347,7 +2316,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     padding: 2.5rem;
     background: rgba(255,255,255,0.02);
     border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 16px;
     overflow: hidden;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -2362,7 +2330,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 .byom-card-border {
     position: absolute;
     inset: -1px;
-    border-radius: 16px;
     background: linear-gradient(135deg, rgba(255,255,255,0.08), transparent 30%, transparent 70%, rgba(255,255,255,0.04));
     opacity: 0;
     transition: opacity 0.5s ease;
@@ -2379,7 +2346,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 14px;
     margin-bottom: 1.25rem;
     position: relative;
     transition: all 0.3s ease;
@@ -2436,7 +2402,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     padding: 0.35rem 0.75rem;
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 20px;
     font-size: 0.78rem;
     font-weight: 500;
     color: #999;
@@ -2529,9 +2494,9 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .timeline-node-dot {
+    border-radius: 50%;
     width: 16px;
     height: 16px;
-    border-radius: 50%;
     background: #030303;
     border: 3px solid rgba(255, 255, 255, 0.15);
     transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -2569,7 +2534,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 .timeline-card {
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.005) 100%);
     border: 1px solid rgba(255, 255, 255, 0.06); 
-    border-radius: 16px;
     padding: 2.5rem;
     width: 100%;
     max-width: 480px;
@@ -2741,7 +2705,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     align-items: center;
     gap: 1rem;
     padding: 2rem;
-    border-radius: 12px;
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -2752,9 +2715,9 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .loader-dot {
+    border-radius: 50%;
     width: 10px;
     height: 10px;
-    border-radius: 50%;
     animation: loaderDotBounce 1.2s infinite ease-in-out;
 }
 
@@ -2777,7 +2740,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     position: relative;
     z-index: 5;
     padding: 10px 24px;
-    border-radius: 9999px;
     background: #030303; /* Solid background to mask spine line */
     border: 1px solid rgba(255, 255, 255, 0.08);
     font-size: 0.85rem;
@@ -2818,6 +2780,7 @@ body:has(.landing-page)::-webkit-scrollbar {
         justify-content: flex-start;
     }
     .timeline-node-dot {
+    border-radius: 50%;
         margin-left: -7px; /* center perfectly on the 2px line */
     }
     .timeline-item-odd .timeline-card-wrapper,
@@ -2896,7 +2859,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     flex-direction: column;
     background: rgba(255, 255, 255, 0.015);
     border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 20px;
     padding: 2.25rem;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -2935,7 +2897,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 12px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
     color: var(--accent-color);
@@ -2970,7 +2931,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 .service-card-visual-container {
     height: 150px;
     background: rgba(0, 0, 0, 0.45);
-    border-radius: 14px;
     border: 1px solid rgba(255, 255, 255, 0.03);
     overflow: hidden;
     position: relative;
@@ -3004,7 +2964,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     width: 170px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
     padding: 0.6rem 0.8rem;
     box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
     transition: all 0.3s ease;
@@ -3023,9 +2982,9 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .mini-circle {
+    border-radius: 50%;
     width: 6px;
     height: 6px;
-    border-radius: 50%;
 }
 
 .mini-circle.red { background: #ff5f56; }
@@ -3048,7 +3007,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     height: 20px;
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 4px;
     display: flex;
     align-items: center;
     padding: 0 0.4rem;
@@ -3056,9 +3014,9 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .mini-dot {
+    border-radius: 50%;
     width: 4px;
     height: 4px;
-    border-radius: 50%;
     background: #00f5d4;
 }
 
@@ -3074,7 +3032,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 .mini-auth-btn-primary {
     width: 100%;
     height: 20px;
-    border-radius: 4px;
     background: #00f5d4;
     border: none;
     font-size: 9px;
@@ -3120,7 +3077,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 .mini-provider-btn {
     width: 20px;
     height: 20px;
-    border-radius: 4px;
     background: rgba(255,255,255,0.05);
     border: 1px solid rgba(255,255,255,0.08);
     display: flex;
@@ -3160,7 +3116,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     width: 90%;
     background: rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.04);
-    border-radius: 8px;
     padding: 0.8rem;
     transition: all 0.3s ease;
 }
@@ -3196,7 +3151,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     width: 200px;
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 8px 20px -5px rgba(0,0,0,0.5);
     transition: all 0.4s ease;
@@ -3231,7 +3185,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     color: #666;
     background: rgba(255,255,255,0.04);
     padding: 1px 5px;
-    border-radius: 3px;
 }
 
 .storage-file-list {
@@ -3268,7 +3221,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     font-weight: 700;
     letter-spacing: 0.04em;
     padding: 2px 4px;
-    border-radius: 3px;
     flex-shrink: 0;
     text-align: center;
     min-width: 22px;
@@ -3394,7 +3346,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     width: 180px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
     transition: all 0.3s ease;
@@ -3435,7 +3386,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 
 .mail-bar-btn {
     height: 18px;
-    border-radius: 4px;
     background: rgba(0, 245, 212, 0.15);
     border: 1px solid rgba(0, 245, 212, 0.3);
     font-size: 8px;
@@ -3502,7 +3452,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     top: 8px;
     right: 8px;
     padding: 0.2rem 0.4rem;
-    border-radius: 4px;
     font-size: 7px;
     font-weight: 700;
     color: #00f5d4;
@@ -3536,7 +3485,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 
 .magic-bento-card:hover .policy-line.indent {
     background: rgba(0, 245, 212, 0.06);
-    border-radius: 2px;
 }
 
 .policy-keyword { color: #e57373; }
@@ -3550,7 +3498,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     justify-content: space-between;
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
     padding: 0.6rem 0.75rem;
     position: relative;
     overflow: hidden;
@@ -3589,7 +3536,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     background: rgba(255, 255, 255, 0.08);
     margin: 0 0.5rem;
     position: relative;
-    border-radius: 1px;
 }
 
 .realtime-pulse {
@@ -3635,7 +3581,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     margin: 3.5rem auto 4.5rem auto;
     background: rgba(10, 10, 10, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 14px;
     overflow: hidden;
     box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(20px);
@@ -3659,7 +3604,7 @@ body:has(.landing-page)::-webkit-scrollbar {
 .lh-dot {
     width: 9px;
     height: 9px;
-    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .lh-dot-red { background: #ff5f56; }
@@ -3690,7 +3635,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     align-items: center;
     gap: 4px;
     padding: 0.2rem 0.5rem;
-    border-radius: 4px;
     transition: all 0.2s ease;
 }
 
@@ -3764,7 +3708,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     letter-spacing: 0.05em;
     background: rgba(255,255,255,0.03);
     padding: 0.1rem 0.35rem;
-    border-radius: 4px;
 }
 
 .lh-builder {
@@ -3789,7 +3732,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 .lh-input {
     background: rgba(255,255,255,0.02);
     border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 6px;
     padding: 0.35rem 0.6rem;
     font-size: 0.8rem;
     color: #fff;
@@ -3817,7 +3759,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     grid-template-columns: 1fr 1fr 60px;
     background: rgba(255, 255, 255, 0.01);
     border: 1px solid rgba(255, 255, 255, 0.04);
-    border-radius: 6px;
     padding: 0.35rem 0.4rem;
     font-size: 0.75rem;
     align-items: center;
@@ -3857,7 +3798,6 @@ body:has(.landing-page)::-webkit-scrollbar {
 .lh-add-btn {
     background: rgba(255,255,255,0.02);
     border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 6px;
     color: #666;
     font-size: 0.7rem;
     padding: 0.35rem 0.6rem;
@@ -3888,7 +3828,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     height: 2px;
     background: rgba(255, 255, 255, 0.04);
     position: relative;
-    border-radius: 1px;
 }
 
 .lh-pulse {
@@ -3912,9 +3851,9 @@ body:has(.landing-page)::-webkit-scrollbar {
 }
 
 .lh-engine {
+    border-radius: 50%;
     width: 34px;
     height: 34px;
-    border-radius: 50%;
     background: rgba(0, 0, 0, 0.5);
     border: 1.5px solid rgba(255,255,255,0.06);
     display: flex;
@@ -3966,7 +3905,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     gap: 6px;
     background: rgba(255,255,255,0.01);
     border: 1px solid rgba(255,255,255,0.03);
-    border-radius: 6px;
     padding: 0.35rem 0.5rem;
     opacity: 0;
     transform: translateX(10px);
@@ -3989,7 +3927,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     font-size: 0.6rem;
     font-weight: 700;
     padding: 0.1rem 0.3rem;
-    border-radius: 4px;
     min-width: 44px;
     text-align: center;
 }
@@ -4007,7 +3944,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     gap: 3px;
     background: rgba(39, 201, 63, 0.08);
     padding: 0.1rem 0.35rem;
-    border-radius: 4px;
 }
 
 .services-bento-placeholder {
@@ -4100,7 +4036,6 @@ body:has(.pricing-page)::-webkit-scrollbar {
   color: #000;
   background: #00f5d4;
   padding: 0.5rem 1rem;
-  border-radius: 999px;
   text-decoration: none;
   font-weight: 600;
   font-size: 0.85rem;
@@ -4145,7 +4080,6 @@ body:has(.pricing-page)::-webkit-scrollbar {
 
 .pricing-card {
   border: 1px solid #1f1f1f;
-  border-radius: 16px;
   padding: 2.5rem;
   background: #0b0b0b;
   display: flex;
@@ -4161,7 +4095,6 @@ body:has(.pricing-page)::-webkit-scrollbar {
   display: inline-flex;
   align-self: flex-start;
   padding: 0.3rem 0.75rem;
-  border-radius: 999px;
   background: #0f0f0f;
   color: #00f5d4;
   font-size: 0.75rem;
@@ -4227,7 +4160,6 @@ body:has(.pricing-page)::-webkit-scrollbar {
   border: 1px solid #00f5d4;
   color: #00f5d4;
   padding: 0.7rem 1.2rem;
-  border-radius: 10px;
   text-decoration: none;
   font-weight: 600;
   background: transparent;
