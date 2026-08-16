@@ -26,7 +26,7 @@
   width: 100%;
   max-width: 100%;
   padding: 0; /* Remove padding since BorderGlow handles inner content */
-  border-radius: 16px;
+  border-radius: 0;
   background: transparent;
   font-weight: 300;
   overflow: visible;
@@ -47,9 +47,11 @@
 
 .magic-bento-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(0, 245, 212, 0.3);
-  background: rgba(0, 245, 212, 0.04);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 245, 212, 0.08);
+  border-color: rgba(0, 245, 212, 0.5);
+  background: rgba(0, 245, 212, 0.08);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 245, 212, 0.15), inset 0 0 10px rgba(0, 245, 212, 0.1);
 }
 
 .magic-bento-card__header,
@@ -76,7 +78,7 @@
   text-transform: uppercase;
   color: rgba(0, 245, 212, 0.6);
   padding: 0.2em 0.6em;
-  border-radius: 4px;
+  border-radius: 0;
   background: rgba(0, 245, 212, 0.06);
   border: 1px solid rgba(0, 245, 212, 0.1);
   transition: all 0.4s ease;
@@ -299,3 +301,19 @@
     transform: scale(1.15);
   }
 }
+
+/* Sharp Crosshairs */
+.magic-bento-card::before,
+.magic-bento-card::after {
+  content: '+';
+  position: absolute;
+  color: rgba(0, 245, 212, 0.4);
+  font-size: 16px;
+  line-height: 1;
+  pointer-events: none;
+  font-family: monospace;
+  z-index: 10;
+}
+.magic-bento-card::before { top: -8px; left: -4px; }
+.magic-bento-card::after { bottom: -8px; right: -4px; }
+

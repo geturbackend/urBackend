@@ -3,6 +3,7 @@ import BaseLayout from '../layouts/Base.astro';
 import Navbar from '../components/Navbar.astro';
 import Footer from '../components/Footer.astro';
 import Hyperspeed from '../components/Hyperspeed/Hyperspeed.jsx';
+import LiquidBackground from '../components/LiquidBackground.jsx';
 import MagicBento from '../components/MagicBento/MagicBento.jsx';
 import StudioReplay from '../components/StudioReplay.jsx';
 import OrbitSection from '../components/OrbitSection.jsx';
@@ -77,17 +78,18 @@ const FAQ_ITEMS = [
     <Navbar />
 
     <!-- Hero Section -->
-    <div class="hero-section">
+    <div class="hero-section" style="position: relative; overflow: hidden;">
       <div class="hyperspeed-wrapper">
         <Hyperspeed client:load effectOptions={HYPERSPEED_OPTIONS} />
       </div>
+      <LiquidBackground client:load />
       <div class="hero-glow"></div>
 
-      <div class="hero-split">
+      <div class="hero-split" style="position: relative; z-index: 1;">
         <div class="hero-split-left">
-          <div class="status-pill">
-            <div class="status-dot"></div>
-            <span>v0.17.0 &mdash; In Active Development</span>
+          <div class="status-pill" style="border-radius: 0; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <div class="status-dot" style="border-radius: 0;"></div>
+            <span style="font-family: monospace; font-size: 11px; letter-spacing: 0.1em;">[ v0.17.0 // ACTIVE BETA ]</span>
           </div>
 
           <h1 class="hero-heading">
