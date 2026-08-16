@@ -1,6 +1,6 @@
 import React from 'react';
 import { Zap } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+
 import UsageProgressBar from './UsageProgressBar';
 import { usePlan } from '../../context/PlanContext';
 
@@ -12,7 +12,7 @@ const formatBytes = (bytes) => {
 
 const UsageQuota = () => {
   const { planData } = usePlan();
-  const navigate = useNavigate();
+
 
   if (!planData) return null;
 
@@ -103,7 +103,7 @@ const UsageQuota = () => {
       {!isPro && (
         <button
           id="usage-quota-upgrade-btn"
-          onClick={() => navigate('/pricing')}
+          onClick={() => window.location.href = 'https://urbackend.bitbros.in/pricing'}
           className="btn btn-secondary"
           style={{ marginTop: '0.5rem', width: '100%', fontSize: '0.75rem', padding: '5px' }}
         >

@@ -176,7 +176,7 @@ export default function Dashboard() {
                   </span>
                 </div>
                 <button
-                  onClick={() => navigate('/pricing')}
+                  onClick={() => window.location.href = 'https://urbackend.bitbros.in/pricing'}
                   className="btn btn-secondary"
                   style={{ fontSize: '0.75rem', padding: '3px 10px', whiteSpace: 'nowrap', flexShrink: 0 }}
                 >

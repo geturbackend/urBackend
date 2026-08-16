@@ -103,8 +103,8 @@ api.interceptors.response.use(
 
             if (isPlanError && !isVerificationGate) {
                 toast.error("Plan limit reached. Please upgrade to continue.");
-                if (window.location.pathname !== '/pricing') {
-                    window.location.assign('/pricing');
+                if (window.location.href !== 'https://urbackend.bitbros.in/pricing') {
+                    window.location.assign('https://urbackend.bitbros.in/pricing');
                 }
                 return Promise.reject(error);
             } else {
