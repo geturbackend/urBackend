@@ -333,10 +333,7 @@ const collectionCreator = async (req, res, next) => {
 const clearCollectionCreatorSession = async (req, res, next) => {
     try {
         const { projectId } = req.params;
-        await Promise.all([
-            redis.del(ccSessionKey(projectId, req.user._id)),
-            redis.del(ccIterationsKey(projectId, req.user._id))
-        ]);
+        await redis.del(ccSessionKey(projectId, req.user._id));
         return new ApiResponse({}, "Session cleared").send(res);
     } catch(err) {
         console.error("clearCollectionCreatorSession error", err);
