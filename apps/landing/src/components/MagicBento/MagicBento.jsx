@@ -431,7 +431,15 @@ const GlobalSpotlight = ({
       });
     };
 
+    const cancelPending = () => {
+      if (rAF) {
+        cancelAnimationFrame(rAF);
+        rAF = null;
+      }
+    };
+
     const handleMouseLeave = () => {
+      cancelPending();
       isInsideSection.current = false;
       gridRef.current?.querySelectorAll('.magic-bento-card').forEach(card => {
         card.style.setProperty('--glow-intensity', '0');
@@ -449,9 +457,13 @@ const GlobalSpotlight = ({
     document.addEventListener('mouseleave', handleMouseLeave);
 
     return () => {
+      cancelPending();
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseleave', handleMouseLeave);
-      spotlightRef.current?.parentNode?.removeChild(spotlightRef.current);
+      if (spotlightRef.current && spotlightRef.current.parentNode) {
+        spotlightRef.current.parentNode.removeChild(spotlightRef.current);
+      }
+      spotlightRef.current = null;
     };
   }, [gridRef, disableAnimations, enabled, spotlightRadius, glowColor]);
 

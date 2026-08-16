@@ -3954,7 +3954,6 @@ body:has(.landing-page)::-webkit-scrollbar {
     .orbit-connect-line::after,
     .hero-glow,
     .byom-pipe-particle {
-    border-radius: 50%;
         animation: none !important;
     }
 }
