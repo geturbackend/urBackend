@@ -1,17 +1,12 @@
 /* --- GLOBAL & LANDING STYLES --- */
 :root {
-  --radius-none: 0px !important;
+  --radius-none: 0px;
   --border-sharp: 1px solid rgba(255, 255, 255, 0.1);
   --border-sharp-hover: 1px solid #00f5d4;
   --bg-sharp-surface: #050505;
   --bg-sharp-elevated: #0a0a0a;
   --accent-cyan: #00f5d4;
 }
-
-*, *::before, *::after {
-  border-radius: 0px !important;
-}
-
 body {
     margin: 0;
     padding: 0;
