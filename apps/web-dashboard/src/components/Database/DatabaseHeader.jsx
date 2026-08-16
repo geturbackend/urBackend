@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   Menu, List as ListIcon, Table as TableIcon, Code, 
-  Filter, RefreshCw, Shield, Plus, Download
+  Filter, RefreshCw, Shield, Plus, Download, Workflow
 } from 'lucide-react';
 import AiQueryBar from './AiQueryBar';
 
@@ -67,7 +67,8 @@ const DatabaseHeader = ({
           {[
             { id: 'table', icon: TableIcon, title: 'Table' },
             { id: 'list', icon: ListIcon, title: 'List' },
-            { id: 'json', icon: Code, title: 'JSON' }
+            { id: 'json', icon: Code, title: 'JSON' },
+            { id: 'canvas', icon: Workflow, title: 'Schema Graph' }
           ].map(mode => (
             <button
               key={mode.id}

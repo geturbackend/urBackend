@@ -15,6 +15,7 @@ import { PUBLIC_API_URL } from '../config';
 import DatabaseHeader from "../components/Database/DatabaseHeader";
 import DatabaseFilter from "../components/Database/DatabaseFilter";
 import Pagination from "../components/Database/Pagination";
+import SchemaCanvasViewer from "../components/SchemaCanvasViewer";
 
 export default function Database() {
   const { projectId } = useParams();
@@ -377,6 +378,17 @@ export default function Database() {
                     recoveringIds={recoveringIds}
                     isViewer={isViewer}
                   />
+                ) : viewMode === "canvas" ? (
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--color-bg-main)' }}>
+                    <SchemaCanvasViewer 
+                      schema={collections.filter(c => c.name !== 'users').map(c => ({
+                        collection: c.name,
+                        fields: (c.model || []).map(f => ({ ...f, name: f.key }))
+                      }))}
+                      messages={[]}
+                      readOnly={true}
+                    />
+                  </div>
                 ) : (
                   <div style={{ height: '100%', overflow: 'auto', padding: '1rem', background: 'var(--color-bg-input)', color: 'var(--color-primary)', fontFamily: 'monospace', fontSize: '0.75rem' }}>
                     <pre>{JSON.stringify(data, null, 2)}</pre>

@@ -100,8 +100,9 @@ api.interceptors.response.use(
 
             const isVerificationGate = VERIFICATION_KEYWORDS.some((kw) => message.toLowerCase().includes(kw));
             const isPlanError = UPGRADE_KEYWORDS.some((kw) => message.toLowerCase().includes(kw));
+            const requiresByok = message.toLowerCase().includes('add your own groq key') || message.toLowerCase().includes('settings for unlimited');
 
-            if (isPlanError && !isVerificationGate) {
+            if (isPlanError && !isVerificationGate && !requiresByok) {
                 toast.error("Plan limit reached. Please upgrade to continue.");
                 if (window.location.href !== 'https://urbackend.bitbros.in/pricing') {
                     window.location.assign('https://urbackend.bitbros.in/pricing');

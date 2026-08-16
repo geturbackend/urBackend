@@ -187,6 +187,8 @@ async def collection_creator(request: CollectionCreatorRequest, req: Request):
             developer_id=request.developer_id,
             plan=request.plan,
             encrypted_byok=request.encrypted_byok.model_dump() if request.encrypted_byok else None,
+            feature="collection-creator",
+            increment=(len(request.messages) == 1),
         )
 
         structured_llm = llm.with_structured_output(CollectionCreatorResponse)

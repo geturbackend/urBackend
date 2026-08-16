@@ -163,34 +163,8 @@ const queryBuilder = async (req, res, next) => {
 
 const ccSessionKey = (projectId, developerId) =>
   `ai:cc:session:${projectId}:${developerId}`;
-const ccIterationsKey = (projectId, developerId) =>
-  `ai:cc:iterations:${projectId}:${developerId}`;
-
-const LUA_RESERVE_ITERATION = `
-local sessionExists = redis.call('EXISTS', KEYS[2])
-local current = redis.call('GET', KEYS[1])
-local count = tonumber(current) or 0
-
-if sessionExists == 0 and count > 0 then
-    count = 0
-    redis.call('SET', KEYS[1], '0')
-end
-
-if count >= tonumber(ARGV[1]) then
-    return {0, count}
-end
-
-local nextVal = redis.call('INCR', KEYS[1])
-redis.call('EXPIRE', KEYS[1], ARGV[2])
-if sessionExists == 1 then
-    redis.call('EXPIRE', KEYS[2], ARGV[2])
-end
-return {1, nextVal}
-`;
 
 const collectionCreator = async (req, res, next) => {
-    let reservedIteration = false;
-    let iterKey = null;
     let hasByok = false;
 
     try {
@@ -221,7 +195,6 @@ const collectionCreator = async (req, res, next) => {
 
         // 2. Load Redis session
         const sessionKey = ccSessionKey(projectId, req.user._id);
-        iterKey = ccIterationsKey(projectId, req.user._id);
         const sessionStr = await redis.get(sessionKey);
 
         let session = { messages: [], hasByok: false };
@@ -251,24 +224,11 @@ const collectionCreator = async (req, res, next) => {
         const encryptedByok = resolvedKey ? { groqKey: encryptForTransit(resolvedKey) } : null;
         hasByok = !!encryptedByok;
 
-        // 4. Atomic iteration reservation before calling Python service
-        const PLATFORM_ITERATION_LIMIT = 3;
-        let iterations = 0;
+        const PLATFORM_ITERATION_LIMIT = 20;
+        let iterations = Math.floor(session.messages.length / 2);
 
-        if (!hasByok) {
-            const [allowed, newCount] = await redis.eval(
-                LUA_RESERVE_ITERATION,
-                2,
-                iterKey,
-                sessionKey,
-                PLATFORM_ITERATION_LIMIT,
-                7200
-            );
-            if (allowed === 0) {
-                throw new AppError(403, "AI iteration limit reached (3/3 on platform key). Add your Groq API key in Settings for unlimited usage.");
-            }
-            reservedIteration = true;
-            iterations = newCount;
+        if (!hasByok && iterations >= PLATFORM_ITERATION_LIMIT) {
+            throw new AppError(403, `Session iteration limit reached (${PLATFORM_ITERATION_LIMIT}/${PLATFORM_ITERATION_LIMIT}). Add your Groq API key in Settings for unlimited usage.`);
         }
 
         // 5. Update session
@@ -345,14 +305,6 @@ const collectionCreator = async (req, res, next) => {
         }, "Agent responded successfully").send(res);
 
     } catch (error) {
-        // Rollback reserved iteration on error if platform key was used
-        if (!hasByok && reservedIteration && iterKey) {
-            try {
-                await redis.decr(iterKey);
-            } catch (revertErr) {
-                console.warn("[CollectionCreator] Failed to rollback reserved iteration counter", revertErr);
-            }
-        }
         if (error instanceof AppError) {
             return next(error);
         }

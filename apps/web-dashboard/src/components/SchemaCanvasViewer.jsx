@@ -37,7 +37,8 @@ export default function SchemaCanvasViewer({
   isInserting,
   onInsertAll,
   onResetChat,
-  onNavigateToDb
+  onNavigateToDb,
+  readOnly = false
 }) {
   const [viewMode, setViewMode] = useState('canvas'); // 'canvas' | 'list' | 'json'
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -209,7 +210,7 @@ export default function SchemaCanvasViewer({
 
           {/* Right Action Controls */}
           <div className="flex items-center gap-2.5">
-            {messages.length > 1 && (
+            {!readOnly && messages?.length > 1 && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -238,7 +239,7 @@ export default function SchemaCanvasViewer({
               </Button>
             )}
 
-            {schema && schema.length > 0 && (
+            {schema && schema.length > 0 && !readOnly && (
               <Button
                 variant="default"
                 size="sm"
