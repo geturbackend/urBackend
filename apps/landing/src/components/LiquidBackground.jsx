@@ -12,13 +12,19 @@ export default function LiquidBackground() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     mountRef.current.appendChild(renderer.domElement);
+    
+    const size = new THREE.Vector2();
+    renderer.getSize(size);
+    const pixelRatio = renderer.getPixelRatio();
+    const renderWidth = size.x * pixelRatio;
+    const renderHeight = size.y * pixelRatio;
 
     // Liquid Shader Material
     const material = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
         uMouse: { value: new THREE.Vector2(0.5, 0.5) },
-        uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
+        uResolution: { value: new THREE.Vector2(renderWidth, renderHeight) }
       },
       vertexShader: `
         varying vec2 vUv;
@@ -88,7 +94,11 @@ export default function LiquidBackground() {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
-      material.uniforms.uResolution.value.set(window.innerWidth, window.innerHeight);
+      
+      const newSize = new THREE.Vector2();
+      renderer.getSize(newSize);
+      const pr = renderer.getPixelRatio();
+      material.uniforms.uResolution.value.set(newSize.x * pr, newSize.y * pr);
     };
 
     window.addEventListener('resize', handleResize);

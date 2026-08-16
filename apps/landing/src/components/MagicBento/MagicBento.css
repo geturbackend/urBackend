@@ -26,15 +26,20 @@
   width: 100%;
   max-width: 100%;
   padding: 0; /* Remove padding since BorderGlow handles inner content */
-  border-radius: 0;
   background: transparent;
   font-weight: 300;
   overflow: visible;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   --glow-x: 50%;
   --glow-y: 50%;
   --glow-intensity: 0;
   --glow-radius: 200px;
+}
+
+/* Ensure BorderGlow inner surfaces are strictly square */
+.magic-bento-card .border-glow-card,
+.magic-bento-card .border-glow-inner {
+  border-radius: 0 !important;
 }
 
 .magic-bento-card .border-glow-inner {
@@ -45,9 +50,10 @@
   height: 100%;
 }
 
-.magic-bento-card:hover {
-  border-color: rgba(0, 245, 212, 0.4);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 15px rgba(0, 245, 212, 0.1);
+.magic-bento-card:hover .border-glow-card {
+  border-color: rgba(0, 245, 212, 0.4) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 15px rgba(0, 245, 212, 0.1) !important;
+  background: rgba(0, 245, 212, 0.04) !important;
 }
 
 .magic-bento-card:hover .service-card-visual-container {
