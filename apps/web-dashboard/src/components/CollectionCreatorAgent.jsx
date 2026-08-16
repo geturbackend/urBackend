@@ -3,6 +3,8 @@ import api from '../utils/api';
 import { toast } from 'react-hot-toast';
 import { Send, ArrowRight, Bot } from 'lucide-react';
 import SchemaCanvasViewer from './SchemaCanvasViewer';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 const SUGGESTIONS = [
   { label: 'E-commerce Platform', prompt: 'Create an e-commerce platform with products, categories, orders, customers, and product reviews' },
@@ -243,15 +245,31 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
             <Bot size={16} className="text-[var(--color-primary)]" />
             <span>AI Schema Assistant</span>
           </h3>
-          <select 
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            className="text-xs py-1 px-2 rounded-md border border-[var(--color-border)] bg-[var(--color-bg-input)] text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-primary)] max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap"
-          >
-            {MODELS.map(m => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="w-[180px]">
+                    <Select value={selectedModel} onValueChange={setSelectedModel}>
+                      <SelectTrigger className="w-full h-7 text-xs border-[var(--color-border)] bg-[var(--color-bg-input)]">
+                        <SelectValue placeholder="Select Model" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {MODELS.map(m => (
+                          <SelectItem key={m} value={m} className="text-xs">
+                            {m}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">Tip: use llama-3.3-70b-versatile for best results</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
 
         {/* Messages Stream (Only this scrolls) */}
