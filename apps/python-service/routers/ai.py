@@ -115,7 +115,7 @@ async def query_builder(request: QueryBuilderRequest, req: Request):
         )
 
         # Enforce structured output based on our Pydantic schema
-        structured_llm = llm.with_structured_output(QueryResult)
+        structured_llm = llm.with_structured_output(QueryResult, method="json_mode")
 
         # Build the system prompt
         system_prompt = """You are a highly intelligent database query builder for a MongoDB-based BaaS called urBackend.
@@ -193,9 +193,10 @@ async def collection_creator(request: CollectionCreatorRequest, req: Request):
             model=request.model,
         )
 
-        structured_llm = llm.with_structured_output(CollectionCreatorResponse)
+        structured_llm = llm.with_structured_output(CollectionCreatorResponse, method="json_mode")
 
         system_prompt = """You are a MongoDB schema designer for urBackend, a Backend-as-a-Service platform.
+You MUST output valid JSON only.
 
 Rules:
 1. If the description is vague, ask 2-3 specific clarifying questions and set type: "clarify". You MUST set "schema": null. NEVER ask more than 3 at once.
