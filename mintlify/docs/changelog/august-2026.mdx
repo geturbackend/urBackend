@@ -3,6 +3,31 @@ title: August 2026
 description: What's new in urBackend — new features, improvements, and fixes.
 ---
 
+<Update label="2026-08-17" description="Week of 2026-08-15–2026-08-17" tags={["Feature", "Improvement", "Fix"]}>
+## New features
+
+- **AI Collection Creator** — Describe what you're building (for example, "a food delivery app") and the AI Collection Creator designs a MongoDB schema for you in a chat-style workspace, then bulk-inserts every collection into your project with one click. Open **Create Collection** and switch to the AI tab to try it. (by [@yash-pouranik](https://github.com/yash-pouranik) in [#392](https://github.com/geturbackend/urbackend/pull/392))
+- **Interactive Schema Canvas** — A new ERD-style Schema Graph view visualizes your collections and their references. Pan, zoom, and toggle between chat and canvas views inside the AI Collection Creator, or open the Schema Graph directly from **Database → view mode** (alongside Table, List, and JSON) to inspect your project's schema. (by [@yash-pouranik](https://github.com/yash-pouranik) in [#393](https://github.com/geturbackend/urbackend/pull/393) and [`1f89774`](https://github.com/geturbackend/urbackend/commit/1f89774a6679b8d8ce77d67a6e81871b1457deba))
+- **Default field values in collections** — When defining collection fields (both manually and via the AI Collection Creator), you can now set a default value that's applied to new documents when the field is omitted. Collections must have at least one field. (by [@yash-pouranik](https://github.com/yash-pouranik) in [#394](https://github.com/geturbackend/urbackend/pull/394))
+- **Model selector in AI Collection Creator** — Pick which Groq model powers your AI Collection Creator chat from a dropdown in the composer. All supported Groq models are available; unsupported models degrade gracefully with a clear message. (by [@yash-pouranik](https://github.com/yash-pouranik) in [`23e1d30`](https://github.com/geturbackend/urbackend/commit/23e1d3097f6169385114fa74dca152a9a99df017))
+- **Skip the onboarding project step** — First-time users can now skip creating a project during onboarding and jump straight into the dashboard. (by [@yash-pouranik](https://github.com/yash-pouranik) in [`754db92`](https://github.com/geturbackend/urbackend/commit/754db929eabbf698ca499c5c307edb9e4db56b43))
+- **New landing page** — The urBackend landing page has been redesigned with a sharp, geometric aesthetic and interactive WebGL visuals. Pricing upgrade links from the dashboard now route to the new landing page. (by [@yash-pouranik](https://github.com/yash-pouranik) in [#395](https://github.com/geturbackend/urbackend/pull/395) and [`c4ba2d7`](https://github.com/geturbackend/urbackend/commit/c4ba2d7a))
+
+## Improvements
+
+- **AI quota usage in Account Settings** — The **AI Integration (BYOK)** section of Account Settings now shows your current platform-key AI session usage against your plan cap, so you can see how many sessions are left before you need a BYOK key. See [BYOK for AI](/guides/ai-byok). (by [@yash-pouranik](https://github.com/yash-pouranik) in [`231edc9`](https://github.com/geturbackend/urbackend/commit/231edc94da743dbda827e7f43289b877c2c73984))
+- **AI Collection Creator rate limiting and reliability** — The AI Collection Creator now uses atomic session reservations, handles recursive and nested-object schemas correctly, returns friendlier errors on LLM validation failures, and disables stale suggestions after a reset. (by [@yash-pouranik](https://github.com/yash-pouranik) in [#393](https://github.com/geturbackend/urbackend/pull/393))
+- **Polished Collection Creator UI** — The Create Collection page has a redesigned, ChatGPT-style conversational workspace with an anchored bottom composer, refined spacing and padding across the schema canvas, and improved responsive behavior. Standard `shadcn` inputs and checkboxes replace ad-hoc controls throughout. (by [@yash-pouranik](https://github.com/yash-pouranik) in [#393](https://github.com/geturbackend/urbackend/pull/393) and [#394](https://github.com/geturbackend/urbackend/pull/394))
+- **Denser Database page** — The Database page layout is tighter, with reclaimed empty space and fixed light-theme color regressions. (by [@yash-pouranik](https://github.com/yash-pouranik) in [`7c4765d`](https://github.com/geturbackend/urbackend/commit/7c4765d))
+
+## Bug fixes
+
+- **Bulk collection creation limit check** — Fixed a bug where the collection-limit check pulled the wrong project ID during bulk creation, blocking valid AI Collection Creator inserts. (by [@yash-pouranik](https://github.com/yash-pouranik) in [`4b52148`](https://github.com/geturbackend/urbackend/commit/4b52148))
+- **Database pagination loop** — Fixed a bug that reset the Database page pagination to page 1 in a loop. Also corrected the developer BYOK endpoint used by the dashboard. (by [@yash-pouranik](https://github.com/yash-pouranik) in [`7671934`](https://github.com/geturbackend/urbackend/commit/7671934))
+- **AI schema validation** — The AI Collection Creator now produces valid default `items` for `Array` fields, a valid `refTarget` for `Ref` fields, and non-empty nested `fields` for `Object` fields, so generated schemas insert cleanly. (by [@yash-pouranik](https://github.com/yash-pouranik) in [#393](https://github.com/geturbackend/urbackend/pull/393))
+- **Post-confirmation guidance** — After the AI confirms a schema, the chat now tells you to click **Insert All** instead of implying the collection has already been created. (by [@yash-pouranik](https://github.com/yash-pouranik) in [#393](https://github.com/geturbackend/urbackend/pull/393))
+</Update>
+
 <Update label="2026-08-14" description="Week of 2026-08-11–2026-08-14" tags={["Improvement", "Fix"]}>
 ## Improvements
 
