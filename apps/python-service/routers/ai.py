@@ -169,7 +169,9 @@ Schema Fields: {schema}"""
         error_name = e.__class__.__name__
         logger.error("[Trace: %s] ❌ AI Query Builder unhandled failure for developer_id=%s: %s", trace_id, request.developer_id, e, exc_info=True)
         if "Tool use is not supported" in str(e) or "tools" in str(e).lower():
-            raise HTTPException(status_code=400, detail="This model doesn't support complex structured outputs. Please switch to llama-3.3-70b-versatile.") from e
+            raise HTTPException(status_code=400, detail="This model doesn't support complex structured outputs. Please select a different model.") from e
+        if "NotFoundError" in error_name or "does not exist" in str(e):
+            raise HTTPException(status_code=400, detail="The selected AI model is currently unavailable or doesn't exist. Please select a different model.") from e
         if "BadRequest" in error_name or "Validation" in error_name:
             raise HTTPException(status_code=400, detail="The AI generated an invalid query format. Please rephrase or simplify your prompt.") from e
         raise HTTPException(status_code=500, detail="Internal server error") from e
@@ -245,7 +247,9 @@ Rules:
         error_name = e.__class__.__name__
         logger.error("[Trace: %s] ❌ AI Collection Creator unhandled failure for developer_id=%s: %s", trace_id, request.developer_id, e, exc_info=True)
         if "Tool use is not supported" in str(e) or "tools" in str(e).lower():
-            raise HTTPException(status_code=400, detail="This model doesn't support complex structured outputs. Please switch to llama-3.3-70b-versatile.") from e
+            raise HTTPException(status_code=400, detail="This model doesn't support complex structured outputs. Please select a different model.") from e
+        if "NotFoundError" in error_name or "does not exist" in str(e):
+            raise HTTPException(status_code=400, detail="The selected AI model is currently unavailable or doesn't exist. Please select a different model from the dropdown.") from e
         if "BadRequest" in error_name or "Validation" in error_name:
             raise HTTPException(status_code=400, detail="The AI generated an invalid response format. Please rephrase or simplify your prompt.") from e
         raise HTTPException(status_code=500, detail="Internal server error") from e
