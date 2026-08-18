@@ -262,7 +262,7 @@ export default function CollectionCreatorAgent({ projectId, onInsertAll }) {
               </div>
             </div>
             <span className="text-[10px] text-[var(--color-text-muted)] italic mr-1">
-              Tip: use llama-3.3-70b for best results
+              Tip: use qwen/qwen3.6-27b or openai/gpt-oss-120b for best results
             </span>
           </div>
         </div>
