@@ -41,7 +41,7 @@ async def resolve_ai_client(
     encrypted_byok: dict | None,
     feature: str = "query-builder",
     increment: bool = True,
-    model: str = "llama-3.3-70b-versatile",
+    model: str = "qwen/qwen3.6-27b",
 ) -> ChatGroq:
     """Resolve the appropriate AI client based on BYOK and plan.
 

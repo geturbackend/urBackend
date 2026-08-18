@@ -81,7 +81,7 @@ class CollectionCreatorRequest(BaseModel):
     developer_id: str
     plan: str = "free"
     encrypted_byok: EncryptedByok | None = None
-    model: str = "llama-3.3-70b-versatile"
+    model: str = "qwen/qwen3.6-27b"
 
 class CollectionCreatorResponse(BaseModel):
     type: Literal["clarify", "schema", "complete"]

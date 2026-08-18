@@ -48,7 +48,7 @@ Rules:
 7. If no PRs were merged (or if all were ignored), output: <Update label="${TODAY}" description="Week of ${WEEK_START}–${TODAY}" tags={[]}>No significant changes this week.</Update>`;
 
 const payload = JSON.stringify({
-  model: "llama-3.3-70b-versatile",
+  model: "qwen/qwen3.6-27b",
   messages: [{ role: "user", content: prompt }],
   max_tokens: 10000,
   temperature: 0.3,

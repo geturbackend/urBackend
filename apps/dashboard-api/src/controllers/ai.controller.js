@@ -246,7 +246,7 @@ const collectionCreator = async (req, res, next) => {
             developer_id: req.user._id.toString(),
             plan: effectivePlan,
             encrypted_byok: encryptedByok,
-            model: model || 'llama-3.3-70b-versatile'
+            model: model || 'qwen/qwen3.6-27b'
         });
 
         const allowedTypes = new Set(['String', 'Number', 'Boolean', 'Date', 'Object', 'Array', 'Ref']);
