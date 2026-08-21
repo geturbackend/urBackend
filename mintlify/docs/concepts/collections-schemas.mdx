@@ -77,6 +77,31 @@ Mark a field as **required** in the dashboard to prevent documents from being sa
 
 Mark a field as **unique** to enforce that no two documents in the collection share the same value for that field. This is enforced at the database level and is useful for fields like `username` or `email` in custom collections.
 
+### Default values
+
+Set a **default** on any non-required `String`, `Number`, or `Boolean` field. When a document is inserted without that field, urBackend stores the default value instead of leaving it unset.
+
+Defaults are available in both the manual collection builder and the AI Collection Creator. In the manual builder, the `Default` column appears next to each field row and accepts a value that matches the field's type. In the AI Collection Creator, defaults are proposed automatically for optional fields where they make sense.
+
+Rules:
+
+- Defaults are only supported on `String`, `Number`, and `Boolean` fields. `Date`, `Ref`, `Array`, and `Object` fields cannot have defaults.
+- Defaults are only allowed on non-required fields. Marking a field as required clears any default that was set.
+- The default value's type must match the field type — a `Number` field cannot default to a string.
+
+## Collections must have at least one field
+
+A collection must be created with at least one field. Requests to create or edit a collection with an empty schema are rejected with `400`:
+
+```json
+{
+  "success": false,
+  "message": "At least one field is required"
+}
+```
+
+The dashboard blocks the **Save Collection** action when no fields are defined, and the AI Collection Creator will not finalize an empty schema.
+
 ## Field type examples
 
 ### String
