@@ -13,6 +13,10 @@ A collection is a named container for JSON documents — conceptually equivalent
 
 **Collections must be created in the dashboard before you can write to them.** The API will reject requests to endpoints that do not correspond to a registered collection. Creating a collection registers it under your project and connects it to your MongoDB database.
 
+<Tip>
+  Prefer designing a whole set of collections at once from a natural-language description? Use the [AI Collection Creator](/guides/ai-collection-creator) as an alternative to the manual field builder.
+</Tip>
+
 <Warning>
   The `users` collection is reserved. All user account operations go through `/api/userAuth/*`. Requests to `/api/data/users` or any path starting with `/api/data/users` are blocked with a `403` response.
 </Warning>

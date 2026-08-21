@@ -55,7 +55,8 @@
                "guides/storage",
                "guides/webhooks",
                "guides/audit-log",
-               "guides/ai-byok"
+               "guides/ai-byok",
+               "guides/ai-collection-creator"
              ]
            },
           {
