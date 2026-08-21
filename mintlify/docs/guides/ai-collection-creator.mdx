@@ -1,0 +1,109 @@
+---
+title: "AI Collection Creator"
+description: "Design and create multiple MongoDB collections at once by chatting with an AI agent inside the urBackend dashboard."
+---
+
+The AI Collection Creator is an in-dashboard agent that turns a natural-language description of your app into a set of production-ready MongoDB collections. You describe what you're building, iterate on the schema through chat, review the design on an interactive canvas, and create every collection in your project with a single click.
+
+Use it when you want to bootstrap a new project's data model quickly instead of clicking through the manual field builder one collection at a time.
+
+## When to use it
+
+- **New project bootstrap** — turn a product idea ("multi-tenant SaaS with workspaces, projects, and tasks") into 5–15 collections without hand-designing each one.
+- **Exploring a schema shape** — iterate on relationships and field types in chat before committing anything to the database.
+- **Reference designs** — ask for well-known patterns (e-commerce, CMS, subscription billing) as a starting point you can then edit manually.
+
+If you already know the exact shape of a single collection, the manual builder is faster. See [Collections & Schemas](/concepts/collections-schemas) for the manual flow and field-type rules.
+
+## Open the AI Collection Creator
+
+1. In the dashboard, open your project.
+2. Go to **Database** and click **Create Collection**.
+3. At the top of the create-collection page, switch the mode selector from **Manual Builder** to **AI-Assisted**.
+
+The page splits into two panels:
+
+- **Left — AI Schema Assistant.** A chat with the agent, plus a model selector and quick-start prompts.
+- **Right — Schema Canvas.** An interactive visualizer that renders the proposed schema as connected cards, one per collection. Fields, types, required/unique flags, and `Ref` relationships are drawn as edges between cards.
+
+## Chat with the agent
+
+Type a description of your app into the composer and press **Enter** (or **Shift+Enter** for a newline). The agent responds with either:
+
+- A clarifying question, if it needs more detail before designing a schema.
+- A proposed set of collections, which appear as cards on the Schema Canvas on the right.
+
+You can keep chatting to refine the design — add fields, split a collection, change a type, add references, remove something you don't need. Each turn updates the Schema Canvas in place.
+
+### Quick-start prompts
+
+When the chat is empty, the assistant offers a few one-click prompts you can send as-is or edit. They currently cover:
+
+- **E-commerce Platform** — products, categories, orders, customers, product reviews.
+- **Project Management SaaS** — workspaces, projects, tasks, milestones, team members.
+- **Subscription Billing API** — plans, subscriptions, invoices, payment methods, usage logs.
+- **Content Management (CMS)** — articles, authors, categories, media assets, publishing revisions.
+
+Use these as starting points, then iterate in chat.
+
+### Model selector
+
+A dropdown at the top of the chat panel lets you pick the model used for the next turn. The default (`qwen/qwen3.6-27b`) and `openai/gpt-oss-120b` currently produce the best schema designs; smaller models are faster but may return simpler results.
+
+Individual messages are limited to 2,000 characters. Longer inputs return a `400` error asking you to shorten the message.
+
+## Review the schema on the Schema Canvas
+
+Every proposed collection is rendered as a card on the canvas on the right:
+
+- Each row is one field with its type.
+- **Required** and **unique** flags are marked on the field.
+- `Ref` fields draw an edge to the referenced collection so you can see relationships at a glance.
+- `Object` and `Array` fields show their nested shape.
+
+You can pan and zoom the canvas to inspect large designs. The canvas updates whenever the agent returns a new schema in chat.
+
+## Create the collections
+
+When you're happy with the design, click **Insert All** above the Schema Canvas. urBackend asks you to confirm, then creates every collection in the design in a single bulk operation. When the call finishes:
+
+- Each collection is either marked as created or listed with the reason it failed (for example, a name that already exists in the project).
+- A toast summarizes how many collections were created and how many failed.
+- The chat session is cleared so you can start a fresh design.
+
+### Bulk creation limits
+
+The bulk-create endpoint enforces the following:
+
+- Maximum **20 collections per Insert All call**. Designs larger than 20 collections must be split across multiple sessions.
+- Your project's overall collection limit (from your plan) still applies. If Insert All would exceed it, the excess collections fail with `Collection limit reached`.
+- Duplicate names against collections that already exist in the project fail with `Collection already exists`. Other collections in the same batch still succeed.
+
+### The `users` collection is reserved
+
+The AI Collection Creator never creates a collection named `users`. It's stripped from the AI response before the schema reaches the canvas, and the bulk-create endpoint additionally rejects any collection named `users` with a `403`.
+
+The `users` collection has a fixed schema contract used by the auth system. Create it manually from the **Manual Builder** tab, where the dashboard pre-fills the required `email` and `password` fields. See [Collections & Schemas — The users collection](/concepts/collections-schemas#the-users-collection) and the [Authentication guide](/guides/authentication).
+
+## Session iteration limits
+
+A single AI Collection Creator session is capped at **20 iterations** (user + assistant turn pairs) when using the urBackend platform key. When you approach the limit, the composer shows a counter (`N of 20 AI turns used`). When you hit it, the composer is disabled and the next request returns:
+
+```
+403 Forbidden
+Session iteration limit reached (20/20). Add your Groq API key in Settings for unlimited usage.
+```
+
+Chat transcripts are cached for 2 hours. Clicking **Reset chat** in the canvas panel clears the transcript, resets the iteration counter, and starts a fresh session.
+
+### BYOK bypasses the iteration cap
+
+If you've configured a personal Groq API key at the developer or project level, the iteration cap **does not apply** — you can iterate as many turns as you like in a single session, subject only to Groq's own rate limits and billing on your key.
+
+BYOK also removes the platform-key monthly AI session cap that applies to other AI features. See [BYOK for AI](/guides/ai-byok) for how to configure a key.
+
+## Related
+
+- [Collections & Schemas](/concepts/collections-schemas) — field types, constraints, and the manual builder.
+- [BYOK for AI](/guides/ai-byok) — bring your own Groq key to bypass iteration and session caps.
+- [Authentication](/guides/authentication) — how the reserved `users` collection is used.
