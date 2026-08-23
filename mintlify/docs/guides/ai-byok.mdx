@@ -28,14 +28,18 @@ If a BYOK key is used, no urBackend-side session cap applies. Groq's own rate li
 
 ## Plan-tier behavior
 
-| Plan | Personal Groq key allowed? | Platform-key AI sessions per month |
-| :--- | :--- | :--- |
-| Free | Yes | 5 |
-| Pro | Yes | 20 |
+The AI Query Builder and the AI Collection Creator (Schema Design) each have their own monthly counter on the platform key:
 
-The monthly counter resets on the first of each calendar month (UTC).
+| Plan | Personal Groq key allowed? | Query Builder requests per month | Collection Creator schema designs per month |
+| :--- | :--- | :--- | :--- |
+| Free | Yes | 5 | 1 |
+| Pro | Yes | 20 | 5 |
 
-Once your plan's platform-key cap is reached, further AI requests return `403 Forbidden` until either the counter resets or you configure a BYOK key.
+Monthly counters reset on the first of each calendar month (UTC).
+
+Collection Creator chat sessions that use the platform key are also capped at **20 iterations per session**. BYOK requests are not subject to this per-session cap.
+
+Once your plan's platform-key cap (monthly or per-session) is reached, further AI requests return `403 Forbidden` until either the counter resets or you configure a BYOK key.
 
 ## Get a Groq API key
 

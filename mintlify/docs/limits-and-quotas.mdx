@@ -33,16 +33,27 @@ When your project approaches the database quota, writes may be rejected with `40
 
 ## AI session limits
 
-AI features (like the AI Query Builder) that use urBackend's platform Groq key are capped per account, per calendar month:
+AI features that use urBackend's platform Groq key are capped per account, per calendar month. The AI Query Builder and the AI Collection Creator (Schema Design) each have their own separate monthly counter.
 
-| Plan | AI sessions per month (platform key) |
+### AI Query Builder
+
+| Plan | Query Builder requests per month (platform key) |
 | :--- | :--- |
 | Free | 5 |
 | Pro | 20 |
 
-Requests beyond the monthly cap return `403 Forbidden` until the counter resets on the first of the next calendar month (UTC).
+### AI Collection Creator (Schema Design)
 
-To bypass this cap, configure a personal Groq API key at the developer or project level. Requests that resolve to a BYOK key are not counted against the platform cap. See [BYOK for AI](/guides/ai-byok).
+| Plan | Schema designs per month (platform key) |
+| :--- | :--- |
+| Free | 1 |
+| Pro | 5 |
+
+In addition to the monthly cap, each Collection Creator chat session using the platform key is limited to **20 iterations** (turns) before you must start a new session. This per-session cap protects platform resources against long, runaway conversations.
+
+Requests beyond either the monthly cap or the per-session iteration cap return `403 Forbidden`. Monthly counters reset on the first of the next calendar month (UTC).
+
+To bypass both the monthly cap and the per-session iteration cap, configure a personal Groq API key at the developer or project level. Requests that resolve to a BYOK key are not counted against any platform cap. See [BYOK for AI](/guides/ai-byok).
 
 ## HTTP status codes
 
