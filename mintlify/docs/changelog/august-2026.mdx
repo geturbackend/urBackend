@@ -3,6 +3,17 @@ title: August 2026
 description: What's new in urBackend — new features, improvements, and fixes.
 ---
 
+<Update label="2026-08-24" description="Week of 2026-08-18–2026-08-24" tags={["Improvement", "Fix"]}>
+## Improvements
+
+- **Refreshed AI Collection Creator model lineup** — The model dropdown now offers `qwen/qwen3.6-27b` (the new default), `openai/gpt-oss-120b`, and `openai/gpt-oss-20b`. The deprecated `llama-3.3-70b-versatile` and `llama-3.1-8b-instant` options have been removed. Existing sessions continue on the new default automatically. See [AI Collection Creator](/guides/ai-collection-creator). (by [@yash-pouranik](https://github.com/yash-pouranik) in [`d290968`](https://github.com/geturbackend/urbackend/commit/d290968e7cabd520333b4c4ccb2a9ff7b54e29ec))
+- **Clearer AI model error messages** — When the selected Groq model is unavailable or doesn't exist, the AI Collection Creator and AI Query Builder now return a friendly `400` prompting you to pick another model from the dropdown instead of a generic server error. (by [@yash-pouranik](https://github.com/yash-pouranik) in [`d8dd026`](https://github.com/geturbackend/urbackend/commit/d8dd02687f2069de1a0758bce75b595f312cc79e))
+
+## Bug fixes
+
+- **Required fields with defaults no longer break AI schemas** — When the AI Collection Creator produced a required field that also carried a default value, schema validation rejected the whole collection. The default is now silently dropped on required fields, so generated schemas insert cleanly. (by [@yash-pouranik](https://github.com/yash-pouranik) in [`980649e`](https://github.com/geturbackend/urbackend/commit/980649e98e7b61cb33a90db4221f47b13aa2dd22))
+</Update>
+
 <Update label="2026-08-17" description="Week of 2026-08-15–2026-08-17" tags={["Feature", "Improvement", "Fix"]}>
 ## New features
 
