@@ -92,7 +92,7 @@ export class StorageModule {
         contentType = file.type || contentType;
         fileSize = file.size;
         fileData = file;
-    } else if (file instanceof Blob) {
+    } else if (typeof Blob !== "undefined" && file instanceof Blob) {
         contentType = file.type || contentType;
         fileSize = file.size;
         fileData = file;
@@ -170,7 +170,7 @@ export class StorageModule {
     if (typeof File !== "undefined" && file instanceof File) {
         type = contentType || file.type || type;
         fileData = file;
-    } else if (file instanceof Blob) {
+    } else if (typeof Blob !== "undefined" && file instanceof Blob) {
         type = contentType || file.type || type;
         fileData = file;
     } else if (typeof Buffer !== "undefined" && Buffer.isBuffer(file)) {
