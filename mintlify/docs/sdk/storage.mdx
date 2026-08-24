@@ -52,6 +52,58 @@ console.log(provider); // 'internal'
 
 ---
 
+## Presigned URLs (Direct Client Uploads)
+
+To allow frontend users to upload files directly without passing them through your server, use the presigned URL flow.
+
+### 1. requestUploadUrl (Server)
+
+Generates a temporary upload URL. Requires your **secret key**.
+
+```typescript
+requestUploadUrl(filename: string, contentType: string, size: number): Promise<{ signedUrl: string, filePath: string }>
+```
+
+### 2. uploadToPresignedUrl (Client)
+
+A static helper to push the file to the generated URL from the frontend.
+
+```typescript
+import { StorageModule } from '@urbackend/sdk';
+
+StorageModule.uploadToPresignedUrl(file: File | Blob | Buffer, signedUrl: string): Promise<void>
+```
+
+### 3. confirmUpload (Server)
+
+Confirms the upload is complete and registers it in your storage quota.
+
+```typescript
+confirmUpload(filePath: string, size: number): Promise<UploadResponse>
+```
+
+**Full Example (React + Node.js):**
+
+```typescript
+// 1. Server: Generate link
+app.post('/api/upload-link', async (req, res) => {
+  const link = await urbackend.storage.requestUploadUrl('cat.png', 'image/png', 500000);
+  res.json(link);
+});
+
+// 2. Client (React): Upload directly
+const { signedUrl, filePath } = await fetch('/api/upload-link').then(r => r.json());
+await StorageModule.uploadToPresignedUrl(file, signedUrl);
+
+// 3. Server: Confirm
+app.post('/api/upload-confirm', async (req, res) => {
+  const result = await urbackend.storage.confirmUpload(req.body.filePath, 500000);
+  res.json(result);
+});
+```
+
+---
+
 ## deleteFile
 
 Delete a previously uploaded file by its storage path.
