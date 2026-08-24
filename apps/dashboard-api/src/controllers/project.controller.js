@@ -168,11 +168,7 @@ const sanitizeAuthProviders = (authProviders = {}) => {
 };
 
 const sanitizeProjectResponse = (projectObj) => {
-  if (projectObj.publishableKey && projectObj.publishableKey.startsWith('pk_live_')) {
-    // Keep plaintext public key
-  } else {
-    projectObj.publishableKey = 'pk_live_••••••••';
-  }
+  projectObj.publishableKey = 'pk_live_••••••••';
   delete projectObj.secretKey;
   delete projectObj.secretKeyEncrypted;
   delete projectObj.jwtSecret;

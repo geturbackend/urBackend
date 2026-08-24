@@ -372,7 +372,12 @@ function ProjectDetails() {
                                     <button onClick={() => handleRegenerateKey('publishable')} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: '0.7rem', cursor: 'pointer' }}>Roll</button>
                                 </div>
                                 <div style={{ display: 'flex', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
-                                    <input readOnly value={project.publishableKey} style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--color-primary)', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
+                                    <input readOnly value={project.publishableKey || 'pk_live_************************'} style={{ flex: 1, background: 'transparent', border: 'none', color: project.publishableKey?.includes('••••') ? '#666' : 'var(--color-primary)', padding: '8px 12px', fontFamily: 'monospace', fontSize: '0.8rem' }} />
+                                    {project.publishableKey?.includes('••••') && (
+                                        <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', alignSelf: 'center', paddingRight: '12px', whiteSpace: 'nowrap' }}>
+                                            Regenerate to reveal
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                             
