@@ -627,19 +627,36 @@ function EditCollection() {
                         overflow: 'hidden',
                         background: 'var(--color-bg-input)'
                     }}>
-                        {fields.map((field, index) => (
-                            <FieldRow
-                                key={field._id}
-                                field={field}
-                                index={index}
-                                depth={1}
-                                collections={collections}
-                                collectionsLoading={collectionsLoading}
-                                collectionsError={collectionsError}
-                                onChange={handleFieldChange}
-                                onRemove={removeField}
-                            />
-                        ))}
+                        {collectionsLoading ? (
+                            <div className="flex flex-col gap-0">
+                                {[1, 2, 3].map(i => (
+                                    <div key={i} className="flex items-center gap-3 p-2 px-3 border-b border-[var(--color-border)] opacity-60">
+                                        <div className="w-5 flex-shrink-0"></div>
+                                        <div className="flex-[3] h-9 bg-[var(--color-bg-card)] animate-pulse rounded"></div>
+                                        <div className="flex-[2] h-9 bg-[var(--color-bg-card)] animate-pulse rounded"></div>
+                                        <div className="flex-[3] flex items-center gap-2">
+                                            <div className="w-5 h-5 bg-[var(--color-bg-card)] animate-pulse rounded"></div>
+                                            <div className="w-16 h-4 bg-[var(--color-bg-card)] animate-pulse rounded"></div>
+                                        </div>
+                                        <div className="w-9 h-9 bg-[var(--color-bg-card)] animate-pulse rounded"></div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            fields.map((field, index) => (
+                                <FieldRow
+                                    key={field._id}
+                                    field={field}
+                                    index={index}
+                                    depth={1}
+                                    collections={collections}
+                                    collectionsLoading={collectionsLoading}
+                                    collectionsError={collectionsError}
+                                    onChange={handleFieldChange}
+                                    onRemove={removeField}
+                                />
+                            ))
+                        )}
                     </div>
 
                     <div style={{ marginTop: '10px', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
