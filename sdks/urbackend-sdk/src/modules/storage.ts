@@ -105,11 +105,7 @@ export class StorageModule {
     }
 
     // step 1 — ask server for a signed URL
-    const { signedUrl, filePath } = await this.client.request<{ signedUrl: string; filePath: string }>(
-        "POST",
-        "/api/storage/upload-request",
-        { body: { filename: resolvedName, contentType, size: fileSize } }
-    );
+    const { signedUrl, filePath } = await this.requestUploadUrl(resolvedName, contentType, fileSize);
 
     // step 2 — upload directly to cloud, server not involved
     const putResponse = await fetch(signedUrl, {
@@ -123,12 +119,77 @@ export class StorageModule {
     }
 
     // step 3 — tell server we're done so it can verify + update quota
+    return this.confirmUpload(filePath, fileSize);
+  }
+
+  /**
+   * Requests a pre-signed upload URL for direct-to-cloud client uploads.
+   * Useful when delegating uploads to a frontend client without exposing the secret key.
+   * 
+   * @param {string} filename - The name of the file
+   * @param {string} contentType - The MIME type of the file
+   * @param {number} size - The size of the file in bytes
+   * @returns {Promise<{ signedUrl: string; filePath: string; token?: string }>} The pre-signed URL and file path
+   */
+  public async requestUploadUrl(filename: string, contentType: string, size: number): Promise<{ signedUrl: string; filePath: string; token?: string }> {
+    return this.client.request<{ signedUrl: string; filePath: string; token?: string }>(
+        "POST",
+        "/api/storage/upload-request",
+        { body: { filename, contentType, size } }
+    );
+  }
+
+  /**
+   * Confirms a direct-to-cloud upload to finalize it and update quotas.
+   * 
+   * @param {string} filePath - The path returned by requestUploadUrl
+   * @param {number} size - The size of the uploaded file
+   * @returns {Promise<UploadResponse>} The upload confirmation details
+   */
+  public async confirmUpload(filePath: string, size: number): Promise<UploadResponse> {
     return this.client.request<UploadResponse>(
         "POST",
         "/api/storage/upload-confirm",
-        { body: { filePath, size: fileSize } }
+        { body: { filePath, size } }
     );
-}
+  }
+
+  /**
+   * Uploads a file directly to a pre-signed URL.
+   * Useful in client-side applications (like React) where the signed URL is provided by your secure backend.
+   * 
+   * @param {unknown} file - The file to upload (File, Blob, or Buffer)
+   * @param {string} signedUrl - The pre-signed URL obtained from your backend
+   * @param {string} [contentType] - The MIME type (optional, auto-detected from File/Blob)
+   * @returns {Promise<void>} Resolves when the upload completes successfully
+   */
+  public static async uploadToPresignedUrl(file: unknown, signedUrl: string, contentType?: string): Promise<void> {
+    let fileData: BodyInit;
+    let type = contentType || "application/octet-stream";
+
+    if (typeof File !== "undefined" && file instanceof File) {
+        type = contentType || file.type || type;
+        fileData = file;
+    } else if (file instanceof Blob) {
+        type = contentType || file.type || type;
+        fileData = file;
+    } else if (typeof Buffer !== "undefined" && Buffer.isBuffer(file)) {
+        fileData = file as unknown as BodyInit;
+    } else {
+        throw new Error("Unsupported file type. Pass a File, Blob, or Buffer.");
+    }
+
+    const putResponse = await fetch(signedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": type },
+        body: fileData,
+    });
+
+    if (!putResponse.ok) {
+        throw new Error(`Direct upload to cloud failed: ${putResponse.status} ${putResponse.statusText}`);
+    }
+  }
+
   /**
    * Deletes a file from storage by its path
    * 
