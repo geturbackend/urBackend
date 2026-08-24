@@ -6,11 +6,13 @@ const {
     getUserSessionsKey,
     getRefreshSession,
     persistRefreshSession,
-    revokeSessionChain
+    revokeSessionChain,
+    getUserActiveSessions
 } = require('@urbackend/common');
 
 const ACCESS_TOKEN_EXPIRES_IN = process.env.PUBLIC_AUTH_ACCESS_TOKEN_TTL || '15m';
 const REFRESH_TOKEN_TTL_SECONDS = Number(process.env.PUBLIC_AUTH_REFRESH_TOKEN_TTL_SECONDS || 7 * 24 * 60 * 60);
+const MAX_CONCURRENT_SESSIONS = Number(process.env.PUBLIC_AUTH_MAX_CONCURRENT_SESSIONS || 3);
 
 const getRefreshCookieOptions = () => ({
     httpOnly: true,
@@ -102,6 +104,23 @@ const saveRefreshSession = async ({ tokenId, rawToken, projectId, userId, rotate
     };
     await redis.set(getRefreshSessionKey(tokenId), JSON.stringify(session), 'EX', REFRESH_TOKEN_TTL_SECONDS);
     await redis.sadd(getUserSessionsKey(projectId, userId), tokenId);
+
+    // Enforce concurrent session limit for new logins
+    if (!rotatedFrom) {
+        try {
+            const activeSessions = await getUserActiveSessions(projectId, userId);
+            if (activeSessions.length > MAX_CONCURRENT_SESSIONS) {
+                // activeSessions is sorted newest first. Revoke everything beyond the limit.
+                const sessionsToRevoke = activeSessions.slice(MAX_CONCURRENT_SESSIONS);
+                for (const sess of sessionsToRevoke) {
+                    await revokeSessionChain(sess.tokenId);
+                }
+            }
+        } catch (err) {
+            console.error('[Session Limit] Failed to enforce max sessions:', err);
+        }
+    }
+
     return session;
 };
 
