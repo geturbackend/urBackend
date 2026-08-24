@@ -297,11 +297,11 @@ Join hundreds of developers building faster without the backend headaches.
 
 <a href="https://www.star-history.com/?repos=geturbackend%2Furbackend&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=geturbackend/urbackend&type=date&theme=dark&legend=bottom-right" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=geturbackend/urbackend&type=date&legend=bottom-right" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=geturbackend/urbackend&type=date&legend=bottom-right" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=geturbackend/urbackend&type=date&theme=dark&legend=top-left&sealed_token=VTbNJ1rS4Fq_k6YQoVaM2J0-P6RWGeAex7HyMG7Ee3xVgBKErBdMdCmuu9VghFfsK4jvoKpTme7EtLapuh_c6caqco1wSN9XYWButE0E5F9VvvOD8ZP_bQ" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=geturbackend/urbackend&type=date&legend=top-left&sealed_token=VTbNJ1rS4Fq_k6YQoVaM2J0-P6RWGeAex7HyMG7Ee3xVgBKErBdMdCmuu9VghFfsK4jvoKpTme7EtLapuh_c6caqco1wSN9XYWButE0E5F9VvvOD8ZP_bQ" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=geturbackend/urbackend&type=date&legend=top-left&sealed_token=VTbNJ1rS4Fq_k6YQoVaM2J0-P6RWGeAex7HyMG7Ee3xVgBKErBdMdCmuu9VghFfsK4jvoKpTme7EtLapuh_c6caqco1wSN9XYWButE0E5F9VvvOD8ZP_bQ" />
  </picture>
-</a>
+</a>s
 
 ---
 
