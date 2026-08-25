@@ -654,6 +654,10 @@ module.exports.sendMailSchema = z
       z.string().email("Invalid recipient email format"),
       z.array(z.string().email("Invalid recipient email format")).nonempty("Recipient list cannot be empty")
     ]),
+    replyTo: z.union([
+      z.string().email("Invalid replyTo email format"),
+      z.array(z.string().email("Invalid replyTo email format"))
+    ]).optional(),
 
     // Direct-send fields (backward compatible)
     subject: z.preprocess(
