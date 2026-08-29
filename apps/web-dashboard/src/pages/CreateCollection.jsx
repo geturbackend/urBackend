@@ -68,8 +68,9 @@ function CreateCollection() {
             setCollectionsError(null);
             try {
                 const res = await api.get(`/api/projects/${projectId}`);
-                if (res.data && res.data.data && Array.isArray(res.data.data.collections)) {
-                    setCollections(res.data.data.collections);
+                const projectData = res.data?.data || res.data;
+                if (projectData && Array.isArray(projectData.collections)) {
+                    setCollections(projectData.collections);
                 } else {
                     setCollections([]);
                 }
