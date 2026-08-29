@@ -86,13 +86,13 @@ module.exports.uploadFile = async (req, res, next) => {
             return next(new AppError(400, "No file uploaded."));
         }
 
-        if (file.size > MAX_FILE_SIZE) {
-            return next(new AppError(413, "File size exceeds limit."));
-        }
-
         const project = req.project;
         const external = isProjectStorageExternal(project);
         const bucket = getBucket(project);
+
+        if (!external && file.size > MAX_FILE_SIZE) {
+            return next(new AppError(413, `File size exceeds limit of ${MAX_FILE_SIZE / (1024 * 1024)}MB.`));
+        }
 
         // ATOMIC QUOTA RESERVATION
         if (!external) {
@@ -298,11 +298,12 @@ module.exports.requestUpload = async (req, res, next) => {
         if (!filename || !contentType || numericSize === null)
             return next(new AppError(400, "filename, contentType, and size are required."));
 
-        if (numericSize > MAX_FILE_SIZE)
-            return next(new AppError(413, "File size exceeds limit."));
-
         const project = req.project;
         const external = isProjectStorageExternal(project);
+
+        if (!external && numericSize > MAX_FILE_SIZE)
+            return next(new AppError(413, `File size exceeds limit of ${MAX_FILE_SIZE / (1024 * 1024)}MB.`));
+
         const effectiveLimit = getEffectiveStorageLimit(project, req);
 
         // just peek at quota — don't charge yet, upload hasn't happened

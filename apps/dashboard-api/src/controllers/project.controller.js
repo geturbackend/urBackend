@@ -1799,10 +1799,6 @@ module.exports.requestUpload = async (req, res, next) => {
       );
     }
 
-    if (numericSize > MAX_FILE_SIZE) {
-      return next(new AppError(413, "File size exceeds limit."));
-    }
-
     const project = await Project.findOne({
       _id: projectId,
       ...getProjectAccessQuery(req.user._id),
@@ -1813,6 +1809,10 @@ module.exports.requestUpload = async (req, res, next) => {
     if (!project) return next(new AppError(404, "Project not found"));
 
     const external = isProjectStorageExternal(project);
+
+    if (!external && numericSize > MAX_FILE_SIZE) {
+      return next(new AppError(413, `File size exceeds limit of ${MAX_FILE_SIZE / (1024 * 1024)}MB.`));
+    }
 
     if (!external) {
       const storageLimit =
