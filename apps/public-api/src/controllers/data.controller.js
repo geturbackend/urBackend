@@ -281,7 +281,7 @@ module.exports.getAllData = async (req, res, next) => {
 
     const total = await features.count();
     const parsedLimit = parseInt(req.query.limit, 10);
-    const limit = Math.max(1, Math.min(Number.isNaN(parsedLimit) ? 100 : parsedLimit, 100));
+    const limit = Math.max(1, Math.min(Number.isNaN(parsedLimit) ? 100 : parsedLimit, 1000));
 
     const useCursor = !!req.query.cursor;
     if (useCursor) {
