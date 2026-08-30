@@ -458,7 +458,7 @@ const payload = await response.json();`}</pre>
                             <CodeBlock
                                 method="GET"
                                 url="/api/data/posts"
-                                comment="Fetch all documents in the collection"
+                                comment="Fetch all documents in the collection (default limit 100, max 1000. Use ?limit=1000)"
                             />
                             <CodeBlock
                                 method="GET"

@@ -70,7 +70,7 @@ You can refine your `GET` requests using the following query parameters:
 | `populate` | `String` | `?populate=author,category` | Expand `Ref` fields into full objects. |
 | `expand` | `String` | `?expand=author` | Alias for `populate`. |
 | `sort` | `String` | `?sort=createdAt:desc` | Sort results by field and order. |
-| `limit` | `Number` | `?limit=25` | Number of documents to return (default: 100, max: 100). |
+| `limit` | `Number` | `?limit=25` | Number of documents to return (default: 100, max: 1000). |
 | `page` | `Number` | `?page=2` | 1-indexed page number for pagination. |
 
 ### Relational Data (Population) 🔗

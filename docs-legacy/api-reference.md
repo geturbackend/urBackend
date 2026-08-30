@@ -31,7 +31,7 @@
 | `populate` | `?populate=author` | Expand Reference fields into objects |
 | `expand` | `?expand=author` | Alias for `populate` |
 | `sort` | `?sort=field:asc` | Sort order (`asc`, `desc`, `1`, `-1`) |
-| `limit` | `?limit=50` | Limit results (default 100) |
+| `limit` | `?limit=50` | Limit results (default: 100, max: 1000) |
 | `page` | `?page=1` | Pagination page number |
 | `field_gt` | `?price_gt=100` | Greater than filter |
 | `field_gte` | `?age_gte=18` | Greater than or equal filter |
