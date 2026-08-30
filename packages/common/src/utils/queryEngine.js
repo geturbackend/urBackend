@@ -148,7 +148,7 @@ class QueryEngine {
 
     paginate() {
         const page = parseInt(this.queryString.page, 10) || 1;
-        const limit = Math.min(parseInt(this.queryString.limit, 10) || 100, 100);
+        const limit = Math.min(parseInt(this.queryString.limit, 10) || 100, 1000);
         const skip = (page - 1) * limit;
 
         this.query = this.query.skip(skip).limit(limit);
@@ -213,7 +213,7 @@ class QueryEngine {
      */
     cursorPaginate() {
         const cursor = this.queryString.cursor;
-        const limit = Math.min(parseInt(this.queryString.limit, 10) || 100, 100);
+        const limit = Math.min(parseInt(this.queryString.limit, 10) || 100, 1000);
 
         // If cursor provided, decode and use range filter
         if (cursor) {
