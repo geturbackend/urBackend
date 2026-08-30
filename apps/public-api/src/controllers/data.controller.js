@@ -383,7 +383,10 @@ module.exports.getSingleDoc = async (req, res, next) => {
       const fields = populateParam.split(',').map(f => f.trim()).filter(Boolean);
 
       fields.forEach(f => {
-        query = query.populate(f);
+        query = query.populate({
+          path: f,
+          match: includeDeleted ? {} : { isDeleted: { $ne: true } }
+        });
       });
     }
 

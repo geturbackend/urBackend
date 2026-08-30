@@ -159,10 +159,17 @@ class QueryEngine {
     populate() {
         const rawParam = this.queryString.populate || this.queryString.expand;
         if (!rawParam) return this;
+        
+        const includeDeleted = this.queryString.include_deleted === 'true';
+        const matchCond = includeDeleted ? {} : { isDeleted: { $ne: true } };
+
         const populateParam = Array.isArray(rawParam) ? rawParam.join(',') : String(rawParam);
         const fields = populateParam.split(',').map(f => f.trim()).filter(Boolean);
         fields.forEach(f => {
-            this.query = this.query.populate(f);
+            this.query = this.query.populate({
+                path: f,
+                match: matchCond
+            });
         });
         return this;
     }
