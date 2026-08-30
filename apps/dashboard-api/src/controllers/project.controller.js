@@ -1368,13 +1368,13 @@ module.exports.insertData = async (req, res) => {
     delete incomingData.isDeleted;
     delete incomingData.deletedAt;
 
-    let docSize = 0;
+    let estimatedDocSize = 0;
     if (!project.resources.db.isExternal) {
-      docSize = Buffer.byteLength(JSON.stringify(incomingData));
+      estimatedDocSize = Buffer.byteLength(JSON.stringify(incomingData));
 
       const limit = project.databaseLimit || 20 * 1024 * 1024;
 
-      if ((project.databaseUsed || 0) + docSize > limit) {
+      if ((project.databaseUsed || 0) + estimatedDocSize > limit) {
         return res
           .status(403)
           .json({ error: "Database limit exceeded. Delete some data." });
@@ -1392,7 +1392,8 @@ module.exports.insertData = async (req, res) => {
     const result = await model.create(incomingData);
 
     if (!project.resources.db.isExternal) {
-      project.databaseUsed = (project.databaseUsed || 0) + docSize;
+      const actualDocSize = mongoose.mongo.BSON.calculateObjectSize(result.toObject());
+      project.databaseUsed = (project.databaseUsed || 0) + actualDocSize;
     }
     await project.save();
 
@@ -1618,11 +1619,11 @@ module.exports.editRow = async (req, res) => {
     delete req.body.isDeleted;
     delete req.body.deletedAt;
 
-    const oldSize = Buffer.byteLength(JSON.stringify(docToEdit.toObject()));
+    const oldSize = mongoose.mongo.BSON.calculateObjectSize(docToEdit.toObject());
 
     docToEdit.set(req.body);
 
-    const newSize = Buffer.byteLength(JSON.stringify(docToEdit.toObject()));
+    const newSize = mongoose.mongo.BSON.calculateObjectSize(docToEdit.toObject());
     const sizeDiff = newSize - oldSize;
 
     if (!project.resources.db.isExternal) {

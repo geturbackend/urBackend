@@ -26,7 +26,11 @@ async function test() {
   
   const fetched = await features.query.lean();
   console.log("Fetched docs count:", fetched.length);
-  
-  process.exit(0);
 }
-test().catch(console.error);
+
+test()
+  .catch(err => {
+    console.error(err);
+    process.exitCode = 1;
+  })
+  .finally(() => mongoose.disconnect());

@@ -165,7 +165,14 @@ export default function Database() {
     try {
       await api.delete(`/api/projects/${projectId}/collections/${activeCollection.name}/data/${id}${isPermanent ? '?permanent=true' : ''}`);
       if (isPermanent || !showDeleted) {
-        setData(prev => prev.filter(item => item._id !== id));
+        setData(prev => {
+          const newData = prev.filter(item => item._id !== id);
+          if (newData.length === 0 && queryParams.page > 1) {
+            setQueryParams(q => ({ ...q, page: q.page - 1 }));
+          }
+          return newData;
+        });
+        setTotalRecords(prev => Math.max(0, prev - 1));
       } else {
         setData(prev => prev.map(item => item._id === id ? { ...item, isDeleted: true, deletedAt: new Date().toISOString() } : item));
       }

@@ -20,7 +20,11 @@ async function test() {
   
   const docs = await features.query.lean();
   console.log("Returned docs:", docs.map(d => ({ name: d.name, isDeleted: d.isDeleted })));
-  
-  process.exit(0);
 }
-test().catch(console.error);
+
+test()
+  .catch(err => {
+    console.error(err);
+    process.exitCode = 1;
+  })
+  .finally(() => mongoose.disconnect());
