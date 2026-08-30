@@ -33,6 +33,7 @@ export default function Database() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [isPermanentDelete, setIsPermanentDelete] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
   const [collectionToDelete, setCollectionToDelete] = useState(null);
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -160,11 +161,22 @@ export default function Database() {
     } catch { toast.error("Failed to save RLS"); return false; }
   };
 
-  const handleDeleteRecord = async (id) => {
+  const handleDeleteRecord = async (id, isPermanent) => {
     try {
-      await api.delete(`/api/projects/${projectId}/collections/${activeCollection.name}/data/${id}`);
-      setData(prev => prev.filter(item => item._id !== id));
-      toast.success("Document deleted");
+      await api.delete(`/api/projects/${projectId}/collections/${activeCollection.name}/data/${id}${isPermanent ? '?permanent=true' : ''}`);
+      if (isPermanent || !showDeleted) {
+        setData(prev => {
+          const newData = prev.filter(item => item._id !== id);
+          if (newData.length === 0 && queryParams.page > 1) {
+            setQueryParams(q => ({ ...q, page: q.page - 1 }));
+          }
+          return newData;
+        });
+        setTotalRecords(prev => Math.max(0, prev - 1));
+      } else {
+        setData(prev => prev.map(item => item._id === id ? { ...item, isDeleted: true, deletedAt: new Date().toISOString() } : item));
+      }
+      toast.success(isPermanent ? "Document permanently deleted" : "Document deleted");
     } catch { toast.error("Failed to delete document"); }
   };
 
@@ -371,7 +383,7 @@ export default function Database() {
                   <CollectionTable 
                     data={data} 
                     activeCollection={activeCollection} 
-                    onDelete={(id) => { setSelectedId(id); setShowModal(true); }} 
+                    onDelete={(id, isPermanent) => { setSelectedId(id); setIsPermanentDelete(isPermanent); setShowModal(true); }} 
                     onView={setSelectedRecord} 
                     onEdit={(rec) => { if (activeCollection?.name === 'users') return; setEditingRecord(rec); setIsAddModalOpen(true); }} 
                     onRecover={handleRecoverRecord}
@@ -446,7 +458,7 @@ export default function Database() {
       )}
 
       {/* Confirmation Modals */}
-      {showModal && <ConfirmationModal open={showModal} title="Delete Record" message="Confirm delete?" onConfirm={() => { handleDeleteRecord(selectedId); setShowModal(false); }} onCancel={() => setShowModal(false)} />}
+      {showModal && <ConfirmationModal open={showModal} title={isPermanentDelete ? "Permanently Delete Record" : "Delete Record"} message={isPermanentDelete ? "This action cannot be undone. Confirm permanent delete?" : "Confirm delete?"} onConfirm={() => { handleDeleteRecord(selectedId, isPermanentDelete); setShowModal(false); }} onCancel={() => setShowModal(false)} />}
       {collectionToDelete && <ConfirmationModal open={!!collectionToDelete} title="Delete Collection" message={`Delete ${collectionToDelete.name}?`} onConfirm={async () => { await api.delete(`/api/projects/${projectId}/collections/${collectionToDelete.name}`); setCollections(c => c.filter(x => x.name !== collectionToDelete.name)); setCollectionToDelete(null); }} onCancel={() => setCollectionToDelete(null)} />}
 
       {/* RLS Dialog */}

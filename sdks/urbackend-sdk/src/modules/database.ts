@@ -371,17 +371,29 @@ export class DatabaseModule {
    *   console.log('User deleted');
    * }
    */
-  public async delete(collection: string, id: string, token?: string): Promise<{ deleted: boolean }> {
+  public async delete(collection: string, id: string, optionsOrToken?: { token?: string, permanent?: boolean } | string): Promise<{ deleted: boolean }> {
+    let token: string | undefined;
+    let permanent = false;
+    
+    if (typeof optionsOrToken === 'string') {
+      token = optionsOrToken;
+    } else if (optionsOrToken) {
+      token = optionsOrToken.token;
+      permanent = !!optionsOrToken.permanent;
+    }
+
+    const qs = permanent ? '?permanent=true' : '';
+
     const result = await this.client.request<{ message?: string; id?: string } | null>(
       'DELETE',
-      `/api/data/${collection}/${id}`,
+      `/api/data/${collection}/${id}${qs}`,
       { token },
     );
 
     const deleted =
       typeof result === 'object' &&
       result !== null &&
-      (result.id === id || result.message === 'Document deleted');
+      (result.id === id || result.message === 'Document deleted' || result.message === 'Document permanently deleted');
 
     return { deleted };
   }
