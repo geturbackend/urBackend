@@ -1443,30 +1443,55 @@ module.exports.deleteRow = async (req, res, next) => {
       project.resources.db.isExternal,
     );
 
-    const result = await Model.findOneAndUpdate(
-      { _id: id, isDeleted: { $ne: true } },
-      {
-        $set: {
-          isDeleted: true,
-          deletedAt: new Date()
-        }
-      },
-      { new: false }
-    ).lean();
+    const isPermanent = req.query.permanent === 'true';
+
+    let result;
+    if (isPermanent) {
+      result = await Model.findOneAndDelete({ _id: id }).lean();
+    } else {
+      result = await Model.findOneAndUpdate(
+        { _id: id, isDeleted: { $ne: true } },
+        {
+          $set: {
+            isDeleted: true,
+            deletedAt: new Date()
+          }
+        },
+        { new: false }
+      ).lean();
+    }
 
     if (!result) {
       return next(new AppError(404, "Document not found."));
     }
 
-    // We don't decrement databaseUsed here because the document still occupies space.
-    // It will be decremented during hard delete in the background worker.
-    try {
-      await enqueueCollectionCleanup(projectId, collectionName);
-    } catch (err) {
-      console.error("Failed to enqueue trash cleanup job", { projectId, collectionName, err });
+    if (isPermanent) {
+      if (!project.resources.db.isExternal) {
+        try {
+          const docSize = mongoose.mongo.BSON.calculateObjectSize(result);
+          await Project.updateOne(
+            { _id: project._id },
+            { $inc: { databaseUsed: -docSize } }
+          );
+        } catch (sizeErr) {
+          console.warn("Failed to calculate document size on permanent delete", sizeErr);
+        }
+      }
+    } else {
+      // We don't decrement databaseUsed here because the document still occupies space.
+      // It will be decremented during hard delete in the background worker.
+      try {
+        await enqueueCollectionCleanup(projectId, collectionName);
+      } catch (err) {
+        console.error("Failed to enqueue trash cleanup job", { projectId, collectionName, err });
+      }
     }
 
-    res.json({ success: true, data: { id: result._id }, message: "Document moved to trash" });
+    res.json({ 
+      success: true, 
+      data: { id: result._id }, 
+      message: isPermanent ? "Document permanently deleted" : "Document moved to trash" 
+    });
   } catch (err) {
     console.error("Delete Error:", err);
     next(new AppError(500, "Failed to delete document"));

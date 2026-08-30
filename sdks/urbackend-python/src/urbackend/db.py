@@ -419,6 +419,7 @@ class DatabaseModule:
         collection: str,
         doc_id: str,
         token: Optional[str] = None,
+        permanent: bool = False,
     ) -> Dict[str, bool]:
         """Delete a document by its ``_id``.
 
@@ -426,6 +427,7 @@ class DatabaseModule:
             collection: Collection name.
             doc_id: MongoDB ObjectId string of the document to delete.
             token: Bearer token for RLS ownership check.
+            permanent: True to permanently delete instead of soft-deleting.
 
         Returns:
             ``{"deleted": True}``
@@ -435,12 +437,14 @@ class DatabaseModule:
 
         Example:
             >>> result = client.db.delete("posts", post_id,
-            ...                           token=client.auth.get_token())
+            ...                           token=client.auth.get_token(),
+            ...                           permanent=True)
             >>> assert result["deleted"] is True
         """
         # http.request raises on non-2xx, so reaching this point means the
         # delete succeeded.
+        query = "?permanent=true" if permanent else ""
         self._http.request(
-            "DELETE", f"/api/data/{collection}/{doc_id}", token=token
+            "DELETE", f"/api/data/{collection}/{doc_id}{query}", token=token
         )
         return {"deleted": True}

@@ -226,21 +226,33 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                             </button>
                             {activeCollection?.name !== 'users' && !isViewer && (
                                 (record.isDeleted || recoveringIds.has(record._id)) ? (
-                                    <button
-                                        className={`btn-icon ${recoveringIds.has(record._id) ? 'loading' : ''}`}
-                                        onClick={() => onRecover(record._id)}
-                                        onPointerDown={e => e.stopPropagation()}
-                                        aria-label={`Restore record ${record._id}`}
-                                        disabled={recoveringIds.has(record._id)}
-                                        title={getDeletionTooltip(record.deletedAt, now)}
-                                        style={{ width: '22px', height: '22px', padding: 0 }}
-                                    >
-                                        {recoveringIds.has(record._id) ? (
-                                            <div className="spinner-small" style={{ width: '11px', height: '11px' }}></div>
-                                        ) : (
-                                            <RotateCcw size={12} color="var(--color-primary)" />
-                                        )}
-                                    </button>
+                                    <>
+                                        <button
+                                            className={`btn-icon ${recoveringIds.has(record._id) ? 'loading' : ''}`}
+                                            onClick={() => onRecover(record._id)}
+                                            onPointerDown={e => e.stopPropagation()}
+                                            aria-label={`Restore record ${record._id}`}
+                                            disabled={recoveringIds.has(record._id)}
+                                            title={getDeletionTooltip(record.deletedAt, now)}
+                                            style={{ width: '22px', height: '22px', padding: 0 }}
+                                        >
+                                            {recoveringIds.has(record._id) ? (
+                                                <div className="spinner-small" style={{ width: '11px', height: '11px' }}></div>
+                                            ) : (
+                                                <RotateCcw size={12} color="var(--color-primary)" />
+                                            )}
+                                        </button>
+                                        <button
+                                            className="btn-icon danger-hover"
+                                            onClick={() => onDelete(record._id, true)}
+                                            onPointerDown={e => e.stopPropagation()}
+                                            aria-label="Permanently Delete Record"
+                                            title="Permanently Delete"
+                                            style={{ width: '22px', height: '22px', padding: 0 }}
+                                        >
+                                            <Trash2 size={12} color="var(--color-danger)" />
+                                        </button>
+                                    </>
                                 ) : (
                                     <>
                                         <button
@@ -255,7 +267,7 @@ export default function CollectionTable({ data, activeCollection, onDelete, onVi
                                         </button>
                                         <button
                                             className="btn-icon danger-hover"
-                                            onClick={() => onDelete(record._id)}
+                                            onClick={() => onDelete(record._id, false)}
                                             onPointerDown={e => e.stopPropagation()}
                                             aria-label="Delete Record"
                                             title="Delete"
