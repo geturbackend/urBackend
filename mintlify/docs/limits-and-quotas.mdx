@@ -18,16 +18,17 @@ Requests that exceed the limit receive a `429 Too Many Requests` response. Desig
 
 | Resource | Limit |
 | :--- | :--- |
-| File upload size | 10 MB per file |
+| File upload size | 10 MB per file (urBackend-hosted storage only) |
 | Storage quota per project | 20 MB |
 
-Files that exceed the limit return `413 Payload Too Large`.
+Files that exceed the limit return `413 Payload Too Large`. Projects connected to external (bring-your-own) storage are not subject to the 10 MB per-file limit.
 
 ## Database limits
 
 | Resource | Limit |
 | :--- | :--- |
 | Database size per project | 20 MB |
+| Documents per read request (`limit`) | 100 by default, up to 1000 |
 
 When your project approaches the database quota, writes may be rejected with `403 Forbidden`. Monitor your usage in the Dashboard.
 

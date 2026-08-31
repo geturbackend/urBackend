@@ -36,7 +36,7 @@ getAll<T extends DocumentData>(collection: string, params?: QueryParams, token?:
 |---|---|---|
 | `filter` | `object` | Filter by field suffixes (e.g. `{ age_gt: 18 }`). |
 | `sort` | `string` | Sort order (e.g. `"createdAt:desc"`). |
-| `limit` | `number` | Max documents to return (max 100). |
+| `limit` | `number` | Max documents to return (default 100, max 1000). |
 | `page` | `number` | Page number for pagination. |
 | `populate` | `string \| string[]` | Expand Reference fields into full objects. |
 

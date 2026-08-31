@@ -3,6 +3,27 @@ title: August 2026
 description: What's new in urBackend — new features, improvements, and fixes.
 ---
 
+<Update label="2026-08-31" description="Week of 2026-08-25–2026-08-31" tags={["Feature", "Improvement", "Fix"]}>
+## New features
+
+- **Permanently delete documents** — The Database page trash view now has a permanent delete button next to restore. After a confirmation prompt, the document is removed immediately (no 30-day wait) and your database quota is reclaimed right away. See [Permanent deletion](/guides/database#permanent-deletion). (by [@yash-pouranik](https://github.com/yash-pouranik) in [#403](https://github.com/geturbackend/urbackend/pull/403))
+- **Granular presigned upload methods in the SDK** — `@urbackend/sdk` `0.4.8` exposes `storage.requestUploadUrl()` and `storage.confirmUpload()`, plus a static `uploadToPresignedUrl()` helper, so you can generate a signed URL on your server and let a browser client upload directly to cloud storage without exposing your secret key. See [Storage SDK](/sdk/storage). (by [@yash-pouranik](https://github.com/yash-pouranik) in [#401](https://github.com/geturbackend/urbackend/pull/401))
+
+## Improvements
+
+- **Data fetch limit raised to 1000** — The `limit` query parameter on data reads now accepts up to `1000` documents per request, up from `100`. The default stays `100`. See [Limits and quotas](/limits-and-quotas). (by [@yash-pouranik](https://github.com/yash-pouranik) in [`9895b5d`](https://github.com/geturbackend/urbackend/commit/9895b5d88107912450a4a1534382fddbd98d1433) and [`759b694`](https://github.com/geturbackend/urbackend/commit/759b694d45494e0398af180775942d07c35f0dd7))
+- **No 10 MB cap for bring-your-own storage** — Uploads to projects connected to external (BYOD) storage no longer hit the 10 MB per-file limit. The limit still applies to urBackend-hosted storage, and the `413` error message now states the exact cap. See [Storage limits](/limits-and-quotas#storage-limits). (by [@yash-pouranik](https://github.com/yash-pouranik) in [`6e68950`](https://github.com/geturbackend/urbackend/commit/6e689509df63cdb45c7d986c601b459f0cfe5267))
+- **More accurate database usage tracking** — Inserts, edits, and permanent deletes now measure actual BSON document size when updating your `databaseUsed` quota, so reported usage matches what's stored. (by [@yash-pouranik](https://github.com/yash-pouranik) in [#403](https://github.com/geturbackend/urbackend/pull/403))
+- **Publishable key masked by default** — The dashboard now masks your `pk_live` publishable key in API responses and in the UI until you reveal it. (by [@yash-pouranik](https://github.com/yash-pouranik) in [`282e8d2`](https://github.com/geturbackend/urbackend/commit/282e8d2572e5ef9cf9592135f1c6e806b436424b))
+
+## Bug fixes
+
+- **Soft-deleted documents excluded from populated refs** — Reads that populate `Ref` fields no longer return trashed documents unless you pass `include_deleted=true`. (by [@yash-pouranik](https://github.com/yash-pouranik) in [`54d34ee`](https://github.com/geturbackend/urbackend/commit/54d34eefda3e61b928ddcca0b085d2118a4e36fc))
+- **Create Collection showed empty collections** — Fixed a missing response wrapper that made collections appear empty on the Create Collection page. (by [@yash-pouranik](https://github.com/yash-pouranik) in [`54612b1`](https://github.com/geturbackend/urbackend/commit/54612b10351a92314452c7311f2f11f6b9aca80f))
+- **Edit Collection loads safely** — The Edit Collection form now shows a loading skeleton while data loads, preventing edits from being saved against stale state. (by [@yash-pouranik](https://github.com/yash-pouranik) in [`86aadcd`](https://github.com/geturbackend/urbackend/commit/86aadcda776fb29c4f07529fb265e4bbe1137d91))
+- **SDK works without `Blob`** — `@urbackend/sdk` `0.4.8` guards `Blob instanceof` checks so storage uploads work in runtimes where `Blob` is undefined. (by [@yash-pouranik](https://github.com/yash-pouranik) in [#401](https://github.com/geturbackend/urbackend/pull/401))
+</Update>
+
 <Update label="2026-08-24" description="Week of 2026-08-18–2026-08-24" tags={["Improvement", "Fix"]}>
 ## Improvements
 
