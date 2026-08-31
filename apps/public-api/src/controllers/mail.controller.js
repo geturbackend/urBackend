@@ -137,6 +137,7 @@ module.exports.sendMail = async (req, res, next) => {
 
     const {
       to,
+      replyTo,
       subject,
       html,
       text,
@@ -295,6 +296,7 @@ module.exports.sendMail = async (req, res, next) => {
       to,
       subject: resolvedSubject,
     };
+    if (replyTo) payload.reply_to = replyTo;
     if (typeof resolvedHtml === "string" && resolvedHtml.trim()) payload.html = resolvedHtml;
     if (typeof resolvedText === "string" && resolvedText.trim()) payload.text = resolvedText;
 
@@ -484,12 +486,13 @@ module.exports.handleResendWebhook = async (req, res, next) => {
 // POST /api/mail/send-batch
 const sendBatchSchema = z.array(
   z.object({
-    to: z.union([z.string(), z.array(z.string())]),
-    subject: z.string().min(1, "Subject is required"),
+    to: z.union([z.string().email(), z.array(z.string().email()).nonempty()]),
+    replyTo: z.union([z.string().email(), z.array(z.string().email())]).optional(),
+    subject: z.string().min(1),
     html: z.string().optional(),
     text: z.string().optional()
-  })
-).min(1).max(100);
+  }).refine(data => data.html || data.text, { message: "Provide html or text" })
+).min(1, "Batch cannot be empty").max(100, "Max 100 emails per batch");
 
 module.exports.sendBatchMail = async (req, res, next) => {
   const reservedKeys = [];
@@ -515,6 +518,7 @@ module.exports.sendBatchMail = async (req, res, next) => {
     const resendPayloads = batch.map(item => ({
       from: fromAddress,
       to: Array.isArray(item.to) ? item.to : [item.to],
+      ...(item.replyTo ? { reply_to: Array.isArray(item.replyTo) ? item.replyTo : [item.replyTo] } : {}),
       subject: item.subject,
       ...(item.html ? { html: item.html } : {}),
       ...(item.text ? { text: item.text } : {})
