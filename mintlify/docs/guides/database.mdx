@@ -96,7 +96,7 @@ Use query parameters to filter, sort, and paginate results.
 | Parameter | Description | Example |
 | --- | --- | --- |
 | `page` | Page number (1-indexed) | `?page=2` |
-| `limit` | Results per page | `?limit=20` |
+| `limit` | Results per page (default `100`, max `1000`) | `?limit=20` |
 | `sort` | Field to sort by, prefix `-` for descending | `?sort=-createdAt` |
 | `field_suffix` | Filter by field value (see below) | `?age_gt=18` |
 
@@ -172,9 +172,14 @@ When you delete a document using `DELETE /api/data/:collectionName/:id`, your ba
 - Documents enter a **30-day grace period** before permanent deletion.
 - You can view trashed documents by appending the `include_deleted=true` query parameter to your read or aggregation requests.
 - A background BullMQ cleanup worker automatically hard-deletes expired documents after 30 days.
+- Populated `Ref` fields exclude soft-deleted documents unless you pass `include_deleted=true`.
+
+### Permanent deletion
+
+You can skip the grace period from the dashboard. On the **Database** page, enable the trash view, then click the delete icon on a trashed document. urBackend asks for confirmation, removes the document immediately, and reclaims its `databaseUsed` quota right away.
 
 <Note>
-  Your `databaseUsed` quota is only reclaimed after the 30-day period when the cleanup worker permanently deletes the expired documents.
+  For soft-deleted documents, your `databaseUsed` quota is only reclaimed after the 30-day period when the cleanup worker permanently deletes the expired documents. Permanent deletion reclaims quota immediately.
 </Note>
 
 ```bash

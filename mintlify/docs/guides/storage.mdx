@@ -50,7 +50,7 @@ Uploads use a presigned URL three-step flow so the binary is sent directly to st
 | `filePath` | Opaque storage path (format: `projectId/uuid_sanitizedFilename`) — save this to confirm or delete the file later |
 
 <Note>
-  This endpoint enforces the 10 MB max file size and checks available headroom against your plan's project storage quota before the upload is confirmed. On the free tier, the default project storage limit is 20 MB.
+  This endpoint enforces the 10 MB max file size and checks available headroom against your plan's project storage quota before the upload is confirmed. On the free tier, the default project storage limit is 20 MB. If your project uses external (bring-your-own) storage, the 10 MB per-file cap and project quota checks do not apply.
 </Note>
 
 ### Step 2 — Upload the binary to storage
@@ -228,8 +228,10 @@ If the path is invalid or the file has already been removed, the API returns `40
 
 | Limit | Value |
 | --- | --- |
-| Maximum file size | 10 MB per file |
+| Maximum file size | 10 MB per file (urBackend-hosted storage only) |
 | Total storage per project | 20 MB (free tier; higher limits on paid plans) |
+
+Projects connected to external (bring-your-own) storage are not subject to the 10 MB per-file limit.
 
 ## Troubleshooting
 

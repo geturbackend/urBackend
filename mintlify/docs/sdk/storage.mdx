@@ -124,9 +124,9 @@ deleteFile(path: string): Promise<{ deleted: boolean }>
 
 | Limit | Value |
 |---|---|
-| Max file size | 10 MB per file |
+| Max file size | 10 MB per file (urBackend-hosted storage only) |
 | Total storage per project | 20 MB (Free Tier) |
 
 <Note>
-Uploads that exceed 10 MB are rejected with a `StorageError`. 
+Uploads that exceed 10 MB are rejected with a `StorageError`. Projects connected to external (bring-your-own) storage are not subject to the 10 MB per-file limit. 
 </Note>
