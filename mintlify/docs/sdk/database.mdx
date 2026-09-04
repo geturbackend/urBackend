@@ -122,10 +122,32 @@ await client.db.patch('products', 'id_123', { price: 45 });
 
 ## delete
 
-Delete a document by its ID.
+Delete a document by its ID. By default the document is soft deleted and moved to the trash, where it stays recoverable for 30 days. Pass `permanent: true` to delete it immediately and reclaim its storage quota right away. Permanent deletion cannot be undone.
 
 ```typescript
-delete(collection: string, id: string, token?: string): Promise<{ deleted: boolean }>
+delete(collection: string, id: string, options?: { token?: string, permanent?: boolean } | string): Promise<{ deleted: boolean }>
+```
+
+**Options**
+
+| Option | Type | Description |
+|---|---|---|
+| `token` | `string` | Bearer token for the RLS ownership check. |
+| `permanent` | `boolean` | When `true`, permanently deletes the document instead of moving it to the trash. Defaults to `false`. |
+
+Passing a token string as the third argument is still supported for backward compatibility: `delete('posts', id, accessToken)`.
+
+**Example**
+
+```typescript
+// Soft delete (moves to trash, recoverable for 30 days)
+await client.db.delete('posts', 'id_123');
+
+// Permanent delete with an RLS token
+await client.db.delete('posts', 'id_123', {
+  token: accessToken,
+  permanent: true
+});
 ```
 
 ---
