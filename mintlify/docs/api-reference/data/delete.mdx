@@ -1,11 +1,13 @@
 ---
 title: "Delete Document"
-description: "Soft delete a document from a collection by its ID. Moves it to the trash."
+description: "Delete a document from a collection by its ID. Soft deletes to the trash by default, or permanently with permanent=true."
 ---
 
 ## DELETE `/api/data/:collectionName/:id`
 
 Moves the document with the given ID to the trash by setting `isDeleted: true` and recording the `deletedAt` timestamp. The document remains recoverable for a **30-day grace period**, after which it is permanently deleted by a background cleanup worker. See the [Database Guide](/guides/database#soft-delete-trash) for more details.
+
+Pass `permanent=true` to skip the trash and remove the document immediately. Permanent deletion cannot be undone.
 
 ### Required header
 
@@ -19,6 +21,12 @@ Moves the document with the given ID to the trash by setting `isDeleted: true` a
 
 <ParamField path="id" type="string" required>
   The MongoDB ObjectId string of the document to delete.
+</ParamField>
+
+### Query parameters
+
+<ParamField query="permanent" type="boolean" default="false">
+  When `true`, deletes the document immediately instead of moving it to the trash. The document cannot be recovered, and its size is subtracted from your `databaseUsed` quota right away. When omitted or `false`, the document is soft deleted and quota is only reclaimed after the 30-day cleanup.
 </ParamField>
 
 ### RLS ownership check
@@ -36,7 +44,7 @@ When using `pk_live` with RLS enabled, urBackend compares the existing document'
 </ResponseField>
 
 <ResponseField name="message" type="string">
-  Human-readable confirmation message.
+  Human-readable confirmation message. `"Document moved to trash"` for soft deletes, `"Document permanently deleted"` when `permanent=true`.
 </ResponseField>
 
 ### Code examples
@@ -79,6 +87,11 @@ curl -X DELETE "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef90123
   -H "x-api-key: sk_live_YOUR_SECRET_KEY"
 ```
 
+```bash curl (permanent)
+curl -X DELETE "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234?permanent=true" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY"
+```
+
 </CodeGroup>
 
 ### Success response
@@ -92,6 +105,8 @@ curl -X DELETE "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef90123
   "message": "Document moved to trash"
 }
 ```
+
+With `permanent=true`, the message is `"Document permanently deleted"` instead.
 
 ### Errors
 
