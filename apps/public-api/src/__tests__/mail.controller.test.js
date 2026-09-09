@@ -88,7 +88,7 @@ jest.mock('@urbackend/common', () => {
     };
 });
 
-const { Project, decrypt, redis, publicEmailQueue, MailTemplate, MailLog, AppError } = require('@urbackend/common');
+const { Project, decrypt, redis, publicEmailQueue, MailTemplate, MailLog, AppError, sendMailSchema } = require('@urbackend/common');
 const mailController = require('../controllers/mail.controller');
 const originalResendApiKey2 = process.env.RESEND_API_KEY_2;
 
@@ -190,6 +190,23 @@ describe('mail.controller', () => {
             attempts: 3,
             backoff: expect.objectContaining({ type: 'exponential', delay: 5000 })
         }));
+    });
+
+    test('queues replyTo using the Resend payload field', async () => {
+        const req = makeReq();
+        req.body.replyTo = 'replies@example.com';
+        const res = makeRes();
+
+        mockProjectConfig({ _id: 'proj_1', resendApiKey: null });
+        decrypt.mockReturnValue(null);
+        redis.eval.mockResolvedValue(1);
+
+        await mailController.sendMail(req, res, next);
+
+        expect(publicEmailQueue.add).toHaveBeenCalledWith('send-public-email', expect.objectContaining({
+            payload: expect.objectContaining({ replyTo: 'replies@example.com' })
+        }), expect.any(Object));
+        expect(publicEmailQueue.add.mock.calls[0][1].payload.reply_to).toBeUndefined();
     });
 
     test('enforces monthly limit', async () => {
@@ -500,6 +517,52 @@ describe('mail.controller', () => {
         expect(redis.decr).toHaveBeenCalledWith(expect.stringContaining('project:mail:count:proj_1:'));
         expect(next).toHaveBeenCalledWith(expect.any(AppError));
         expect(next.mock.calls[0][0].statusCode).toBe(503);
+    });
+
+    test('uses Resend replyTo field for batch messages', async () => {
+        const req = makeReq();
+        req.body = [{
+            to: 'u@example.com',
+            replyTo: 'replies@example.com',
+            subject: 'Batch',
+            text: 'Hello'
+        }];
+        const res = makeRes();
+
+        mockProjectConfig({ _id: 'proj_1', resendApiKey: null });
+        decrypt.mockReturnValue(null);
+        redis.eval.mockResolvedValue(1);
+        mockResendClient.batch.send.mockResolvedValue({ data: [{ id: 're_123' }], error: null });
+
+        await mailController.sendBatchMail(req, res, next);
+
+        expect(mockResendClient.batch.send).toHaveBeenCalledWith([
+            expect.objectContaining({ replyTo: ['replies@example.com'] })
+        ]);
+        expect(mockResendClient.batch.send.mock.calls[0][0][0].reply_to).toBeUndefined();
+    });
+
+    test.each([
+        [{ to: 'u@example.com', subject: '   ', text: 'Hello' }],
+        [{ to: 'u@example.com', subject: 'Batch', html: '   ', text: '\n\t' }],
+        [{ to: 'u@example.com', replyTo: [], subject: 'Batch', text: 'Hello' }],
+    ])('rejects invalid batch mail payload %o', async (body) => {
+        const req = makeReq();
+        req.body = body;
+
+        await mailController.sendBatchMail(req, makeRes(), next);
+
+        expect(next).toHaveBeenCalledWith(expect.any(AppError));
+        expect(next.mock.calls[0][0].statusCode).toBe(400);
+    });
+
+    test('rejects an empty replyTo list for single-message mail', () => {
+        expect(() => sendMailSchema.parse({
+            to: 'u@example.com',
+            replyTo: [],
+            subject: 'Hello',
+            text: 'Message'
+        })).toThrow('Reply-to list cannot be empty');
     });
 
     test('enforces BYOK gate for audience creation', async () => {

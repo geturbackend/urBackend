@@ -656,7 +656,7 @@ module.exports.sendMailSchema = z
     ]),
     replyTo: z.union([
       z.string().email("Invalid replyTo email format"),
-      z.array(z.string().email("Invalid replyTo email format"))
+      z.array(z.string().email("Invalid replyTo email format")).nonempty("Reply-to list cannot be empty")
     ]).optional(),
 
     // Direct-send fields (backward compatible)
