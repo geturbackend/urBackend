@@ -167,7 +167,13 @@ const res = await fetch(`https://api.ub.bitbros.in/api/data/posts/${postId}`, {
 
 ## Soft delete and trash
 
-When you delete a document using `DELETE /api/data/:collectionName/:id`, your backend moves it to the trash instead of removing it immediately. 
+When you delete a document using `DELETE /api/data/:collectionName/:id`, your backend moves it to the trash instead of removing it immediately.
+
+```bash
+curl -X DELETE "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234" \
+  -H "x-api-key: sk_live_YOUR_KEY"
+```
+
 
 - Documents enter a **30-day grace period** before permanent deletion.
 - You can view trashed documents by appending the `include_deleted=true` query parameter to your read or aggregation requests.
@@ -176,16 +182,43 @@ When you delete a document using `DELETE /api/data/:collectionName/:id`, your ba
 
 ### Permanent deletion
 
-You can skip the grace period from the dashboard. On the **Database** page, enable the trash view, then click the delete icon on a trashed document. urBackend asks for confirmation, removes the document immediately, and reclaims its `databaseUsed` quota right away.
+You can skip the grace period from the dashboard, the REST API, or the SDKs. Permanent deletion removes the document immediately and cannot be undone.
+
+**Dashboard:** on the **Database** page, enable the trash view, then click the delete icon on a trashed document. urBackend asks for confirmation, removes the document immediately, and reclaims its `databaseUsed` quota right away.
+
+**REST API:** append the `permanent=true` query parameter to the delete endpoint. urBackend responds with the message `"Document permanently deleted"` instead of `"Document moved to trash"`.
+
+<CodeGroup>
+
+```bash curl
+curl -X DELETE "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234?permanent=true" \
+  -H "x-api-key: sk_live_YOUR_KEY"
+```
+
+```typescript TypeScript SDK
+await client.db.delete('posts', postId, { permanent: true });
+
+// With an RLS token
+await client.db.delete('posts', postId, {
+  token: accessToken,
+  permanent: true
+});
+```
+
+```python Python SDK
+client.db.delete("posts", post_id, permanent=True)
+
+# With an RLS token
+client.db.delete("posts", post_id,
+                 token=client.auth.get_token(),
+                 permanent=True)
+```
+
+</CodeGroup>
 
 <Note>
   For soft-deleted documents, your `databaseUsed` quota is only reclaimed after the 30-day period when the cleanup worker permanently deletes the expired documents. Permanent deletion reclaims quota immediately.
 </Note>
-
-```bash
-curl -X DELETE "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234" \
-  -H "x-api-key: sk_live_YOUR_KEY"
-```
 
 ## Schema validation
 
