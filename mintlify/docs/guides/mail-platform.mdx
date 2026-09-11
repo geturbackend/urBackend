@@ -7,8 +7,8 @@ description: "Comprehensive developer guide for urBackend Mail Platform: BYOK, b
 
 urBackend Mail Platform extends transactional sending into a full delivery workflow with:
 
-- async queue-backed single sending (`/api/mail/send`)
-- direct provider batch sending (`/api/mail/send-batch`)
+- async queue-backed single sending (`/api/mail/send`), with optional `replyTo`
+- direct provider batch sending (`/api/mail/send-batch`, 1..100 items, per-item `replyTo`)
 - BYOK (Bring Your Own Key) with encrypted project-level Resend keys
 - delivery tracking via persistent `MailLog`
 - audience/contact management (BYOK-gated)
@@ -101,13 +101,20 @@ All `/api/mail/*` send endpoints require your **Secret Key** (`sk_live_...`) in 
 
 | Field | Type | Required | Notes |
 |---|---|---:|---|
-| `to` | `string` | ✅ | recipient email |
+| `to` | `string \| string[]` | ✅ | recipient email(s); array form must have at least one entry |
+| `replyTo` | `string \| string[]` | Optional | reply-to address(es); forwarded to Resend as the `Reply-To` header |
 | `subject` | `string` | Direct mode ✅ | required when not using template fields |
 | `html` | `string` | Direct mode one of `html/text` | HTML body |
 | `text` | `string` | Direct mode one of `html/text` | Text body |
 | `templateId` | `string` | Template mode one of `templateId/templateName` | 24-char ObjectId |
 | `templateName` | `string` | Template mode one of `templateId/templateName` | key/name lookup |
 | `variables` | `object` | Optional | template vars |
+
+Validation notes:
+
+- `to` and `replyTo` must be valid email addresses. Array forms cannot be empty (`Recipient list cannot be empty`, `Reply-to list cannot be empty`).
+- Subject must be non-empty after any template/variable interpolation (`Subject is required`).
+- Rendered body must contain a non-empty `html` or `text` value; requests where both are empty after interpolation are rejected (`Provide at least one of html or text content.`).
 
 #### Quota and limits
 
@@ -169,13 +176,30 @@ Array of 1..100 items:
 [
   {
     "to": "u1@example.com",
+    "replyTo": "support@acme.com",
     "subject": "Campaign",
     "html": "<p>Hello</p>"
   }
 ]
 ```
 
-Each item supports `to`, `subject`, `html?`, `text?`.
+Each item supports:
+
+| Field | Type | Required | Notes |
+|---|---|---:|---|
+| `to` | `string \| string[]` | ✅ | recipient email(s); array form must have at least one entry |
+| `replyTo` | `string \| string[]` | Optional | reply-to address(es); array form must have at least one entry |
+| `subject` | `string` | ✅ | non-empty after trimming |
+| `html` | `string` | one of `html/text` ✅ | HTML body |
+| `text` | `string` | one of `html/text` ✅ | Text body |
+
+Validation is enforced by a strict Zod schema on every batch call:
+
+- The batch array itself must contain **1..100** items. Empty batches are rejected with `Batch cannot be empty`; larger batches are rejected with `Max 100 emails per batch`.
+- Each `to` and `replyTo` value is validated as a proper email address.
+- Each item must supply a non-empty `subject` (`Subject is required`).
+- Each item must supply at least one of `html` or `text` (`Provide html or text`).
+- Templates (`templateId` / `templateName` / `variables`) are **not** supported in batch mode. Batch items always go directly to Resend with the exact `subject` / `html` / `text` you provide.
 
 #### Quota behavior
 
@@ -196,8 +220,8 @@ curl -X POST "https://api.ub.bitbros.in/api/mail/send-batch" \
   -H "Content-Type: application/json" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
   -d '[
-    {"to":"a@example.com","subject":"Hi A","html":"<p>A</p>"},
-    {"to":"b@example.com","subject":"Hi B","html":"<p>B</p>"}
+    {"to":"a@example.com","replyTo":"support@acme.com","subject":"Hi A","html":"<p>A</p>"},
+    {"to":"b@example.com","subject":"Hi B","text":"Hello B"}
   ]'
 ```
 
@@ -207,8 +231,8 @@ import { UrBackendClient } from 'urbackend-sdk';
 const client = new UrBackendClient({ apiKey: process.env.URB_SECRET_KEY! });
 const result = await client.request('POST', '/api/mail/send-batch', {
   body: [
-    { to: 'a@example.com', subject: 'Hi A', html: '<p>A</p>' },
-    { to: 'b@example.com', subject: 'Hi B', html: '<p>B</p>' }
+    { to: 'a@example.com', replyTo: 'support@acme.com', subject: 'Hi A', html: '<p>A</p>' },
+    { to: 'b@example.com', subject: 'Hi B', text: 'Hello B' }
   ]
 });
 console.log(result);
@@ -568,12 +592,12 @@ Add product screenshots/annotated walkthrough images in this section if your doc
 
 | Endpoint | Status | Typical message |
 |---|---:|---|
-| `POST /api/mail/send` | `400` | Invalid mail payload / template not found / subject required |
-| `POST /api/mail/send` | `403` | Secret key required |
-| `POST /api/mail/send` | `429` | Monthly mail limit exceeded |
-| `POST /api/mail/send-batch` | `400` | Invalid batch mail payload |
-| `POST /api/mail/send-batch` | `403` | Secret key required |
-| `POST /api/mail/send-batch` | `429` | Monthly mail limit exceeded |
+| `POST /api/mail/send` | `400` | `Recipient list cannot be empty` / `Reply-to list cannot be empty` / `Subject is required` / `Provide at least one of html or text content.` / `Template not found.` |
+| `POST /api/mail/send` | `403` | `Forbidden. This action requires a Secret Key (sk_live_...).` |
+| `POST /api/mail/send` | `429` | `Monthly mail limit exceeded.` |
+| `POST /api/mail/send-batch` | `400` | `Batch cannot be empty` / `Max 100 emails per batch` / `Recipient list cannot be empty` / `Reply-to list cannot be empty` / `Subject is required` / `Provide html or text` |
+| `POST /api/mail/send-batch` | `403` | `Forbidden. This action requires a Secret Key (sk_live_...).` |
+| `POST /api/mail/send-batch` | `429` | `Monthly mail limit exceeded.` |
 | `GET /api/mail/logs/:resendId` | `400` | Invalid resendId format |
 | `GET /api/mail/logs/:resendId` | `404` | Mail log entry not found for this project |
 | `GET /api/mail/audiences` + audience mutations | `403` | This feature requires a BYOK Resend key |

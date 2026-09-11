@@ -22,7 +22,8 @@ send(payload: SendMailPayload): Promise<SendMailResponse>
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `to` | `string \| string[]` | Yes | Recipient email address(es). |
+| `to` | `string \| string[]` | Yes | Recipient email address(es). Array form must contain at least one entry. |
+| `replyTo` | `string \| string[]` | No | Reply-to address(es). Forwarded to Resend as the `Reply-To` header. Array form must contain at least one entry. |
 | `subject` | `string` | Template mode: No, Direct mode: Yes | Email subject line. |
 | `text` | `string` | Direct mode: one of `text` or `html` is required | Plain text body. |
 | `html` | `string` | Direct mode: one of `text` or `html` is required | HTML body. |
@@ -85,6 +86,7 @@ console.log(response.id);
 // Direct mode
 const response = await client.mail.send({
   to: 'customer@example.com',
+  replyTo: 'support@acme.com',
   subject: 'Welcome to urBackend',
   html: '<h1>Hi there!</h1><p>Thanks for joining.</p>'
 });

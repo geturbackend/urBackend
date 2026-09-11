@@ -24,8 +24,12 @@ Sends transactional email from your project.
 
 ### Request body
 
-<ParamField body="to" type="string" required>
-  Recipient email address.
+<ParamField body="to" type="string | string[]" required>
+  Recipient email address, or an array of recipient addresses. Each address must be a valid email. An array must contain at least one entry.
+</ParamField>
+
+<ParamField body="replyTo" type="string | string[]">
+  Optional reply-to address, or an array of addresses. Each address must be a valid email. When provided as an array, it must contain at least one entry. Forwarded to Resend as the message's `Reply-To` header.
 </ParamField>
 
 <ParamField body="subject" type="string">
@@ -57,7 +61,9 @@ Sends transactional email from your project.
 - Template mode: `templateId` or `templateName`
 - Direct mode: `subject` + (`html` or `text`)
 - Do not pass both `templateId` and `templateName`.
-- If rendered subject/body becomes empty after variable interpolation, request is rejected with `400`.
+- `to` and `replyTo` must contain valid email addresses. Array forms cannot be empty (`Recipient list cannot be empty`, `Reply-to list cannot be empty`).
+- Subject is required after any template resolution and variable interpolation (`Subject is required`).
+- The rendered message must include a non-empty `html` or `text` body. Requests where both come out empty after interpolation are rejected with `Provide html or text` (or `Provide at least one of html or text content.` when neither field was supplied).
 
 ### Template resolution order
 
@@ -123,6 +129,7 @@ const res = await fetch('https://api.ub.bitbros.in/api/mail/send', {
   },
   body: JSON.stringify({
     to: 'user@example.com',
+    replyTo: 'support@acme.com',
     subject: 'Welcome to Acme',
     html: '<h1>Hello</h1><p>Your account is ready.</p>'
   })
@@ -212,10 +219,14 @@ public class Main {
 
 ### Errors
 
-| Status | Cause |
-| :--- | :--- |
-| `400 Bad Request` | Invalid payload, invalid template ID, or empty rendered subject/body |
-| `401 Unauthorized` | Missing project context |
-| `403 Forbidden` | Non-secret key used |
-| `404 Not Found` | Template or project not found |
-| `429 Too Many Requests` | Monthly mail limit exceeded |
+| Status | Message | Cause |
+| :--- | :--- | :--- |
+| `400 Bad Request` | `Invalid recipient email format` / `Recipient list cannot be empty` | `to` is missing, malformed, or an empty array |
+| `400 Bad Request` | `Invalid replyTo email format` / `Reply-to list cannot be empty` | `replyTo` is malformed or an empty array |
+| `400 Bad Request` | `Subject is required` | Subject missing, blank, or empty after template/variable interpolation |
+| `400 Bad Request` | `Provide at least one of html or text content.` | Neither `html` nor `text` supplied (or both empty after interpolation) |
+| `400 Bad Request` | `Template not found.` | `templateId` / `templateName` does not resolve |
+| `401 Unauthorized` | `Project context missing.` | Request has no resolved project |
+| `403 Forbidden` | `Forbidden. This action requires a Secret Key (sk_live_...).` | Non-secret key used |
+| `404 Not Found` | `Project not found.` | Project record missing |
+| `429 Too Many Requests` | `Monthly mail limit exceeded.` | Project quota exhausted for the month |
