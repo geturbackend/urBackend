@@ -1,0 +1,14 @@
+---
+title: September 2026
+description: What's new in urBackend — new features, improvements, and fixes.
+---
+
+<Update label="2026-09-14" description="Week of 2026-09-08–2026-09-14" tags={["Feature", "Fix"]}>
+## New features
+
+- **`replyTo` on transactional mail** — `POST /mail/send` and `POST /mail/send/batch` now accept an optional `replyTo` field (a single address or an array of addresses). When set, replies from recipients route to those addresses instead of your verified `from` sender. Available in the REST API, TypeScript SDK (`mail.send()` / `mail.sendBatch()`), and Python SDK. See [Send mail](/api-reference/mail/send) and [Mail SDK](/sdk/mail). (by [@yash-pouranik](https://github.com/yash-pouranik) in [#402](https://github.com/geturbackend/urbackend/pull/402))
+
+## Bug fixes
+
+- **Empty mail bodies are now rejected up-front** — Mail requests without any content (both `html` and `text` empty or whitespace) now fail validation with a `400` before hitting the mail queue, instead of enqueuing an empty message. Whitespace-only subjects are also rejected. See [Send mail](/api-reference/mail/send). (by [@yash-pouranik](https://github.com/yash-pouranik) in [#402](https://github.com/geturbackend/urbackend/pull/402))
+</Update>
