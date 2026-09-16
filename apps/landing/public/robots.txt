@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://urbackend.bitbros.in/sitemap-index.xml
+Sitemap: https://urbackend.bitbros.in/sitemap.xml

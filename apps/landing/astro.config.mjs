@@ -8,6 +8,11 @@ import vercel from '@astrojs/vercel';
 // https://astro.build/config
 export default defineConfig({
   site: 'https://urbackend.bitbros.in',
-  integrations: [react(), sitemap()],
+  integrations: [
+    react(),
+    sitemap({
+      filter: (page) => page === 'https://urbackend.bitbros.in/',
+    }),
+  ],
   adapter: vercel()
 });
