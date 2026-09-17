@@ -2,7 +2,7 @@
 import BaseLayout from '../layouts/Base.astro';
 import Navbar from '../components/Navbar.astro';
 import Footer from '../components/Footer.astro';
-import { Check } from 'lucide-react';
+import { Check, ChevronDown, HelpCircle, ArrowRight } from 'lucide-react';
 
 const FREE_FEATURES = [
   '1 Project',
@@ -30,18 +30,41 @@ const PRO_FEATURES = [
   'AI integrations (OpenAI, Groq)',
   'Priority support',
 ];
+
+const PRICING_FAQS = [
+  {
+    q: 'What happens when I exceed free tier limits?',
+    a: 'API requests are gracefully rate-limited with HTTP 429 rather than resulting in unexpected charges. You will never receive a surprise bill.'
+  },
+  {
+    q: 'Can I bring my own MongoDB Atlas cluster on the Free tier?',
+    a: 'The Free tier includes urBackend managed database storage. Bring Your Own MongoDB (BYOM) is available on the Pro tier during beta.'
+  },
+  {
+    q: 'How does the free 1-month Pro trial work?',
+    a: 'Click "Get 1 month Pro for free" to unlock Pro features on your account with zero credit card required.'
+  },
+  {
+    q: 'Do you offer team collaboration?',
+    a: 'Yes. Pro plans support inviting team members with granular project access controls and role-based permissions.'
+  }
+];
 ---
 
 <BaseLayout 
-  title="urBackend | Pricing" 
-  description="Simple pricing for every stage. Start for free."
+  title="urBackend Pricing - Free Developer Tier & Predictable Scale for MongoDB" 
+  description="Affordable, transparent MongoDB BaaS pricing. Get started free with 5 projects, 500MB storage, and 50K monthly API requests. Upgrade to Pro for BYOM and dedicated scale."
+  keywords="MongoDB pricing, Backend as a Service pricing, free MongoDB backend, BaaS cost comparison, Firebase alternative pricing, Supabase pricing alternative, serverless backend pricing"
+  canonicalUrl="https://urbackend.in/pricing"
 >
   <div class="pricing-page">
     <Navbar />
 
     <main class="pricing-main">
       <div class="pricing-hero">
+        <span class="section-badge" style="display: inline-block; margin-bottom: 1rem;">PLANS & LIMITS</span>
         <h1>Simple pricing for every stage</h1>
+        <p>No unexpected bills. Start building on the free tier, scale as your application grows.</p>
       </div>
 
       <div class="pricing-grid">
@@ -61,7 +84,7 @@ const PRO_FEATURES = [
               </li>
             ))}
           </ul>
-          <a href="https://app.urbackend.bitbros.in/signup" class="pricing-button">
+          <a href="https://app.urbackend.in/signup" class="pricing-button">
             Start for Free
           </a>
         </section>
@@ -82,13 +105,78 @@ const PRO_FEATURES = [
               </li>
             ))}
           </ul>
-          <a href="https://app.urbackend.bitbros.in/request-pro" class="pricing-button pricing-button-green">
+          <a href="https://app.urbackend.in/request-pro" class="pricing-button pricing-button-green">
             Get 1 month Pro for free
           </a>
         </section>
       </div>
+
+      <!-- Pricing FAQ Section -->
+      <section class="pricing-faq-section">
+        <div class="faq-heading-box">
+          <HelpCircle size={24} color="#00f5d4" />
+          <h2>Frequently Asked Questions</h2>
+        </div>
+        <div class="pricing-faq-grid">
+          {PRICING_FAQS.map((faq) => (
+            <div class="p-faq-card">
+              <h3>{faq.q}</h3>
+              <p>{faq.a}</p>
+            </div>
+          ))}
+        </div>
+      </section>
     </main>
 
     <Footer />
   </div>
 </BaseLayout>
+
+<style>
+  .pricing-faq-section {
+    margin-top: 6rem;
+    padding-top: 4rem;
+    border-top: 1px solid #1f1f1f;
+  }
+
+  .faq-heading-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 3rem;
+  }
+
+  .faq-heading-box h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+  }
+
+  .pricing-faq-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+  }
+
+  .p-faq-card {
+    background: #080808;
+    border: 1px solid #1a1a1a;
+    padding: 2rem;
+  }
+
+  .p-faq-card h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 0.75rem;
+  }
+
+  .p-faq-card p {
+    font-size: 0.95rem;
+    color: #a1a1aa;
+    line-height: 1.6;
+    margin: 0;
+  }
+</style>

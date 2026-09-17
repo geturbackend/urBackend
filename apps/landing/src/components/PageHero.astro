@@ -1,0 +1,107 @@
+---
+import { ArrowRight } from 'lucide-react';
+
+interface Props {
+  badge: string;
+  title: string;
+  highlightTitle?: string;
+  description: string;
+  primaryCta?: {
+    label: string;
+    href: string;
+  };
+  secondaryCta?: {
+    label: string;
+    href: string;
+  };
+}
+
+const { badge, title, highlightTitle, description, primaryCta, secondaryCta } = Astro.props;
+---
+
+<section class="page-hero">
+  <div class="page-hero-glow"></div>
+  <div class="page-hero-container">
+    <div class="status-pill" style="display: inline-flex; margin-bottom: 1.5rem;">
+      <span class="section-badge" style="margin-bottom: 0;">{badge}</span>
+    </div>
+    
+    <h1 class="page-hero-title">
+      {title} {highlightTitle && <span class="text-gradient-primary">{highlightTitle}</span>}
+    </h1>
+    
+    <p class="page-hero-desc">
+      {description}
+    </p>
+
+    {(primaryCta || secondaryCta) && (
+      <div class="page-hero-ctas">
+        {primaryCta && (
+          <a href={primaryCta.href} class="btn-hero-primary">
+            <span>{primaryCta.label}</span>
+            <ArrowRight size={16} />
+          </a>
+        )}
+        {secondaryCta && (
+          <a href={secondaryCta.href} class="btn-hero-secondary">
+            <span>{secondaryCta.label}</span>
+          </a>
+        )}
+      </div>
+    )}
+  </div>
+</section>
+
+<style>
+  .page-hero {
+    position: relative;
+    padding: calc(var(--nav-height, 70px) + 4rem) 1.5rem 4rem;
+    text-align: center;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 10%, rgba(0, 245, 212, 0.05) 0%, transparent 60%);
+  }
+
+  .page-hero-glow {
+    position: absolute;
+    top: -20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(0, 245, 212, 0.08) 0%, transparent 70%);
+    filter: blur(120px);
+    pointer-events: none;
+  }
+
+  .page-hero-container {
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .page-hero-title {
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+    margin: 0 0 1.5rem;
+    color: #fff;
+  }
+
+  .page-hero-desc {
+    font-size: clamp(1.05rem, 2vw, 1.25rem);
+    color: #a1a1aa;
+    line-height: 1.6;
+    max-width: 680px;
+    margin: 0 auto 2.5rem;
+  }
+
+  .page-hero-ctas {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+</style>

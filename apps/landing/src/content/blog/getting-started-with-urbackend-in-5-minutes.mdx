@@ -1,0 +1,109 @@
+---
+title: "Getting Started with urBackend in 5 Minutes: Complete Tutorial"
+description: "A fast, hands-on walkthrough showing how to initialize a project, configure MongoDB collections, and query data from a React frontend with authentication."
+date: 2026-09-05
+author: "urBackend Team"
+category: "Tutorials"
+tags: ["mongodb tutorial", "react mongodb", "baas quickstart", "typescript sdk", "urbackend tutorial", "mern tutorial", "rest api tutorial"]
+draft: false
+---
+
+In this tutorial, we will take you from zero to a fully functional, authenticated frontend application powered by urBackend and MongoDB in under five minutes.
+
+## Step 1: Create a Free Project
+
+First, sign up at [app.urbackend.in](https://app.urbackend.in) and click **Create Project**.
+
+You will receive two keys in your project settings:
+- **Publishable Key (`pk_live_...`)**: Safe to expose in frontend bundles, mobile apps, and public repositories.
+- **Secret Key (`sk_live_...`)**: High-privilege administrative key for server-side scripts.
+
+## Step 2: Define a Collection
+
+Navigate to **Database ➔ Create Collection**. You can either:
+
+1. **Use the Visual Builder**: Add fields such as `title (String, Required)`, `price (Number)`, and `inStock (Boolean)`.
+2. **Use the AI Collection Creator**: Describe your schema (for example, *"An inventory catalog with product name, price, SKU, and tags"*), and let the AI build the schema for you.
+
+Set the Row-Level Security mode to **`public-read`** so any user can browse items, but only authenticated users can make changes.
+
+## Step 3: Install the SDK
+
+In your React or Next.js project, install `@urbackend/react` and `@urbackend/sdk`:
+
+```bash
+npm install @urbackend/react @urbackend/sdk
+```
+
+## Step 4: Wrap Your App with UrProvider
+
+In your application root (e.g. `main.tsx` or `App.tsx`):
+
+```tsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { UrProvider } from '@urbackend/react';
+import App from './App';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <UrProvider apiKey="pk_live_your_publishable_key">
+      <App />
+    </UrProvider>
+  </React.StrictMode>
+);
+```
+
+## Step 5: Query Data & Authenticate
+
+Now use the built-in React hooks to query your MongoDB documents and handle authentication:
+
+```tsx
+import { useDb, useUser, UrAuth } from '@urbackend/react';
+import { useEffect, useState } from 'react';
+
+export default function ProductList() {
+  const { user, logout } = useUser();
+  const db = useDb();
+  const [products, setProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadData() {
+      // Query collection with sorting & limits
+      const items = await db.getAll('products', {
+        sort: 'createdAt:desc',
+        limit: 10
+      });
+      setProducts(items);
+    }
+    loadData();
+  }, [db]);
+
+  if (!user) {
+    return <UrAuth providers={['github', 'google']} />;
+  }
+
+  return (
+    <div>
+      <h1>Welcome back, {user.name}</h1>
+      <button onClick={logout}>Sign Out</button>
+
+      <h2>Product Catalog</h2>
+      <ul>
+        {products.map((p) => (
+          <li key={p._id}>{p.title} — ${p.price}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+## That's It!
+
+You now have a production-ready application with:
+- Full authentication (Email/Password + GitHub/Google OAuth)
+- Direct MongoDB reads protected by Row-Level Security
+- Zero custom backend code or server maintenance
+
+To learn more about advanced features like presigned file uploads, transactional emails, and CLI schema sync, check out our [full documentation](https://docs.urbackend.in).

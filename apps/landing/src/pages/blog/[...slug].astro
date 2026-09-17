@@ -1,0 +1,27 @@
+---
+import { getCollection, render } from 'astro:content';
+import ContentPage from '../../layouts/ContentPage.astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.map((post) => ({
+    params: { slug: post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+
+<ContentPage
+  title={post.data.title}
+  description={post.data.description}
+  date={post.data.date}
+  author={post.data.author}
+  category={post.data.category}
+  tags={post.data.tags}
+  canonicalUrl={`https://urbackend.in/blog/${post.id}`}
+>
+  <Content />
+</ContentPage>

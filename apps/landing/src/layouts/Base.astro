@@ -2,12 +2,29 @@
 interface Props {
   title: string;
   description: string;
+  keywords?: string;
   canonicalUrl?: string;
   ogImage?: string;
+  structuredData?: Record<string, any>;
+  noindex?: boolean;
 }
-const { title, description, canonicalUrl, ogImage } = Astro.props;
+const { title, description, keywords, canonicalUrl, ogImage, structuredData, noindex } = Astro.props;
 import '../styles/landing.css';
 import Analytics from '@vercel/analytics/astro';
+
+const defaultKeywords = "MongoDB BaaS, Backend as a Service, MongoDB backend, Firebase alternative for MongoDB, Supabase MongoDB, serverless MongoDB API, MongoDB Atlas BaaS, Instant REST API, MERN stack backend";
+const metaKeywords = keywords || defaultKeywords;
+
+const defaultStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "urBackend",
+  "applicationCategory": "DeveloperApplication",
+  "description": description,
+  "url": "https://urbackend.in",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+};
+const jsonLd = structuredData || defaultStructuredData;
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -21,11 +38,15 @@ import Analytics from '@vercel/analytics/astro';
   <link rel="apple-touch-icon" href="/LOGO_SQ.png" />
   <title>{title}</title>
   <meta name="description" content={description} />
+  <meta name="keywords" content={metaKeywords} />
+  <meta name="author" content="urBackend" />
+  {noindex && <meta name="robots" content="noindex, nofollow" />}
   
   <!-- Open Graph -->
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
   <meta property="og:type" content="website" />
+  <meta property="og:url" content={canonicalUrl || Astro.url.href} />
   <meta property="og:image" content={ogImage || '/og-image.png'} />
   <meta property="og:site_name" content="urBackend" />
   
@@ -39,15 +60,7 @@ import Analytics from '@vercel/analytics/astro';
   {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
   
   <!-- Structured Data (JSON-LD) -->
-  <script type="application/ld+json" set:html={JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "urBackend",
-      "applicationCategory": "DeveloperApplication",
-      "description": description,
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
-    })}>
-  </script>
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)}></script>
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />

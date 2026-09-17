@@ -1,0 +1,267 @@
+---
+import BaseLayout from '../../layouts/Base.astro';
+import Navbar from '../../components/Navbar.astro';
+import Footer from '../../components/Footer.astro';
+import PageHero from '../../components/PageHero.astro';
+import ComparisonTable from '../../components/ComparisonTable.astro';
+import { ArrowRight, Check, X, Shield, Database, Unlock, Sparkles } from 'lucide-react';
+
+const COMPARISON_ROWS = [
+  {
+    category: 'DATABASE & DATA MODEL',
+    feature: 'Primary Database Engine',
+    urbackend: 'MongoDB (BSON / JSON)',
+    competitor: 'Cloud Firestore / Realtime DB',
+    note: 'urBackend is built natively on MongoDB; Firebase uses proprietary Google document engines.'
+  },
+  {
+    category: 'DATABASE & DATA MODEL',
+    feature: 'Bring Your Own Database (BYOD)',
+    urbackend: true,
+    competitor: false,
+    note: 'Connect any MongoDB Atlas or self-hosted cluster with full root access.'
+  },
+  {
+    category: 'DATABASE & DATA MODEL',
+    feature: 'Standard Database Tooling',
+    urbackend: true,
+    competitor: false,
+    note: 'Use MongoDB Compass, mongosh, Studio 3T, and native MongoDB drivers anytime.'
+  },
+  {
+    category: 'DATABASE & DATA MODEL',
+    feature: 'Complex Filtering & Aggregation',
+    urbackend: 'Full MongoDB Aggregations',
+    competitor: 'Firestore Query Subsets',
+    note: 'Firestore restricts inequality filters across multiple fields without composite indexes.'
+  },
+  {
+    category: 'AUTHENTICATION & SECURITY',
+    feature: 'User Authentication',
+    urbackend: true,
+    competitor: true,
+    note: 'Both offer email/password, social OAuth (GitHub, Google), and session token management.'
+  },
+  {
+    category: 'AUTHENTICATION & SECURITY',
+    feature: 'Client-Side Access Security',
+    urbackend: 'Row-Level Security (RLS)',
+    competitor: 'Firestore Security Rules',
+    note: 'urBackend uses declarative token ownership; Firebase uses security rules DSL.'
+  },
+  {
+    category: 'STORAGE & MEDIA',
+    feature: 'File & Media Storage',
+    urbackend: true,
+    competitor: true,
+    note: 'Both provide authenticated file uploads with direct-to-cloud delivery.'
+  },
+  {
+    category: 'STORAGE & MEDIA',
+    feature: 'Bring Your Own Storage (S3 / R2)',
+    urbackend: true,
+    competitor: false,
+    note: 'urBackend lets you link AWS S3, Cloudflare R2, or Supabase Storage without platform markups.'
+  },
+  {
+    category: 'REALTIME & COMMUNICATION',
+    feature: 'Realtime Data Updates',
+    urbackend: true,
+    competitor: true,
+    note: 'urBackend provides WebSocket mutation broadcasting; Firebase provides onSnapshot listeners.'
+  },
+  {
+    category: 'REALTIME & COMMUNICATION',
+    feature: 'Built-in Transactional Email',
+    urbackend: true,
+    competitor: 'Extensions Required',
+    note: 'urBackend includes pre-configured email queues and templates out of the box.'
+  },
+  {
+    category: 'AI & DEVELOPER TOOLING',
+    feature: 'AI Schema & Collection Generation',
+    urbackend: 'Native Conversational Builder',
+    competitor: 'Firebase Genkit / Vertex AI',
+    note: 'Both support modern AI workflows; urBackend specializes in natural-language MongoDB schemas.'
+  },
+  {
+    category: 'INFRASTRUCTURE & FREEDOM',
+    feature: 'Open Source Core',
+    urbackend: true,
+    competitor: false,
+    note: 'urBackend core is open source (MIT); Firebase is a proprietary Google Cloud service.'
+  },
+  {
+    category: 'INFRASTRUCTURE & FREEDOM',
+    feature: 'Mobile App Observability',
+    urbackend: 'Standard Logs & Metrics',
+    competitor: 'Crashlytics & Performance',
+    note: 'Firebase provides deeper mobile-specific diagnostics (Crashlytics, Remote Config, App Check).'
+  }
+];
+---
+
+<BaseLayout
+  title="urBackend vs Firebase - Native MongoDB BaaS Alternative to Firestore"
+  description="Compare urBackend and Firebase side-by-side. Discover why developers choose urBackend for native MongoDB document models, Mongoose support, S3 storage, and no proprietary vendor lock-in."
+  keywords="urBackend vs Firebase, Firebase alternative, MongoDB vs Firestore, open source Firebase alternative, Firebase MongoDB, Firebase alternative for web, Firebase pricing comparison"
+  canonicalUrl="https://urbackend.in/compare/firebase"
+>
+  <Navbar />
+
+  <PageHero
+    badge="PLATFORM COMPARISON"
+    title="urBackend vs"
+    highlightTitle="Google Firebase"
+    description="Evaluating Firebase for your application? See a balanced, technical comparison of where urBackend shines for MongoDB developers and where Firebase excels for mobile ecosystems."
+    primaryCta={{ label: "Try urBackend Free", href: "https://app.urbackend.in/signup" }}
+    secondaryCta={{ label: "View Features", href: "/features" }}
+  />
+
+  <!-- Comparison Matrix -->
+  <section class="compare-table-section">
+    <div class="compare-container">
+      <div class="section-header-centered">
+        <span class="section-badge">OBJECTIVE BREAKDOWN</span>
+        <h2 class="section-title">Side-by-Side Capability Matrix</h2>
+        <p class="section-desc">An accurate, feature-by-feature evaluation of urBackend and Google Firebase.</p>
+      </div>
+
+      <ComparisonTable competitor="Google Firebase" rows={COMPARISON_ROWS} />
+    </div>
+  </section>
+
+  <!-- Deep Dive Comparison Points -->
+  <section class="deep-dive-section">
+    <div class="deep-dive-container">
+      <div class="takeaways-grid">
+        <div class="takeaway-card">
+          <div class="takeaway-icon">
+            <Database size={24} color="#00f5d4" />
+          </div>
+          <h3>Where urBackend Excels</h3>
+          <ul class="takeaway-list">
+            <li><strong>You want standard MongoDB:</strong> Full access to MongoDB's rich query operators, aggregation pipelines, and BSON document flexibility without proprietary query restrictions.</li>
+            <li><strong>Data ownership (BYOD):</strong> Connect your own MongoDB Atlas cluster or self-hosted server. You retain root database credentials and can query with MongoDB Compass or mongosh at any time.</li>
+            <li><strong>Multi-cloud storage (BYOS):</strong> Avoid Google Cloud Storage lock-in by connecting your own AWS S3 or Cloudflare R2 bucket with zero per-file size caps.</li>
+            <li><strong>Open source core:</strong> urBackend is MIT-licensed. You can inspect the codebase, contribute improvements, and avoid proprietary platform dependencies.</li>
+          </ul>
+        </div>
+
+        <div class="takeaway-card">
+          <div class="takeaway-icon">
+            <Shield size={24} color="#FFBD2E" />
+          </div>
+          <h3>Where Firebase Excels</h3>
+          <ul class="takeaway-list">
+            <li><strong>Mobile app analytics & diagnostics:</strong> Firebase Crashlytics, Performance Monitoring, and Google Analytics are deeply integrated and best-in-class for iOS and Android apps.</li>
+            <li><strong>Google Cloud ecosystem:</strong> Tight integration with Google Cloud IAM, BigQuery data streaming, and Google Cloud Run.</li>
+            <li><strong>Specialized mobile services:</strong> Built-in features like Remote Config, A/B Testing, and App Check for device attestation.</li>
+            <li><strong>Massive global infrastructure:</strong> Decades of Google infrastructure scale and wide third-party provider support.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bottom CTA -->
+  <section class="cta-section">
+    <div class="cta-container">
+      <h2 class="cta-heading">Want the power of a MongoDB BaaS?</h2>
+      <p class="cta-description">
+        Keep the flexibility of MongoDB, avoid vendor lock-in, and ship your application in record time.
+      </p>
+      <div class="cta-buttons">
+        <a href="https://app.urbackend.in/signup" class="cta-btn-primary">
+          <span>Get Started Free</span>
+          <ArrowRight size={18} />
+        </a>
+        <a href="/compare/supabase" class="cta-btn-secondary">
+          <span>Compare with Supabase</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .compare-table-section {
+    padding: 2rem 1.5rem 6rem;
+    background: #030303;
+  }
+
+  .compare-container {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-header-centered {
+    text-align: center;
+    margin-bottom: 3.5rem;
+  }
+
+  /* Deep Dive Takeaways */
+  .deep-dive-section {
+    padding: 6rem 1.5rem;
+    background: #000;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .deep-dive-container {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .takeaways-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 2.5rem;
+  }
+
+  .takeaway-card {
+    background: #070707;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .takeaway-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .takeaway-card h3 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+  }
+
+  .takeaway-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .takeaway-list li {
+    font-size: 0.95rem;
+    color: #a1a1aa;
+    line-height: 1.6;
+  }
+
+  .takeaway-list strong {
+    color: #fff;
+  }
+</style>
