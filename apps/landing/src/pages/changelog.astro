@@ -98,14 +98,23 @@ let releases: ReleaseEntry[] = fallbackReleases;
 
 if (changelogDir) {
   try {
+    const parseFileDate = (fileName: string): number => {
+      const clean = fileName.replace('.mdx', '').trim();
+      const parts = clean.split('-');
+      if (parts.length >= 2) {
+        const month = parts[0];
+        const year = parts[parts.length - 1];
+        const timestamp = Date.parse(`${month} 1, ${year}`);
+        if (!isNaN(timestamp)) {
+          return timestamp;
+        }
+      }
+      return 0;
+    };
+
     const files = fs.readdirSync(changelogDir)
       .filter((f) => f.endsWith('.mdx'))
-      .sort((a, b) => {
-        const monthOrder = ['september', 'august', 'july', 'june', 'may', 'april'];
-        const aMonth = a.split('-')[0].toLowerCase();
-        const bMonth = b.split('-')[0].toLowerCase();
-        return monthOrder.indexOf(aMonth) - monthOrder.indexOf(bMonth);
-      });
+      .sort((a, b) => parseFileDate(b) - parseFileDate(a));
 
     const parsedReleases: ReleaseEntry[] = [];
 

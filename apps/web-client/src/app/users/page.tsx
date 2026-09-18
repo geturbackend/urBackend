@@ -132,8 +132,9 @@ export default function UsersPage() {
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-muted-foreground">Full Name</label>
+                  <label htmlFor="user-full-name" className="text-xs font-semibold text-muted-foreground">Full Name</label>
                   <Input
+                    id="user-full-name"
                     placeholder="e.g. Jordan Miller"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
@@ -141,8 +142,9 @@ export default function UsersPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-muted-foreground">Email Address</label>
+                  <label htmlFor="user-email" className="text-xs font-semibold text-muted-foreground">Email Address</label>
                   <Input
+                    id="user-email"
                     type="email"
                     placeholder="e.g. jordan@example.com"
                     value={newEmail}
@@ -151,8 +153,9 @@ export default function UsersPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-muted-foreground">Role</label>
+                  <label htmlFor="user-role" className="text-xs font-semibold text-muted-foreground">Role</label>
                   <Input
+                    id="user-role"
                     placeholder="e.g. Frontend Engineer"
                     value={newRole}
                     onChange={(e) => setNewRole(e.target.value)}

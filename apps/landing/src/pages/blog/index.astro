@@ -67,7 +67,7 @@ const remainingPosts = allPosts.slice(1);
       </div>
 
       <div class="posts-grid">
-        {allPosts.map((post) => (
+        {remainingPosts.map((post) => (
           <BlogCard
             slug={post.id}
             title={post.data.title}
@@ -216,7 +216,7 @@ const remainingPosts = allPosts.slice(1);
 
   .posts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
     gap: 2rem;
   }
 

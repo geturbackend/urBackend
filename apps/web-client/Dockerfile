@@ -39,10 +39,12 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # Copy build artifacts from standalone output
-COPY --from=builder /app/apps/web-client/.next/standalone ./
-COPY --from=builder /app/apps/web-client/.next/static ./apps/web-client/.next/static
-COPY --from=builder /app/apps/web-client/public ./apps/web-client/public
+COPY --from=builder --chown=node:node /app/apps/web-client/.next/standalone ./
+COPY --from=builder --chown=node:node /app/apps/web-client/.next/static ./apps/web-client/.next/static
+COPY --from=builder --chown=node:node /app/apps/web-client/public ./apps/web-client/public
+
+USER node
 
 EXPOSE 3000
 
-CMD ["node", "apps/web-client/server.js"]
+CMD ["node", "server.js"]
