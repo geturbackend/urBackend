@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://urbackend.in/sitemap-index.xml
+Sitemap: https://urbackend.in/sitemap.xml
 Sitemap: https://urbackend.in/sitemap-0.xml
+Sitemap: https://urbackend.in/sitemap-index.xml

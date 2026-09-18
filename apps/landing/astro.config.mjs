@@ -10,7 +10,7 @@ import vercel from '@astrojs/vercel';
 export default defineConfig({
   site: 'https://urbackend.in',
   redirects: {
-    '/sitemap.xml': '/sitemap-index.xml',
+    '/sitemap.xml': '/sitemap-0.xml',
   },
   integrations: [
     react(),
