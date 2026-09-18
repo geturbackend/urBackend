@@ -180,7 +180,10 @@ describe('data.controller read RLS filters', () => {
         const res = makeRes();
         await getSingleDoc(req, res, next);
 
-        expect(mockPopulate).toHaveBeenCalledWith('author');
+        expect(mockPopulate).toHaveBeenCalledWith({
+            path: 'author',
+            match: { isDeleted: { $ne: true } }
+        });
         expect(res.json).toHaveBeenCalled();
     });
 
@@ -189,8 +192,14 @@ describe('data.controller read RLS filters', () => {
         const res = makeRes();
         await getSingleDoc(req, res, next);
 
-        expect(mockPopulate).toHaveBeenCalledWith('author');
-        expect(mockPopulate).toHaveBeenCalledWith('category');
+        expect(mockPopulate).toHaveBeenCalledWith({
+            path: 'author',
+            match: { isDeleted: { $ne: true } }
+        });
+        expect(mockPopulate).toHaveBeenCalledWith({
+            path: 'category',
+            match: { isDeleted: { $ne: true } }
+        });
         expect(res.json).toHaveBeenCalled();
         expect(next).not.toHaveBeenCalled();
     });

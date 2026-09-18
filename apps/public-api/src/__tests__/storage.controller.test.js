@@ -116,7 +116,7 @@ describe('storage.controller', () => {
 
             expect(next).toHaveBeenCalledWith(expect.any(AppError));
             expect(next.mock.calls[0][0].statusCode).toBe(413);
-            expect(next.mock.calls[0][0].message).toBe('File size exceeds limit.');
+            expect(next.mock.calls[0][0].message).toBe('File size exceeds limit of 10MB.');
         });
 
         test('returns 403 when internal storage quota is exceeded', async () => {
