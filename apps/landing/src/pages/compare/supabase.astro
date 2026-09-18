@@ -1,0 +1,245 @@
+---
+import BaseLayout from '../../layouts/Base.astro';
+import Navbar from '../../components/Navbar.astro';
+import Footer from '../../components/Footer.astro';
+import PageHero from '../../components/PageHero.astro';
+import ComparisonTable from '../../components/ComparisonTable.astro';
+import { ArrowRight, Check, X, Shield, Database, Unlock, Code } from 'lucide-react';
+
+const COMPARISON_ROWS = [
+  {
+    category: 'DATABASE PARADIGM',
+    feature: 'Primary Database Engine',
+    urbackend: 'MongoDB (Document Store)',
+    competitor: 'PostgreSQL (Relational SQL)',
+    note: 'urBackend uses flexible documents; Supabase uses relational tables.'
+  },
+  {
+    category: 'DATABASE PARADIGM',
+    feature: 'Schema Evolution',
+    urbackend: 'Dynamic JSON Schemas',
+    competitor: 'SQL Migration Files',
+    note: 'Update fields via console or API without running ALTER TABLE migrations.'
+  },
+  {
+    category: 'DATABASE PARADIGM',
+    feature: 'Nested Objects & Arrays',
+    urbackend: 'First-Class Native BSON',
+    competitor: 'JSONB or Join Tables',
+    note: 'Directly embed sub-documents without relational mapping complexity.'
+  },
+  {
+    category: 'DATABASE PARADIGM',
+    feature: 'Bring Your Own Cloud Database',
+    urbackend: true,
+    competitor: 'Self-Host Only',
+    note: 'urBackend links directly to any MongoDB Atlas tier without transferring hosting.'
+  },
+  {
+    category: 'DEVELOPER EXPERIENCE',
+    feature: 'Client Query Syntax',
+    urbackend: 'MongoDB Operators (_gt, _in)',
+    competitor: 'PostgREST Filters (.eq, .gt)',
+    note: 'Familiar syntax for developers experienced with Mongoose and MongoDB.'
+  },
+  {
+    category: 'DEVELOPER EXPERIENCE',
+    feature: 'AI Collection Creator',
+    urbackend: true,
+    competitor: false,
+    note: 'Describe what you are building and generate normalized schemas with ERD graph.'
+  },
+  {
+    category: 'DEVELOPER EXPERIENCE',
+    feature: 'Transactional Mail Platform',
+    urbackend: 'Built-in Queue & Templates',
+    competitor: 'Third-Party Webhook',
+    note: 'Send onboarding and verification emails directly without external mail wrappers.'
+  },
+  {
+    category: 'STORAGE & ASSETS',
+    feature: 'Bring Your Own Storage (S3 / R2)',
+    urbackend: true,
+    competitor: 'Supabase Storage Only',
+    note: 'Connect your existing cloud buckets or even Supabase Storage itself.'
+  },
+  {
+    category: 'SECURITY & ACCESS CONTROL',
+    feature: 'Row-Level Security (RLS)',
+    urbackend: 'Declarative UI / JWT Mode',
+    competitor: 'PostgreSQL RLS (SQL)',
+    note: 'Configure public-read and private modes without writing complex SQL policies.'
+  },
+  {
+    category: 'INFRASTRUCTURE & OPEN SOURCE',
+    feature: 'Open Source License',
+    urbackend: 'MIT License',
+    competitor: 'Apache 2.0',
+    note: 'Both platforms are open source and support developer freedom.'
+  }
+];
+---
+
+<BaseLayout
+  title="urBackend vs Supabase - Native MongoDB vs PostgreSQL Backend-as-a-Service"
+  description="Technical comparison of urBackend vs Supabase. Compare MongoDB document flexibility and Bring Your Own MongoDB (BYOM) against PostgreSQL and Supabase SQL architectures."
+  keywords="urBackend vs Supabase, Supabase alternative, Supabase MongoDB, MongoDB vs PostgreSQL BaaS, open source BaaS, Supabase alternative for MongoDB, document database BaaS"
+  canonicalUrl="https://urbackend.in/compare/supabase"
+>
+  <Navbar />
+
+  <PageHero
+    badge="PLATFORM COMPARISON"
+    title="urBackend vs"
+    highlightTitle="Supabase"
+    description="Choosing between MongoDB and PostgreSQL for your backend? Compare urBackend's document-native flexibility with Supabase's relational architecture to pick the ideal stack for your app."
+    primaryCta={{ label: "Try urBackend Free", href: "https://app.urbackend.in/signup" }}
+    secondaryCta={{ label: "Compare with Firebase", href: "/compare/firebase" }}
+  />
+
+  <!-- Comparison Matrix -->
+  <section class="compare-table-section">
+    <div class="compare-container">
+      <div class="section-header-centered">
+        <span class="section-badge">FEATURE MATRIX</span>
+        <h2 class="section-title">Technical Breakdown</h2>
+        <p class="section-desc">Comparing document flexibility against relational constraints.</p>
+      </div>
+
+      <ComparisonTable competitor="Supabase" rows={COMPARISON_ROWS} />
+    </div>
+  </section>
+
+  <!-- Deep Dive Comparison Points -->
+  <section class="deep-dive-section">
+    <div class="deep-dive-container">
+      <div class="takeaways-grid">
+        <div class="takeaway-card">
+          <div class="takeaway-icon">
+            <Database size={24} color="#00f5d4" />
+          </div>
+          <h3>Why Choose urBackend Over Supabase</h3>
+          <ul class="takeaway-list">
+            <li><strong>You love MongoDB:</strong> If your team prefers document databases, sub-document embedding, and rapid schema iteration, urBackend is built specifically for you.</li>
+            <li><strong>Zero SQL migration friction:</strong> Evolve your application features without writing or debugging SQL migration scripts on every deployment.</li>
+            <li><strong>MongoDB Atlas integration:</strong> Keep your existing Atlas database, backup snapshots, and aggregation pipelines intact.</li>
+            <li><strong>Built-in AI Schema Builder:</strong> Conversational AI designs complete collection structures and ERD diagrams in seconds.</li>
+          </ul>
+        </div>
+
+        <div class="takeaway-card">
+          <div class="takeaway-icon">
+            <Code size={24} color="#409EFF" />
+          </div>
+          <h3>When Supabase Might Be Better</h3>
+          <ul class="takeaway-list">
+            <li><strong>Relational data model:</strong> Your data consists of rigid relational schemas requiring strict foreign key cascades and multi-table joins.</li>
+            <li><strong>SQL power users:</strong> Your team has deep PostgreSQL expertise and writes complex stored procedures and database triggers.</li>
+            <li><strong>Edge Functions:</strong> You require serverless Deno edge functions deployed alongside your database.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bottom CTA -->
+  <section class="cta-section">
+    <div class="cta-container">
+      <h2 class="cta-heading">Love MongoDB? Build with urBackend.</h2>
+      <p class="cta-description">
+        Experience the speed of a document-native Backend as a Service today.
+      </p>
+      <div class="cta-buttons">
+        <a href="https://app.urbackend.in/signup" class="cta-btn-primary">
+          <span>Get Started Free</span>
+          <ArrowRight size={18} />
+        </a>
+        <a href="/features" class="cta-btn-secondary">
+          <span>Explore All Features</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .compare-table-section {
+    padding: 2rem 1.5rem 6rem;
+    background: #030303;
+  }
+
+  .compare-container {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-header-centered {
+    text-align: center;
+    margin-bottom: 3.5rem;
+  }
+
+  /* Deep Dive Takeaways */
+  .deep-dive-section {
+    padding: 6rem 1.5rem;
+    background: #000;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .deep-dive-container {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .takeaways-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    gap: 2.5rem;
+  }
+
+  .takeaway-card {
+    background: #070707;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .takeaway-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .takeaway-card h3 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+  }
+
+  .takeaway-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .takeaway-list li {
+    font-size: 0.95rem;
+    color: #a1a1aa;
+    line-height: 1.6;
+  }
+
+  .takeaway-list strong {
+    color: #fff;
+  }
+</style>

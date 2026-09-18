@@ -1,0 +1,542 @@
+---
+import BaseLayout from '../layouts/Base.astro';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import PageHero from '../components/PageHero.astro';
+import { 
+  Database, UserRound, HardDrive, Mail, Lock, Activity, 
+  Sparkles, Zap, Shield, ArrowRight, Check, Code, Server, 
+  Layers, RefreshCw, Key
+} from 'lucide-react';
+
+const CORE_SERVICES = [
+  {
+    id: 'database',
+    icon: Database,
+    badge: 'DATABASE ENGINE',
+    title: 'MongoDB-Native JSON Document Store',
+    description: 'Direct CRUD mutations and queries from your frontend using MongoDB-native syntax and operators. Automated schema validation guarantees integrity without restricting document flexibility.',
+    features: [
+      'Visual Schema Builder with strict JSON Schema compilation',
+      'Advanced MongoDB filtering (_gt, _gte, _lt, _lte, _ne, _in)',
+      'Document soft-deletion & trash recovery pipeline',
+      'Automated index management directly from the console',
+      'Sub-document embedding and multi-collection references',
+      'Up to 1,000 documents per query with cursor pagination'
+    ],
+    codeSnippet: `// Query documents directly with MongoDB filter operators
+const products = await client.db.getAll('products', {
+  filter: { category: 'electronics', price_lte: 500 },
+  sort: 'createdAt:desc',
+  limit: 20
+});`
+  },
+  {
+    id: 'auth',
+    icon: UserRound,
+    badge: 'IDENTITY & AUTH',
+    title: 'Pre-configured Auth with Social Providers',
+    description: 'Production-ready authentication without writing user endpoints or managing JWT secret rotation. Works seamlessly with React hooks and client-side storage.',
+    features: [
+      'Email & password authentication with bcrypt hashing',
+      'Social OAuth (GitHub & Google) with zero frontend complexity',
+      'Rotating refresh token sessions stored in Redis',
+      'Cross-origin cookie & local storage dual-support',
+      'Email verification & password reset with one-time OTPs',
+      'Pre-built React UI drop-in component (<UrAuth />)'
+    ],
+    codeSnippet: `// Email login with session handling
+const { accessToken, user } = await client.auth.login({
+  email: 'developer@example.com',
+  password: 'SecurePassword123!'
+});
+
+// Or start Social OAuth flow
+const redirectUrl = await client.auth.socialStart('github');`
+  },
+  {
+    id: 'security',
+    icon: Lock,
+    badge: 'ROW-LEVEL SECURITY',
+    title: 'Granular Row-Level Access Control (RLS)',
+    description: 'Enforce document-level ownership directly at the API gateway. Allow your frontend to read and write directly to your database with zero risk of unauthorized access.',
+    features: [
+      'Public-read mode for blogs, catalogs, and public profiles',
+      'Private mode requiring authenticated tokens on every operation',
+      'Owner-write validation matching auth.id against document owner',
+      'Publishable key (pk_live) vs Secret key (sk_live) separation',
+      'Fine-grained attribute-level projection control',
+      'Zero MongoDB connection leakage to client browsers'
+    ],
+    codeSnippet: `// Inserts automatically attach user ownership
+await client.db.insert('posts', {
+  title: 'My First Post',
+  content: 'Protected by RLS out of the box.'
+}, client.auth.getToken());`
+  },
+  {
+    id: 'storage',
+    icon: HardDrive,
+    badge: 'FILE STORAGE',
+    title: 'Bring-Your-Own Storage & CDN Delivery',
+    description: 'Upload, manage, and deliver files with automatic presigned URLs. Connect your own AWS S3, Cloudflare R2, or Supabase Storage bucket without artificial upload caps.',
+    features: [
+      'Direct-to-bucket client uploads via presigned URLs',
+      'No file size caps when using Bring-Your-Own-Storage',
+      'Asset mime-type validation and file extension guards',
+      'Global CDN-ready public asset URLs',
+      'Automatic metadata tracking in your MongoDB database',
+      'Integrated deletion hooks for orphaned media'
+    ],
+    codeSnippet: `// Direct upload from browser Blob or File
+const { url, path } = await client.storage.upload(file, 'avatar.png');
+
+// Or generate presigned URL for large direct client uploads
+const { uploadUrl } = await client.storage.requestUploadUrl('video.mp4');`
+  },
+  {
+    id: 'mail',
+    icon: Mail,
+    badge: 'TRANSACTIONAL MAILER',
+    title: 'Built-in Transactional Email Dispatcher',
+    description: 'Pre-wired email dispatchers for onboarding, email verification, password recovery, and alerts. Customize HTML layouts or use global responsive templates.',
+    features: [
+      'Global responsive templates: Welcome, OTP, Reset Password, Invites',
+      'Custom HTML template builder with dynamic variable interpolation',
+      'Custom replyTo and custom sender domains support',
+      'Asynchronous queue processing powered by BullMQ & Redis',
+      'Delivery logs and audit trail in project console',
+      'BYOK mail platform support (Resend & SMTP)'
+    ],
+    codeSnippet: `// Send transactional email with dynamic variables
+await client.mail.send({
+  to: 'alice@example.com',
+  templateName: 'welcome',
+  variables: { name: 'Alice', appUrl: 'https://myapp.com' }
+});`
+  },
+  {
+    id: 'ai',
+    icon: Sparkles,
+    badge: 'AI INTELLIGENCE',
+    title: 'AI Collection Creator & Natural Language Queries',
+    description: 'Describe what your application does in natural language. Our Python AI engine generates normalized MongoDB collections, field types, and relations in seconds.',
+    features: [
+      'Natural language schema design with conversational refinement',
+      'Interactive Schema Canvas & ERD visualization',
+      'Natural Language to MongoDB Query Builder',
+      'BYOK support for Groq (Llama 3.3, Qwen 2.5, DeepSeek)',
+      'Platform shared AI pool for quick experimentation',
+      'Transit encryption for all BYOK keys and prompts'
+    ],
+    codeSnippet: `// Prompt in console:
+// "Design an e-commerce platform with products, variants, orders, and reviews"
+// Result: 4 collections with references, default values & validation schemas.`
+  }
+];
+---
+
+<BaseLayout 
+  title="urBackend Features - MongoDB REST API, Auth, S3 Storage & Row-Level Security"
+  description="Comprehensive backend features for MongoDB: Instant REST CRUD APIs, Row-Level Security (RLS), JWT & Social Auth, S3/R2 Cloud Storage, Transactional Mail, and AI Schema Generation."
+  keywords="MongoDB features, MongoDB REST API generator, Row Level Security MongoDB, MongoDB authentication, S3 file storage MongoDB, transactional email API, MongoDB schema builder, developer backend platform"
+  canonicalUrl="https://urbackend.in/features"
+>
+  <Navbar />
+
+  <PageHero 
+    badge="PLATFORM CAPABILITIES"
+    title="Everything you need to ship faster with"
+    highlightTitle="MongoDB"
+    description="Eliminate weeks of backend boilerplate. Connect your database and instantly get production-ready APIs, authentication, storage, email, and row-level security."
+    primaryCta={{ label: "Start Building Free", href: "https://app.urbackend.in/signup" }}
+    secondaryCta={{ label: "Read the Docs", href: "https://docs.urbackend.in" }}
+  />
+
+  <!-- Main Feature Breakdown -->
+  <section class="features-detail-section">
+    <div class="features-container">
+      {CORE_SERVICES.map((service, index) => {
+        const Icon = service.icon;
+        const isReversed = index % 2 === 1;
+        return (
+          <div class={`feature-row ${isReversed ? 'row-reversed' : ''}`} id={service.id}>
+            <div class="feature-info-col">
+              <div class="service-pill">
+                <Icon size={14} />
+                <span>{service.badge}</span>
+              </div>
+              <h2 class="service-title">{service.title}</h2>
+              <p class="service-desc">{service.description}</p>
+              
+              <ul class="feature-checklist">
+                {service.features.map((item) => (
+                  <li>
+                    <div class="check-icon">
+                      <Check size={14} />
+                    </div>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div class="feature-code-col">
+              <div class="code-window">
+                <div class="code-window-header">
+                  <div class="window-dots">
+                    <span class="dot dot-red"></span>
+                    <span class="dot dot-yellow"></span>
+                    <span class="dot dot-green"></span>
+                  </div>
+                  <span class="window-title">SDK Example</span>
+                  <span class="window-lang">TypeScript</span>
+                </div>
+                <pre class="code-block"><code>{service.codeSnippet}</code></pre>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </section>
+
+  <!-- Infrastructure Highlight -->
+  <section class="infra-highlight-section">
+    <div class="infra-container">
+      <div class="infra-header">
+        <span class="section-badge">INFRASTRUCTURE FREEDOM</span>
+        <h2 class="section-title">Zero Vendor Lock-In by Design</h2>
+        <p class="section-desc">
+          Unlike proprietary platforms that trap your data in their custom database engines, urBackend sits directly on top of your standard MongoDB cluster.
+        </p>
+      </div>
+
+      <div class="infra-grid">
+        <div class="infra-card">
+          <Database size={28} color="#00f5d4" />
+          <h3>Bring Your Own MongoDB (BYOM)</h3>
+          <p>Point urBackend at your MongoDB Atlas cluster or self-hosted server. You retain full database ownership, root connection strings, and direct query access.</p>
+        </div>
+        <div class="infra-card">
+          <HardDrive size={28} color="#409EFF" />
+          <h3>Bring Your Own Storage (BYOS)</h3>
+          <p>Connect AWS S3, Cloudflare R2, or Supabase Storage. Avoid arbitrary per-file upload caps and take advantage of your existing enterprise storage agreements.</p>
+        </div>
+        <div class="infra-card">
+          <Key size={28} color="#FFBD2E" />
+          <h3>Bring Your Own Keys (BYOK)</h3>
+          <p>Provide your own Groq AI keys or Resend mail credentials. Encrypted at rest with AES-256-GCM and during transit to backend workers.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Comparison Links Callout -->
+  <section class="compare-banner-section">
+    <div class="compare-banner-container">
+      <h2>Curious how we compare with other platforms?</h2>
+      <p>See why developers choose urBackend for document-oriented MongoDB applications.</p>
+      <div class="compare-banner-links">
+        <a href="/compare/firebase" class="compare-pill-btn">
+          <span>urBackend vs Firebase</span>
+          <ArrowRight size={15} />
+        </a>
+        <a href="/compare/supabase" class="compare-pill-btn">
+          <span>urBackend vs Supabase</span>
+          <ArrowRight size={15} />
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bottom CTA -->
+  <section class="cta-section">
+    <div class="cta-container">
+      <div class="cta-badge">
+        <Zap size={16} />
+        <span>Developer Beta</span>
+      </div>
+      <h2 class="cta-heading">Ready to supercharge your MongoDB?</h2>
+      <p class="cta-description">
+        Create a project in 60 seconds. Connect your MongoDB cluster and deploy production-ready REST endpoints immediately.
+      </p>
+      <div class="cta-buttons">
+        <a href="https://app.urbackend.in/signup" class="cta-btn-primary">
+          <span>Get Started Free</span>
+          <ArrowRight size={18} />
+        </a>
+        <a href="https://app.urbackend.in/login" class="cta-btn-secondary">
+          <span>Sign In to Console</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .features-detail-section {
+    padding: 4rem 1.5rem 8rem;
+    background: #030303;
+  }
+
+  .features-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 7rem;
+  }
+
+  .feature-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+  }
+
+  .row-reversed {
+    direction: rtl;
+  }
+
+  .row-reversed > * {
+    direction: ltr;
+  }
+
+  .service-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.3rem 0.75rem;
+    background: rgba(0, 245, 212, 0.06);
+    border: 1px solid rgba(0, 245, 212, 0.2);
+    color: #00f5d4;
+    margin-bottom: 1.25rem;
+  }
+
+  .service-title {
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 800;
+    line-height: 1.2;
+    color: #fff;
+    margin: 0 0 1rem;
+    letter-spacing: -0.03em;
+  }
+
+  .service-desc {
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: #a1a1aa;
+    margin: 0 0 2rem;
+  }
+
+  .feature-checklist {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .feature-checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    color: #d4d4d8;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .check-icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 245, 212, 0.1);
+    border: 1px solid rgba(0, 245, 212, 0.3);
+    color: #00f5d4;
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  /* Code Window */
+  .code-window {
+    background: #080808;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    overflow: hidden;
+  }
+
+  .code-window-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.25rem;
+    background: #0d0d0d;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .window-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .dot-red { background: #ff5f56; }
+  .dot-yellow { background: #ffbd2e; }
+  .dot-green { background: #27c93f; }
+
+  .window-title {
+    font-size: 0.75rem;
+    color: #71717a;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .window-lang {
+    font-size: 0.7rem;
+    color: #00f5d4;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .code-block {
+    margin: 0;
+    padding: 1.5rem;
+    background: transparent;
+    color: #f4f4f5;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    overflow-x: auto;
+  }
+
+  /* Infra Highlight */
+  .infra-highlight-section {
+    padding: 6rem 1.5rem;
+    background: #000;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .infra-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .infra-header {
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+
+  .infra-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    gap: 2rem;
+  }
+
+  .infra-card {
+    background: #060606;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    transition: transform 0.3s ease, border-color 0.3s ease;
+  }
+
+  .infra-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(0, 245, 212, 0.3);
+  }
+
+  .infra-card h3 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+  }
+
+  .infra-card p {
+    font-size: 0.95rem;
+    color: #a1a1aa;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* Compare Banner */
+  .compare-banner-section {
+    padding: 5rem 1.5rem;
+    background: #030303;
+    text-align: center;
+  }
+
+  .compare-banner-container {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .compare-banner-container h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.5rem;
+  }
+
+  .compare-banner-container p {
+    color: #a1a1aa;
+    font-size: 1.05rem;
+    margin: 0 0 2rem;
+  }
+
+  .compare-banner-links {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .compare-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.8rem 1.5rem;
+    background: #09090b;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+
+  .compare-pill-btn:hover {
+    border-color: #00f5d4;
+    color: #00f5d4;
+    transform: translateY(-2px);
+  }
+
+  @media (max-width: 900px) {
+    .feature-row {
+      grid-template-columns: 1fr;
+      gap: 2.5rem;
+    }
+
+    .row-reversed {
+      direction: ltr;
+    }
+  }
+</style>

@@ -1,0 +1,337 @@
+---
+import BaseLayout from '../layouts/Base.astro';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import PageHero from '../components/PageHero.astro';
+import StudioReplay from '../components/StudioReplay.jsx';
+import { 
+  Database, Shield, Zap, Terminal, ArrowRight, Check, 
+  Server, Lock, Layers, RefreshCw, Cpu, Globe
+} from 'lucide-react';
+
+const MONGODB_ADVANTAGES = [
+  {
+    icon: Layers,
+    title: 'Native JSON & BSON Documents',
+    description: 'No object-relational impedance mismatch. Store objects, arrays, and nested hierarchies exactly as your frontend components consume them.'
+  },
+  {
+    icon: RefreshCw,
+    title: 'Zero Disruptive SQL Migrations',
+    description: 'Add new fields, evolve collections, and deprecate attributes dynamically without taking your production API offline for ALTER TABLE operations.'
+  },
+  {
+    icon: Zap,
+    title: 'MongoDB Query Operators Built-In',
+    description: 'Filter with native ease: _gt, _gte, _lt, _lte, _ne, _in. Fetch nested attributes directly without constructing complex multi-table SQL joins.'
+  },
+  {
+    icon: Lock,
+    title: 'Secure Client-Facing Layer',
+    description: 'Never expose your MongoDB URI, root credentials, or database port to client applications. urBackend acts as an authenticated, RLS-enforced proxy.'
+  },
+  {
+    icon: Cpu,
+    title: 'Connection Pooling & Circuit Breakers',
+    description: 'High-performance LRU connection cache protects your MongoDB Atlas cluster from connection exhaustion during traffic spikes.'
+  },
+  {
+    icon: Server,
+    title: 'Any MongoDB, Anywhere',
+    description: 'Compatible with MongoDB Atlas (Serverless, Dedicated, Shared M0/M10+), AWS DocumentDB, DigitalOcean Managed MongoDB, and self-hosted instances.'
+  }
+];
+
+const BYOM_STEPS = [
+  {
+    num: '1',
+    title: 'Whitelist Gateway IP Addresses',
+    desc: 'Add urBackend\'s outbound gateway IPs to your MongoDB Atlas Network Access IP Access List so our API nodes can establish secure TLS connections.'
+  },
+  {
+    num: '2',
+    title: 'Paste Connection String',
+    desc: 'Provide your standard mongodb+srv:// URI with a dedicated database user. urBackend automatically validates read/write permissions from both internal nodes.'
+  },
+  {
+    num: '3',
+    title: 'Select Collections & Enforce Schema',
+    desc: 'Map existing collections into urBackend. Choose RLS modes (public-read or private) and begin querying from TypeScript or React immediately.'
+  }
+];
+---
+
+<BaseLayout
+  title="MongoDB BaaS - Instant REST APIs, Auth & Storage for MongoDB Atlas"
+  description="Turn MongoDB Atlas or self-hosted MongoDB into a complete backend. Instant CRUD endpoints, schema validation, Row-Level Security, and zero database lock-in with Bring Your Own MongoDB (BYOM)."
+  keywords="MongoDB BaaS, MongoDB Atlas BaaS, MongoDB backend as a service, BYOM, Bring Your Own MongoDB, serverless MongoDB REST API, MongoDB developer platform, MongoDB Atlas backend"
+  canonicalUrl="https://urbackend.in/mongodb"
+>
+  <Navbar />
+
+  <PageHero
+    badge="THE MONGODB BAAS"
+    title="The Backend-as-a-Service built for"
+    highlightTitle="MongoDB Atlas"
+    description="Stop writing boilerplate CRUD endpoints. Connect your existing MongoDB cluster and instantly generate authenticated REST endpoints, Row-Level Security, and file storage."
+    primaryCta={{ label: "Connect Your MongoDB", href: "https://app.urbackend.in/signup" }}
+    secondaryCta={{ label: "Explore Features", href: "/features" }}
+  />
+
+  <!-- Interactive Studio Demo -->
+  <section class="studio-demo-section">
+    <div class="studio-container">
+      <div class="section-header-centered">
+        <span class="section-badge">INSTANT ENDPOINT GENERATION</span>
+        <h2 class="section-title">From MongoDB Collection to Live API</h2>
+        <p class="section-desc">Watch urBackend compile strict JSON validation schemas into secure REST endpoints in real time.</p>
+      </div>
+
+      <StudioReplay client:visible />
+    </div>
+  </section>
+
+  <!-- BYOM Pipeline Deep Dive -->
+  <section class="byom-details-section" id="byom-details">
+    <div class="byom-container">
+      <div class="byom-intro">
+        <span class="section-badge">BRING YOUR OWN DATABASE</span>
+        <h2 class="section-title">Your Data Stays on Your Infrastructure</h2>
+        <p class="section-desc">
+          Vendor lock-in is the biggest risk in modern cloud platforms. With urBackend, you retain 100% data ownership. We never hold your primary database hostage.
+        </p>
+      </div>
+
+      <div class="byom-steps-grid">
+        {BYOM_STEPS.map((step) => (
+          <div class="byom-step-card">
+            <div class="byom-step-number">{step.num}</div>
+            <h3>{step.title}</h3>
+            <p>{step.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      <div class="byom-callout-box">
+        <div class="callout-icon">
+          <Shield size={24} color="#00f5d4" />
+        </div>
+        <div class="callout-text">
+          <h4>Dual-Server Handshake Validation</h4>
+          <p>
+            When connecting an external MongoDB database, urBackend runs verification handshakes from both our Dashboard API and Public API gateways. Both egress IP addresses are clearly displayed in your project settings for easy Atlas allowlisting.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Advantages Grid -->
+  <section class="advantages-section">
+    <div class="advantages-container">
+      <div class="section-header-centered">
+        <span class="section-badge">WHY MONGODB?</span>
+        <h2 class="section-title">Designed Specifically for Document Flexibility</h2>
+        <p class="section-desc">Traditional BaaS platforms are built on SQL. Here is why frontend developers prefer the document paradigm with urBackend.</p>
+      </div>
+
+      <div class="advantages-grid">
+        {MONGODB_ADVANTAGES.map((adv) => {
+          const Icon = adv.icon;
+          return (
+            <div class="adv-card">
+              <div class="adv-icon">
+                <Icon size={24} />
+              </div>
+              <h3>{adv.title}</h3>
+              <p>{adv.description}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </section>
+
+  <!-- Bottom CTA -->
+  <section class="cta-section">
+    <div class="cta-container">
+      <h2 class="cta-heading">Ready to connect your MongoDB?</h2>
+      <p class="cta-description">
+        Keep your existing cluster, retain full database access, and ship applications 10x faster.
+      </p>
+      <div class="cta-buttons">
+        <a href="https://app.urbackend.in/signup" class="cta-btn-primary">
+          <span>Get Started Free</span>
+          <ArrowRight size={18} />
+        </a>
+        <a href="https://docs.urbackend.in/guides/database" target="_blank" rel="noopener noreferrer" class="cta-btn-secondary">
+          <span>Read MongoDB Guide</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .studio-demo-section {
+    padding: 2rem 1.5rem 6rem;
+    background: #030303;
+  }
+
+  .studio-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-header-centered {
+    text-align: center;
+    margin-bottom: 3.5rem;
+  }
+
+  /* BYOM Details */
+  .byom-details-section {
+    padding: 6rem 1.5rem;
+    background: #000;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .byom-container {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .byom-intro {
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+
+  .byom-steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3.5rem;
+  }
+
+  .byom-step-card {
+    background: #070707;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 2.2rem;
+    position: relative;
+    transition: border-color 0.2s ease;
+  }
+
+  .byom-step-card:hover {
+    border-color: rgba(0, 245, 212, 0.3);
+  }
+
+  .byom-step-number {
+    width: 36px;
+    height: 36px;
+    background: rgba(0, 245, 212, 0.1);
+    border: 1px solid rgba(0, 245, 212, 0.3);
+    color: #00f5d4;
+    font-size: 1.1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .byom-step-card h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.75rem;
+  }
+
+  .byom-step-card p {
+    font-size: 0.95rem;
+    color: #a1a1aa;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .byom-callout-box {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+    background: rgba(0, 245, 212, 0.03);
+    border: 1px solid rgba(0, 245, 212, 0.2);
+    padding: 2rem;
+  }
+
+  .callout-icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .callout-text h4 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.5rem;
+  }
+
+  .callout-text p {
+    font-size: 0.95rem;
+    color: #a1a1aa;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* Advantages */
+  .advantages-section {
+    padding: 6rem 1.5rem;
+    background: #030303;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .advantages-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .advantages-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    gap: 2rem;
+  }
+
+  .adv-card {
+    background: #070707;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 2.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .adv-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 245, 212, 0.08);
+    border: 1px solid rgba(0, 245, 212, 0.2);
+    color: #00f5d4;
+  }
+
+  .adv-card h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+  }
+
+  .adv-card p {
+    font-size: 0.92rem;
+    color: #a1a1aa;
+    line-height: 1.6;
+    margin: 0;
+  }
+</style>

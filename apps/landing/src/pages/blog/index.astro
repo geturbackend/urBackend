@@ -1,0 +1,228 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/Base.astro';
+import Navbar from '../../components/Navbar.astro';
+import Footer from '../../components/Footer.astro';
+import PageHero from '../../components/PageHero.astro';
+import BlogCard from '../../components/BlogCard.astro';
+import { Sparkles, ArrowRight } from 'lucide-react';
+
+const allPosts = await getCollection('blog', ({ data }) => !data.draft);
+allPosts.sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime());
+
+const featuredPost = allPosts[0];
+const remainingPosts = allPosts.slice(1);
+---
+
+<BaseLayout
+  title="urBackend Blog - MongoDB Tutorials, Architecture & Backend Engineering"
+  description="Deep-dive articles, tutorials, and architecture lessons from the urBackend engineering team. Learn best practices for MongoDB BaaS, Row-Level Security, fullstack apps, and SDKs."
+  keywords="MongoDB blog, Backend as a Service tutorials, MongoDB architecture, fullstack engineering, MERN stack guide, BaaS tutorials, urBackend engineering"
+  canonicalUrl="https://urbackend.in/blog"
+>
+  <Navbar />
+
+  <PageHero
+    badge="ENGINEERING & INSIGHTS"
+    title="The urBackend"
+    highlightTitle="Blog"
+    description="Architecture breakdowns, MongoDB tutorials, release updates, and engineering lessons from building a MongoDB-native Backend as a Service."
+  />
+
+  <section class="blog-listing-section">
+    <div class="blog-container">
+      {featuredPost && (
+        <div class="featured-post-wrapper">
+          <div class="featured-tag">
+            <Sparkles size={14} />
+            <span>Featured Article</span>
+          </div>
+
+          <a href={`/blog/${featuredPost.id}`} class="featured-post-card">
+            <div class="featured-content">
+              <span class="category-pill">{featuredPost.data.category}</span>
+              <h2>{featuredPost.data.title}</h2>
+              <p>{featuredPost.data.description}</p>
+              
+              <div class="featured-footer">
+                <span class="featured-date">
+                  {new Date(featuredPost.data.date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                </span>
+                <span class="read-btn">
+                  Read article <ArrowRight size={16} />
+                </span>
+              </div>
+            </div>
+          </a>
+        </div>
+      )}
+
+      <div class="posts-grid-header">
+        <h2 class="grid-title">All Articles</h2>
+        <span class="post-count">{allPosts.length} posts published</span>
+      </div>
+
+      <div class="posts-grid">
+        {remainingPosts.map((post) => (
+          <BlogCard
+            slug={post.id}
+            title={post.data.title}
+            description={post.data.description}
+            date={post.data.date}
+            author={post.data.author}
+            category={post.data.category}
+            tags={post.data.tags}
+          />
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .blog-listing-section {
+    padding: 1rem 1.5rem 8rem;
+    background: #030303;
+  }
+
+  .blog-container {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* Featured Card */
+  .featured-post-wrapper {
+    margin-bottom: 5rem;
+  }
+
+  .featured-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #00f5d4;
+    margin-bottom: 1rem;
+  }
+
+  .featured-post-card {
+    display: block;
+    background: radial-gradient(circle at 80% 20%, rgba(0, 245, 212, 0.06) 0%, #080808 60%);
+    border: 1px solid rgba(0, 245, 212, 0.25);
+    padding: 3.5rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .featured-post-card:hover {
+    transform: translateY(-4px);
+    border-color: #00f5d4;
+    box-shadow: 0 16px 40px -10px rgba(0, 245, 212, 0.15);
+  }
+
+  .featured-content {
+    max-width: 800px;
+  }
+
+  .category-pill {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.6rem;
+    background: rgba(0, 245, 212, 0.08);
+    border: 1px solid rgba(0, 245, 212, 0.2);
+    color: #00f5d4;
+    margin-bottom: 1.25rem;
+  }
+
+  .featured-content h2 {
+    font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+    margin: 0 0 1.25rem;
+  }
+
+  .featured-post-card:hover h2 {
+    color: #00f5d4;
+  }
+
+  .featured-content p {
+    font-size: 1.15rem;
+    color: #a1a1aa;
+    line-height: 1.6;
+    margin: 0 0 2.5rem;
+  }
+
+  .featured-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .featured-date {
+    font-size: 0.85rem;
+    color: #71717a;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .read-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #00f5d4;
+  }
+
+  /* Posts Grid */
+  .posts-grid-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .grid-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+  }
+
+  .post-count {
+    font-size: 0.85rem;
+    color: #71717a;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    gap: 2rem;
+  }
+
+  @media (max-width: 640px) {
+    .featured-post-card {
+      padding: 2rem;
+    }
+  }
+</style>

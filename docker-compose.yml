@@ -74,6 +74,24 @@ services:
     depends_on:
       - dashboard-api
 
+  # ── Web Client (Next.js 14 + shadcn/ui) ──────────────────────────────────────
+  web-client:
+    build:
+      context: .
+      dockerfile: ./apps/web-client/Dockerfile
+    container_name: urbackend_web_client
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    depends_on:
+      - dashboard-api
+      - public-api
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:1235
+      NEXT_PUBLIC_DASHBOARD_API_URL: http://localhost:1234
+      PORT: 3000
+      NODE_ENV: production
+
 volumes:
   mongo_data:
   redis_data:

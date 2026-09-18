@@ -22,10 +22,10 @@ Workspace scripts are defined in [package.json](/package.json).
 
 ## Production Deployment Endpoints & Domains
 
-- **Frontend Landing**: `https://urbackend.bitbros.in`
-- **Dashboard App**: `https://app.urbackend.bitbros.in`
-- **Dashboard API (Internal/Admin)**: `https://api.urbackend.bitbros.in`
-- **Public API (SDK & User Auth)**: `https://api.ub.bitbros.in`
+- **Frontend Landing**: `https://urbackend.in/`
+- **Dashboard App**: `https://app.urbackend.in/`
+- **Dashboard API (Internal/Admin)**: `https://platform-api.urbackend.in/`
+- **Public API (SDK & User Auth)**: `https://api.urbackend.in/`
 
 ## Important project rules
 

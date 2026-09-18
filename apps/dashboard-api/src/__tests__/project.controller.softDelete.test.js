@@ -34,7 +34,8 @@ const mongoose = require('mongoose');
 function makeReq() {
     return {
         params: { projectId: 'proj_1', collectionName: 'posts', id: '507f1f77bcf86cd799439011' },
-        user: { _id: 'user_1' }
+        user: { _id: 'user_1' },
+        query: {}
     };
 }
 

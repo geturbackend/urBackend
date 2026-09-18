@@ -1,0 +1,165 @@
+---
+import BaseLayout from '../../layouts/Base.astro';
+import Navbar from '../../components/Navbar.astro';
+import Footer from '../../components/Footer.astro';
+import PageHero from '../../components/PageHero.astro';
+import { ArrowRight, Database, Flame, Server } from 'lucide-react';
+---
+
+<BaseLayout
+  title="urBackend Comparisons - vs Firebase, Supabase & Modern BaaS Alternatives"
+  description="Compare urBackend against Firebase and Supabase. See why developers choose a native MongoDB BaaS for document modeling, BYOM cluster flexibility, and zero vendor lock-in."
+  keywords="Firebase alternative, Supabase alternative, MongoDB BaaS alternative, Backend as a Service comparison, Firebase vs MongoDB, Supabase vs MongoDB, best BaaS 2026"
+  canonicalUrl="https://urbackend.in/compare"
+>
+  <Navbar />
+
+  <PageHero
+    badge="PLATFORM COMPARISONS"
+    title="How urBackend compares to other"
+    highlightTitle="BaaS Solutions"
+    description="Find the right backend architecture for your stack. Compare urBackend's document-native MongoDB engine, Bring-Your-Own-Storage flexibility, and open-source foundation."
+  />
+
+  <section class="compare-hub-section">
+    <div class="compare-hub-container">
+      <div class="compare-cards-grid">
+        <div class="compare-hub-card">
+          <div class="compare-hub-icon icon-firebase">
+            <Flame size={28} />
+          </div>
+          <h2>urBackend vs Google Firebase</h2>
+          <p>
+            Looking for an open-source, MongoDB-native alternative to Firebase? See how urBackend eliminates vendor lock-in, provides transparent pricing, and lets you own your database completely.
+          </p>
+          <ul class="hub-bullet-list">
+            <li>Standard MongoDB vs Proprietary Firestore</li>
+            <li>Zero vendor lock-in with Bring Your Own Database (BYOD)</li>
+            <li>Connect AWS S3 or Cloudflare R2 storage</li>
+          </ul>
+          <a href="/compare/firebase" class="cta-btn-primary hub-cta">
+            <span>Read Firebase Comparison</span>
+            <ArrowRight size={16} />
+          </a>
+        </div>
+
+        <div class="compare-hub-card">
+          <div class="compare-hub-icon icon-supabase">
+            <Database size={28} />
+          </div>
+          <h2>urBackend vs Supabase</h2>
+          <p>
+            Choosing between a document store and a relational database? Compare urBackend's MongoDB engine with Supabase's PostgreSQL architecture to understand schema flexibility vs SQL relations.
+          </p>
+          <ul class="hub-bullet-list">
+            <li>Flexible JSON Schemas vs SQL Migrations</li>
+            <li>First-class nested sub-documents and arrays</li>
+            <li>AI-powered Collection Creator with ERD visualization</li>
+          </ul>
+          <a href="/compare/supabase" class="cta-btn-primary hub-cta">
+            <span>Read Supabase Comparison</span>
+            <ArrowRight size={16} />
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .compare-hub-section {
+    padding: 3rem 1.5rem 8rem;
+    background: #030303;
+  }
+
+  .compare-hub-container {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .compare-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+    gap: 3rem;
+  }
+
+  .compare-hub-card {
+    background: #070707;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 3rem;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+  }
+
+  .compare-hub-card:hover {
+    border-color: rgba(0, 245, 212, 0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px -10px rgba(0, 245, 212, 0.1);
+  }
+
+  .compare-hub-icon {
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .icon-firebase {
+    color: #ff9800;
+  }
+
+  .icon-supabase {
+    color: #00f5d4;
+  }
+
+  .compare-hub-card h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 1rem;
+    letter-spacing: -0.02em;
+  }
+
+  .compare-hub-card p {
+    font-size: 0.98rem;
+    color: #a1a1aa;
+    line-height: 1.6;
+    margin: 0 0 1.5rem;
+  }
+
+  .hub-bullet-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex-grow: 1;
+  }
+
+  .hub-bullet-list li {
+    font-size: 0.92rem;
+    color: #d4d4d8;
+    position: relative;
+    padding-left: 1.25rem;
+  }
+
+  .hub-bullet-list li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: #00f5d4;
+  }
+
+  .hub-cta {
+    width: 100%;
+    justify-content: center;
+  }
+</style>

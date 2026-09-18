@@ -55,8 +55,10 @@ const FAQ_ITEMS = [
 ---
 
 <BaseLayout 
-  title="urBackend | MongoDB-Native Backend-as-a-Service" 
-  description="Your MongoDB, Supercharged. Turn your MongoDB into a production-ready backend with REST APIs, authentication, file storage, and email — zero backend code."
+  title="urBackend | MongoDB-Native Backend-as-a-Service (BaaS) & Instant REST API" 
+  description="Turn MongoDB into a production-ready backend in minutes. Instant CRUD REST APIs, JWT authentication, social login, file storage, row-level security & background jobs — zero boilerplate code."
+  keywords="MongoDB BaaS, Backend as a Service, MongoDB backend, Firebase alternative for MongoDB, Supabase MongoDB alternative, serverless MongoDB API, MongoDB Atlas BaaS, Instant REST API, MERN stack backend, React backend, Next.js MongoDB backend"
+  canonicalUrl="https://urbackend.in/"
 >
   <div class="landing-page">
     <!-- Grid Background -->
@@ -103,15 +105,57 @@ const FAQ_ITEMS = [
           </p>
 
           <div class="hero-ctas" style="margin-bottom: 2.5rem;">
-            <a href="https://app.urbackend.bitbros.in/signup" class="btn-hero-primary">
+            <a href="https://app.urbackend.in/signup" class="btn-hero-primary">
               <span>Get Started Free</span>
               <ArrowRight size={18} strokeWidth={2.5} />
             </a>
-            <a href="https://app.urbackend.bitbros.in/login" class="btn-hero-secondary">
+            <a href="https://app.urbackend.in/login" class="btn-hero-secondary">
               <Terminal size={18} strokeWidth={2} />
               <span>Go to Console</span>
             </a>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backed By Trust Strip -->
+    <div class="trust-strip">
+      <div class="trust-strip-container">
+        <span class="trust-label">SELECTED FOR &amp; BACKED BY</span>
+        <div class="trust-badges">
+          <a 
+            href="https://www.mongodb.com/startups" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            class="trust-badge"
+            title="MongoDB for Startups"
+          >
+            <span class="trust-icon">
+              <img src="/badges/mongodb.svg" alt="MongoDB Logo" width="18" height="18" />
+            </span>
+            <span class="trust-text">
+              <span class="trust-brand">MongoDB</span>
+              <span class="trust-sub">for Startups</span>
+            </span>
+          </a>
+
+          <div class="trust-separator"></div>
+
+          <a 
+            href="https://mintlify.com" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            class="trust-badge"
+            title="Mintlify OSS Program"
+          >
+            <span class="trust-icon">
+              <img src="/badges/mintlify.svg" alt="Mintlify Logo" width="18" height="18" />
+            </span>
+            <span class="trust-text">
+              <span class="trust-brand">Mintlify</span>
+              <span class="trust-sub">OSS Program</span>
+            </span>
+          </a>
         </div>
       </div>
     </div>
@@ -365,11 +409,11 @@ const FAQ_ITEMS = [
         </p>
         
         <div class="cta-buttons">
-          <a href="https://app.urbackend.bitbros.in/signup" class="cta-btn-primary">
+          <a href="https://app.urbackend.in/signup" class="cta-btn-primary">
             <span>Get Started Free</span>
             <ArrowRight size={18} strokeWidth={2.5} />
           </a>
-          <a href="https://app.urbackend.bitbros.in/login" class="cta-btn-secondary">
+          <a href="https://app.urbackend.in/login" class="cta-btn-secondary">
             <Terminal size={18} strokeWidth={2} />
             <span>Go to Console</span>
           </a>
@@ -444,4 +488,133 @@ const FAQ_ITEMS = [
     justify-content: space-between;
     align-items: center;
   }
+
+  /* Backed By Trust Strip */
+  .trust-strip {
+    background: #040404;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 0.9rem 1.5rem;
+    position: relative;
+    z-index: 2;
+  }
+
+  .trust-strip-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.75rem;
+    flex-wrap: wrap;
+  }
+
+  .trust-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #71717a;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .trust-badges {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .trust-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.35rem 0.85rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 4px;
+    text-decoration: none;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .trust-badge:hover {
+    border-color: rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-1px);
+  }
+
+  .trust-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .trust-icon img {
+    opacity: 0.85;
+    transition: opacity 0.25s ease, transform 0.25s ease, filter 0.25s ease;
+  }
+
+  .trust-badge:hover .trust-icon img {
+    opacity: 1;
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 6px rgba(0, 245, 212, 0.35));
+  }
+
+  .trust-text {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .trust-brand {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #e4e4e7;
+    transition: color 0.2s ease;
+  }
+
+  .trust-badge:hover .trust-brand {
+    color: #fff;
+  }
+
+  .trust-sub {
+    font-size: 0.75rem;
+    color: #71717a;
+    font-weight: 500;
+  }
+
+  .trust-badge:hover .trust-sub {
+    color: #a1a1aa;
+  }
+
+  .trust-separator {
+    width: 1px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  @media (max-width: 640px) {
+    .trust-strip-container {
+      flex-direction: column;
+      gap: 0.75rem;
+      text-align: center;
+    }
+
+    .trust-badges {
+      flex-direction: column;
+      gap: 0.6rem;
+      width: 100%;
+    }
+
+    .trust-badge {
+      justify-content: center;
+      width: 100%;
+      max-width: 260px;
+    }
+
+    .trust-separator {
+      display: none;
+    }
+  }
 </style>
+

@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "concurrently -c \"cyan,magenta,yellow,green\" -n \"DASHBOARD,PUBLIC,WEB,CONSUMER\" \"npm run dev --workspace=dashboard-api\" \"npm run dev --workspace=public-api\" \"npm run dev --workspace=web-dashboard\" \"npm run dev --workspace=consumer\"",
     "build": "npm run build --workspaces --if-present",
+    "test:web-client": "npm run test --workspace=web-client",
     "loadtest:public": "node scripts/loadtest-public-api.js",
     "loadtest:dashboard": "node scripts/loadtest-dashboard-api.js",
     "prepare": "husky || node -e \"\""
@@ -32,6 +33,10 @@
     "path": "0.12.7"
   },
   "overrides": {
-    "rollup": "npm:@rollup/wasm-node"
+    "rollup": "npm:@rollup/wasm-node",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5"
   }
 }

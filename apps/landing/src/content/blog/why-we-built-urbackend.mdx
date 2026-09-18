@@ -1,0 +1,60 @@
+---
+title: "Why We Built urBackend: The Missing BaaS for MongoDB"
+description: "Frontend developers have loved Backend-as-a-Service tools for years, but SQL-based platforms force rigid schemas and painful migrations. Here is why we built a MongoDB-native platform with zero vendor lock-in."
+date: 2026-08-15
+author: "Yash Pouranik"
+category: "Announcements"
+tags: ["mongodb baas", "backend as a service", "firebase alternative", "supabase alternative", "open-source baas", "mongodb", "document database", "backend architecture"]
+draft: false
+---
+
+For the past decade, the Backend-as-a-Service (BaaS) landscape has undergone a massive resurgence. Platforms like Firebase, Supabase, and PocketBase proved that developers don't want to spend three weeks writing repetitive CRUD controllers, user sign-up handlers, and auth token rotation.
+
+Yet, despite this explosion of tooling, one massive ecosystem was left behind: **MongoDB**.
+
+If you were a frontend or mobile engineer who preferred document databases — who wanted the flexibility of JSON, nested arrays, and rapid iteration without schema lock — you were effectively forced into one of two painful choices:
+
+1. **Use Firebase/Firestore**, where your data is locked into Google's proprietary ecosystem with unpredictable read/write billing and no easy export.
+2. **Use a PostgreSQL BaaS**, where every slight schema modification requires drafting SQL migration files, altering tables, and dealing with complex relational join tables for nested components.
+
+We built **urBackend** to fix this.
+
+## The Document Model is Natural for Frontends
+
+When building modern web and mobile apps with React, Vue, or Flutter, your state is inherently hierarchical. A blog post has nested tags, an author profile, and an array of comments. An e-commerce product has variant dimensions, color swatches, and customer ratings.
+
+In a relational database, modeling this requires four separate tables joined with foreign keys. In MongoDB, it is simply a document:
+
+```json
+{
+  "_id": "prod_987",
+  "title": "Ergonomic Mechanical Keyboard",
+  "price": 149.99,
+  "specs": {
+    "switches": "Gateron Brown",
+    "hotSwappable": true
+  },
+  "tags": ["peripherals", "wireless"]
+}
+```
+
+By pairing this natural document structure with an automated BaaS gateway, frontend developers get the best of both worlds: rapid iteration and structured integrity.
+
+## Our Core Principles
+
+When designing urBackend, we committed to three non-negotiable architectural principles:
+
+### 1. Bring Your Own Database (Zero Vendor Lock-In)
+We believe your data should always belong to you. urBackend can connect directly to your existing MongoDB Atlas cluster or self-hosted database. If you ever decide to stop using urBackend, you simply disconnect — your MongoDB database and data remain completely intact. No complex migration pipelines, no proprietary export formats.
+
+### 2. Built-in Row-Level Security (RLS)
+Exposing direct database access to frontend clients requires airtight security. urBackend intercepts every request at the gateway, validating JSON Web Tokens and enforcing document ownership before a single query reaches your database.
+
+### 3. Transparent & Predictable Infrastructure
+No surprise bills based on internal database reads or background indexing spikes. We believe in clear limits, open-source core code, and transparent pricing.
+
+## What's Next
+
+urBackend is currently in active Public Beta. We've released official SDKs for TypeScript, React, and Python, launched our terminal CLI, and introduced an AI Collection Creator that turns natural language into validated schemas.
+
+We're just getting started. Join our [Discord community](https://discord.gg/CXJjvJkNWn) and let's build the future of MongoDB backends together.

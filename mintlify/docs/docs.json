@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "luma",
   "name": "urBackend",
-  "domain": "docs.ub.bitbros.in",
+  "domain": "docs.urbackend.in",
   "colors": {
     "primary": "#53e5ae",
     "light": "#347c64",
@@ -161,6 +161,27 @@
             "pages": [
               "cli/overview"
             ]
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/geturbackend/urBackend",
+      "discord": "https://discord.gg/CXJjvJkNWn"
+    },
+    "links": [
+      {
+        "header": "Backed by",
+        "items": [
+          {
+            "label": "MongoDB for Startups",
+            "href": "https://www.mongodb.com/startups"
+          },
+          {
+            "label": "Mintlify OSS Program",
+            "href": "https://mintlify.com"
           }
         ]
       }

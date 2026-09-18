@@ -1,0 +1,347 @@
+---
+import { Tag, Sparkles, Wrench, Bug, ExternalLink } from 'lucide-react';
+
+export interface ReleaseEntry {
+  title: string;
+  date: string;
+  version?: string;
+  summary?: string;
+  features?: string[];
+  improvements?: string[];
+  fixes?: string[];
+  link?: string;
+}
+
+interface Props {
+  releases: ReleaseEntry[];
+}
+
+const { releases } = Astro.props;
+---
+
+<div class="changelog-timeline">
+  <div class="timeline-line"></div>
+
+  {releases.map((release) => (
+    <article class="timeline-item">
+      <div class="timeline-node">
+        <div class="timeline-dot"></div>
+      </div>
+
+      <div class="timeline-content">
+        <header class="timeline-header">
+          <div class="timeline-meta">
+            <span class="timeline-date">{release.date}</span>
+            {release.version && (
+              <span class="timeline-badge">
+                <Tag size={12} />
+                {release.version}
+              </span>
+            )}
+          </div>
+          <h2 class="timeline-title">{release.title}</h2>
+          {release.summary && <p class="timeline-summary">{release.summary}</p>}
+        </header>
+
+        <div class="timeline-body">
+          {release.features && release.features.length > 0 && (
+            <div class="change-group">
+              <h3 class="group-label feature-label">
+                <Sparkles size={14} /> New Features
+              </h3>
+              <ul class="change-list">
+                {release.features.map((item) => (
+                  <li>
+                    <span class="bullet-dot bullet-cyan"></span>
+                    <span class="change-text" set:html={item} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {release.improvements && release.improvements.length > 0 && (
+            <div class="change-group">
+              <h3 class="group-label improvement-label">
+                <Wrench size={14} /> Improvements
+              </h3>
+              <ul class="change-list">
+                {release.improvements.map((item) => (
+                  <li>
+                    <span class="bullet-dot bullet-yellow"></span>
+                    <span class="change-text" set:html={item} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {release.fixes && release.fixes.length > 0 && (
+            <div class="change-group">
+              <h3 class="group-label fix-label">
+                <Bug size={14} /> Bug Fixes
+              </h3>
+              <ul class="change-list">
+                {release.fixes.map((item) => (
+                  <li>
+                    <span class="bullet-dot bullet-red"></span>
+                    <span class="change-text" set:html={item} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {release.link && (
+          <footer class="timeline-footer">
+            <a href={release.link} target="_blank" rel="noopener noreferrer" class="timeline-link">
+              <span>View full release in documentation</span>
+              <ExternalLink size={13} />
+            </a>
+          </footer>
+        )}
+      </div>
+    </article>
+  ))}
+</div>
+
+<style>
+  .changelog-timeline {
+    position: relative;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 6rem;
+  }
+
+  .timeline-line {
+    position: absolute;
+    top: 2rem;
+    bottom: 4rem;
+    left: 2rem;
+    width: 2px;
+    background: linear-gradient(180deg, rgba(0, 245, 212, 0.4) 0%, rgba(255, 255, 255, 0.05) 90%);
+  }
+
+  .timeline-item {
+    position: relative;
+    display: flex;
+    gap: 2.5rem;
+    margin-bottom: 4rem;
+  }
+
+  .timeline-node {
+    position: relative;
+    flex-shrink: 0;
+    width: 24px;
+    display: flex;
+    justify-content: center;
+    padding-top: 0.35rem;
+    z-index: 2;
+  }
+
+  .timeline-dot {
+    width: 14px;
+    height: 14px;
+    background: #030303;
+    border: 2px solid #00f5d4;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0, 245, 212, 0.6);
+  }
+
+  .timeline-content {
+    flex: 1;
+    background: #080808;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 2rem;
+    position: relative;
+    transition: border-color 0.2s ease;
+  }
+
+  .timeline-content:hover {
+    border-color: rgba(0, 245, 212, 0.25);
+  }
+
+  .timeline-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .timeline-date {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #71717a;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .timeline-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.5rem;
+    background: rgba(0, 245, 212, 0.08);
+    border: 1px solid rgba(0, 245, 212, 0.2);
+    color: #00f5d4;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .timeline-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0.25rem 0 0.5rem;
+    letter-spacing: -0.02em;
+  }
+
+  .timeline-summary {
+    color: #a1a1aa;
+    font-size: 0.95rem;
+    margin: 0 0 1.5rem;
+    line-height: 1.5;
+  }
+
+  .timeline-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .group-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 0.75rem;
+  }
+
+  .feature-label {
+    color: #00f5d4;
+  }
+
+  .improvement-label {
+    color: #facc15;
+  }
+
+  .fix-label {
+    color: #f87171;
+  }
+
+  .change-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .change-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+
+  .bullet-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-top: 0.55rem;
+    flex-shrink: 0;
+  }
+
+  .bullet-cyan {
+    background: #00f5d4;
+    box-shadow: 0 0 6px rgba(0, 245, 212, 0.5);
+  }
+
+  .bullet-yellow {
+    background: #facc15;
+  }
+
+  .bullet-red {
+    background: #f87171;
+  }
+
+  /* Formatted markdown text styling inside change items */
+  .change-text {
+    flex: 1;
+    color: #d4d4d8;
+  }
+
+  .change-text :global(strong) {
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .change-text :global(code) {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85em;
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    color: #00f5d4;
+  }
+
+  .change-text :global(a) {
+    color: #00f5d4;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .change-text :global(a:hover) {
+    color: #00ffd8;
+  }
+
+  .timeline-footer {
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .timeline-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: #00f5d4;
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .timeline-link:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+  }
+
+  @media (max-width: 640px) {
+    .changelog-timeline {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
+    .timeline-line {
+      left: 1rem;
+    }
+
+    .timeline-item {
+      gap: 1.25rem;
+    }
+
+    .timeline-content {
+      padding: 1.25rem;
+    }
+
+    .timeline-title {
+      font-size: 1.3rem;
+    }
+  }
+</style>

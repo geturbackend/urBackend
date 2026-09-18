@@ -1,6 +1,6 @@
 ---
 import { Github, ArrowRight } from 'lucide-react';
-const ADMIN_EMAIL = 'yashpouranik@gmail.com'; // Hardcoding since this is static site
+const ADMIN_EMAIL = 'yash@urbackend.in'; // Official contact email
 ---
 
 <footer class="modern-footer">
@@ -38,27 +38,41 @@ const ADMIN_EMAIL = 'yashpouranik@gmail.com'; // Hardcoding since this is static
 
                 <div class="footer-col">
                     <h4>Product</h4>
-                    <a href="/#features">Features</a>
-                    <a href="/#use-cases">Use Cases</a>
-                    <a href="/#how-it-works">How it Works</a>
-                    <a href="https://docs.ub.bitbros.in">Documentation</a>
+                    <a href="/features">Features</a>
+                    <a href="/pricing">Pricing</a>
+                    <a href="/changelog">Changelog</a>
+                </div>
+
+                <div class="footer-col">
+                    <h4>Solutions</h4>
+                    <a href="/use-cases">Use Cases</a>
+                    <a href="/mongodb">For MongoDB</a>
+                    <a href="/compare/firebase">vs Firebase</a>
+                    <a href="/compare/supabase">vs Supabase</a>
+                </div>
+
+                <div class="footer-col">
+                    <h4>Developers</h4>
+                    <a href="https://docs.urbackend.in">Documentation</a>
+                    <a href="/blog">Blog</a>
+                    <a href="https://github.com/geturbackend/urBackend" target="_blank" rel="noreferrer">GitHub</a>
+                    <a href="https://www.npmjs.com/package/@urbackend/cli" target="_blank" rel="noreferrer">CLI</a>
                 </div>
 
                 <div class="footer-col">
                     <h4>Connect</h4>
                     <a href="https://discord.gg/CXJjvJkNWn" target="_blank" rel="noreferrer">Discord</a>
-                    <a href="https://github.com/yash-pouranik/urBackend" target="_blank" rel="noreferrer">Github</a>
-                    <a href={`mailto:${ADMIN_EMAIL}`}>Email</a>
+                    <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${ADMIN_EMAIL}`} target="_blank" rel="noopener noreferrer">Email</a>
                 </div>
             </div>
         </div>
 
         <div class="footer-middle">
             <div class="social-links">
-                <a href="https://github.com/yash-pouranik/urBackend" target="_blank" class="social-icon"><Github size={20} /></a>
+                <a href="https://github.com/geturbackend/urBackend" target="_blank" class="social-icon"><Github size={20} /></a>
             </div>
             <div class="legal-links">
-                <span>&copy; 2026 urBackend Inc.</span>
+                <span>&copy; 2026 urBackend. All rights reserved.</span>
             </div>
         </div>
 

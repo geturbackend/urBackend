@@ -1,0 +1,409 @@
+---
+import BaseLayout from '../layouts/Base.astro';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import PageHero from '../components/PageHero.astro';
+import { 
+  Layers, Smartphone, ShoppingCart, Sparkles, Sliders, 
+  ArrowRight, Check, ShieldCheck, Zap, Database, Globe
+} from 'lucide-react';
+
+const USE_CASES = [
+  {
+    id: 'saas',
+    icon: Layers,
+    badge: 'MULTI-TENANT SAAS',
+    title: 'B2B & B2C SaaS Platforms',
+    description: 'Launch complete SaaS backends with user authentication, team collaboration, document ownership policies, and billing webhooks without maintaining server infrastructure.',
+    highlights: [
+      'Built-in Row-Level Security (RLS) ensures users and tenants only access their own documents',
+      'Transactional email dispatchers for invite links, onboarding, and workspace notifications',
+      'Config change audit logging and webhook triggers for payment events (Stripe, Lemon Squeezy)',
+      'Rotating refresh tokens with Redis persistence for seamless multi-device sessions'
+    ],
+    architecture: 'React / Next.js Client ➔ urBackend Gateway (RLS + Auth) ➔ MongoDB Atlas (Tenant Collections)'
+  },
+  {
+    id: 'mobile',
+    icon: Smartphone,
+    badge: 'MOBILE APPLICATIONS',
+    title: 'Flutter & React Native Backends',
+    description: 'Provide high-speed JSON APIs for mobile applications. Upload photos and media through presigned cloud storage URLs with zero backend server lag.',
+    highlights: [
+      'Clean REST endpoints with minimal payload overhead for bandwidth-constrained cellular networks',
+      'Direct-to-bucket S3/R2 presigned file uploads for user avatars, images, and audio',
+      'Official Dart and React Native client integrations with token caching',
+      'Strict schema validation ensures malformed mobile client payloads are caught immediately'
+    ],
+    architecture: 'Flutter / React Native ➔ Bearer Token Auth ➔ Direct S3 Storage & MongoDB Document Store'
+  },
+  {
+    id: 'ecommerce',
+    icon: ShoppingCart,
+    badge: 'CONTENT & COMMERCE',
+    title: 'Catalogs, Marketplaces & Headless CMS',
+    description: 'Take advantage of MongoDB\'s flexible document model to handle deeply nested product variants, attributes, reviews, and dynamic pricing schemas without rigid SQL migrations.',
+    highlights: [
+      'Nested JSON documents represent variations, specifications, and SKU matrices naturally',
+      'Public-read collections deliver high-throughput cached responses for catalog browsing',
+      'Automated index management directly from the console ensures rapid sub-second search',
+      'Realtime WebSocket mutation broadcasting keeps client inventory badges synchronized'
+    ],
+    architecture: 'Headless Frontend (Astro / Next.js) ➔ Public-Read Gateway ➔ Indexed MongoDB Collections'
+  },
+  {
+    id: 'ai',
+    icon: Sparkles,
+    badge: 'AI-POWERED PLATFORMS',
+    title: 'Generative AI & Agent Workspaces',
+    description: 'Pair your LLM pipelines with a MongoDB backend that adapts instantly. Use natural language to generate schemas and persist conversational sessions with zero friction.',
+    highlights: [
+      'Python SDK enables seamless integration with LangChain, LlamaIndex, and FastAPI agents',
+      'BYOK Groq integration provides high-throughput inference for natural language schema generation',
+      'Store dynamic conversational memory, prompt templates, and vector metadata in flexible documents',
+      'Transit encryption safeguards all proprietary developer keys and model payloads'
+    ],
+    architecture: 'FastAPI / Python Agents ➔ urBackend Python SDK ➔ Encrypted BYOK Engine ➔ MongoDB'
+  },
+  {
+    id: 'internal-tools',
+    icon: Sliders,
+    badge: 'ENTERPRISE & INTERNAL TOOLS',
+    title: 'Internal Dashboards & Admin Portals',
+    description: 'Empower operations and support teams with instant backends. Generate CRUD APIs for legacy MongoDB databases in minutes without altering existing schemas.',
+    highlights: [
+      'Connect existing production MongoDB instances with Bring-Your-Own-Database (BYOD)',
+      'Async background worker exports databases to CSV/JSON without timing out',
+      'Visual Collection Builder lets non-engineers structure operational data securely',
+      'Personal Access Tokens (PATs) enable automated CI/CD and cron jobs'
+    ],
+    architecture: 'Internal Tool (Retool / Vite) ➔ Secret Key (sk_live) ➔ Existing Enterprise MongoDB'
+  }
+];
+---
+
+<BaseLayout
+  title="urBackend Use Cases - SaaS, Mobile Apps, AI Workflows & Internal Tools"
+  description="Explore real-world use cases for urBackend: Multi-tenant SaaS with Row-Level Security, React Native/Flutter mobile backends, AI-powered applications, and enterprise internal tools on MongoDB."
+  keywords="MongoDB SaaS backend, mobile app backend MongoDB, Flutter MongoDB backend, React Native backend, AI backend BaaS, internal tool backend, serverless backend use cases"
+  canonicalUrl="https://urbackend.in/use-cases"
+>
+  <Navbar />
+
+  <PageHero
+    badge="PROVEN ARCHITECTURES"
+    title="Build and scale any modern application on"
+    highlightTitle="MongoDB"
+    description="From early-stage prototypes to high-throughput SaaS platforms and cross-platform mobile apps, urBackend delivers the speed and flexibility your stack demands."
+    primaryCta={{ label: "Start Building Free", href: "https://app.urbackend.in/signup" }}
+    secondaryCta={{ label: "Read the Docs", href: "https://docs.urbackend.in" }}
+  />
+
+  <!-- Detailed Use Cases List -->
+  <section class="use-cases-list-section">
+    <div class="use-cases-container">
+      {USE_CASES.map((uc, index) => {
+        const Icon = uc.icon;
+        return (
+          <div class="use-case-block" id={uc.id}>
+            <div class="use-case-top">
+              <div class="use-case-badge-row">
+                <div class="uc-badge">
+                  <Icon size={14} />
+                  <span>{uc.badge}</span>
+                </div>
+              </div>
+              <h2 class="uc-title">{uc.title}</h2>
+              <p class="uc-desc">{uc.description}</p>
+            </div>
+
+            <div class="use-case-details">
+              <div class="uc-highlights">
+                <h3>Key Capabilities</h3>
+                <ul>
+                  {uc.highlights.map((h) => (
+                    <li>
+                      <div class="check-box">
+                        <Check size={14} />
+                      </div>
+                      <span>{h}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div class="uc-arch-box">
+                <h3>Architecture Flow</h3>
+                <div class="arch-diagram">
+                  <code>{uc.architecture}</code>
+                </div>
+                <div class="arch-meta">
+                  <Zap size={14} color="#00f5d4" />
+                  <span>Configurable in under 5 minutes from the console.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </section>
+
+  <!-- How It Works Summary -->
+  <section class="steps-summary-section">
+    <div class="steps-container">
+      <div class="section-header-centered">
+        <span class="section-badge">WORKFLOW</span>
+        <h2 class="section-title">Three Steps to Production</h2>
+        <p class="section-desc">Go from an empty folder or existing database to production endpoints in minutes.</p>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-num">01</div>
+          <h3>Connect Database</h3>
+          <p>Link your MongoDB Atlas or self-hosted cluster using a standard connection string, or start with our managed cloud database.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">02</div>
+          <h3>Model Collections</h3>
+          <p>Define your collection schemas with the Visual Builder or AI Collection Creator. Set field types, validation rules, and RLS modes.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">03</div>
+          <h3>Query from Client</h3>
+          <p>Install the SDK for TypeScript, React, or Python and begin querying data, uploading files, and authenticating users immediately.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bottom CTA -->
+  <section class="cta-section">
+    <div class="cta-container">
+      <h2 class="cta-heading">Have an application in mind?</h2>
+      <p class="cta-description">
+        Ship your backend in record time with urBackend. No credit card required.
+      </p>
+      <div class="cta-buttons">
+        <a href="https://app.urbackend.in/signup" class="cta-btn-primary">
+          <span>Start Building Free</span>
+          <ArrowRight size={18} />
+        </a>
+        <a href="/features" class="cta-btn-secondary">
+          <span>Explore All Features</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .use-cases-list-section {
+    padding: 3rem 1.5rem 6rem;
+    background: #030303;
+  }
+
+  .use-cases-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4rem;
+  }
+
+  .use-case-block {
+    background: #070707;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 3rem;
+    transition: border-color 0.3s ease;
+  }
+
+  .use-case-block:hover {
+    border-color: rgba(0, 245, 212, 0.3);
+  }
+
+  .use-case-top {
+    margin-bottom: 2.5rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .uc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.25rem 0.75rem;
+    background: rgba(0, 245, 212, 0.06);
+    border: 1px solid rgba(0, 245, 212, 0.2);
+    color: #00f5d4;
+    margin-bottom: 1rem;
+  }
+
+  .uc-title {
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 1rem;
+    letter-spacing: -0.02em;
+  }
+
+  .uc-desc {
+    font-size: 1.1rem;
+    color: #a1a1aa;
+    line-height: 1.6;
+    margin: 0;
+    max-width: 800px;
+  }
+
+  .use-case-details {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 3rem;
+  }
+
+  .uc-highlights h3,
+  .uc-arch-box h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #fff;
+    margin: 0 0 1.25rem;
+  }
+
+  .uc-highlights ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .uc-highlights li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    font-size: 0.95rem;
+    color: #d4d4d8;
+    line-height: 1.5;
+  }
+
+  .check-box {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 245, 212, 0.1);
+    border: 1px solid rgba(0, 245, 212, 0.3);
+    color: #00f5d4;
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .uc-arch-box {
+    background: #040404;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .arch-diagram {
+    background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .arch-diagram code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    color: #00f5d4;
+    line-height: 1.6;
+    display: block;
+    word-break: break-word;
+  }
+
+  .arch-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+    color: #71717a;
+  }
+
+  /* Steps Summary */
+  .steps-summary-section {
+    padding: 6rem 1.5rem;
+    background: #000;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .steps-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-header-centered {
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+  }
+
+  .step-card {
+    background: #060606;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .step-num {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: rgba(0, 245, 212, 0.2);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 1rem;
+  }
+
+  .step-card h3 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.75rem;
+  }
+
+  .step-card p {
+    font-size: 0.95rem;
+    color: #a1a1aa;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  @media (max-width: 900px) {
+    .use-case-details {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+
+    .use-case-block {
+      padding: 2rem;
+    }
+  }
+</style>

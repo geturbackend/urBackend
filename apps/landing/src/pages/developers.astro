@@ -1,0 +1,445 @@
+---
+import BaseLayout from '../layouts/Base.astro';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import PageHero from '../components/PageHero.astro';
+import OrbitSection from '../components/OrbitSection.jsx';
+import { 
+  Code, Terminal, Layers, ArrowRight, Github, BookOpen, 
+  ExternalLink, Check, Copy, Sparkles, Cpu, ShieldCheck
+} from 'lucide-react';
+
+const SDKS = [
+  {
+    name: '@urbackend/sdk',
+    badge: 'TYPESCRIPT & JAVASCRIPT',
+    version: 'v0.4.8',
+    install: 'npm install @urbackend/sdk',
+    description: 'Framework-agnostic core SDK. Provides typed collections, auth session caching, RLS headers, file uploads, and mail dispatchers.',
+    code: `import urBackend from '@urbackend/sdk';
+
+const client = urBackend({ 
+  apiKey: 'pk_live_your_key' 
+});
+
+// Query database with MongoDB operators
+const posts = await client.db.getAll('posts', {
+  filter: { published: true },
+  sort: 'createdAt:desc',
+  limit: 10
+});`
+  },
+  {
+    name: '@urbackend/react',
+    badge: 'REACT & NEXT.JS',
+    version: 'v0.2.7',
+    install: 'npm install @urbackend/react @urbackend/sdk',
+    description: 'First-class React support with <UrProvider />, authentication drop-in UI (<UrAuth />), protected route guards, and custom hooks.',
+    code: `import { UrProvider, UrAuth, useUser, useDb } from '@urbackend/react';
+
+function App() {
+  return (
+    <UrProvider apiKey="pk_live_your_key">
+      <Dashboard />
+    </UrProvider>
+  );
+}
+
+function Dashboard() {
+  const { user, logout } = useUser();
+  const db = useDb();
+  // ...
+}`
+  },
+  {
+    name: 'urbackend (Python)',
+    badge: 'PYTHON & FASTAPI',
+    version: 'v0.1.1',
+    install: 'pip install urbackend',
+    description: 'Python SDK built on requests. Seamless integration for Django, Flask, FastAPI microservices, and AI pipelines.',
+    code: `from urbackend import UrBackendClient
+
+client = UrBackendClient(api_key="pk_live_your_key")
+
+# CRUD operations
+post = client.db.insert(
+    "posts",
+    {"title": "Hello from Python", "published": True},
+    token=client.auth.get_token()
+)`
+  },
+  {
+    name: '@urbackend/cli',
+    badge: 'TERMINAL TOOL',
+    version: 'v0.2.0',
+    install: 'npm install -g @urbackend/cli',
+    description: 'Manage projects from your command line. Sync collections, pull schemas, and generate strict TypeScript definition files.',
+    code: `# Login with Personal Access Token (PAT)
+ub login
+
+# Link workspace to urBackend project
+ub init
+
+# Pull remote schemas & generate urbackend.d.ts
+ub pull
+ub generate`
+  }
+];
+
+const DEV_HIGHLIGHTS = [
+  {
+    icon: Code,
+    title: 'Strict Type Generation',
+    desc: 'Run ub generate from the CLI to generate complete TypeScript definitions matching your live MongoDB collection schemas.'
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Publishable vs Secret Keys',
+    desc: 'Public keys (pk_live) are safe for frontend bundles and enforced by RLS. Secret keys (sk_live) unlock full administrative access.'
+  },
+  {
+    icon: Cpu,
+    title: 'Low Latency Global Gateway',
+    desc: 'Optimized connection pooling, Redis LRU cache, and lightweight Express gateways with sub-50ms average responses.'
+  },
+  {
+    icon: Terminal,
+    title: 'Open REST Specification',
+    desc: 'Every urBackend project outputs predictable REST endpoints. If you do not want an SDK, query directly with fetch or cURL.'
+  }
+];
+---
+
+<BaseLayout
+  title="urBackend for Developers - TypeScript, React, Python SDKs & CLI for MongoDB"
+  description="Integrate MongoDB in minutes with official SDKs for TypeScript, React, and Python. Features automated TypeScript generation, CLI tooling, and full REST API documentation."
+  keywords="MongoDB SDK, TypeScript MongoDB client, React MongoDB SDK, Python MongoDB BaaS, urBackend CLI, generated types, REST API client for MongoDB, MERN stack tools"
+  canonicalUrl="https://urbackend.in/developers"
+>
+  <Navbar />
+
+  <PageHero
+    badge="DEVELOPER ECOSYSTEM"
+    title="Built by developers, for modern"
+    highlightTitle="Builders"
+    description="Ship applications in minutes, not months. Use our lightweight SDKs, generate end-to-end TypeScript definitions, and integrate directly with your favorite framework."
+    primaryCta={{ label: "Explore Documentation", href: "https://docs.urbackend.in" }}
+    secondaryCta={{ label: "View GitHub Repo", href: "https://github.com/geturbackend/urBackend" }}
+  />
+
+  <!-- SDKs Grid -->
+  <section class="sdks-section">
+    <div class="sdks-container">
+      <div class="section-header-centered">
+        <span class="section-badge">OFFICIAL PACKAGES</span>
+        <h2 class="section-title">First-Party Client Libraries</h2>
+        <p class="section-desc">Official client libraries and developer tooling maintained directly by the urBackend core team.</p>
+      </div>
+
+      <div class="sdks-grid">
+        {SDKS.map((sdk) => (
+          <div class="sdk-card">
+            <div class="sdk-card-top">
+              <div class="sdk-meta">
+                <span class="sdk-badge">{sdk.badge}</span>
+                <span class="sdk-version">{sdk.version}</span>
+              </div>
+              <h3 class="sdk-title">{sdk.name}</h3>
+              <p class="sdk-desc">{sdk.description}</p>
+              
+              <div class="install-bar">
+                <code>{sdk.install}</code>
+              </div>
+            </div>
+
+            <div class="sdk-code-box">
+              <pre><code>{sdk.code}</code></pre>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Orbit Technology Section -->
+  <OrbitSection client:visible />
+
+  <!-- DX Highlights -->
+  <section class="dx-features-section">
+    <div class="dx-container">
+      <div class="section-header-centered">
+        <span class="section-badge">DEVELOPER EXPERIENCE</span>
+        <h2 class="section-title">Engineered for Developer Joy</h2>
+        <p class="section-desc">We obsess over developer ergonomics so you spend time building features instead of managing plumbing.</p>
+      </div>
+
+      <div class="dx-grid">
+        {DEV_HIGHLIGHTS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div class="dx-card">
+              <div class="dx-icon-box">
+                <Icon size={24} />
+              </div>
+              <h3>{item.title}</h3>
+              <p>{item.desc}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </section>
+
+  <!-- Open Source & Community Banner -->
+  <section class="oss-community-section">
+    <div class="oss-community-container">
+      <div class="oss-card">
+        <div class="oss-card-content">
+          <span class="section-badge">OPEN SOURCE CORE</span>
+          <h2>Backed by the Community & NSoC 2026</h2>
+          <p>
+            urBackend is licensed under MIT. Our core engine, SDKs, and CLI are fully open-source. Join our growing community of contributors and help shape the future of MongoDB BaaS.
+          </p>
+          <div class="oss-actions">
+            <a href="https://github.com/geturbackend/urBackend" target="_blank" rel="noopener noreferrer" class="cta-btn-primary">
+              <Github size={18} />
+              <span>Star on GitHub</span>
+            </a>
+            <a href="https://discord.gg/CXJjvJkNWn" target="_blank" rel="noopener noreferrer" class="cta-btn-secondary">
+              <span>Join Discord Community</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bottom CTA -->
+  <section class="cta-section">
+    <div class="cta-container">
+      <h2 class="cta-heading">Ready to write code?</h2>
+      <p class="cta-description">
+        Initialize your project in under two minutes with the urBackend CLI or dashboard console.
+      </p>
+      <div class="cta-buttons">
+        <a href="https://app.urbackend.in/signup" class="cta-btn-primary">
+          <span>Get Started Free</span>
+          <ArrowRight size={18} />
+        </a>
+        <a href="https://docs.urbackend.in/quickstart" target="_blank" rel="noopener noreferrer" class="cta-btn-secondary">
+          <span>5-Minute Quickstart</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .sdks-section {
+    padding: 3rem 1.5rem 6rem;
+    background: #030303;
+  }
+
+  .sdks-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-header-centered {
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+
+  .sdks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 2.5rem;
+  }
+
+  .sdk-card {
+    background: #070707;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: border-color 0.3s ease;
+  }
+
+  .sdk-card:hover {
+    border-color: rgba(0, 245, 212, 0.3);
+  }
+
+  .sdk-card-top {
+    padding: 2.2rem;
+  }
+
+  .sdk-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .sdk-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.6rem;
+    background: rgba(0, 245, 212, 0.08);
+    border: 1px solid rgba(0, 245, 212, 0.2);
+    color: #00f5d4;
+  }
+
+  .sdk-version {
+    font-size: 0.8rem;
+    color: #71717a;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .sdk-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .sdk-desc {
+    font-size: 0.95rem;
+    color: #a1a1aa;
+    line-height: 1.6;
+    margin: 0 0 1.5rem;
+  }
+
+  .install-bar {
+    background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .install-bar code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88rem;
+    color: #00f5d4;
+  }
+
+  .sdk-code-box {
+    background: #020202;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    flex: 1;
+    overflow-x: auto;
+  }
+
+  .sdk-code-box pre {
+    margin: 0;
+    padding: 1.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: #e4e4e7;
+  }
+
+  /* DX Highlights */
+  .dx-features-section {
+    padding: 6rem 1.5rem;
+    background: #000;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .dx-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .dx-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 2rem;
+  }
+
+  .dx-card {
+    background: #070707;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 2.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .dx-icon-box {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 245, 212, 0.08);
+    border: 1px solid rgba(0, 245, 212, 0.2);
+    color: #00f5d4;
+  }
+
+  .dx-card h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+  }
+
+  .dx-card p {
+    font-size: 0.92rem;
+    color: #a1a1aa;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* OSS Section */
+  .oss-community-section {
+    padding: 6rem 1.5rem;
+    background: #030303;
+  }
+
+  .oss-community-container {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .oss-card {
+    background: radial-gradient(circle at 50% 0%, rgba(0, 245, 212, 0.06) 0%, #060606 70%);
+    border: 1px solid rgba(0, 245, 212, 0.25);
+    padding: 4rem 2.5rem;
+    text-align: center;
+  }
+
+  .oss-card-content h2 {
+    font-size: clamp(2rem, 3.5vw, 2.8rem);
+    font-weight: 800;
+    color: #fff;
+    margin: 1rem 0 1rem;
+    letter-spacing: -0.03em;
+  }
+
+  .oss-card-content p {
+    font-size: 1.1rem;
+    color: #a1a1aa;
+    line-height: 1.6;
+    max-width: 650px;
+    margin: 0 auto 2.5rem;
+  }
+
+  .oss-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 640px) {
+    .sdks-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

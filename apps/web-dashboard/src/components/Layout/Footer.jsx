@@ -51,18 +51,18 @@ export default function Footer() {
                         <div className="footer-col">
                             <h4>Connect</h4>
                             <a href="https://discord.gg/CXJjvJkNWn" target="_blank" rel="noreferrer">Discord</a>
-                            <a href="https://github.com/yash-pouranik/urBackend" target="_blank" rel="noreferrer">Github</a>
-                            <a href={`mailto:${ADMIN_EMAIL}`}>Email</a>
+                            <a href="https://github.com/geturbackend/urBackend" target="_blank" rel="noreferrer">Github</a>
+                            <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${ADMIN_EMAIL || 'yash@urbackend.in'}`} target="_blank" rel="noopener noreferrer">Email</a>
                         </div>
                     </div>
                 </div>
 
                 <div className="footer-middle">
                     <div className="social-links">
-                        <a href="https://github.com/yash-pouranik/urBackend" target="_blank" className="social-icon"><Github size={20} /></a>
+                        <a href="https://github.com/geturbackend/urBackend" target="_blank" rel="noreferrer" className="social-icon"><Github size={20} /></a>
                     </div>
                     <div className="legal-links">
-                        <span>&copy; 2026 urBackend Inc.</span>
+                        <span>&copy; 2026 urBackend. All rights reserved.</span>
                     </div>
                 </div>
 

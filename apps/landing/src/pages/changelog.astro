@@ -1,0 +1,270 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+import BaseLayout from '../layouts/Base.astro';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import PageHero from '../components/PageHero.astro';
+import ChangelogTimeline, { type ReleaseEntry } from '../components/ChangelogTimeline.astro';
+import { ArrowRight, Github, ExternalLink } from 'lucide-react';
+
+function formatMarkdown(raw: string): string {
+  // 1. Clean up GitHub PR / author trailing references like:
+  // (by [@yash-pouranik](https://...) in [#403](...))
+  // (by @user in #123)
+  // ([#403](...))
+  // or lingering "in )"
+  let text = raw
+    .replace(/\s*\((?:by\s+[^)]+)?\s*(?:in\s+[^)]+)?\)/gi, '')
+    .replace(/\s*\(\s*by\s+[^)]*\)/gi, '')
+    .replace(/\s*\(\s*in\s+[^)]*\)/gi, '')
+    .replace(/\s*in\s*\)\s*$/gi, '')
+    .trim();
+
+  // 2. Format bold: **text** -> <strong>text</strong>
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+  // 3. Format inline code: `code` -> <code>code</code>
+  text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // 4. Format links: [label](url) -> <a href="..." target="_blank" rel="noopener noreferrer">label</a>
+  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
+    let fullUrl = url;
+    if (url.startsWith('/')) {
+      fullUrl = `https://docs.urbackend.in${url}`;
+    }
+    return `<a href="${fullUrl}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+  });
+
+  return text;
+}
+
+// Locate mintlify/docs/changelog directory
+const possiblePaths = [
+  path.resolve(process.cwd(), '../../mintlify/docs/changelog'),
+  path.resolve(process.cwd(), 'mintlify/docs/changelog'),
+  path.resolve(process.cwd(), '../mintlify/docs/changelog'),
+];
+
+let changelogDir: string | null = null;
+for (const p of possiblePaths) {
+  if (fs.existsSync(p)) {
+    changelogDir = p;
+    break;
+  }
+}
+
+// Fallback structured data formatted through formatMarkdown
+const fallbackReleases: ReleaseEntry[] = [
+  {
+    title: 'September 2026 Update',
+    date: '2026-09-14',
+    version: 'v0.17.0',
+    summary: 'Transactional mail enhancements, replyTo routing, and stricter payload guards.',
+    features: [
+      formatMarkdown('**`replyTo` on transactional mail** — `POST /mail/send` and `POST /mail/send/batch` now accept an optional `replyTo` field routing replies to dedicated inboxes.'),
+    ],
+    fixes: [
+      formatMarkdown('**Empty mail bodies rejected early** — Requests without content fail validation with a `400` before hitting the mail queue.'),
+    ],
+    link: 'https://docs.urbackend.in/changelog/september-2026'
+  },
+  {
+    title: 'August 2026 Release: AI Creator & Studio',
+    date: '2026-08-31',
+    version: 'v0.16.0',
+    summary: 'Permanent document deletion, granular presigned uploads, and conversational AI collection generator.',
+    features: [
+      formatMarkdown('**Permanently delete documents** — The Database page trash view now has a permanent delete button next to restore to reclaim quota immediately.'),
+      formatMarkdown('**Granular presigned upload methods in the SDK** — `@urbackend/sdk` `0.4.8` exposes `storage.requestUploadUrl()` and `storage.confirmUpload()`.'),
+      formatMarkdown('**AI Collection Creator** — Describe your application in natural language to generate normalized MongoDB collections with ERD visualization.'),
+      formatMarkdown('**BYOK for Groq AI models** — Bring your own API key for high-throughput inference with Llama 3.3, Qwen 2.5, and DeepSeek.'),
+      formatMarkdown('**Data fetch limit raised to 1000** — The `limit` query parameter on data reads now accepts up to `1000` documents per request.')
+    ],
+    improvements: [
+      formatMarkdown('**No 10 MB cap for BYO storage** — Uploads to external S3/R2 storage are no longer bound to the 10 MB platform limit.'),
+      formatMarkdown('**Accurate BSON usage tracking** — Document size measurements ensure database quota tracking reflects true storage footprint.'),
+      formatMarkdown('**Publishable key masked by default** — The dashboard masks your `pk_live` key until explicitly revealed.')
+    ],
+    fixes: [
+      formatMarkdown('**SDK works without Blob** — `@urbackend/sdk` guards `Blob instanceof` checks in Node.js/serverless runtimes.'),
+      formatMarkdown('**Soft-deleted documents excluded** — Populated references no longer return trashed documents unless requested.')
+    ],
+    link: 'https://docs.urbackend.in/changelog/august-2026'
+  }
+];
+
+let releases: ReleaseEntry[] = fallbackReleases;
+
+if (changelogDir) {
+  try {
+    const parseFileDate = (fileName: string): number => {
+      const clean = fileName.replace('.mdx', '').trim();
+      const parts = clean.split('-');
+      if (parts.length >= 2) {
+        const month = parts[0];
+        const year = parts[parts.length - 1];
+        const timestamp = Date.parse(`${month} 1, ${year}`);
+        if (!isNaN(timestamp)) {
+          return timestamp;
+        }
+      }
+      return 0;
+    };
+
+    const files = fs.readdirSync(changelogDir)
+      .filter((f) => f.endsWith('.mdx'))
+      .sort((a, b) => parseFileDate(b) - parseFileDate(a));
+
+    const parsedReleases: ReleaseEntry[] = [];
+
+    for (const file of files) {
+      const content = fs.readFileSync(path.join(changelogDir, file), 'utf-8');
+      const monthSlug = file.replace('.mdx', '');
+      
+      const titleMatch = content.match(/title:\s*(.+)/);
+      const title = titleMatch ? `${titleMatch[1].trim()} Update` : `${file} Update`;
+
+      const dateMatch = content.match(/<Update\s+label="([^"]+)"/);
+      const date = dateMatch ? dateMatch[1] : '2026';
+
+      const extractSectionBullets = (headerRegex: RegExp): string[] => {
+        const match = content.match(headerRegex);
+        if (!match) return [];
+        const sectionText = match[1];
+        const lines = sectionText.split('\n');
+        const bullets: string[] = [];
+        let current = '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            if (current) bullets.push(formatMarkdown(current));
+            current = trimmed.substring(2).trim();
+          } else if (current && trimmed && !trimmed.startsWith('##') && !trimmed.startsWith('<')) {
+            current += ' ' + trimmed;
+          }
+        }
+        if (current) bullets.push(formatMarkdown(current));
+        return bullets;
+      };
+
+      const features = extractSectionBullets(/## (?:New features|🚀 New Features)([\s\S]*?)(?=## |<\/Update>|$)/i);
+      const improvements = extractSectionBullets(/## (?:Improvements|🛠 Improvements)([\s\S]*?)(?=## |<\/Update>|$)/i);
+      const fixes = extractSectionBullets(/## (?:Bug fixes|🐛 Bug Fixes)([\s\S]*?)(?=## |<\/Update>|$)/i);
+
+      if (features.length > 0 || improvements.length > 0 || fixes.length > 0) {
+        parsedReleases.push({
+          title,
+          date,
+          version: monthSlug.startsWith('september') ? 'v0.17.0' : monthSlug.startsWith('august') ? 'v0.16.0' : monthSlug.startsWith('july') ? 'v0.15.0' : 'v0.14.0',
+          summary: `Official release updates for ${titleMatch ? titleMatch[1].trim() : monthSlug}.`,
+          features: features.slice(0, 5),
+          improvements: improvements.slice(0, 4),
+          fixes: fixes.slice(0, 4),
+          link: `https://docs.urbackend.in/changelog/${monthSlug}`
+        });
+      }
+    }
+
+    if (parsedReleases.length > 0) {
+      releases = parsedReleases;
+    }
+  } catch (err) {
+    // Graceful fallback to formatted fallbackReleases
+  }
+}
+---
+
+<BaseLayout
+  title="urBackend Changelog - Release Notes, SDK Updates & Feature Announcements"
+  description="Stay up to date with urBackend releases: newly added MongoDB BaaS features, SDK updates (@urbackend/sdk, React, Python, CLI), performance upgrades, and bug fixes."
+  keywords="urBackend changelog, urBackend release notes, MongoDB BaaS updates, @urbackend/sdk releases, product updates, developer changelog"
+  canonicalUrl="https://urbackend.in/changelog"
+>
+  <Navbar />
+
+  <PageHero
+    badge="PRODUCT EVOLUTION"
+    title="What's new in"
+    highlightTitle="urBackend"
+    description="Track weekly releases, engine improvements, and new capabilities shipped across our dashboard, public API, and client SDKs."
+  />
+
+  <section class="changelog-main-section">
+    <ChangelogTimeline releases={releases} />
+  </section>
+
+  <!-- Community Section -->
+  <section class="community-banner-section">
+    <div class="community-card">
+      <span class="section-badge" style="margin-bottom: 1.25rem;">COMMUNITY & RELEASES</span>
+      <h2>Shape what ships next</h2>
+      <p>All registered developers receive product releases and architecture updates directly. Follow our GitHub releases or chat directly with the team on Discord.</p>
+      
+      <div class="community-actions">
+        <a href="https://github.com/geturbackend/urBackend" target="_blank" rel="noopener noreferrer" class="cta-btn-primary">
+          <Github size={18} />
+          <span>Star on GitHub</span>
+        </a>
+        <a href="https://discord.gg/CXJjvJkNWn" target="_blank" rel="noopener noreferrer" class="cta-btn-secondary">
+          <span>Join Developer Discord</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .changelog-main-section {
+    background: #030303;
+    padding-bottom: 2rem;
+  }
+
+  .community-banner-section {
+    padding: 2rem 1.5rem 8rem;
+    background: #030303;
+  }
+
+  .community-card {
+    max-width: 760px;
+    margin: 0 auto;
+    background: radial-gradient(circle at 50% 0%, rgba(0, 245, 212, 0.05) 0%, #070707 70%);
+    border: 1px solid rgba(0, 245, 212, 0.2);
+    padding: 3.5rem 2rem;
+    text-align: center;
+  }
+
+  .community-card h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.75rem;
+    letter-spacing: -0.02em;
+  }
+
+  .community-card p {
+    font-size: 1.05rem;
+    color: #a1a1aa;
+    line-height: 1.6;
+    margin: 0 0 2rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .community-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 600px) {
+    .community-actions {
+      flex-direction: column;
+    }
+  }
+</style>

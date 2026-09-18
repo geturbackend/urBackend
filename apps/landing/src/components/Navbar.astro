@@ -1,104 +1,346 @@
 ---
-import { Zap, Box, Check, Terminal, Menu, X, ArrowRight } from 'lucide-react';
-
-const NAV_ITEMS = [
-  { label: 'Features', href: '/#client-services', icon: Zap },
-  { label: 'Use Cases', href: '/#use-cases', icon: Box },
-  { label: 'Pricing', href: '/pricing', icon: Check },
-  { label: 'Docs', href: 'https://docs.ub.bitbros.in', icon: Terminal, external: true }
-];
+import { Zap, DollarSign, FileText, Layers, Database, GitCompare, Code, BookOpen, Pen, ChevronDown, ArrowRight, Menu, X } from 'lucide-react';
 ---
 
-<nav class="nav-glass" id="main-nav">
+<nav class="nav-glass" id="navbar">
   <div class="nav-container">
     <div class="nav-logo">
-      <a href="/" style="display: flex; align-items: center; gap: 0.75rem; text-decoration: none;">
-        <img src="/LOGO_SQ.png" alt="urBackend" style="height: 32px; width: auto;" />
+      <a href="/" class="nav-logo-link">
+        <img src="/LOGO_SQ.png" alt="urBackend Logo" />
         <span class="nav-logo-text">urBackend</span>
       </a>
     </div>
 
     <div class="nav-links">
-      {NAV_ITEMS.map((item) => {
-        const IconComponent = item.icon;
-        return item.external ? (
-          <a href={item.href} class="nav-link" target="_blank" rel="noopener noreferrer">
-            <IconComponent size={14} />
-            <span>{item.label}</span>
+      <div class="nav-group">
+        <button class="nav-group-trigger">
+          Product <ChevronDown className="chevron" />
+        </button>
+        <div class="nav-dropdown">
+          <a href="/features" class="nav-dropdown-link">
+            <Zap /> Features
           </a>
-        ) : (
-          <a href={item.href} class="nav-link">
-            <IconComponent size={14} />
-            <span>{item.label}</span>
+          <a href="/pricing" class="nav-dropdown-link">
+            <DollarSign /> Pricing
           </a>
-        );
-      })}
+          <a href="/changelog" class="nav-dropdown-link">
+            <FileText /> Changelog
+          </a>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <button class="nav-group-trigger">
+          Solutions <ChevronDown className="chevron" />
+        </button>
+        <div class="nav-dropdown">
+          <a href="/use-cases" class="nav-dropdown-link">
+            <Layers /> Use Cases
+          </a>
+          <a href="/mongodb" class="nav-dropdown-link">
+            <Database /> MongoDB
+          </a>
+          <a href="/compare/firebase" class="nav-dropdown-link">
+            <GitCompare /> vs Firebase
+          </a>
+          <a href="/compare/supabase" class="nav-dropdown-link">
+            <GitCompare /> vs Supabase
+          </a>
+        </div>
+      </div>
+
+      <div class="nav-group">
+        <button class="nav-group-trigger">
+          Developers <ChevronDown className="chevron" />
+        </button>
+        <div class="nav-dropdown">
+          <a href="/developers" class="nav-dropdown-link">
+            <Code /> Developers
+          </a>
+          <a href="https://docs.urbackend.in" class="nav-dropdown-link" target="_blank" rel="noopener noreferrer">
+            <BookOpen /> Docs
+          </a>
+          <a href="/blog" class="nav-dropdown-link">
+            <Pen /> Blog
+          </a>
+        </div>
+      </div>
     </div>
 
     <div class="nav-actions">
-      <a href="https://app.urbackend.bitbros.in/login" class="nav-btn-ghost">Log in</a>
-      <a href="https://app.urbackend.bitbros.in/signup" class="nav-btn-primary">
-        <span>Get Started</span>
-        <ArrowRight size={16} />
+      <a href="https://app.urbackend.in/login" class="nav-btn-ghost">Login</a>
+      <a href="https://app.urbackend.in/signup" class="nav-btn-primary">
+        Get Started <ArrowRight size={16} />
       </a>
-      <button class="mobile-menu-btn" id="mobile-menu-toggle" aria-label="Toggle menu">
-        <Menu id="menu-icon-open" />
-        <X id="menu-icon-close" style={{ display: 'none' }} />
-      </button>
     </div>
+
+    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle menu">
+      <Menu id="menu-icon" />
+      <X id="close-icon" class="hidden" style={{ display: 'none' }} />
+    </button>
   </div>
 </nav>
 
-<div id="pricing-mobile-menu" class="mobile-menu-overlay">
-  <a href="/#client-services" class="mobile-menu-link">Features</a>
-  <a href="/#use-cases" class="mobile-menu-link">Use Cases</a>
-  <a href="/pricing" class="mobile-menu-link">Pricing</a>
-  <a href="https://docs.ub.bitbros.in" target="_blank" rel="noopener noreferrer" class="mobile-menu-link">Docs</a>
-  <div class="mobile-menu-divider"></div>
-  <a href="https://app.urbackend.bitbros.in/login" class="mobile-menu-sub-link">Log in</a>
-  <a href="https://app.urbackend.bitbros.in/signup" class="btn btn-primary mobile-menu-action">Start for Free</a>
+<div class="mobile-menu-overlay" id="mobile-menu">
+  <div class="mobile-menu-content">
+    <div class="mobile-menu-group-title">Product</div>
+    <a href="/features" class="nav-dropdown-link mobile-link">
+      <Zap /> Features
+    </a>
+    <a href="/pricing" class="nav-dropdown-link mobile-link">
+      <DollarSign /> Pricing
+    </a>
+    <a href="/changelog" class="nav-dropdown-link mobile-link">
+      <FileText /> Changelog
+    </a>
+
+    <div class="mobile-menu-group-title">Solutions</div>
+    <a href="/use-cases" class="nav-dropdown-link mobile-link">
+      <Layers /> Use Cases
+    </a>
+    <a href="/mongodb" class="nav-dropdown-link mobile-link">
+      <Database /> MongoDB
+    </a>
+    <a href="/compare/firebase" class="nav-dropdown-link mobile-link">
+      <GitCompare /> vs Firebase
+    </a>
+    <a href="/compare/supabase" class="nav-dropdown-link mobile-link">
+      <GitCompare /> vs Supabase
+    </a>
+
+    <div class="mobile-menu-group-title">Developers</div>
+    <a href="/developers" class="nav-dropdown-link mobile-link">
+      <Code /> Developers
+    </a>
+    <a href="https://docs.urbackend.in" class="nav-dropdown-link mobile-link" target="_blank" rel="noopener noreferrer">
+      <BookOpen /> Docs
+    </a>
+    <a href="/blog" class="nav-dropdown-link mobile-link">
+      <Pen /> Blog
+    </a>
+
+    <div class="mobile-actions" style="margin-top: 2rem; display: flex; flex-direction: column; gap: 1rem;">
+      <a href="https://app.urbackend.in/login" class="nav-btn-ghost" style="justify-content: center; padding: 0.8rem;">Login</a>
+      <a href="https://app.urbackend.in/signup" class="nav-btn-primary" style="justify-content: center; padding: 0.8rem;">
+        Get Started <ArrowRight size={16} />
+      </a>
+    </div>
+  </div>
 </div>
 
+<style>
+.nav-logo {
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.nav-logo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  line-height: 1;
+}
+
+.nav-logo-link img {
+  height: 32px;
+  width: auto;
+  display: block;
+}
+
+.nav-logo-text {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.nav-group {
+  position: relative;
+}
+
+.nav-group-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem 1rem;
+  color: #9e9ba5;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  background: none;
+  text-decoration: none;
+}
+
+.nav-group-trigger:hover {
+  color: #00f5d4;
+}
+
+.nav-group-trigger .chevron {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.2s ease;
+}
+
+.nav-group:hover .nav-group-trigger .chevron,
+.nav-group:focus-within .nav-group-trigger .chevron {
+  transform: rotate(180deg);
+}
+
+.nav-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 200px;
+  background: rgba(10, 8, 15, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(8px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5), 0 0 10px rgba(0, 245, 212, 0.03);
+  z-index: 200;
+}
+
+.nav-group:hover .nav-dropdown,
+.nav-group:focus-within .nav-dropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.nav-dropdown-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  color: #9e9ba5;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.nav-dropdown-link:hover {
+  color: #00f5d4;
+  background: rgba(0, 245, 212, 0.06);
+}
+
+.nav-dropdown-link svg {
+  width: 15px;
+  height: 15px;
+  opacity: 0.6;
+}
+
+.nav-dropdown-link:hover svg {
+  opacity: 1;
+  color: #00f5d4;
+}
+
+/* Mobile group headings */
+.mobile-menu-group-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #555;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.mobile-menu-group-title:first-child {
+  margin-top: 0;
+}
+
+.mobile-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background: rgba(3, 3, 3, 0.98);
+  backdrop-filter: blur(10px);
+  z-index: 99;
+  display: none;
+  flex-direction: column;
+  padding-top: 5rem;
+  padding-left: 2rem;
+  padding-right: 2rem;
+  overflow-y: auto;
+}
+
+.mobile-menu-overlay.active {
+  display: flex;
+}
+
+.mobile-menu-content {
+  max-width: 400px;
+  margin: 0 auto;
+  width: 100%;
+  padding-bottom: 3rem;
+}
+
+.mobile-link {
+  font-size: 1.1rem;
+  padding: 0.8rem 0;
+}
+
+.mobile-link svg {
+  width: 18px;
+  height: 18px;
+}
+</style>
+
 <script>
-  const nav = document.getElementById('main-nav');
-  const toggleBtn = document.getElementById('mobile-menu-toggle');
-  const mobileMenu = document.getElementById('pricing-mobile-menu');
-  const iconOpen = document.getElementById('menu-icon-open');
-  const iconClose = document.getElementById('menu-icon-close');
-  const mobileLinks = mobileMenu?.querySelectorAll('a');
+  document.addEventListener('DOMContentLoaded', () => {
+    const navbar = document.getElementById('navbar');
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const menuIcon = document.getElementById('menu-icon');
+    const closeIcon = document.getElementById('close-icon');
 
-  // Scroll effect
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 20) {
-      nav?.classList.add('nav-scrolled');
-    } else {
-      nav?.classList.remove('nav-scrolled');
-    }
-  });
+    // Scroll effect
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 20) {
+        navbar?.classList.add('nav-scrolled');
+      } else {
+        navbar?.classList.remove('nav-scrolled');
+      }
+      
+      // Hide nav when scrolling down, show when scrolling up
+      if (window.scrollY > lastScrollY && window.scrollY > 100) {
+        navbar?.classList.add('nav-hidden');
+      } else {
+        navbar?.classList.remove('nav-hidden');
+      }
+      lastScrollY = window.scrollY;
+    });
 
-  // Mobile menu toggle
-  let isMenuOpen = false;
-  
-  function toggleMenu() {
-    isMenuOpen = !isMenuOpen;
-    if (isMenuOpen) {
-      mobileMenu?.classList.add('open');
-      if (iconOpen) iconOpen.style.display = 'none';
-      if (iconClose) iconClose.style.display = 'block';
-      document.body.style.overflow = 'hidden';
-    } else {
-      mobileMenu?.classList.remove('open');
-      if (iconOpen) iconOpen.style.display = 'block';
-      if (iconClose) iconClose.style.display = 'none';
-      document.body.style.overflow = '';
-    }
-  }
+    let lastScrollY = window.scrollY;
 
-  toggleBtn?.addEventListener('click', toggleMenu);
-  
-  mobileLinks?.forEach(link => {
-    link.addEventListener('click', () => {
-      if (isMenuOpen) toggleMenu();
+    // Mobile menu toggle
+    mobileMenuBtn?.addEventListener('click', () => {
+      mobileMenu?.classList.toggle('active');
+      const isActive = mobileMenu?.classList.contains('active');
+      
+      if (isActive) {
+        document.body.style.overflow = 'hidden'; // Prevent scrolling
+        menuIcon.style.display = 'none';
+        closeIcon.style.display = 'block';
+      } else {
+        document.body.style.overflow = '';
+        menuIcon.style.display = 'block';
+        closeIcon.style.display = 'none';
+      }
     });
   });
 </script>

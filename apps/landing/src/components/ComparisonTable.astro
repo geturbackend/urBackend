@@ -1,0 +1,233 @@
+---
+import { Check, X, Minus } from 'lucide-react';
+
+interface ComparisonRow {
+  category: string;
+  feature: string;
+  urbackend: string | boolean;
+  competitor: string | boolean;
+  note?: string;
+}
+
+interface Props {
+  competitor: string;
+  rows: ComparisonRow[];
+}
+
+const { competitor, rows } = Astro.props;
+
+// Group rows by category
+const categories = Array.from(new Set(rows.map((r) => r.category)));
+---
+
+<div class="comparison-table-wrapper">
+  <div class="comparison-table-scroll">
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th class="feature-col">Feature</th>
+          <th class="urbackend-col">
+            <div class="header-brand">
+              <span class="brand-highlight">urBackend</span>
+              <span class="badge-tag">MongoDB Native</span>
+            </div>
+          </th>
+          <th class="competitor-col">
+            <div class="header-brand">
+              <span>{competitor}</span>
+            </div>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {categories.map((cat) => (
+          <>
+            <tr class="category-header-row">
+              <td colspan="3">{cat}</td>
+            </tr>
+            {rows.filter((r) => r.category === cat).map((row) => (
+              <tr class="data-row">
+                <td class="feature-cell">
+                  <div class="feature-name">{row.feature}</div>
+                  {row.note && <div class="feature-note">{row.note}</div>}
+                </td>
+                <td class="urbackend-cell">
+                  {typeof row.urbackend === 'boolean' ? (
+                    row.urbackend ? (
+                      <span class="icon-check"><Check size={18} /></span>
+                    ) : (
+                      <span class="icon-x"><X size={18} /></span>
+                    )
+                  ) : (
+                    <span class="val-text val-highlight">{row.urbackend}</span>
+                  )}
+                </td>
+                <td class="competitor-cell">
+                  {typeof row.competitor === 'boolean' ? (
+                    row.competitor ? (
+                      <span class="icon-check-muted"><Check size={18} /></span>
+                    ) : (
+                      <span class="icon-x"><X size={18} /></span>
+                    )
+                  ) : (
+                    <span class="val-text">{row.competitor}</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .comparison-table-wrapper {
+    max-width: 1000px;
+    margin: 2rem auto;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: #060606;
+    overflow: hidden;
+  }
+
+  .comparison-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.95rem;
+  }
+
+  th {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: #0a0a0a;
+  }
+
+  .feature-col {
+    width: 44%;
+    color: #a1a1aa;
+    font-weight: 500;
+  }
+
+  .urbackend-col {
+    width: 28%;
+    background: rgba(0, 245, 212, 0.03);
+    border-left: 1px solid rgba(0, 245, 212, 0.15);
+    border-right: 1px solid rgba(0, 245, 212, 0.15);
+  }
+
+  .competitor-col {
+    width: 28%;
+    color: #fff;
+  }
+
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .brand-highlight {
+    color: #00f5d4;
+  }
+
+  .badge-tag {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.45rem;
+    background: rgba(0, 245, 212, 0.1);
+    border: 1px solid rgba(0, 245, 212, 0.25);
+    color: #00f5d4;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .category-header-row td {
+    padding: 1rem 1.5rem 0.5rem;
+    background: rgba(255, 255, 255, 0.02);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #00f5d4;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .data-row td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  .data-row:hover {
+    background: rgba(255, 255, 255, 0.015);
+  }
+
+  .feature-cell {
+    color: #fff;
+  }
+
+  .feature-name {
+    font-weight: 500;
+  }
+
+  .feature-note {
+    font-size: 0.8rem;
+    color: #71717a;
+    margin-top: 0.2rem;
+  }
+
+  .urbackend-cell {
+    background: rgba(0, 245, 212, 0.02);
+    border-left: 1px solid rgba(0, 245, 212, 0.15);
+    border-right: 1px solid rgba(0, 245, 212, 0.15);
+  }
+
+  .competitor-cell {
+    color: #a1a1aa;
+  }
+
+  .icon-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #00f5d4;
+  }
+
+  .icon-check-muted {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #71717a;
+  }
+
+  .icon-x {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #ef4444;
+    opacity: 0.7;
+  }
+
+  .val-text {
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .val-highlight {
+    color: #00f5d4;
+  }
+
+  @media (max-width: 640px) {
+    th, .data-row td {
+      padding: 0.75rem 1rem;
+    }
+  }
+</style>
