@@ -5,29 +5,27 @@ import Footer from '../components/Footer.astro';
 import { Check, ChevronDown, HelpCircle, ArrowRight } from 'lucide-react';
 
 const FREE_FEATURES = [
-  '1 Project',
-  '5 Collections per project',
+  '1 Project, 5 Collections',
   '2,000 API requests / day',
-  '10MB File Storage',
   '200 Auth Users',
-  '25 Emails / month',
-  'Global email templates',
+  '3 Active Webhooks',
+  '50 Emails / month (Sends & Broadcasts)',
+  'Custom HTML Email Templates',
+  'Bring Your Own MongoDB (BYOM)',
+  'Bring Your Own Storage (S3 / R2)',
+  'Bring Your Own Keys (Resend, OAuth, AI)',
+  'Team Collaboration (up to 2 members)',
   'Community support',
 ];
 
 const PRO_FEATURES = [
-  '10 Projects',
-  'Unlimited collections',
-  'Unlimited API requests',
+  '10 Projects, Unlimited Collections',
+  'Unlimited API requests (600 req/min burst)',
   'Unlimited Auth Users',
-  'Unlimited Webhooks',
-  'External Database (BYOM)',
-  'Bring your own Storage (S3/R2)',
+  'Unlimited Webhooks + Priority Delivery',
   '1,000 Emails / month',
-  'Custom HTML email templates',
-  'BYOK — own API keys',
-  'Analytics Pro',
-  'AI integrations (OpenAI, Groq)',
+  'Up to 6 Team Members',
+  'Analytics Pro & Deep Insights',
   'Priority support',
 ];
 
@@ -38,7 +36,7 @@ const PRICING_FAQS = [
   },
   {
     q: 'Can I bring my own MongoDB Atlas cluster on the Free tier?',
-    a: 'The Free tier includes urBackend managed database storage. Bring Your Own MongoDB (BYOM) is available on the Pro tier during beta.'
+    a: 'Yes! Both Free and Pro tiers support Bring Your Own MongoDB (BYOM) and Bring Your Own Storage (BYOS). Connect your Atlas cluster or S3 bucket directly on any plan.'
   },
   {
     q: 'How does the free 1-month Pro trial work?',
@@ -46,7 +44,7 @@ const PRICING_FAQS = [
   },
   {
     q: 'Do you offer team collaboration?',
-    a: 'Yes. Pro plans support inviting team members with granular project access controls and role-based permissions.'
+    a: 'Yes. Free plans allow up to 2 team members (owner + 1 collaborator). Pro plans support up to 6 members with role-based access control.'
   }
 ];
 ---

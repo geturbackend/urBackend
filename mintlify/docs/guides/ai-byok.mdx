@@ -131,7 +131,6 @@ Pass `"groqKey": null` to clear the project's key.
 | Condition | Status | Detail |
 | :--- | :--- | :--- |
 | Key does not start with `gsk_`, or is longer than 200 characters | `400` | `Invalid Groq API key format. Key must start with 'gsk_'.` |
-| Saving a key on a plan without BYOK for AI enabled | `403` | `Bring Your Own AI Key (Groq) is a Pro feature. Please upgrade to continue.` |
 | Project ID is not a valid ObjectId | `400` | `Invalid project ID` |
 | Project not found or caller is not an admin | `404` | `Project not found or access denied` |
 | Groq rejects the key at request time | `401` | `Invalid BYOK Groq key provided` |

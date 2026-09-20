@@ -16,21 +16,21 @@ const PLAN_LIMITS = {
     authUsersLimit: 200,     // was: 1000 — biggest change
 
     // Mail
-    mailPerMonth: 25,        // was: 50 — half it
-    mailTemplatesEnabled: false,
+    mailPerMonth: 50,
+    mailTemplatesEnabled: true,
 
     // Webhooks
-    webhooksLimit: 0,        // was: 100 — REMOVE from free entirely
-    webhookRetryEnabled: false,
+    webhooksLimit: 3,
+    webhookRetryEnabled: true,
 
     // BYOM/BYOS/BYOK
     byomEnabled: true,       
-    byosEnabled: false,      
-    byokEnabled: false,      
+    byosEnabled: true,      
+    byokEnabled: true,      
     aiByokEnabled: true,
 
     // Features
-    analyticsProEnabled: false,
+    analyticsProEnabled: true,
     teamsEnabled: true,
     maxMembers: 2,           // owner + 1 member
   },

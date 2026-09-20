@@ -177,7 +177,7 @@ exports.checkByokGate = async function(req, res, next) {
 }
 
 exports.checkWebhookGate = async function(req, res, next) {
-    const { Project, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId } = require('@urbackend/common');
+    const { Project, Webhook, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId } = require('@urbackend/common');
     try {
         if (isAdminRequest(req)) return next();
 
@@ -186,8 +186,15 @@ exports.checkWebhookGate = async function(req, res, next) {
             return next(new AppError(403, 'Verify your email to create or test webhooks.'));
         }
 
+        // Only enforce count limit on new webhook creation (POST without webhookId)
+        const isCreate = req.method === 'POST' && !req.params.webhookId;
+        if (!isCreate) {
+            return next();
+        }
+
         const rawProjectId = req.params.projectId || req.body.projectId || req.query.projectId;
         const cleanProjectId = sanitizeObjectId(rawProjectId);
+        if (!cleanProjectId) return next(new AppError(400, 'Invalid or missing projectId'));
 
         let customLimits = null;
         if (cleanProjectId) {
@@ -198,8 +205,11 @@ exports.checkWebhookGate = async function(req, res, next) {
         const effectivePlan = resolveEffectivePlan(req.developer);
         const limits = getPlanLimits({ plan: effectivePlan, customLimits });
 
-        if (limits.webhooksLimit === 0) {
-            return next(new AppError(403, 'Webhooks are a Pro feature. Please upgrade to create integrations.'));
+        if (limits.webhooksLimit !== -1) {
+            const currentCount = await Webhook.countDocuments({ projectId: cleanProjectId });
+            if (currentCount >= limits.webhooksLimit) {
+                return next(new AppError(403, `Webhook limit reached (${limits.webhooksLimit}). Please upgrade your plan for unlimited webhooks.`));
+            }
         }
 
         next();

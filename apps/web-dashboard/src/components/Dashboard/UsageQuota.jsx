@@ -67,7 +67,7 @@ const UsageQuota = () => {
         <UsageProgressBar
           label="Webhooks"
           used={usage?.totalWebhooks ?? 0}
-          limit={limits?.webhooksLimit ?? 0}
+          limit={limits?.webhooksLimit ?? 3}
           unit="Hooks"
           unlimited={limits?.webhooksLimit === -1}
           tooltip={limits?.webhooksLimit === -1 ? "Unlimited webhooks included in your plan" : ""}
@@ -87,8 +87,8 @@ const UsageQuota = () => {
           limit={limits?.storageBytes ?? 10485760}
           formatValue={formatBytes}
           unit=""
-          unlimited={limits?.storageBytes === -1}
-          tooltip={limits?.storageBytes === -1 ? "Bring Your Own Storage (BYOS) enabled: Connect an external storage provider for unlimited storage." : ""}
+          unlimited={limits?.storageBytes === -1 || limits?.byosEnabled}
+          tooltip={limits?.byosEnabled ? "Bring Your Own Storage (BYOS) enabled: Connect an external storage provider for unlimited storage." : (limits?.storageBytes === -1 ? "Unlimited managed file storage" : "")}
         />
         <UsageProgressBar
           label="Requests"
@@ -103,7 +103,7 @@ const UsageQuota = () => {
       {!isPro && (
         <button
           id="usage-quota-upgrade-btn"
-          onClick={() => window.location.href = 'https://urbackend.bitbros.in/pricing'}
+          onClick={() => window.location.href = 'https://urbackend.in/pricing'}
           className="btn btn-secondary"
           style={{ marginTop: '0.5rem', width: '100%', fontSize: '0.75rem', padding: '5px' }}
         >

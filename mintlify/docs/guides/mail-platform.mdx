@@ -50,7 +50,7 @@ flowchart LR
 | Batch send (`/api/mail/send-batch`, max 100 items) | ✅ | ✅ | ✅ |
 | Delivery logs + live status | ✅ | ✅ | ✅ |
 | Audiences & Contacts | ❌ | ✅ | ✅ |
-| Marketing Broadcasts | ❌ | ❌ | ✅ |
+| Marketing Broadcasts | ❌ | ✅ (within 50/mo limit) | ✅ (within 1,000/mo limit) |
 
 ## Getting started
 
@@ -604,7 +604,7 @@ Add product screenshots/annotated walkthrough images in this section if your doc
 | `GET/PATCH/DELETE /api/mail/audiences/:id/contacts/*` | `400` | Invalid audience/contact id format |
 | `GET/PATCH/DELETE /api/mail/audiences/:id/contacts/*` | `403` | Contacts require a custom Resend API Key (BYOK) |
 | `POST /api/mail/broadcasts*` | `400` | audienceId, subject, and html are required |
-| `POST /api/mail/broadcasts*` | `403` | Broadcasts require both BYOK and Pro plan |
+| `POST /api/mail/broadcasts*` | `403` | Broadcasts require a configured BYOK Resend key |
 | `POST /api/mail/webhook` | `400` | Webhook signature verification failed |
 | Provider-proxied endpoints | passthrough | Upstream Resend status/message are surfaced |
 

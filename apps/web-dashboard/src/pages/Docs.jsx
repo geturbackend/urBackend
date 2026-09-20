@@ -599,7 +599,7 @@ console.log("File URL:", result.url);
 
                         <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Storage & Database Quotas</h3>
                         <p style={{ color: '#aaa', lineHeight: '1.6', marginBottom: '1rem' }}>
-                            Total allowed usage is determined by your current plan. By default on the Free tier, projects have caps on total Database Documents and File Storage. Exceeding these returns a <code>403 Forbidden</code> response on POST/PUT requests.
+                            Total allowed usage is determined by your current plan. On the Free tier, projects have managed caps on Database Storage (50 MB) and File Storage (10 MB). Connect your own MongoDB Atlas (BYOM) or external S3/R2 storage (BYOS) to unlock unlimited storage. Exceeding managed quotas returns a <code>403 Forbidden</code> response on POST/PUT requests.
                         </p>
                     </div>
                 );
