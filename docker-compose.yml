@@ -5,8 +5,20 @@ services:
     image: mongo:7
     container_name: urbackend_mongo
     restart: unless-stopped
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --quiet --eval 'try { rs.status() } catch (err) {
+          rs.initiate({_id: "rs0", members: [{_id: 0, host: "mongo:27017"}]})
+          }; db.hello().isWritablePrimary' | grep true
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
 
   # ── Redis ─────────────────────────────────────────────────────────────────────
   redis:
@@ -26,14 +38,16 @@ services:
     ports:
       - '1234:1234'
     depends_on:
-      - mongo
-      - redis
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - path: .env
         required: false
     environment:
       # Override DB URLs to use Docker service names
-      MONGO_URL: mongodb://mongo:27017/urbackend
+      MONGO_URL: mongodb://mongo:27017/urbackend?replicaSet=rs0
       REDIS_URL: redis://redis:6379
       NODE_ENV: production
       PORT: 1234
@@ -48,13 +62,15 @@ services:
     ports:
       - '1235:1235'
     depends_on:
-      - mongo
-      - redis
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - path: .env
         required: false
     environment:
-      MONGO_URL: mongodb://mongo:27017/urbackend
+      MONGO_URL: mongodb://mongo:27017/urbackend?replicaSet=rs0
       REDIS_URL: redis://redis:6379
       NODE_ENV: production
       USER_PORT: 1235
