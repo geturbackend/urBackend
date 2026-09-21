@@ -8,6 +8,7 @@ jest.mock('@urbackend/common', () => {
 
   const Project = {
     countDocuments: jest.fn(),
+    findById: jest.fn(),
     findOne: jest.fn(),
   };
 
@@ -16,12 +17,12 @@ jest.mock('@urbackend/common', () => {
     Project,
     sanitizeObjectId: jest.fn((value) => value || null),
     resolveEffectivePlan: jest.fn(() => 'free'),
-    getPlanLimits: jest.fn(() => ({ maxProjects: 1, maxCollections: 5 })),
+    getPlanLimits: jest.fn(() => ({ maxProjects: 1, maxCollections: 5, webhooksLimit: 3 })),
   };
 });
 
 const { Project, AppError } = require('@urbackend/common');
-const { checkDeveloperCapability, checkProjectLimit, checkCollectionLimit } = require('../middlewares/planEnforcement');
+const { checkDeveloperCapability, checkProjectLimit, checkCollectionLimit, checkWebhookGate } = require('../middlewares/planEnforcement');
 
 const makeReq = (overrides = {}) => ({
   user: { _id: 'dev_1', email: 'dev@example.com', isVerified: false },
@@ -129,6 +130,41 @@ describe('planEnforcement capability checks', () => {
 
     await checkDeveloperCapability('revealApiKeys')(req, {}, next);
 
+    expect(next).toHaveBeenCalledWith();
+  });
+
+  test('passes the finite webhook quota to the create controller without pre-counting', async () => {
+    Project.findById.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockResolvedValue({ customLimits: null }),
+    });
+    const req = makeReq({
+      method: 'POST',
+      params: { projectId: 'project_1' },
+      user: { _id: 'dev_1', email: 'dev@example.com', isVerified: true },
+      developer: { _id: 'dev_1', isVerified: true },
+    });
+    const next = jest.fn();
+
+    await checkWebhookGate(req, {}, next);
+
+    expect(req.webhookQuotaLimit).toBe(3);
+    expect(next).toHaveBeenCalledWith();
+  });
+
+  test('preserves the admin webhook quota bypass', async () => {
+    const req = makeReq({
+      method: 'POST',
+      params: { projectId: 'project_1' },
+      user: { _id: 'admin_1', email: 'admin@example.com', isAdmin: true, isVerified: true },
+      developer: { _id: 'admin_1', isVerified: true },
+    });
+    const next = jest.fn();
+
+    await checkWebhookGate(req, {}, next);
+
+    expect(req.webhookQuotaLimit).toBeUndefined();
+    expect(Project.findById).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalledWith();
   });
 });

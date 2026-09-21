@@ -177,7 +177,7 @@ exports.checkByokGate = async function(req, res, next) {
 }
 
 exports.checkWebhookGate = async function(req, res, next) {
-    const { Project, Webhook, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId } = require('@urbackend/common');
+    const { Project, resolveEffectivePlan, getPlanLimits, AppError, sanitizeObjectId } = require('@urbackend/common');
     try {
         if (isAdminRequest(req)) return next();
 
@@ -205,12 +205,9 @@ exports.checkWebhookGate = async function(req, res, next) {
         const effectivePlan = resolveEffectivePlan(req.developer);
         const limits = getPlanLimits({ plan: effectivePlan, customLimits });
 
-        if (limits.webhooksLimit !== -1) {
-            const currentCount = await Webhook.countDocuments({ projectId: cleanProjectId });
-            if (currentCount >= limits.webhooksLimit) {
-                return next(new AppError(403, `Webhook limit reached (${limits.webhooksLimit}). Please upgrade your plan for unlimited webhooks.`));
-            }
-        }
+        // The controller performs the authoritative quota check and insert in
+        // one transaction. Passing the limit avoids a count-then-create race.
+        req.webhookQuotaLimit = limits.webhooksLimit;
 
         next();
     } catch (err) {

@@ -47,15 +47,48 @@ module.exports.createWebhook = async (req, res, next) => {
 
     // Encrypt the secret
     const encryptedSecret = encrypt(secret);
-
-    const webhook = await Webhook.create({
+    const webhookData = {
       projectId,
       name,
       url,
       secret: encryptedSecret,
       events: events || {},
       enabled: enabled !== false,
-    });
+    };
+
+    let webhook;
+    const quotaLimit = req.webhookQuotaLimit;
+    if (Number.isInteger(quotaLimit) && quotaLimit >= 0) {
+      const session = await mongoose.startSession();
+      try {
+        await session.withTransaction(async () => {
+          // Updating one shared project document serializes concurrent quota
+          // checks for this project. The update rolls back with the insert.
+          const reservation = await Project.updateOne(
+            { _id: projectId, ...getProjectAccessQuery(req.user._id) },
+            { $inc: { webhookQuotaVersion: 1 } },
+            { session }
+          );
+          if (reservation.matchedCount !== 1) {
+            throw new AppError(404, "Project not found");
+          }
+
+          const currentCount = await Webhook.countDocuments(
+            { projectId },
+            { session }
+          );
+          if (currentCount >= quotaLimit) {
+            throw new AppError(403, `Webhook limit reached (${quotaLimit}). Please upgrade your plan for unlimited webhooks.`);
+          }
+
+          [webhook] = await Webhook.create([webhookData], { session });
+        });
+      } finally {
+        await session.endSession();
+      }
+    } else {
+      webhook = await Webhook.create(webhookData);
+    }
 
     // Return without secret
     return new ApiResponse({
