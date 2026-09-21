@@ -6,29 +6,27 @@ import { X, Zap, Check, Loader2 } from 'lucide-react';
 // import { useAuth } from '../context/AuthContext';
 
 const FREE_FEATURES = [
-    '1 Project',
-    '5 Collections per project',
+    '1 Project, 5 Collections',
     '2,000 API requests / day',
-    '10MB File Storage',
     '200 Auth Users',
-    '25 Emails / month',
-    'Global email templates',
+    '3 Active Webhooks',
+    '50 Emails / month (Sends & Broadcasts)',
+    'Custom HTML Email Templates',
+    'Bring Your Own MongoDB (BYOM)',
+    'Bring Your Own Storage (S3 / R2)',
+    'Bring Your Own Keys (Resend, OAuth, AI)',
+    'Team Collaboration (up to 2 members)',
     'Community support',
 ];
 
 const PRO_FEATURES = [
-    '10 Projects',
-    'Unlimited collections',
-    'Unlimited API requests',
+    '10 Projects, Unlimited Collections',
+    'Unlimited API requests (600 req/min burst)',
     'Unlimited Auth Users',
-    'Unlimited Webhooks',
-    'External Database (BYOM)',
-    'Bring your own Storage (S3/R2)',
+    'Unlimited Webhooks + Priority Delivery',
     '1,000 Emails / month',
-    'Custom HTML email templates',
-    'BYOK — own API keys',
-    'Analytics Pro',
-    'AI integrations (OpenAI, Groq)',
+    'Up to 6 Team Members',
+    'Analytics Pro & Deep Insights',
     'Priority support',
 ];
 

@@ -1,8 +1,12 @@
 import React from 'react';
 import { Folder, Activity, Zap } from 'lucide-react';
 import StatCard from './StatCard';
+import { useAuth } from '../../context/AuthContext';
 
 const StatsRow = ({ projectsCount }) => {
+  const { user } = useAuth();
+  const isPro = user?.plan === 'pro';
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '4rem' }}>
       <StatCard
@@ -22,10 +26,10 @@ const StatsRow = ({ projectsCount }) => {
       />
       <StatCard
         title="Current Plan"
-        value="Free Tier"
+        value={isPro ? "Pro Tier" : "Free Tier"}
         icon={Zap}
-        color="#FFBD2E"
-        background="rgba(255, 189, 46, 0.1)"
+        color={isPro ? "var(--color-primary, #3ECF8E)" : "#FFBD2E"}
+        background={isPro ? "rgba(62, 207, 142, 0.1)" : "rgba(255, 189, 46, 0.1)"}
       />
     </div>
   );

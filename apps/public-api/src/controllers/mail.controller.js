@@ -727,12 +727,12 @@ module.exports.deleteContact = async (req, res, next) => {
   }
 };
 
-// --- BROADCASTS (BYOK + Pro Gate) ---
+// --- BROADCASTS (BYOK Gate + Quota Tracking) ---
 
 const requireBroadcastGate = async (req) => {
   const { resend, usingByok } = await resolveResendClient(req);
   if (!usingByok || !req.planLimits?.byokEnabled) {
-    const err = new Error("Broadcasts require both a BYOK Resend key and a Pro plan.");
+    const err = new Error("Broadcasts require a configured BYOK Resend key.");
     err.statusCode = 403;
     throw err;
   }
@@ -766,17 +766,34 @@ module.exports.createBroadcast = async (req, res, next) => {
 };
 
 module.exports.sendBroadcast = async (req, res, next) => {
+  let consumedQuotaKey = null;
   try {
     const { id } = req.params;
     if (!/^[A-Za-z0-9_-]+$/.test(id)) {
       return next(new AppError(400, "Invalid broadcast ID format."));
     }
     const resend = await requireBroadcastGate(req);
+
+    const projectId = req.project?._id?.toString() || req.project?._id;
+    if (projectId) {
+      const limit = getMonthlyMailLimit(req.project, req.planLimits);
+      const { count, key } = await reserveMonthlyMailSlot(projectId, limit);
+      consumedQuotaKey = key;
+    }
+
     const { data, error } = await resend.broadcasts.send(id);
-    if (error) return next(new AppError(error.statusCode || 500, error.message));
+    if (error) {
+      if (consumedQuotaKey) {
+        await redis.decr(consumedQuotaKey).catch(() => {});
+      }
+      return next(new AppError(error.statusCode || 500, error.message));
+    }
 
     return new ApiResponse(data).send(res, 200);
   } catch (err) {
+    if (consumedQuotaKey) {
+      await redis.decr(consumedQuotaKey).catch(() => {});
+    }
     return next(new AppError(err.statusCode || 500, err.message));
   }
 };

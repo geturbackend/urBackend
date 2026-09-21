@@ -140,6 +140,9 @@ const projectSchema = new mongoose.Schema(
     databaseUsed: { type: Number, default: 0 },
     databaseLimit: { type: Number, default: 20 * 1024 * 1024 },
 
+    // Internal write-lock version for atomic webhook quota reservations.
+    webhookQuotaVersion: { type: Number, default: 0, select: false },
+
     // Granular Resources Structure
     resources: {
       db: {

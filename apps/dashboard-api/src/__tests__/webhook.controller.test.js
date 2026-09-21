@@ -15,6 +15,7 @@ jest.mock('@urbackend/common', () => {
   return {
     Webhook: {
       create: jest.fn(),
+      countDocuments: jest.fn(),
       find: jest.fn(),
       findOne: jest.fn(),
       findOneAndUpdate: jest.fn(),
@@ -26,6 +27,7 @@ jest.mock('@urbackend/common', () => {
     },
     Project: {
       findOne: jest.fn(),
+      updateOne: jest.fn(),
     },
     AppError,
     encrypt: jest.fn((val) => ({ encrypted: 'enc', iv: 'iv', tag: 'tag' })),
@@ -95,6 +97,10 @@ describe('webhook.controller', () => {
     next = jest.fn();
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   describe('createWebhook', () => {
     test('creates webhook with valid input', async () => {
       Project.findOne.mockResolvedValue({ _id: validProjectId });
@@ -143,6 +149,90 @@ describe('webhook.controller', () => {
           }),
         })
       );
+    });
+
+    test('checks finite quota and creates the webhook in one transaction', async () => {
+      const session = {
+        withTransaction: jest.fn(async (operation) => operation()),
+        endSession: jest.fn(),
+      };
+      jest.spyOn(mongoose, 'startSession').mockResolvedValue(session);
+      Project.findOne.mockResolvedValue({ _id: validProjectId });
+      Project.updateOne.mockResolvedValue({ matchedCount: 1 });
+      Webhook.countDocuments.mockResolvedValue(2);
+      createWebhookSchema.safeParse.mockReturnValue({
+        success: true,
+        data: {
+          name: 'Test Webhook',
+          url: 'https://example.com/hook',
+          secret: 'whsec_testsecret12345678',
+          events: {},
+        },
+      });
+      Webhook.create.mockResolvedValue([{
+        _id: validWebhookId,
+        projectId: validProjectId,
+        name: 'Test Webhook',
+        url: 'https://example.com/hook',
+        events: new Map(),
+        enabled: true,
+      }]);
+      req.body = {
+        name: 'Test Webhook',
+        url: 'https://example.com/hook',
+        secret: 'whsec_testsecret12345678',
+      };
+      req.webhookQuotaLimit = 3;
+
+      await createWebhook(req, res, next);
+
+      expect(Project.updateOne).toHaveBeenCalledWith(
+        { _id: validProjectId, owner: 'user123' },
+        { $inc: { webhookQuotaVersion: 1 } },
+        { session }
+      );
+      expect(Webhook.countDocuments).toHaveBeenCalledWith(
+        { projectId: validProjectId },
+        { session }
+      );
+      expect(Webhook.create).toHaveBeenCalledWith(
+        [expect.objectContaining({ projectId: validProjectId, name: 'Test Webhook' })],
+        { session }
+      );
+      expect(session.endSession).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    test('does not create a webhook when the transactional quota reservation fails', async () => {
+      const session = {
+        withTransaction: jest.fn(async (operation) => operation()),
+        endSession: jest.fn(),
+      };
+      jest.spyOn(mongoose, 'startSession').mockResolvedValue(session);
+      Project.findOne.mockResolvedValue({ _id: validProjectId });
+      Project.updateOne.mockResolvedValue({ matchedCount: 1 });
+      Webhook.countDocuments.mockResolvedValue(3);
+      createWebhookSchema.safeParse.mockReturnValue({
+        success: true,
+        data: {
+          name: 'Test Webhook',
+          url: 'https://example.com/hook',
+          secret: 'whsec_testsecret12345678',
+        },
+      });
+      req.body = {
+        name: 'Test Webhook',
+        url: 'https://example.com/hook',
+        secret: 'whsec_testsecret12345678',
+      };
+      req.webhookQuotaLimit = 3;
+
+      await createWebhook(req, res, next);
+
+      expect(Webhook.create).not.toHaveBeenCalled();
+      expect(session.endSession).toHaveBeenCalled();
+      expect(next).toHaveBeenCalledWith(expect.any(AppError));
+      expect(next.mock.calls[0][0].statusCode).toBe(403);
     });
 
     test('returns 404 if project not found', async () => {

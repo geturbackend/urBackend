@@ -58,14 +58,7 @@ That's it! 🎉
 
 ## 🟢 Why urBackend?
 
-While tools like PocketBase are great for small single-server apps (SQLite), **urBackend** is built for scale.
-
-| Feature | urBackend | Firebase | PocketBase |
-| :--- | :--- | :--- | :--- |
-| **Database** | **MongoDB (Scalable)** | Proprietary NoSQL | SQLite (Single Server) |
-| **Caching** | **Redis Built-in** | None | None |
-| **Hosting** | **Self-Hosted / Cloud** | Cloud Only | Self-Hosted |
-| **Source** | **Open-Source** | Closed-Source | Open-Source |
+**urBackend** is built for developer velocity and horizontal scale, combining the simplicity of a modern BaaS with the power of MongoDB and Redis.
 
 ### Core Features:
 - **Instant NoSQL:** Create collections and push JSON data instantly.

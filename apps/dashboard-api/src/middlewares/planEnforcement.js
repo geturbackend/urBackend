@@ -186,8 +186,15 @@ exports.checkWebhookGate = async function(req, res, next) {
             return next(new AppError(403, 'Verify your email to create or test webhooks.'));
         }
 
+        // Only enforce count limit on new webhook creation (POST without webhookId)
+        const isCreate = req.method === 'POST' && !req.params.webhookId;
+        if (!isCreate) {
+            return next();
+        }
+
         const rawProjectId = req.params.projectId || req.body.projectId || req.query.projectId;
         const cleanProjectId = sanitizeObjectId(rawProjectId);
+        if (!cleanProjectId) return next(new AppError(400, 'Invalid or missing projectId'));
 
         let customLimits = null;
         if (cleanProjectId) {
@@ -198,9 +205,9 @@ exports.checkWebhookGate = async function(req, res, next) {
         const effectivePlan = resolveEffectivePlan(req.developer);
         const limits = getPlanLimits({ plan: effectivePlan, customLimits });
 
-        if (limits.webhooksLimit === 0) {
-            return next(new AppError(403, 'Webhooks are a Pro feature. Please upgrade to create integrations.'));
-        }
+        // The controller performs the authoritative quota check and insert in
+        // one transaction. Passing the limit avoids a count-then-create race.
+        req.webhookQuotaLimit = limits.webhooksLimit;
 
         next();
     } catch (err) {

@@ -31,24 +31,34 @@ export async function statusCommand(): Promise<void> {
       console.log(`${label("Plan expires")} ${stats.planExpiresAt}`);
     }
 
+    const fmtLimit = (val: number | undefined, isBytes = false): string => {
+      if (val === undefined || val === null) return "N/A";
+      if (val === -1) return "Unlimited";
+      return isBytes ? formatBytes(val) : val.toLocaleString();
+    };
+
     console.log("\n── Usage ────────────────────────────────────────");
     console.log(
-      `${label("Projects")} ${stats.usage.totalProjects} / ${stats.limits.maxProjects}`,
+      `${label("Projects")} ${stats.usage.totalProjects} / ${fmtLimit(stats.limits.maxProjects)}`,
     );
     console.log(
-      `${label("Collections")} ${stats.usage.totalCollections} / ${stats.limits.maxCollections}`,
+      `${label("Collections")} ${stats.usage.totalCollections} / ${fmtLimit(stats.limits.maxCollections)}`,
     );
     console.log(
-      `${label("Database")} ${formatBytes(stats.usage.totalDatabaseUsed)} / ${formatBytes(stats.limits.mongoBytes)}`,
+      `${label("Database")} ${formatBytes(stats.usage.totalDatabaseUsed)} / ${fmtLimit(stats.limits.mongoBytes, true)}`,
     );
     console.log(
-      `${label("Storage")} ${formatBytes(stats.usage.totalStorageUsed)} / ${formatBytes(stats.limits.storageBytes)}`,
+      `${label("Storage")} ${formatBytes(stats.usage.totalStorageUsed)} / ${fmtLimit(stats.limits.storageBytes, true)}`,
     );
     console.log(
-      `${label("API requests")} ${stats.usage.totalRequests.toLocaleString()} / ${stats.limits.reqPerDay.toLocaleString()} today`,
+      `${label("API requests")} ${stats.usage.totalRequests.toLocaleString()} / ${fmtLimit(stats.limits.reqPerDay)} today`,
     );
-    console.log(`${label("Auth users")} ${stats.usage.totalUsers} / ${stats.limits.authUsersLimit}`);
-    console.log(`${label("Webhooks")} ${stats.usage.totalWebhooks}`);
+    console.log(
+      `${label("Auth users")} ${stats.usage.totalUsers} / ${fmtLimit(stats.limits.authUsersLimit)}`,
+    );
+    console.log(
+      `${label("Webhooks")} ${stats.usage.totalWebhooks} / ${fmtLimit(stats.limits.webhooksLimit)}`,
+    );
 
     if (currentProjectId) {
       try {
