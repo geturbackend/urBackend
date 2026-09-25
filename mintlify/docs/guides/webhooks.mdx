@@ -14,6 +14,10 @@ Webhooks let urBackend notify your server the moment data changes in your collec
 3. Either copy the auto-generated signing secret or enter your own. Store this secret securely — you will use it to verify incoming requests.
 4. Save the webhook. urBackend will begin sending events to your URL immediately.
 
+<Note>
+  The Free plan allows up to 3 webhooks per project, including disabled ones. The Pro plan has no webhook limit. The limit only applies when you create a webhook. You can still edit, delete, and test existing webhooks at the limit. See [Limits & Quotas](/limits-and-quotas#webhook-limits).
+</Note>
+
 ## Payload format
 
 Every webhook event is delivered as a `POST` request with a JSON body in this shape:

@@ -32,6 +32,35 @@ Files that exceed the limit return `413 Payload Too Large`. Projects connected t
 
 When your project approaches the database quota, writes may be rejected with `403 Forbidden`. Monitor your usage in the Dashboard.
 
+## Mail limits
+
+Mail sent through the Mail Platform counts against a per-project monthly quota. Transactional sends, batch sends, and marketing broadcasts all draw from the same quota.
+
+| Plan | Emails per month |
+| :--- | :--- |
+| Free | 50 |
+| Pro | 1,000 |
+
+Custom mail templates and BYOK (your own Resend key) are available on both plans. See [Mail Platform](/guides/mail-platform).
+
+## Webhook limits
+
+| Plan | Webhooks per project |
+| :--- | :--- |
+| Free | 3 |
+| Pro | Unlimited |
+
+Every webhook in the project counts toward the limit, including disabled ones. Only webhook creation is count-gated. Creating a webhook when the project is already at its limit returns `403 Forbidden` with the message `Webhook limit reached (3). Please upgrade your plan for unlimited webhooks.` Editing, deleting, and testing existing webhooks are not restricted. Automatic delivery retries are available on both plans.
+
+## Team member limits
+
+| Plan | Members per project (including the owner) |
+| :--- | :--- |
+| Free | 2 |
+| Pro | 6 |
+
+Inviting a member beyond the limit returns `403 Forbidden`.
+
 ## AI session limits
 
 AI features that use urBackend's platform Groq key are capped per account, per calendar month. The AI Query Builder and the AI Collection Creator (Schema Design) each have their own separate monthly counter.
