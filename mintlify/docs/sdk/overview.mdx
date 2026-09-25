@@ -30,6 +30,17 @@ The factory accepts a `UrBackendConfig` object:
 | `baseUrl` | `string` | No | Override the default API base URL. |
 | `headers` | `Record<string, string>` | No | Additional headers sent with every request. |
 
+<Note>
+  The public API now lives at `https://api.urbackend.in`. The previous host, `https://api.ub.bitbros.in`, is deprecated after 30 October 2026. If your SDK version still defaults to the previous host, set `baseUrl` explicitly:
+
+  ```typescript
+  const client = urBackend({
+    apiKey: process.env.URBACKEND_API_KEY,
+    baseUrl: 'https://api.urbackend.in'
+  });
+  ```
+</Note>
+
 ## Quick example
 
 ```typescript

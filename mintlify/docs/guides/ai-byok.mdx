@@ -89,13 +89,13 @@ Requires a logged-in dashboard session.
 
 ```bash
 # Save a key
-curl -X PUT "https://api.ub.bitbros.in/api/user/me/byok" \
+curl -X PUT "https://platform-api.urbackend.in/api/user/me/byok" \
   -H "Content-Type: application/json" \
   -H "Cookie: <your-session-cookie>" \
   -d '{"groqKey": "gsk_..."}'
 
 # Clear the key
-curl -X PUT "https://api.ub.bitbros.in/api/user/me/byok" \
+curl -X PUT "https://platform-api.urbackend.in/api/user/me/byok" \
   -H "Content-Type: application/json" \
   -H "Cookie: <your-session-cookie>" \
   -d '{"groqKey": null}'
@@ -118,7 +118,7 @@ curl -X PUT "https://api.ub.bitbros.in/api/user/me/byok" \
 Requires the project **admin** role.
 
 ```bash
-curl -X PUT "https://api.ub.bitbros.in/api/projects/PROJECT_ID/byok" \
+curl -X PUT "https://platform-api.urbackend.in/api/projects/PROJECT_ID/byok" \
   -H "Content-Type: application/json" \
   -H "Cookie: <your-session-cookie>" \
   -d '{"groqKey": "gsk_..."}'

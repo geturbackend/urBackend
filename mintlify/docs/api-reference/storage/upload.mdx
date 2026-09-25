@@ -65,7 +65,7 @@ const formData = new FormData();
 formData.append('file', fileInput.files[0]);
 
 // Do NOT set Content-Type — the browser handles it automatically with FormData
-const res = await fetch('https://api.ub.bitbros.in/api/storage/upload', {
+const res = await fetch('https://api.urbackend.in/api/storage/upload', {
   method: 'POST',
   headers: {
     'x-api-key': 'pk_live_YOUR_KEY'
@@ -89,7 +89,7 @@ import fetch from 'node-fetch';
 const form = new FormData();
 form.append('file', fs.createReadStream('./image.png'));
 
-const res = await fetch('https://api.ub.bitbros.in/api/storage/upload', {
+const res = await fetch('https://api.urbackend.in/api/storage/upload', {
   method: 'POST',
   headers: {
     'x-api-key': 'sk_live_YOUR_SECRET_KEY',

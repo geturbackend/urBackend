@@ -28,7 +28,7 @@ Choose `public-read` for content that should be publicly visible (for example, p
 
 ## Enabling RLS on a collection
 
-1. Open your project in the [urBackend Dashboard](https://urbackend.bitbros.in).
+1. Open your project in the [urBackend Dashboard](https://app.urbackend.in).
 2. Navigate to the **Database** tab and select the collection.
 3. Open the collection's **Settings**.
 4. Toggle **Row-Level Security** on.
@@ -88,7 +88,7 @@ This is the complete client-side flow for an authenticated user creating a docum
 
 ```javascript
 // Step 1 — log the user in to get their JWT
-const loginResponse = await fetch('https://api.ub.bitbros.in/api/userAuth/login', {
+const loginResponse = await fetch('https://api.urbackend.in/api/userAuth/login', {
   method: 'POST',
   headers: {
     'x-api-key': 'pk_live_...',
@@ -102,7 +102,7 @@ const { accessToken } = await loginResponse.json();
 
 // Step 2 — create a post using pk_live + the user's JWT
 // The `userId` owner field is auto-injected — you do not need to include it
-const postResponse = await fetch('https://api.ub.bitbros.in/api/data/posts', {
+const postResponse = await fetch('https://api.urbackend.in/api/data/posts', {
   method: 'POST',
   headers: {
     'x-api-key': 'pk_live_...',

@@ -5,7 +5,7 @@ description: "Let your users sign in with GitHub or Google using OAuth."
 
 urBackend supports OAuth sign-in via GitHub and Google. Once configured, your users can authenticate without creating a password — urBackend creates or links their account automatically.
 
-**Base URL:** `https://api.ub.bitbros.in`
+**Base URL:** `https://api.urbackend.in`
 
 ## How the flow works
 
@@ -32,7 +32,7 @@ After a successful login, urBackend redirects the user to `<your-site>/auth/call
     urBackend displays a read-only callback URL for the selected provider:
 
     ```
-    https://api.ub.bitbros.in/api/userAuth/social/github/callback
+    https://api.urbackend.in/api/userAuth/social/github/callback
     ```
 
     Copy this URL — you will register it with the provider in the next step.
@@ -59,7 +59,7 @@ When a user clicks "Login with GitHub" or "Login with Google", redirect their br
 ```jsx
 // components/LoginButtons.jsx
 const API_KEY = 'pk_live_YOUR_KEY';
-const API_URL = 'https://api.ub.bitbros.in';
+const API_URL = 'https://api.urbackend.in';
 
 function LoginButtons() {
   const handleGitHubLogin = () => {
@@ -121,7 +121,7 @@ function AuthCallback() {
       }
 
       // Exchange rtCode for a refresh token
-      const response = await fetch('https://api.ub.bitbros.in/api/userAuth/social/exchange', {
+      const response = await fetch('https://api.urbackend.in/api/userAuth/social/exchange', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

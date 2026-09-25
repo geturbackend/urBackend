@@ -34,7 +34,7 @@ Returns the full profile of the currently signed-in user. The response never inc
 <CodeGroup>
 
 ```javascript fetch
-const res = await fetch('https://api.ub.bitbros.in/api/userAuth/me', {
+const res = await fetch('https://api.urbackend.in/api/userAuth/me', {
   headers: {
     'x-api-key': 'pk_live_YOUR_KEY',
     'Authorization': `Bearer ${accessToken}`
@@ -45,7 +45,7 @@ const user = await res.json();
 ```
 
 ```bash curl
-curl "https://api.ub.bitbros.in/api/userAuth/me" \
+curl "https://api.urbackend.in/api/userAuth/me" \
   -H "x-api-key: pk_live_YOUR_KEY" \
   -H "Authorization: Bearer ACCESS_TOKEN"
 ```
@@ -93,7 +93,7 @@ Returns a public-safe view of a user's profile. No authentication is required.
 ### Code Example
 
 ```javascript
-const res = await fetch('https://api.ub.bitbros.in/api/userAuth/public/alice_dev', {
+const res = await fetch('https://api.urbackend.in/api/userAuth/public/alice_dev', {
   headers: {
     'x-api-key': 'pk_live_YOUR_KEY'
   }

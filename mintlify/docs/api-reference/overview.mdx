@@ -8,8 +8,23 @@ description: "Base URL, authentication, response format, and a full quick-refere
 All API requests are made to:
 
 ```
-https://api.ub.bitbros.in
+https://api.urbackend.in
 ```
+
+<Warning>
+  urBackend moved to new domains. The previous `bitbros.in` hosts stay live until 30 October 2026. After that date they are deprecated. Update your apps to use the new hosts before then.
+
+  | Service | New host | Previous host |
+  | :--- | :--- | :--- |
+  | Public API (SDK and user auth) | `https://api.urbackend.in` | `https://api.ub.bitbros.in` |
+  | Dashboard | `https://app.urbackend.in` | `https://urbackend.bitbros.in` |
+  | Dashboard API | `https://platform-api.urbackend.in` | `https://dashboard-api.ub.bitbros.in` |
+  | Landing site | `https://urbackend.in` | — |
+</Warning>
+
+<Note>
+  The official SDKs may still default to the previous API host. To target the new host, pass `baseUrl: 'https://api.urbackend.in'` when you create the client.
+</Note>
 
 ## Authentication
 

@@ -63,7 +63,7 @@ The endpoint returns the document object directly.
 const docId = '64fd1234abcd5678ef901234';
 
 const res = await fetch(
-  `https://api.ub.bitbros.in/api/data/posts/${docId}?include_deleted=true`,
+  `https://api.urbackend.in/api/data/posts/${docId}?include_deleted=true`,
   {
     headers: {
       'x-api-key': 'pk_live_YOUR_KEY'
@@ -76,7 +76,7 @@ const doc = await res.json();
 ```
 
 ```bash curl
-curl "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234?include_deleted=true" \
+curl "https://api.urbackend.in/api/data/posts/64fd1234abcd5678ef901234?include_deleted=true" \
   -H "x-api-key: pk_live_YOUR_KEY"
 ```
 

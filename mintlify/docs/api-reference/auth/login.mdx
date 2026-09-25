@@ -63,7 +63,7 @@ The refresh token is issued alongside the access token and delivered differently
 <CodeGroup>
 
 ```javascript fetch
-const res = await fetch('https://api.ub.bitbros.in/api/userAuth/login', {
+const res = await fetch('https://api.urbackend.in/api/userAuth/login', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -80,7 +80,7 @@ const { accessToken, expiresIn, user } = await res.json();
 ```
 
 ```bash curl
-curl -X POST "https://api.ub.bitbros.in/api/userAuth/login" \
+curl -X POST "https://api.urbackend.in/api/userAuth/login" \
   -H "Content-Type: application/json" \
   -H "x-api-key: pk_live_YOUR_KEY" \
   -c cookies.txt \

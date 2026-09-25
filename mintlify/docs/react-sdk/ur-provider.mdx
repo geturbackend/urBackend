@@ -29,6 +29,10 @@ function App() {
 | `baseUrl` | `string` | No | Overrides the default urBackend API URL. Useful for self-hosted instances. |
 | `children` | `React.ReactNode` | Yes | The components to render inside the provider. |
 
+<Note>
+  The public API now lives at `https://api.urbackend.in`. The previous host is deprecated after 30 October 2026. If your SDK version still defaults to the previous host, pass `baseUrl="https://api.urbackend.in"` to `<UrProvider>`.
+</Note>
+
 ## How it works
 
 When `<UrProvider>` mounts, it automatically:

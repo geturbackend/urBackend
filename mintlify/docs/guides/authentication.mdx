@@ -7,7 +7,7 @@ User accounts in urBackend are managed through `/api/userAuth/*` endpoints. Do *
 
 All auth endpoints require your publishable key (`pk_live_...`) in the `x-api-key` header.
 
-**Base URL:** `https://api.ub.bitbros.in`
+**Base URL:** `https://api.urbackend.in`
 
 ## Disabling Public Signups
 
@@ -40,7 +40,7 @@ You can add any extra fields (e.g., `username`, `avatar`, `preferences`). urBack
     Send a `POST` request to create an account. You can include any extra fields defined in your `users` schema.
 
     ```javascript
-    const res = await fetch('https://api.ub.bitbros.in/api/userAuth/signup', {
+    const res = await fetch('https://api.urbackend.in/api/userAuth/signup', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -64,7 +64,7 @@ You can add any extra fields (e.g., `username`, `avatar`, `preferences`). urBack
     Authenticate with email and password to receive an access token.
 
     ```javascript
-    const res = await fetch('https://api.ub.bitbros.in/api/userAuth/login', {
+    const res = await fetch('https://api.urbackend.in/api/userAuth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -88,7 +88,7 @@ You can add any extra fields (e.g., `username`, `avatar`, `preferences`). urBack
     Pass the access token in the `Authorization` header for any endpoint that requires authentication.
 
     ```javascript
-    const res = await fetch('https://api.ub.bitbros.in/api/userAuth/me', {
+    const res = await fetch('https://api.urbackend.in/api/userAuth/me', {
       headers: {
         'x-api-key': 'pk_live_YOUR_KEY',
         'Authorization': `Bearer ${accessToken}`
@@ -106,7 +106,7 @@ You can add any extra fields (e.g., `username`, `avatar`, `preferences`). urBack
     **Web clients** — the refresh token cookie is sent automatically:
 
     ```javascript
-    const res = await fetch('https://api.ub.bitbros.in/api/userAuth/refresh-token', {
+    const res = await fetch('https://api.urbackend.in/api/userAuth/refresh-token', {
       method: 'POST',
       headers: { 'x-api-key': 'pk_live_YOUR_KEY' },
       credentials: 'include'
@@ -116,7 +116,7 @@ You can add any extra fields (e.g., `username`, `avatar`, `preferences`). urBack
     **Mobile or non-browser clients** — send the refresh token in a header:
 
     ```javascript
-    const res = await fetch('https://api.ub.bitbros.in/api/userAuth/refresh-token', {
+    const res = await fetch('https://api.urbackend.in/api/userAuth/refresh-token', {
       method: 'POST',
       headers: {
         'x-api-key': 'pk_live_YOUR_KEY',
@@ -135,7 +135,7 @@ You can add any extra fields (e.g., `username`, `avatar`, `preferences`). urBack
     Revoke the current refresh session. After this call the refresh token is invalidated.
 
     ```javascript
-    await fetch('https://api.ub.bitbros.in/api/userAuth/logout', {
+    await fetch('https://api.urbackend.in/api/userAuth/logout', {
       method: 'POST',
       headers: { 'x-api-key': 'pk_live_YOUR_KEY' },
       credentials: 'include'
@@ -153,7 +153,7 @@ Returns the profile of the currently authenticated user.
 **Endpoint:** `GET /api/userAuth/me`
 
 ```javascript
-const res = await fetch('https://api.ub.bitbros.in/api/userAuth/me', {
+const res = await fetch('https://api.urbackend.in/api/userAuth/me', {
   headers: {
     'x-api-key': 'pk_live_YOUR_KEY',
     'Authorization': `Bearer ${accessToken}`
@@ -168,7 +168,7 @@ Update editable profile fields for the authenticated user.
 **Endpoint:** `PUT /api/userAuth/update-profile`
 
 ```javascript
-const res = await fetch('https://api.ub.bitbros.in/api/userAuth/update-profile', {
+const res = await fetch('https://api.urbackend.in/api/userAuth/update-profile', {
   method: 'PUT',
   headers: {
     'Content-Type': 'application/json',
@@ -187,7 +187,7 @@ const res = await fetch('https://api.ub.bitbros.in/api/userAuth/update-profile',
 **Endpoint:** `PUT /api/userAuth/change-password`
 
 ```javascript
-const res = await fetch('https://api.ub.bitbros.in/api/userAuth/change-password', {
+const res = await fetch('https://api.urbackend.in/api/userAuth/change-password', {
   method: 'PUT',
   headers: {
     'Content-Type': 'application/json',
@@ -208,7 +208,7 @@ Fetch a safe, public view of any user's profile by username. No authentication i
 **Endpoint:** `GET /api/userAuth/public/:username`
 
 ```javascript
-const res = await fetch('https://api.ub.bitbros.in/api/userAuth/public/dev_pulse', {
+const res = await fetch('https://api.urbackend.in/api/userAuth/public/dev_pulse', {
   headers: { 'x-api-key': 'pk_live_YOUR_KEY' }
 });
 ```
@@ -222,7 +222,7 @@ const res = await fetch('https://api.ub.bitbros.in/api/userAuth/public/dev_pulse
     **Endpoint:** `POST /api/userAuth/request-password-reset`
 
     ```javascript
-    const res = await fetch('https://api.ub.bitbros.in/api/userAuth/request-password-reset', {
+    const res = await fetch('https://api.urbackend.in/api/userAuth/request-password-reset', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -239,7 +239,7 @@ const res = await fetch('https://api.ub.bitbros.in/api/userAuth/public/dev_pulse
     **Endpoint:** `POST /api/userAuth/reset-password`
 
     ```javascript
-    const res = await fetch('https://api.ub.bitbros.in/api/userAuth/reset-password', {
+    const res = await fetch('https://api.urbackend.in/api/userAuth/reset-password', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -261,7 +261,7 @@ After sign-up, you can prompt users to verify their email address.
 **Endpoint:** `POST /api/userAuth/verify-email`
 
 ```javascript
-const res = await fetch('https://api.ub.bitbros.in/api/userAuth/verify-email', {
+const res = await fetch('https://api.urbackend.in/api/userAuth/verify-email', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',

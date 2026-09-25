@@ -85,7 +85,7 @@ For URL values, prefer escaped placeholders like `{{appUrl}}`. URL-like variable
 
 <Steps>
   <Step title="Get your Secret Key">
-    Log in to the [urBackend Dashboard](https://urbackend.bitbros.in/dashboard), create a new project, and copy your **Secret Key** (`sk_live_...`) or you can get it from rotating it from project overview page.
+    Log in to the [urBackend Dashboard](https://app.urbackend.in), create a new project, and copy your **Secret Key** (`sk_live_...`) or you can get it from rotating it from project overview page.
   </Step>
   <Step title="Copy the Code">
     Copy your preferred language snippet from below. Use **Direct Mode** if you just want to send a quick HTML/Text email without setting up templates or use welcome template for fast test.
@@ -102,7 +102,7 @@ For URL values, prefer escaped placeholders like `{{appUrl}}`. URL-like variable
 <CodeGroup>
 
 ```javascript fetch (template mode)
-const res = await fetch('https://api.ub.bitbros.in/api/mail/send', {
+const res = await fetch('https://api.urbackend.in/api/mail/send', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -121,7 +121,7 @@ const res = await fetch('https://api.ub.bitbros.in/api/mail/send', {
 ```
 
 ```javascript fetch (direct mode)
-const res = await fetch('https://api.ub.bitbros.in/api/mail/send', {
+const res = await fetch('https://api.urbackend.in/api/mail/send', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -157,7 +157,7 @@ public class Main {
       """;
 
     HttpRequest request = HttpRequest.newBuilder()
-        .uri(URI.create("https://api.ub.bitbros.in/api/mail/send"))
+        .uri(URI.create("https://api.urbackend.in/api/mail/send"))
         .header("Content-Type", "application/json")
         .header("x-api-key", "sk_live_YOUR_SECRET_KEY")
         .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
@@ -187,7 +187,7 @@ public class Main {
       """;
 
     HttpRequest request = HttpRequest.newBuilder()
-        .uri(URI.create("https://api.ub.bitbros.in/api/mail/send"))
+        .uri(URI.create("https://api.urbackend.in/api/mail/send"))
         .header("Content-Type", "application/json")
         .header("x-api-key", "sk_live_YOUR_SECRET_KEY")
         .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
