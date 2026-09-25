@@ -11,7 +11,7 @@ Before using these endpoints you need to configure the OAuth provider in your pr
 
 1. Go to **Project Settings** and add your frontend URL as the **Site URL** (e.g., `https://myapp.com`).
 2. Go to **Auth → Social Auth** and select GitHub or Google.
-3. Copy the read-only **Callback URL** shown by urBackend (e.g., `https://api.ub.bitbros.in/api/userAuth/social/github/callback`).
+3. Copy the read-only **Callback URL** shown by urBackend (e.g., `https://api.urbackend.in/api/userAuth/social/github/callback`).
 4. Register that callback URL in the provider's OAuth app settings (GitHub: **Developer Settings → OAuth Apps**; Google: **Cloud Console → Credentials**).
 5. Paste the provider's **Client ID** and **Client Secret** into urBackend and enable the provider.
 
@@ -36,11 +36,11 @@ Redirects the user's browser to the provider login page. Because this is a brows
 ```javascript
 // Redirect the user to start the OAuth flow
 window.location.href =
-  'https://api.ub.bitbros.in/api/userAuth/social/github/start?x-api-key=pk_live_YOUR_KEY';
+  'https://api.urbackend.in/api/userAuth/social/github/start?x-api-key=pk_live_YOUR_KEY';
 
 // Or for Google:
 window.location.href =
-  'https://api.ub.bitbros.in/api/userAuth/social/google/start?x-api-key=pk_live_YOUR_KEY';
+  'https://api.urbackend.in/api/userAuth/social/google/start?x-api-key=pk_live_YOUR_KEY';
 ```
 
 After the user authenticates with the provider, urBackend redirects them to:
@@ -146,7 +146,7 @@ function AuthCallback() {
       }
 
       // Exchange rtCode for refresh token
-      const res = await fetch('https://api.ub.bitbros.in/api/userAuth/social/exchange', {
+      const res = await fetch('https://api.urbackend.in/api/userAuth/social/exchange', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

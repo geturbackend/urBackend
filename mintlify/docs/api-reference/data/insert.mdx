@@ -61,7 +61,7 @@ The endpoint returns the created document object directly.
 
 ```javascript sk_live (server-side)
 // Use sk_live from your server — never expose it in frontend code
-const res = await fetch('https://api.ub.bitbros.in/api/data/posts', {
+const res = await fetch('https://api.urbackend.in/api/data/posts', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ const doc = await res.json();
 ```javascript pk_live + RLS (client-side)
 // Use pk_live + user JWT when collection has RLS enabled
 // userId is auto-injected from the JWT — no need to include it
-const res = await fetch('https://api.ub.bitbros.in/api/data/posts', {
+const res = await fetch('https://api.urbackend.in/api/data/posts', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -101,7 +101,7 @@ const doc = await res.json();
 ```
 
 ```bash curl (sk_live)
-curl -X POST "https://api.ub.bitbros.in/api/data/posts" \
+curl -X POST "https://api.urbackend.in/api/data/posts" \
   -H "Content-Type: application/json" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
   -d '{

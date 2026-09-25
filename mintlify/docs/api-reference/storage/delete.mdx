@@ -36,7 +36,7 @@ Permanently removes a file from storage. You must provide the `path` value that 
 <CodeGroup>
 
 ```javascript fetch
-const res = await fetch('https://api.ub.bitbros.in/api/storage/file', {
+const res = await fetch('https://api.urbackend.in/api/storage/file', {
   method: 'DELETE',
   headers: {
     'Content-Type': 'application/json',
@@ -51,7 +51,7 @@ const { success, message } = await res.json();
 ```
 
 ```bash curl
-curl -X DELETE "https://api.ub.bitbros.in/api/storage/file" \
+curl -X DELETE "https://api.urbackend.in/api/storage/file" \
   -H "Content-Type: application/json" \
   -H "x-api-key: pk_live_YOUR_KEY" \
   -d '{"path": "PROJECT_ID/image.png"}'

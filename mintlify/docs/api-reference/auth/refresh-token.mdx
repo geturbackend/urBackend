@@ -45,7 +45,7 @@ Include the refresh token in the `x-refresh-token` header, and set `x-refresh-to
 
 ```javascript Web (cookie)
 // Browser: credentials: 'include' sends the HTTP-only cookie automatically
-const res = await fetch('https://api.ub.bitbros.in/api/userAuth/refresh-token', {
+const res = await fetch('https://api.urbackend.in/api/userAuth/refresh-token', {
   method: 'POST',
   headers: {
     'x-api-key': 'pk_live_YOUR_KEY'
@@ -58,7 +58,7 @@ const { accessToken: newAccessToken } = await res.json();
 
 ```javascript Mobile (header)
 // Mobile / non-browser: pass the refresh token explicitly in a header
-const res = await fetch('https://api.ub.bitbros.in/api/userAuth/refresh-token', {
+const res = await fetch('https://api.urbackend.in/api/userAuth/refresh-token', {
   method: 'POST',
   headers: {
     'x-api-key': 'pk_live_YOUR_KEY',

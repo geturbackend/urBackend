@@ -5,7 +5,7 @@ description: "Upload files and images to get public CDN URLs. No S3 buckets or c
 
 urBackend handles file and image uploads for you. Upload a file and receive a public CDN URL you can use directly in your application.
 
-**Base URL:** `https://api.ub.bitbros.in`
+**Base URL:** `https://api.urbackend.in`
 
 <Warning>
   All storage endpoints require your **secret key** (`sk_live_...`) in the `x-api-key` header. These operations should only be performed server-side.
@@ -118,7 +118,7 @@ if (!fileInput?.files?.length) {
 
 const file = fileInput.files[0];
 
-const requestRes = await fetch('https://api.ub.bitbros.in/api/storage/upload-request', {
+const requestRes = await fetch('https://api.urbackend.in/api/storage/upload-request', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -152,7 +152,7 @@ if (!uploadRes.ok) {
   throw new Error(`Upload failed: ${uploadRes.status} ${uploadRes.statusText}`);
 }
 
-const confirmRes = await fetch('https://api.ub.bitbros.in/api/storage/upload-confirm', {
+const confirmRes = await fetch('https://api.urbackend.in/api/storage/upload-confirm', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -210,7 +210,7 @@ To delete a file, pass the `path` returned from the upload response.
 **Endpoint:** `DELETE /api/storage/file`
 
 ```javascript
-await fetch('https://api.ub.bitbros.in/api/storage/file', {
+await fetch('https://api.urbackend.in/api/storage/file', {
   method: 'DELETE',
   headers: {
     'Content-Type': 'application/json',

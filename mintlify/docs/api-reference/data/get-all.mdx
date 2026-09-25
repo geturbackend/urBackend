@@ -99,7 +99,7 @@ const params = new URLSearchParams({
 });
 
 const res = await fetch(
-  `https://api.ub.bitbros.in/api/data/posts?${params}`,
+  `https://api.urbackend.in/api/data/posts?${params}`,
   {
     headers: {
       'x-api-key': 'pk_live_YOUR_KEY'
@@ -113,12 +113,12 @@ const { data } = await res.json();
 ```
 
 ```bash curl
-curl "https://api.ub.bitbros.in/api/data/posts?page=1&limit=10&sort=-createdAt&status=published&include_deleted=true" \
+curl "https://api.urbackend.in/api/data/posts?page=1&limit=10&sort=-createdAt&status=published&include_deleted=true" \
   -H "x-api-key: pk_live_YOUR_KEY"
 ```
 
 ```javascript Private collection (RLS)
-const res = await fetch('https://api.ub.bitbros.in/api/data/notes', {
+const res = await fetch('https://api.urbackend.in/api/data/notes', {
   headers: {
     'x-api-key': 'pk_live_YOUR_KEY',
     'Authorization': `Bearer ${accessToken}` // Required for private-mode collections

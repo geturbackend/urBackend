@@ -30,7 +30,7 @@ Use `pk_live` for all read operations from client-side code. It is safe to bundl
 
 ```javascript
 // Safe — pk_live is read-only by default
-const response = await fetch('https://api.ub.bitbros.in/api/data/products', {
+const response = await fetch('https://api.urbackend.in/api/data/products', {
   headers: {
     'x-api-key': 'pk_live_...'
   }
@@ -51,7 +51,7 @@ You can allow authenticated frontend users to write their own data by enabling *
 
 ```javascript
 // pk_live write with RLS enabled — user must be logged in
-const response = await fetch('https://api.ub.bitbros.in/api/data/posts', {
+const response = await fetch('https://api.urbackend.in/api/data/posts', {
   method: 'POST',
   headers: {
     'x-api-key': 'pk_live_...',
@@ -70,7 +70,7 @@ Use `sk_live` for all server-side operations: seeding data, admin scripts, serve
 
 ```javascript
 // Server-side only — never expose sk_live in client code
-const response = await fetch('https://api.ub.bitbros.in/api/data/products', {
+const response = await fetch('https://api.urbackend.in/api/data/products', {
   method: 'POST',
   headers: {
     'x-api-key': 'sk_live_...',

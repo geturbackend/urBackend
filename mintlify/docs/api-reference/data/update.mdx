@@ -65,7 +65,7 @@ When using `pk_live` with RLS enabled, urBackend fetches the existing document a
 const postId = '64fd1234abcd5678ef901234';
 
 const res = await fetch(
-  `https://api.ub.bitbros.in/api/data/posts/${postId}`,
+  `https://api.urbackend.in/api/data/posts/${postId}`,
   {
     method: 'PUT',
     headers: {
@@ -87,7 +87,7 @@ console.log('Updated document:', data);
 const postId = '64fd1234abcd5678ef901234';
 
 const res = await fetch(
-  `https://api.ub.bitbros.in/api/data/posts/${postId}`,
+  `https://api.urbackend.in/api/data/posts/${postId}`,
   {
     method: 'PATCH',
     headers: {
@@ -108,7 +108,7 @@ console.log('Updated document:', data);
 const postId = '64fd1234abcd5678ef901234';
 
 const res = await fetch(
-  `https://api.ub.bitbros.in/api/data/posts/${postId}`,
+  `https://api.urbackend.in/api/data/posts/${postId}`,
   {
     method: 'PATCH',
     headers: {
@@ -128,7 +128,7 @@ console.log('Updated document:', data);
 ```
 
 ```bash curl
-curl -X PUT "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234" \
+curl -X PUT "https://api.urbackend.in/api/data/posts/64fd1234abcd5678ef901234" \
   -H "Content-Type: application/json" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
   -d '{"title": "Updated title", "meta.views": 105}'

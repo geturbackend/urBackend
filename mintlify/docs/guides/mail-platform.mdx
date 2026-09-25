@@ -127,7 +127,7 @@ Validation notes:
 <CodeGroup>
 
 ```bash curl
-curl -X POST "https://api.ub.bitbros.in/api/mail/send" \
+curl -X POST "https://api.urbackend.in/api/mail/send" \
   -H "Content-Type: application/json" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
   -d '{
@@ -216,7 +216,7 @@ Validation is enforced by a strict Zod schema on every batch call:
 <CodeGroup>
 
 ```bash curl
-curl -X POST "https://api.ub.bitbros.in/api/mail/send-batch" \
+curl -X POST "https://api.urbackend.in/api/mail/send-batch" \
   -H "Content-Type: application/json" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
   -d '[
@@ -265,7 +265,7 @@ Sorting/pagination behavior:
 <CodeGroup>
 
 ```bash curl
-curl "https://api.ub.bitbros.in/api/mail/logs" \
+curl "https://api.urbackend.in/api/mail/logs" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY"
 ```
 
@@ -279,7 +279,7 @@ console.log(logs);
 Dashboard API variant (bearer auth):
 
 ```bash
-curl "https://dashboard-api.ub.bitbros.in/api/projects/<projectId>/mail/logs" \
+curl "https://platform-api.urbackend.in/api/projects/<projectId>/mail/logs" \
   -H "Authorization: Bearer <dashboard-jwt>"
 ```
 
@@ -295,7 +295,7 @@ Use live status when you need real-time provider status. Use stored logs for ana
 <CodeGroup>
 
 ```bash curl
-curl "https://api.ub.bitbros.in/api/mail/logs/re_123" \
+curl "https://api.urbackend.in/api/mail/logs/re_123" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY"
 ```
 
@@ -309,7 +309,7 @@ console.log(status.dbLog, status.resendStatus);
 Dashboard API live check:
 
 ```bash
-curl "https://dashboard-api.ub.bitbros.in/api/projects/<projectId>/mail/logs/re_123/live" \
+curl "https://platform-api.urbackend.in/api/projects/<projectId>/mail/logs/re_123/live" \
   -H "Authorization: Bearer <dashboard-jwt>"
 ```
 
@@ -328,15 +328,15 @@ Error status/message semantics follow upstream Resend responses where applicable
 <CodeGroup>
 
 ```bash curl
-curl "https://api.ub.bitbros.in/api/mail/audiences" \
+curl "https://api.urbackend.in/api/mail/audiences" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY"
 
-curl -X POST "https://api.ub.bitbros.in/api/mail/audiences" \
+curl -X POST "https://api.urbackend.in/api/mail/audiences" \
   -H "Content-Type: application/json" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
   -d '{"name":"VIP Customers"}'
 
-curl -X DELETE "https://api.ub.bitbros.in/api/mail/audiences/aud_123" \
+curl -X DELETE "https://api.urbackend.in/api/mail/audiences/aud_123" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY"
 ```
 
@@ -362,7 +362,7 @@ Contact payload fields:
 <CodeGroup>
 
 ```bash curl
-curl -X POST "https://api.ub.bitbros.in/api/mail/audiences/aud_123/contacts" \
+curl -X POST "https://api.urbackend.in/api/mail/audiences/aud_123/contacts" \
   -H "Content-Type: application/json" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
   -d '{
@@ -392,15 +392,15 @@ For the remaining contact endpoints:
 <CodeGroup>
 
 ```bash curl
-curl "https://api.ub.bitbros.in/api/mail/audiences/aud_123/contacts" \
+curl "https://api.urbackend.in/api/mail/audiences/aud_123/contacts" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY"
 
-curl -X PATCH "https://api.ub.bitbros.in/api/mail/audiences/aud_123/contacts/ct_123" \
+curl -X PATCH "https://api.urbackend.in/api/mail/audiences/aud_123/contacts/ct_123" \
   -H "Content-Type: application/json" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
   -d '{"firstName":"Ada","unsubscribed":true}'
 
-curl -X DELETE "https://api.ub.bitbros.in/api/mail/audiences/aud_123/contacts/ct_123" \
+curl -X DELETE "https://api.urbackend.in/api/mail/audiences/aud_123/contacts/ct_123" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY"
 ```
 
@@ -443,7 +443,7 @@ Broadcast create/send/list/detail/delete paths run behind mail usage gating midd
 
 ```bash curl
 # 1) Create
-curl -X POST "https://api.ub.bitbros.in/api/mail/broadcasts" \
+curl -X POST "https://api.urbackend.in/api/mail/broadcasts" \
   -H "Content-Type: application/json" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
   -d '{
@@ -454,7 +454,7 @@ curl -X POST "https://api.ub.bitbros.in/api/mail/broadcasts" \
   }'
 
 # 2) Send
-curl -X POST "https://api.ub.bitbros.in/api/mail/broadcasts/brd_123/send" \
+curl -X POST "https://api.urbackend.in/api/mail/broadcasts/brd_123/send" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY"
 ```
 
@@ -477,13 +477,13 @@ Other broadcast endpoints:
 <CodeGroup>
 
 ```bash curl
-curl "https://api.ub.bitbros.in/api/mail/broadcasts" \
+curl "https://api.urbackend.in/api/mail/broadcasts" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY"
 
-curl "https://api.ub.bitbros.in/api/mail/broadcasts/brd_123" \
+curl "https://api.urbackend.in/api/mail/broadcasts/brd_123" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY"
 
-curl -X DELETE "https://api.ub.bitbros.in/api/mail/broadcasts/brd_123" \
+curl -X DELETE "https://api.urbackend.in/api/mail/broadcasts/brd_123" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY"
 ```
 
@@ -528,7 +528,7 @@ Resend controls webhook retries for non-2xx/timeout outcomes. Keep endpoint idem
 <CodeGroup>
 
 ```bash curl
-curl -X POST "https://api.ub.bitbros.in/api/mail/webhook" \
+curl -X POST "https://api.urbackend.in/api/mail/webhook" \
   -H "Content-Type: application/json" \
   -H "svix-id: <id>" \
   -H "svix-timestamp: <timestamp>" \
@@ -537,7 +537,7 @@ curl -X POST "https://api.ub.bitbros.in/api/mail/webhook" \
 ```
 
 ```ts JavaScript (server webhook simulator)
-await fetch('https://api.ub.bitbros.in/api/mail/webhook', {
+await fetch('https://api.urbackend.in/api/mail/webhook', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',

@@ -5,8 +5,8 @@ description: "Create, read, update, and delete documents in your MongoDB collect
 
 urBackend gives you a REST interface for your MongoDB collections with no SQL or aggregation pipelines required. Define your collections in the dashboard, then read and write data immediately.
 
-**Base URL:** `https://api.ub.bitbros.in`  
-**Pattern:** `https://api.ub.bitbros.in/api/data/:collectionName`
+**Base URL:** `https://api.urbackend.in`  
+**Pattern:** `https://api.urbackend.in/api/data/:collectionName`
 
 Replace `:collectionName` with the name of your collection (e.g., `posts`, `products`, `orders`).
 
@@ -33,7 +33,7 @@ Use `sk_live` for server-side writes. Use `pk_live` + RLS + a user JWT to let au
 By default, write operations require your secret key (`sk_live_...`). If you enable RLS on the collection, you can also write with a publishable key and a valid user JWT.
 
 ```javascript
-const res = await fetch('https://api.ub.bitbros.in/api/data/posts', {
+const res = await fetch('https://api.urbackend.in/api/data/posts', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -64,7 +64,7 @@ Read operations use your publishable key (`pk_live_...`) and never expose your s
 **Endpoint:** `GET /api/data/:collectionName`
 
 ```bash
-curl "https://api.ub.bitbros.in/api/data/posts" \
+curl "https://api.urbackend.in/api/data/posts" \
   -H "x-api-key: pk_live_YOUR_KEY"
 ```
 
@@ -85,7 +85,7 @@ curl "https://api.ub.bitbros.in/api/data/posts" \
 **Endpoint:** `GET /api/data/:collectionName/:id`
 
 ```bash
-curl "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234" \
+curl "https://api.urbackend.in/api/data/posts/64fd1234abcd5678ef901234" \
   -H "x-api-key: pk_live_YOUR_KEY"
 ```
 
@@ -121,7 +121,7 @@ You can append suffixes to field names in the query string to apply MongoDB comp
 **Filtering example — published posts, newest first, price strictly greater than 10 and strictly less than 50 (exclusive bounds):**
 
 ```bash
-curl "https://api.ub.bitbros.in/api/data/posts?status=published&price_gt=10&price_lt=50&sort=-createdAt" \
+curl "https://api.urbackend.in/api/data/posts?status=published&price_gt=10&price_lt=50&sort=-createdAt" \
   -H "x-api-key: pk_live_YOUR_KEY"
 ```
 
@@ -134,7 +134,7 @@ curl "https://api.ub.bitbros.in/api/data/posts?status=published&price_gt=10&pric
 ```javascript
 const postId = '64fd1234abcd5678ef901234';
 
-const res = await fetch(`https://api.ub.bitbros.in/api/data/posts/${postId}`, {
+const res = await fetch(`https://api.urbackend.in/api/data/posts/${postId}`, {
   method: 'PUT',
   headers: {
     'Content-Type': 'application/json',
@@ -153,7 +153,7 @@ const res = await fetch(`https://api.ub.bitbros.in/api/data/posts/${postId}`, {
 **Endpoint:** `PATCH /api/data/:collectionName/:id`
 
 ```javascript
-const res = await fetch(`https://api.ub.bitbros.in/api/data/posts/${postId}`, {
+const res = await fetch(`https://api.urbackend.in/api/data/posts/${postId}`, {
   method: 'PATCH',
   headers: {
     'Content-Type': 'application/json',
@@ -170,7 +170,7 @@ const res = await fetch(`https://api.ub.bitbros.in/api/data/posts/${postId}`, {
 When you delete a document using `DELETE /api/data/:collectionName/:id`, your backend moves it to the trash instead of removing it immediately.
 
 ```bash
-curl -X DELETE "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234" \
+curl -X DELETE "https://api.urbackend.in/api/data/posts/64fd1234abcd5678ef901234" \
   -H "x-api-key: sk_live_YOUR_KEY"
 ```
 
@@ -191,7 +191,7 @@ You can skip the grace period from the dashboard, the REST API, or the SDKs. Per
 <CodeGroup>
 
 ```bash curl
-curl -X DELETE "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234?permanent=true" \
+curl -X DELETE "https://api.urbackend.in/api/data/posts/64fd1234abcd5678ef901234?permanent=true" \
   -H "x-api-key: sk_live_YOUR_KEY"
 ```
 

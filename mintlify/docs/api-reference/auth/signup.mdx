@@ -63,7 +63,7 @@ Creates a new user account and returns an access token. Any extra fields defined
 <CodeGroup>
 
 ```javascript fetch
-const res = await fetch('https://api.ub.bitbros.in/api/userAuth/signup', {
+const res = await fetch('https://api.urbackend.in/api/userAuth/signup', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -82,7 +82,7 @@ const { user, accessToken } = await res.json();
 ```
 
 ```bash curl
-curl -X POST "https://api.ub.bitbros.in/api/userAuth/signup" \
+curl -X POST "https://api.urbackend.in/api/userAuth/signup" \
   -H "Content-Type: application/json" \
   -H "x-api-key: pk_live_YOUR_KEY" \
   -d '{

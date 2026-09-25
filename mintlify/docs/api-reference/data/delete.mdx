@@ -55,7 +55,7 @@ When using `pk_live` with RLS enabled, urBackend compares the existing document'
 const docId = '64fd1234abcd5678ef901234';
 
 const res = await fetch(
-  `https://api.ub.bitbros.in/api/data/posts/${docId}`,
+  `https://api.urbackend.in/api/data/posts/${docId}`,
   {
     method: 'DELETE',
     headers: {
@@ -71,7 +71,7 @@ const { success, data, message } = await res.json();
 const docId = '64fd1234abcd5678ef901234';
 
 const res = await fetch(
-  `https://api.ub.bitbros.in/api/data/posts/${docId}`,
+  `https://api.urbackend.in/api/data/posts/${docId}`,
   {
     method: 'DELETE',
     headers: {
@@ -83,12 +83,12 @@ const res = await fetch(
 ```
 
 ```bash curl
-curl -X DELETE "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234" \
+curl -X DELETE "https://api.urbackend.in/api/data/posts/64fd1234abcd5678ef901234" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY"
 ```
 
 ```bash curl (permanent)
-curl -X DELETE "https://api.ub.bitbros.in/api/data/posts/64fd1234abcd5678ef901234?permanent=true" \
+curl -X DELETE "https://api.urbackend.in/api/data/posts/64fd1234abcd5678ef901234?permanent=true" \
   -H "x-api-key: sk_live_YOUR_SECRET_KEY"
 ```
 

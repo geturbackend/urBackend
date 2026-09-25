@@ -57,7 +57,7 @@ If Row-Level Security (RLS) is enabled, your backend automatically injects a `$m
 
 ```javascript fetch
 const res = await fetch(
-  'https://api.ub.bitbros.in/api/data/orders/aggregate',
+  'https://api.urbackend.in/api/data/orders/aggregate',
   {
     method: 'POST',
     headers: {
@@ -78,7 +78,7 @@ const { success, data } = await res.json();
 ```
 
 ```bash curl
-curl -X POST "https://api.ub.bitbros.in/api/data/orders/aggregate?include_deleted=false" \
+curl -X POST "https://api.urbackend.in/api/data/orders/aggregate?include_deleted=false" \
   -H "Content-Type: application/json" \
   -H "x-api-key: pk_live_YOUR_KEY" \
   -d '{
