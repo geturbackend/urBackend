@@ -12,7 +12,7 @@ urBackend Mail Platform extends transactional sending into a full delivery workf
 - BYOK (Bring Your Own Key) with encrypted project-level Resend keys
 - delivery tracking via persistent `MailLog`
 - audience/contact management (BYOK-gated)
-- marketing broadcasts (BYOK + Pro gated)
+- marketing broadcasts (BYOK-gated, counted against the monthly mail quota)
 - webhook-driven status updates with Svix verification
 
 Implementation references:
@@ -46,11 +46,15 @@ flowchart LR
 
 | Capability | Free (shared key) | Free + BYOK | Pro + BYOK |
 |---|---:|---:|---:|
+| Monthly mail quota | 50 | 50 | 1,000 |
 | Transactional send (`/api/mail/send`) | ✅ | ✅ | ✅ |
 | Batch send (`/api/mail/send-batch`, max 100 items) | ✅ | ✅ | ✅ |
+| Custom mail templates (`templateId` / `templateName`) | ✅ | ✅ | ✅ |
 | Delivery logs + live status | ✅ | ✅ | ✅ |
 | Audiences & Contacts | ❌ | ✅ | ✅ |
 | Marketing Broadcasts | ❌ | ✅ (within 50/mo limit) | ✅ (within 1,000/mo limit) |
+
+BYOK is available on every plan, including Free. Audiences, contacts, and broadcasts only require a configured BYOK Resend key. They do not require a Pro plan.
 
 ## Getting started
 
@@ -414,7 +418,7 @@ await client.request('DELETE', '/api/mail/audiences/aud_123/contacts/ct_123');
 
 </CodeGroup>
 
-## Marketing broadcasts (BYOK + Pro)
+## Marketing broadcasts (BYOK)
 
 Endpoints:
 
@@ -437,7 +441,9 @@ Endpoints:
 
 ### Quota checks
 
-Broadcast create/send/list/detail/delete paths run behind mail usage gating middleware and plan checks.
+Broadcasts require a configured BYOK Resend key on the project. They are available on both the Free and Pro plans.
+
+Each broadcast send reserves one slot from the project's shared monthly mail quota (50 on Free, 1,000 on Pro), the same quota used by transactional sends. If Resend rejects the send, urBackend refunds the reserved slot so failed sends do not count against your quota.
 
 <CodeGroup>
 
@@ -574,7 +580,8 @@ Route: `/project/:projectId/mail`
 
 - compose audience + subject + html
 - send campaign via broadcast API
-- locked unless BYOK is configured and account is Pro
+- locked if BYOK key is not configured
+- each send counts against the monthly mail quota
 
 <Info>
 Add product screenshots/annotated walkthrough images in this section if your docs deployment supports hosted image assets.
@@ -635,7 +642,7 @@ Compared to legacy single-send usage:
 - `/api/mail/send-batch` adds bulk dispatch (up to 100 items/request)
 - `MailLog` is first-class for auditability and dashboard visibility
 - new BYOK-gated resources: audiences, contacts
-- new BYOK+Pro resource: broadcasts
+- new BYOK-gated resource: broadcasts (counted against the monthly mail quota)
 - webhook path requires raw-body middleware placement before JSON parser
 - new env dependencies for production-grade mail processing (`RESEND_WEBHOOK_SECRET`, sender defaults)
 
