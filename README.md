@@ -20,7 +20,6 @@
 <div align="center">
 
 ![Build Status](https://img.shields.io/github/actions/workflow/status/yash-pouranik/urbackend/ci.yml?branch=main)
-[![CI (Continuous Integration)](https://github.com/geturbackend/urBackend/actions/workflows/ci.yml/badge.svg)](https://github.com/geturbackend/urBackend/actions/workflows/ci.yml)
 ![License](https://img.shields.io/github/license/yash-pouranik/urbackend)
 ![Stars](https://img.shields.io/github/stars/yash-pouranik/urbackend?name=urbackend)
 ![Commits](https://img.shields.io/github/commit-activity/m/yash-pouranik/urbackend)
