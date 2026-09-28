@@ -3,6 +3,26 @@ title: September 2026
 description: What's new in urBackend — new features, improvements, and fixes.
 ---
 
+<Update label="2026-09-28" description="Week of 2026-09-22–2026-09-28" tags={["Feature", "Improvement", "Fix"]}>
+## New features
+
+- **More features on the Free plan** — Free projects now include BYOK (your own Resend, OAuth, and AI keys), bring-your-own storage (S3 / R2), custom HTML email templates, and Analytics Pro. See [Limits & Quotas](/limits-and-quotas). (by [@yash-pouranik](https://github.com/yash-pouranik) in [#409](https://github.com/geturbackend/urbackend/pull/409))
+- **Webhooks on the Free plan** — Free projects can now create up to 3 webhooks, with automatic delivery retries. Pro stays unlimited. See [Webhooks](/guides/webhooks) and [Webhook limits](/limits-and-quotas#webhook-limits). (by [@yash-pouranik](https://github.com/yash-pouranik) in [#409](https://github.com/geturbackend/urbackend/pull/409))
+- **Broadcasts on the Free plan** — Marketing broadcasts now only require a configured BYOK Resend key. A Pro plan is no longer needed. See [Mail Platform](/guides/mail-platform). (by [@yash-pouranik](https://github.com/yash-pouranik) in [#409](https://github.com/geturbackend/urbackend/pull/409))
+
+## Improvements
+
+- **Higher Free mail quota** — The Free plan now includes 50 emails per month, up from 25. Broadcast sends now count toward the same monthly quota as transactional mail. Failed broadcast sends don't use up quota. See [Mail limits](/limits-and-quotas#mail-limits). (by [@yash-pouranik](https://github.com/yash-pouranik) in [#409](https://github.com/geturbackend/urbackend/pull/409))
+- **Clearer `ub status` output** — The CLI now shows your webhook count against your plan limit. Unlimited resources display as `Unlimited`. See [CLI overview](/cli/overview). (by [@yash-pouranik](https://github.com/yash-pouranik) in [#409](https://github.com/geturbackend/urbackend/pull/409))
+- **Updated pricing and upgrade screens** — The pricing page and the dashboard upgrade modal now reflect the new Free and Pro plans. (by [@yash-pouranik](https://github.com/yash-pouranik) in [#409](https://github.com/geturbackend/urbackend/pull/409))
+- **New `urbackend.in` domains** — The public API now lives at `https://api.urbackend.in` and the dashboard at `https://app.urbackend.in`. The previous `bitbros.in` hosts stop working after 30 October 2026. Please update your apps before then. See [API overview](/api-reference/overview). (by [@mintlify](https://github.com/apps/mintlify) in [#412](https://github.com/geturbackend/urbackend/pull/412))
+
+## Bug fixes
+
+- **Webhook limit enforced reliably** — Creating several webhooks at once can no longer exceed your plan's limit. At the limit, creation returns `403` with `Webhook limit reached`. Editing, deleting, and testing existing webhooks still work. (by [@yash-pouranik](https://github.com/yash-pouranik) in [#409](https://github.com/geturbackend/urbackend/pull/409))
+- **Self-hosted Docker Compose starts cleanly** — The bundled MongoDB now runs as a replica set. The APIs wait until the database is ready before starting. (by [@yash-pouranik](https://github.com/yash-pouranik) in [#409](https://github.com/geturbackend/urbackend/pull/409))
+</Update>
+
 <Update label="2026-09-21" description="Week of 2026-09-15–2026-09-21" tags={["Feature", "Improvement", "Fix"]}>
 ## New features
 
