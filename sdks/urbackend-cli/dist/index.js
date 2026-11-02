@@ -6,7 +6,7 @@ import { Command } from "commander";
 // package.json
 var package_default = {
   name: "@urbackend/cli",
-  version: "0.2.2",
+  version: "0.2.3",
   description: "Official CLI for urBackend \u2014 manage projects, schemas, and more from your terminal",
   publishConfig: {
     access: "public"
@@ -55,7 +55,7 @@ import os from "os";
 import path from "path";
 var CONFIG_DIR = path.join(os.homedir(), ".ub");
 var CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
-var DEFAULT_API_BASE = process.env.URBACKEND_API_URL ?? "https://api.urbackend.bitbros.in";
+var DEFAULT_API_BASE = process.env.URBACKEND_API_URL ?? "https://platform-api.urbackend.in";
 
 // src/core/config.ts
 var DEFAULT_CONFIG = {

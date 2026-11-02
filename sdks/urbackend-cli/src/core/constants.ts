@@ -12,4 +12,4 @@ export const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
  * Override via URBACKEND_API_URL env variable for local development.
  */
 export const DEFAULT_API_BASE =
-  process.env.URBACKEND_API_URL ?? "https://api.urbackend.bitbros.in";
+  process.env.URBACKEND_API_URL ?? "https://platform-api.urbackend.in";

@@ -1,6 +1,6 @@
 {
   "name": "@urbackend/cli",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Official CLI for urBackend — manage projects, schemas, and more from your terminal",
   "publishConfig": {
     "access": "public"
