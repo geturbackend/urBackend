@@ -26,6 +26,49 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 // src/index.ts
 var import_commander = require("commander");
 
+// package.json
+var package_default = {
+  name: "@urbackend/cli",
+  version: "0.2.2",
+  description: "Official CLI for urBackend \u2014 manage projects, schemas, and more from your terminal",
+  publishConfig: {
+    access: "public"
+  },
+  type: "module",
+  bin: {
+    ub: "./bin/ub.js"
+  },
+  files: [
+    "bin",
+    "dist",
+    "README.md"
+  ],
+  scripts: {
+    build: "tsup --config tsup.config.ts",
+    dev: "tsup --config tsup.config.ts --watch",
+    lint: "tsc --noEmit",
+    format: 'prettier --write "src/**/*.ts"'
+  },
+  dependencies: {
+    commander: "^12.1.0"
+  },
+  devDependencies: {
+    "@types/node": "^22.0.0",
+    tsup: "^8.5.1",
+    typescript: "^5.7.2"
+  },
+  engines: {
+    node: ">=20.0.0"
+  },
+  keywords: [
+    "urbackend",
+    "cli",
+    "baas"
+  ],
+  author: "urBackend Contributors",
+  license: "MIT"
+};
+
 // src/core/config.ts
 var import_node_fs = __toESM(require("fs"), 1);
 var import_node_path2 = __toESM(require("path"), 1);
@@ -209,6 +252,7 @@ async function confirm(question) {
 
 // src/utils/format.ts
 function formatBytes(bytes) {
+  if (bytes < 0) return "Unlimited";
   if (bytes === 0) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
@@ -340,6 +384,16 @@ async function getProject(projectId) {
   );
   if ("data" in res && res.data) return res.data;
   return res;
+}
+async function syncSchema(projectId, collections) {
+  const res = await apiFetch(
+    `/projects/${projectId}/sync-schema`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ collections })
+    }
+  );
+  return res.data;
 }
 
 // src/commands/project/list.ts
@@ -641,24 +695,33 @@ async function statusCommand() {
     if (stats.planExpiresAt) {
       console.log(`${label("Plan expires")} ${stats.planExpiresAt}`);
     }
+    const fmtLimit = (val, isBytes = false) => {
+      if (val === void 0 || val === null) return "N/A";
+      if (val === -1) return "Unlimited";
+      return isBytes ? formatBytes(val) : val.toLocaleString();
+    };
     console.log("\n\u2500\u2500 Usage \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500");
     console.log(
-      `${label("Projects")} ${stats.usage.totalProjects} / ${stats.limits.maxProjects}`
+      `${label("Projects")} ${stats.usage.totalProjects} / ${fmtLimit(stats.limits.maxProjects)}`
     );
     console.log(
-      `${label("Collections")} ${stats.usage.totalCollections} / ${stats.limits.maxCollections}`
+      `${label("Collections")} ${stats.usage.totalCollections} / ${fmtLimit(stats.limits.maxCollections)}`
     );
     console.log(
-      `${label("Database")} ${formatBytes(stats.usage.totalDatabaseUsed)} / ${formatBytes(stats.limits.mongoBytes)}`
+      `${label("Database")} ${formatBytes(stats.usage.totalDatabaseUsed)} / ${fmtLimit(stats.limits.mongoBytes, true)}`
     );
     console.log(
-      `${label("Storage")} ${formatBytes(stats.usage.totalStorageUsed)} / ${formatBytes(stats.limits.storageBytes)}`
+      `${label("Storage")} ${formatBytes(stats.usage.totalStorageUsed)} / ${fmtLimit(stats.limits.storageBytes, true)}`
     );
     console.log(
-      `${label("API requests")} ${stats.usage.totalRequests.toLocaleString()} / ${stats.limits.reqPerDay.toLocaleString()} today`
+      `${label("API requests")} ${stats.usage.totalRequests.toLocaleString()} / ${fmtLimit(stats.limits.reqPerDay)} today`
     );
-    console.log(`${label("Auth users")} ${stats.usage.totalUsers} / ${stats.limits.authUsersLimit}`);
-    console.log(`${label("Webhooks")} ${stats.usage.totalWebhooks}`);
+    console.log(
+      `${label("Auth users")} ${stats.usage.totalUsers} / ${fmtLimit(stats.limits.authUsersLimit)}`
+    );
+    console.log(
+      `${label("Webhooks")} ${stats.usage.totalWebhooks} / ${fmtLimit(stats.limits.webhooksLimit)}`
+    );
     if (currentProjectId) {
       try {
         const project = await getProject(currentProjectId);
@@ -731,8 +794,8 @@ async function doctorCommand(options = {}) {
     projectName: null
   };
   try {
-    const fs2 = await import("fs");
-    result.configFound = fs2.existsSync(configFilePath());
+    const fs5 = await import("fs");
+    result.configFound = fs5.existsSync(configFilePath());
   } catch {
     result.configFound = false;
   }
@@ -745,8 +808,12 @@ async function doctorCommand(options = {}) {
       result.patValid = true;
       result.email = profile.developer.email;
       result.plan = profile.developer.plan;
-    } catch {
-      result.patValid = false;
+    } catch (error) {
+      if (error instanceof APIError && error.status === 401) {
+        result.patValid = false;
+      } else {
+        result.patValid = null;
+      }
     }
   }
   if (currentProjectId && result.patValid) {
@@ -754,8 +821,12 @@ async function doctorCommand(options = {}) {
       const project = await getProject(currentProjectId);
       result.projectAccessible = true;
       result.projectName = project.name;
-    } catch {
-      result.projectAccessible = false;
+    } catch (error) {
+      if (error instanceof APIError && (error.status === 401 || error.status === 403)) {
+        result.projectAccessible = false;
+      } else {
+        result.projectAccessible = null;
+      }
     }
   }
   if (options.json) {
@@ -774,6 +845,10 @@ async function doctorCommand(options = {}) {
   );
   if (!token) {
     console.log(`  ${fail}  PAT                   Not set \u2014 run 'ub login'`);
+  } else if (result.patValid === null) {
+    console.log(
+      `  ${warn}  PAT                   Unable to validate \u2014 API unreachable or backend error`
+    );
   } else {
     console.log(
       `  ${result.patValid ? ok : fail}  PAT                   ${result.patValid ? `Valid (${result.email}, ${result.plan})` : "Invalid or expired \u2014 run 'ub login'"}`
@@ -781,13 +856,17 @@ async function doctorCommand(options = {}) {
   }
   if (!currentProjectId) {
     console.log(`  ${warn}  Active project        Not selected \u2014 run 'ub project use'`);
+  } else if (result.projectAccessible === null) {
+    console.log(
+      `  ${warn}  Active project        Unable to validate \u2014 API unreachable or backend error`
+    );
   } else {
     console.log(
       `  ${result.projectAccessible ? ok : fail}  Active project        ${result.projectAccessible ? `${result.projectName} (${currentProjectId})` : `ID ${currentProjectId} \u2014 not found or access denied`}`
     );
   }
   console.log();
-  const allGood = result.configFound && result.patValid && result.dashboardApiReachable && result.projectSelected && result.projectAccessible;
+  const allGood = result.configFound && result.patValid === true && result.dashboardApiReachable && result.projectSelected && result.projectAccessible === true;
   if (allGood) {
     logger.success("Everything looks good.");
   } else {
@@ -796,9 +875,397 @@ async function doctorCommand(options = {}) {
   console.log();
 }
 
+// src/commands/init/index.ts
+var import_node_fs3 = __toESM(require("fs"), 1);
+var import_node_path4 = __toESM(require("path"), 1);
+
+// src/core/workspace.ts
+var import_node_fs2 = __toESM(require("fs"), 1);
+var import_node_path3 = __toESM(require("path"), 1);
+var WORKSPACE_DIR = ".ub";
+var CONFIG_FILE = "config.json";
+var SCHEMAS_DIR = "schemas";
+function getWorkspaceDir() {
+  return import_node_path3.default.join(process.cwd(), WORKSPACE_DIR);
+}
+function getWorkspaceConfigPath() {
+  return import_node_path3.default.join(getWorkspaceDir(), CONFIG_FILE);
+}
+function getSchemasDir() {
+  return import_node_path3.default.join(getWorkspaceDir(), SCHEMAS_DIR);
+}
+function loadWorkspaceConfig() {
+  const configPath = getWorkspaceConfigPath();
+  if (!import_node_fs2.default.existsSync(configPath)) {
+    return null;
+  }
+  try {
+    const raw = import_node_fs2.default.readFileSync(configPath, "utf8");
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+function saveWorkspaceConfig(config) {
+  const dir = getWorkspaceDir();
+  if (!import_node_fs2.default.existsSync(dir)) {
+    import_node_fs2.default.mkdirSync(dir, { recursive: true });
+  }
+  const configPath = getWorkspaceConfigPath();
+  import_node_fs2.default.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf8");
+}
+function isValidCollectionName(collectionName) {
+  return typeof collectionName === "string" && !collectionName.includes("/") && !collectionName.includes("\\") && !collectionName.includes("..");
+}
+function saveSchemaFile(collectionName, schema) {
+  if (!isValidCollectionName(collectionName)) {
+    throw new Error(`Invalid collection name: ${collectionName}`);
+  }
+  const schemasDir = getSchemasDir();
+  if (!import_node_fs2.default.existsSync(schemasDir)) {
+    import_node_fs2.default.mkdirSync(schemasDir, { recursive: true });
+  }
+  const filePath = import_node_path3.default.join(schemasDir, `${collectionName}.json`);
+  import_node_fs2.default.writeFileSync(filePath, JSON.stringify(schema, null, 2), "utf8");
+}
+function getLocalSchemas() {
+  const schemasDir = getSchemasDir();
+  if (!import_node_fs2.default.existsSync(schemasDir)) {
+    return [];
+  }
+  const files = import_node_fs2.default.readdirSync(schemasDir).filter((file) => file.endsWith(".json"));
+  const schemas = [];
+  for (const file of files) {
+    try {
+      const filePath = import_node_path3.default.join(schemasDir, file);
+      const raw = import_node_fs2.default.readFileSync(filePath, "utf8");
+      schemas.push({
+        name: file.replace(".json", ""),
+        schema: JSON.parse(raw)
+      });
+    } catch (err) {
+      logger.warn(`Failed to parse schema file: ${file}. Skipping.`);
+    }
+  }
+  return schemas;
+}
+function clearSchemaFiles() {
+  const schemasDir = getSchemasDir();
+  if (!import_node_fs2.default.existsSync(schemasDir)) return;
+  const files = import_node_fs2.default.readdirSync(schemasDir);
+  for (const file of files) {
+    if (file.endsWith(".json")) {
+      import_node_fs2.default.unlinkSync(import_node_path3.default.join(schemasDir, file));
+    }
+  }
+}
+
+// src/commands/init/index.ts
+async function initCommand(projectIdOrName) {
+  const token = getToken();
+  if (!token) {
+    logger.error("You are not logged in. Run 'ub login' first.");
+    process.exitCode = 1;
+    return;
+  }
+  try {
+    const projects = await listProjects();
+    if (projects.length === 0) {
+      logger.info("No projects found. Create one at dashboard.urbackend.bitbros.in");
+      return;
+    }
+    let selectedId;
+    let selectedName;
+    if (projectIdOrName) {
+      const match = projects.find(
+        (p) => p._id === projectIdOrName || p.name.toLowerCase() === projectIdOrName.toLowerCase()
+      );
+      if (!match) {
+        logger.error(`No project found matching "${projectIdOrName}".`);
+        logger.info("Run 'ub project list' to see available projects.");
+        process.exitCode = 1;
+        return;
+      }
+      selectedId = match._id;
+      selectedName = match.name;
+    } else {
+      console.log("\nAvailable projects:\n");
+      projects.forEach((p, i) => {
+        console.log(`  [${i + 1}] ${p.name} (${p._id})`);
+      });
+      console.log();
+      const answer = await prompt("Select a project to link this directory to: ");
+      if (!/^\d+$/.test(answer)) {
+        logger.error("Invalid selection.");
+        process.exitCode = 1;
+        return;
+      }
+      const index = Number(answer) - 1;
+      if (isNaN(index) || index < 0 || index >= projects.length) {
+        logger.error("Invalid selection.");
+        process.exitCode = 1;
+        return;
+      }
+      selectedId = projects[index]._id;
+      selectedName = projects[index].name;
+    }
+    saveWorkspaceConfig({ projectId: selectedId, projectName: selectedName });
+    const gitignorePath = import_node_path4.default.join(process.cwd(), ".gitignore");
+    if (import_node_fs3.default.existsSync(gitignorePath)) {
+      const gitignore = import_node_fs3.default.readFileSync(gitignorePath, "utf8");
+      const lines = gitignore.split(/\r?\n/).map((line) => line.trim());
+      if (!lines.includes(".ub") && !lines.includes("/.ub") && !lines.includes(".ub/")) {
+        import_node_fs3.default.appendFileSync(gitignorePath, "\n# urBackend local workspace\n.ub\n", "utf8");
+        logger.info("Added .ub to .gitignore");
+      }
+    } else {
+      import_node_fs3.default.writeFileSync(gitignorePath, "# urBackend local workspace\n.ub\n", "utf8");
+      logger.info("Created .gitignore and added .ub");
+    }
+    logger.success(`Successfully initialized urBackend workspace in .ub/`);
+    logger.info(`Linked to project: ${selectedName} (${selectedId})`);
+    console.log(`
+Next, run 'ub pull' to download your schemas.`);
+  } catch (error) {
+    if (error instanceof APIError) {
+      if (error.status === 401) {
+        logger.error("Token is invalid or expired. Run 'ub login' to re-authenticate.");
+      } else {
+        logger.error(error.message);
+      }
+      process.exitCode = 1;
+      return;
+    }
+    logger.error("Unable to connect to the urBackend API.");
+    process.exitCode = 1;
+  }
+}
+
+// src/commands/pull/index.ts
+async function pullCommand() {
+  const token = getToken();
+  if (!token) {
+    logger.error("You are not logged in. Run 'ub login' first.");
+    process.exitCode = 1;
+    return;
+  }
+  const workspaceConfig = loadWorkspaceConfig();
+  if (!workspaceConfig || !workspaceConfig.projectId) {
+    logger.error(
+      "No project linked to this directory. Run 'ub init' to link a project first."
+    );
+    process.exitCode = 1;
+    return;
+  }
+  const { projectId, projectName } = workspaceConfig;
+  logger.info(`Fetching schemas for ${projectName ? projectName + " " : ""}(${projectId})...`);
+  try {
+    const project = await getProject(projectId);
+    if (!project.collections || project.collections.length === 0) {
+      logger.info("This project has no collections defined yet.");
+      return;
+    }
+    let count = 0;
+    for (const collection of project.collections) {
+      if (!isValidCollectionName(collection.name)) {
+        throw new Error(`Invalid collection name received from remote: ${collection.name}`);
+      }
+    }
+    clearSchemaFiles();
+    for (const collection of project.collections) {
+      saveSchemaFile(collection.name, {
+        name: collection.name,
+        model: collection.model,
+        rls: collection.rls
+      });
+      count++;
+    }
+    logger.success(`Successfully pulled ${count} collection schema(s) into .ub/schemas/`);
+    console.log();
+    for (const collection of project.collections) {
+      console.log(`  ${label("schema")} ${collection.name}.json`);
+    }
+    console.log(`
+Next, run 'ub generate' to create your TypeScript types.`);
+  } catch (error) {
+    if (error instanceof APIError) {
+      if (error.status === 401) {
+        logger.error("Token is invalid or expired. Run 'ub login' to re-authenticate.");
+      } else if (error.status === 403) {
+        logger.error("You do not have permission to access this project.");
+      } else {
+        logger.error(error.message);
+      }
+      process.exitCode = 1;
+      return;
+    }
+    logger.error("Unable to connect to the urBackend API.");
+    process.exitCode = 1;
+  }
+}
+
+// src/commands/push/index.ts
+async function pushCommand() {
+  const token = getToken();
+  if (!token) {
+    logger.error("You are not logged in. Run 'ub login' first.");
+    process.exitCode = 1;
+    return;
+  }
+  const workspaceConfig = loadWorkspaceConfig();
+  if (!workspaceConfig || !workspaceConfig.projectId) {
+    logger.error(
+      "No project linked to this directory. Run 'ub init' to link a project first."
+    );
+    process.exitCode = 1;
+    return;
+  }
+  const { projectId, projectName } = workspaceConfig;
+  const localSchemas = getLocalSchemas();
+  if (localSchemas.length === 0) {
+    logger.error(
+      "No schema files found in .ub/schemas/. Run 'ub pull' first to fetch schemas, or create them manually."
+    );
+    process.exitCode = 1;
+    return;
+  }
+  const collections = localSchemas.map((entry) => ({
+    name: entry.schema.name ?? entry.name,
+    model: entry.schema.model ?? []
+  }));
+  logger.info(
+    `Pushing ${collections.length} schema(s) to ${projectName ? projectName + " " : ""}(${projectId})...`
+  );
+  try {
+    const result = await syncSchema(projectId, collections);
+    logger.success(
+      `Successfully synced ${result.synced} collection schema(s) to remote.`
+    );
+    console.log();
+    for (const name of result.collections) {
+      console.log(`  ${label("synced")} ${name}`);
+    }
+    console.log(
+      `
+Remote project is now up to date with your local schemas.`
+    );
+  } catch (error) {
+    if (error instanceof APIError) {
+      if (error.status === 401) {
+        logger.error(
+          "Token is invalid or expired. Run 'ub login' to re-authenticate."
+        );
+      } else if (error.status === 403) {
+        logger.error(error.message || "You do not have permission to sync schemas for this project.");
+      } else if (error.status === 400 || error.status === 422) {
+        logger.error(`Schema validation failed: ${error.message}`);
+      } else {
+        logger.error(error.message);
+      }
+      process.exitCode = 1;
+      return;
+    }
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`Unable to connect to the urBackend API. Error: ${errorMessage}`);
+    process.exitCode = 1;
+  }
+}
+
+// src/commands/generate/index.ts
+var import_node_fs4 = __toESM(require("fs"), 1);
+var import_node_path5 = __toESM(require("path"), 1);
+function mapType(field, indent = "    ") {
+  switch (field.type) {
+    case "String":
+      return "string";
+    case "Number":
+      return "number";
+    case "Boolean":
+      return "boolean";
+    case "Date":
+      return "string | Date";
+    case "Ref":
+      return "string";
+    case "Array":
+      if (field.fields && field.fields.length > 0) {
+        if (field.fields.length === 1 && !field.fields[0].key) {
+          return `Array<${mapType(field.fields[0], indent)}>`;
+        }
+        return `Array<${parseFields(field.fields, indent + "  ")}>`;
+      }
+      return "any[]";
+    case "Object":
+      if (field.fields && field.fields.length > 0) {
+        return parseFields(field.fields, indent + "  ");
+      }
+      return "Record<string, any>";
+    default:
+      return "any";
+  }
+}
+function parseFields(fields, indent) {
+  let out = "{\n";
+  for (const f of fields) {
+    const isOptional = !f.required ? "?" : "";
+    const typeStr = mapType(f, indent);
+    out += `${indent}  "${f.key}"${isOptional}: ${typeStr};
+`;
+  }
+  out += `${indent}}`;
+  return out;
+}
+async function generateCommand() {
+  const schemas = getLocalSchemas();
+  if (schemas.length === 0) {
+    logger.error("No schemas found in .ub/schemas/. Run 'ub pull' first.");
+    process.exitCode = 1;
+    return;
+  }
+  let dtsContent = `// Auto-generated by urBackend CLI
+// Do not edit this file directly
+
+`;
+  dtsContent += `export interface UrBackendTypes {
+`;
+  for (const { name, schema } of schemas) {
+    if (!schema.model || !Array.isArray(schema.model)) continue;
+    dtsContent += `  "${name}": {
+`;
+    dtsContent += `    _id: string;
+`;
+    for (const field of schema.model) {
+      const isOptional = !field.required ? "?" : "";
+      const typeStr = mapType(field, "  ");
+      dtsContent += `    "${field.key}"${isOptional}: ${typeStr};
+`;
+    }
+    dtsContent += `    createdAt: string | Date;
+`;
+    dtsContent += `    updatedAt: string | Date;
+`;
+    dtsContent += `  };
+`;
+  }
+  dtsContent += `}
+`;
+  const outputPath = import_node_path5.default.join(process.cwd(), "urbackend.d.ts");
+  try {
+    import_node_fs4.default.writeFileSync(outputPath, dtsContent, "utf8");
+    logger.success(`Generated TypeScript definitions at ./urbackend.d.ts`);
+  } catch (error) {
+    logger.error(`Failed to write urbackend.d.ts: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
+
 // src/index.ts
 var program = new import_commander.Command();
-program.name("ub").description("Official urBackend CLI \u2014 manage projects, schemas, and more").version("0.1.0");
+var CLI_VERSION = package_default.version;
+program.name("ub").description("Official urBackend CLI \u2014 manage projects, schemas, and more").version(CLI_VERSION, "-V, --version", "Output the current version").option("-v", "Output the current version");
+program.on("option:v", () => {
+  console.log(CLI_VERSION);
+  process.exit(0);
+});
 program.command("login").description("Authenticate with a Personal Access Token").action(loginCommand);
 program.command("logout").description("Remove stored credentials from this machine").action(logoutCommand);
 program.command("whoami").description("Show the currently authenticated developer").action(whoamiCommand);
@@ -811,6 +1278,10 @@ collectionCmd.command("list").alias("ls").description("List all collections in t
 collectionCmd.command("delete <collectionName>").alias("rm").description("Delete a collection and all its data").option("-f, --force", "Skip confirmation prompt").option("-p, --project <projectId>", "Target a specific project ID").action((name, options) => collectionDeleteCommand(name, options));
 program.command("status").description("Show account usage and recent API activity").action(statusCommand);
 program.command("doctor").description("Run diagnostic checks on your CLI setup").option("--json", "Output results as JSON (useful for CI/AI agents)").action((options) => doctorCommand(options));
+program.command("init [projectIdOrName]").description("Initialize a local urBackend project workspace").action((projectIdOrName) => initCommand(typeof projectIdOrName === "string" ? projectIdOrName : void 0));
+program.command("pull").description("Fetch the latest schemas for the linked project").action(pullCommand);
+program.command("push").description("Push local schemas to the remote project").action(pushCommand);
+program.command("generate").description("Generate TypeScript definitions from local schemas").action(generateCommand);
 program.parseAsync(process.argv).catch((err) => {
   console.error(`\u2716 ${err.message}`);
   process.exit(1);

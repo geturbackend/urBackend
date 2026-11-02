@@ -13,9 +13,9 @@ const DELAY_MS = 1200; // slight buffer over 1s for rate limit safety
 
 async function sendEmail(email) {
     return resend.emails.send({ 
-        from: process.env.EMAIL_FROM || 'Yash from urBackend <yash@apps.bitbros.in>',
+        from: process.env.EMAIL_FROM || 'Yash from urBackend <yash@urbackend.in>',
         to: email,
-        replyTo: process.env.EMAIL_REPLY_TO || 'yashpouranik@bitbros.in', 
+        replyTo: process.env.EMAIL_REPLY_TO || 'yash@urbackend.in', 
         subject: "your next backend project",
         text: `Hey,
 

@@ -16,6 +16,7 @@ export interface GlobalStats {
     storageBytes: number;
     mongoBytes: number;
     authUsersLimit: number;
+    webhooksLimit: number;
   };
   usage: {
     totalProjects: number;
