@@ -30,7 +30,7 @@ ub generate
 
 For a comprehensive list of every command (`project`, `collection`, `doctor`, etc.) and detailed explanations of how the CLI works under the hood, please read the full documentation:
 
-👉 **[urBackend CLI Reference Documentation](https://docs.ub.bitbros.in/cli/overview)**
+👉 **[urBackend CLI Reference Documentation](https://docs.urbackend.in/)**
 
 ## License
 

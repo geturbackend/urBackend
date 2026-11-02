@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import packageJson from "../package.json" with { type: "json" };
 import { loginCommand } from "./commands/auth/login.js";
 import { logoutCommand } from "./commands/auth/logout.js";
 import { whoamiCommand } from "./commands/auth/whoami.js";
@@ -15,11 +16,18 @@ import { pushCommand } from "./commands/push/index.js";
 import { generateCommand } from "./commands/generate/index.js";
 
 const program = new Command();
+const CLI_VERSION = packageJson.version;
 
 program
   .name("ub")
   .description("Official urBackend CLI — manage projects, schemas, and more")
-  .version("0.2.0", "-v, -V, --version", "Output the current version");
+  .version(CLI_VERSION, "-V, --version", "Output the current version")
+  .option("-v", "Output the current version");
+
+program.on("option:v", () => {
+  console.log(CLI_VERSION);
+  process.exit(0);
+});
 
 // ── Authentication ──────────────────────────────────────────────────────────
 
