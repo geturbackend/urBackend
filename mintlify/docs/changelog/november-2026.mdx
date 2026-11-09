@@ -1,0 +1,14 @@
+---
+title: November 2026
+description: "What's new in urBackend: new features, improvements, and fixes."
+---
+
+<Update label="2026-11-09" description="Week of 2026-11-02 to 2026-11-08" tags={["Improvement", "Fix"]}>
+## Improvements
+
+- **`ub -v` prints the CLI version**: `ub -v`, `ub -V`, and `ub --version` now print the installed CLI version and exit. The CLI reads the version from its package, so the output always matches the release you installed. See [CLI overview](/cli/overview#installation). (by [@yash-pouranik](https://github.com/yash-pouranik) in [#414](https://github.com/geturbackend/urbackend/pull/414))
+
+## Bug fixes
+
+- **CLI connects to the production platform API**: CLI 0.2.3 sends requests to `https://platform-api.urbackend.in` by default. Earlier versions use the previous API host, so update with `npm install -g @urbackend/cli` if you installed the CLI globally. (by [@yash-pouranik](https://github.com/yash-pouranik) in [#414](https://github.com/geturbackend/urbackend/pull/414))
+</Update>
