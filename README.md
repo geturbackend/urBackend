@@ -12,8 +12,8 @@
 </p>
 
 <p align="center">
-  <a href="https://urbackend.bitbros.in"><strong>Cloud Dashboard</strong></a> ·
-  <a href="https://docs.ub.bitbros.in/introduction"><strong>Docs</strong></a> ·
+  <a href="https://urbackend.in"><strong>Cloud Dashboard</strong></a> ·
+  <a href="https://docs.urbackend.in/introduction"><strong>Docs</strong></a> ·
   <a href="https://discord.gg/CXJjvJkNWn"><strong>Discord</strong></a>
 </p>
 
