@@ -196,4 +196,14 @@ describe('verifyApiKey middleware', () => {
         expect(next).toHaveBeenCalled();
         expect(Project.findOne).not.toHaveBeenCalled();
     });
+
+    test('selects allowPublicSignup from DB projection', async () => {
+        const req = makeReq({ headers: { 'x-api-key': 'pk_live_somekey' } });
+        const res = makeRes();
+
+        await verifyApiKey(req, res, next);
+
+        expect(Project.findOne).toHaveBeenCalled();
+        expect(mockSelect).toHaveBeenCalledWith(expect.stringContaining('allowPublicSignup'));
+    });
 });

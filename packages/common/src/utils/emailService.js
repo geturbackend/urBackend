@@ -11,7 +11,7 @@ console.log("__dirname =", __dirname);
 
 const resend = new Resend(process.env.RESEND_API_KEY_2 || process.env.RESEND_API_KEY || 're_dummy_key_for_testing');
 
-const FALLBACK_FROM_ADDRESS = 'urBackend <urbackend@apps.bitbros.in>';
+const FALLBACK_FROM_ADDRESS = 'Yash from urBackend <yash@urbackend.in>';
 
 const formatFromAddress = (email_address) => {
     const trimmed = email_address?.trim();
@@ -24,7 +24,7 @@ const formatFromAddress = (email_address) => {
         return trimmed;
     }
 
-    return `urBackend <${trimmed}>`;
+    return `Yash from urBackend <${trimmed}>`;
 };
 
 const generateDynamicFromAddress = (projectName) => {
@@ -38,11 +38,11 @@ const generateDynamicFromAddress = (projectName) => {
     const finalDisplayName = /^[a-zA-Z0-9 ]+$/.test(safeDisplayName) 
         ? safeDisplayName 
         : `"${safeDisplayName.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
-    return `${finalDisplayName} <${safeEmailHandle}@apps.bitbros.in>`;
+    return `${finalDisplayName} <${safeEmailHandle}@apps.urbackend.in>`;
 };
  
 const defaultFromAddress = formatFromAddress(process.env.EMAIL_FROM);
-const replyToAddress = process.env.EMAIL_REPLY_TO?.trim() || "urbackend@apps.bitbros.in";
+const replyToAddress = process.env.EMAIL_REPLY_TO?.trim() || "yash@urbackend.in";
 
 async function sendOtp(email, otp, { subject = "Verify your urBackend account", customContent = null } = {}) {
     try {
@@ -111,7 +111,7 @@ const escapeHtml = (unsafe) => {
 async function sendReleaseEmail(email, { version, title, content, changelogUrl }) {
     const sVersion = escapeHtml(version);
     const sTitle = escapeHtml(title);
-    const fallbackUrl = 'https://urbackend.bitbros.in/releases';
+    const fallbackUrl = 'https://urbackend.in/releases';
     const ctaUrl = typeof changelogUrl === 'string' && /^https?:\/\//i.test(changelogUrl)
         ? changelogUrl
         : fallbackUrl;
@@ -365,12 +365,12 @@ urBackend Team`;
         `;
 
         const { data, error } = await resend.emails.send({
-            from: `urBackend <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`,
+            from: defaultFromAddress,
             to: to,
             subject: subject,
             text: textBody,
             html: htmlContent,
-            replyTo: 'urbackend@apps.bitbros.in',
+            replyTo: replyToAddress,
         });
 
         if (error) {

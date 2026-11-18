@@ -63,7 +63,7 @@ const initPublicEmailWorker = () => {
                 const { generateDynamicFromAddress } = require('../utils/emailService');
                 fromAddress = generateDynamicFromAddress(projectName);
             } else {
-                fromAddress = process.env.EMAIL_FROM || "urBackend <urbackend@apps.bitbros.in>";
+                fromAddress = process.env.EMAIL_FROM || "urBackend Apps <noreply@apps.urbackend.in>";
             }
         }
 

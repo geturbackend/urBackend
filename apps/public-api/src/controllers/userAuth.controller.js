@@ -246,6 +246,7 @@ const getSocialProviderConfig = async (projectId, provider) => {
         'collections',
         'jwtSecret',
         'isAuthEnabled',
+        'allowPublicSignup',
         `authProviders.${provider}.enabled`,
         `authProviders.${provider}.clientId`,
         `authProviders.${provider}.redirectUri`,

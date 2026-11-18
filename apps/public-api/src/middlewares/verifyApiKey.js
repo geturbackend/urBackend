@@ -83,6 +83,7 @@ module.exports = async (req, res, next) => {
                     jwtSecret
                     allowedDomains
                     isAuthEnabled
+                    allowPublicSignup
                     siteUrl
                 `,
         )
