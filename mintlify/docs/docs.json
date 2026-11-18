@@ -135,6 +135,7 @@
               "api-reference/data/get-one",
               "api-reference/data/aggregate",
               "api-reference/data/insert",
+              "api-reference/data/bulk-insert",
               "api-reference/data/update",
               "api-reference/data/delete"
             ]

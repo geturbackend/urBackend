@@ -7,6 +7,8 @@ description: "Create a new document in a collection."
 
 Inserts a new document into the specified collection and returns the created document on success.
 
+To insert up to 100 documents in one request, use [Bulk insert documents](/api-reference/data/bulk-insert).
+
 ### Required header
 
 `x-api-key`: `sk_live_…` by default. `pk_live_…` is accepted only when the collection has **RLS enabled** and the request includes a valid `Authorization: Bearer <accessToken>` header.
