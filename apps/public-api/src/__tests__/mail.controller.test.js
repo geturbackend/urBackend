@@ -58,7 +58,7 @@ jest.mock('@urbackend/common', () => {
             })),
         },
         decrypt: jest.fn(),
-        generateDynamicFromAddress: jest.fn((name) => `mock <mock@apps.bitbros.in>`),
+        generateDynamicFromAddress: jest.fn((name) => `mock <mock@apps.urbackend.in>`),
         redis: redisMock,
         getPlanLimits: jest.fn(() => ({ mailPerMonth: 100 })),
         publicEmailQueue: {

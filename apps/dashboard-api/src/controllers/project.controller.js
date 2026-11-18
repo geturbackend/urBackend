@@ -1708,7 +1708,7 @@ module.exports.listFiles = async (req, res) => {
     console.error(err);
     res.status(500).json({
       error: "Something Went Wrong",
-      try: "Try checking docs or contact support - urbackend@bitbros.in",
+      try: "Try checking docs or contact support - yash@urbackend.in",
     });
   }
 };

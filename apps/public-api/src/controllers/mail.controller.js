@@ -750,7 +750,7 @@ module.exports.createBroadcast = async (req, res, next) => {
 
     const payload = {
       audienceId: resolvedAudienceId,
-      from: from || process.env.EMAIL_FROM || "urBackend <urbackend@apps.bitbros.in>",
+      from: from || process.env.EMAIL_FROM || "Yash from urBackend <yash@urbackend.in>",
       subject,
       html
     };
