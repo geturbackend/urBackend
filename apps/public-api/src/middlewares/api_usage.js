@@ -22,6 +22,27 @@ const limiter = (req, res, next) => {
     return rateLimiterMiddleware(req, res, next);
 };
 
+// Dedicated per-IP rate limiter for login to mitigate credential stuffing / password spraying
+const loginRateLimiterMiddleware = rateLimit({
+    windowMs: parseInt(process.env.LOGIN_RATE_LIMIT_WINDOW_MS || String(15 * 60 * 1000), 10),
+    max: parseInt(process.env.LOGIN_RATE_LIMIT_MAX || '20', 10),
+    message: { success: false, message: 'Too many login attempts from this IP, please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    validate: {
+        xForwardedForHeader: false,
+        trustProxy: false
+    }
+});
+
+const loginLimiter = (req, res, next) => {
+    const bypassKey = process.env.LOADTEST_BYPASS_KEY;
+    if (bypassKey && req.headers['x-bypass-rate-limit'] === bypassKey) {
+        return next();
+    }
+    return loginRateLimiterMiddleware(req, res, next);
+};
+
 // Logger with API analytics
 const logger = (req, res, next) => {
     // Capture start time for response time measurement
@@ -125,4 +146,4 @@ const logger = (req, res, next) => {
     next();
 };
 
-module.exports = { limiter, logger };
+module.exports = { limiter, loginLimiter, logger };

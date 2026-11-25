@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const verifyApiKey = require('../middlewares/verifyApiKey');
+const { loginLimiter } = require('../middlewares/api_usage');
 const {checkAuthEnabled} = require('@urbackend/common');
 const { checkUsageLimits, checkAuthUsersLimit } = require('../middlewares/usageGate');
 const { signup, login, me, publicProfile, verifyEmail, resendVerificationOtp, requestPasswordReset, resetPasswordUser, updateProfile, changePasswordUser, refreshToken, logout, startSocialAuth, handleSocialAuthCallback, exchangeSocialRefreshToken } = require('../controllers/userAuth.controller');
@@ -10,7 +11,7 @@ const { signup, login, me, publicProfile, verifyEmail, resendVerificationOtp, re
 router.post('/signup', verifyApiKey, checkAuthEnabled, checkUsageLimits, checkAuthUsersLimit, signup);
 
 // LOGIN ROUTE
-router.post('/login', verifyApiKey, checkAuthEnabled, checkUsageLimits, login);
+router.post('/login', loginLimiter, verifyApiKey, checkAuthEnabled, checkUsageLimits, login);
 router.get('/social/:provider/start', verifyApiKey, checkAuthEnabled, checkUsageLimits, startSocialAuth);
 router.get('/social/:provider/callback', checkUsageLimits, checkAuthUsersLimit, handleSocialAuthCallback);
 router.post('/social/exchange', verifyApiKey, checkAuthEnabled, checkUsageLimits, exchangeSocialRefreshToken);
