@@ -33,7 +33,7 @@ app.use(standardizeApiResponse);
 const projectCorsPreflight = (req, res, next) => {
     res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
     res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
-    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-api-key, x-refresh-token, x-refresh-token-mode");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-api-key, x-refresh-token, x-refresh-token-mode, x-csrf-token");
     res.header("Access-Control-Allow-Credentials", "true");
     res.header("Access-Control-Max-Age", "86400"); // Cache preflight for 24 hours
     if (req.method === 'OPTIONS') {
