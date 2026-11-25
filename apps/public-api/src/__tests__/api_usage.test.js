@@ -202,3 +202,49 @@ describe('api_usage middleware', () => {
         expect(mockPlatformEventCreate).not.toHaveBeenCalled();
     });
 });
+
+describe('loginLimiter middleware', () => {
+    const express = require('express');
+    const request = require('supertest');
+
+    const buildApp = (max = '2') => {
+        process.env.LOGIN_RATE_LIMIT_MAX = max;
+        delete process.env.LOADTEST_BYPASS_KEY;
+        jest.resetModules();
+        const { loginLimiter } = require('../middlewares/api_usage');
+        const app = express();
+        app.set('trust proxy', 1);
+        app.post('/login', loginLimiter, (req, res) => res.status(200).json({ ok: true }));
+        return app;
+    };
+
+    afterEach(() => {
+        delete process.env.LOGIN_RATE_LIMIT_MAX;
+        delete process.env.LOADTEST_BYPASS_KEY;
+    });
+
+    test('blocks requests exceeding LOGIN_RATE_LIMIT_MAX from the same IP with 429', async () => {
+        const app = buildApp('2');
+
+        await request(app).post('/login').set('X-Forwarded-For', '203.0.113.10').expect(200);
+        await request(app).post('/login').set('X-Forwarded-For', '203.0.113.10').expect(200);
+        const blocked = await request(app).post('/login').set('X-Forwarded-For', '203.0.113.10').expect(429);
+        expect(blocked.body.success).toBe(false);
+    });
+
+    test('tracks login rate limit independently per IP', async () => {
+        const app = buildApp('1');
+
+        await request(app).post('/login').set('X-Forwarded-For', '203.0.113.11').expect(200);
+        await request(app).post('/login').set('X-Forwarded-For', '203.0.113.11').expect(429);
+        await request(app).post('/login').set('X-Forwarded-For', '203.0.113.12').expect(200);
+    });
+
+    test('allows bypass when x-bypass-rate-limit matches LOADTEST_BYPASS_KEY', async () => {
+        const app = buildApp('1');
+        process.env.LOADTEST_BYPASS_KEY = 'secret_loadtest_key';
+
+        await request(app).post('/login').set('X-Forwarded-For', '203.0.113.13').expect(200);
+        await request(app).post('/login').set('X-Forwarded-For', '203.0.113.13').set('x-bypass-rate-limit', 'secret_loadtest_key').expect(200);
+    });
+});
