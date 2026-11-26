@@ -108,7 +108,7 @@ const GOOGLE_JWK = {
     use: 'sig',
 };
 
-const makeProject = () => ({
+const makeProject = (overrides = {}) => ({
     _id: 'project_1',
     name: 'Demo',
     jwtSecret: 'jwt_secret',
@@ -139,6 +139,7 @@ const makeProject = () => ({
             redirectUri: 'http://localhost:1235/api/userAuth/social/google/callback',
         },
     },
+    ...overrides,
 });
 
 const makeReq = ({ params = {}, query = {}, project = makeProject() } = {}) => ({
@@ -536,6 +537,44 @@ next = jest.fn();
 
         expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('error='));
         expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('The+user+denied'));
+    });
+
+    test('handleSocialAuthCallback rejects new user signup when allowPublicSignup is false', async () => {
+        redis.get.mockResolvedValueOnce(JSON.stringify({
+            projectId: 'project_1',
+            provider: 'github',
+            callbackUrl: 'http://localhost:5173/auth/callback',
+        }));
+        mockProjectFindByIdChain.lean.mockResolvedValueOnce(makeProject({ allowPublicSignup: false }));
+
+        mockUsersModel.findOne
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce(null);
+
+        global.fetch
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ access_token: 'gh_token' }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ id: 12345, login: 'alice', avatar_url: 'http://avatar' }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ([{ email: 'alice@example.com', primary: true, verified: true }]),
+            });
+
+        const req = makeReq({
+            params: { provider: 'github' },
+            query: { code: 'code_gh', state: 'state_gh' },
+        });
+        const res = makeRes();
+
+        await controller.handleSocialAuthCallback(req, res, next);
+
+        expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('Public+signup+is+disabled+for+this+project'));
+        expect(mockUsersModel.create).not.toHaveBeenCalled();
     });
 
     // P1: Email collision when provider email is not verified
