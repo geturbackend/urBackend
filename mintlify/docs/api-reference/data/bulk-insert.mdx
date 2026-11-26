@@ -1,23 +1,109 @@
-# Bulk Insert Data
+---
+title: "Bulk Insert Documents"
+description: "Insert up to 100 documents into a collection in a single request."
+---
 
-## Endpoint
-POST /api/data/:collectionName/bulk
+## POST `/api/data/:collectionName/bulk`
 
-## Description
-Use this endpoint to insert multiple records in a single request.  
-It’s useful when you want to reduce multiple API calls and improve performance.
+Inserts multiple documents into the specified collection in one request and returns the number of documents inserted on success.
 
-## Request Body
-An array of objects that follow your collection schema.
+### Required header
 
-## Example
+`x-api-key`: `sk_live_…` by default. `pk_live_…` is accepted only when the collection has **RLS enabled** and the request includes a valid `Authorization: Bearer <accessToken>` header.
 
-```json
-[
-  { "name": "John" },
-  { "name": "Jane" }
-]
-## Response
+### Path parameters
+
+<ParamField path="collectionName" type="string" required>
+  The name of the collection to insert into (e.g., `posts`, `orders`). The `users` collection is not supported. Use the `/api/userAuth` endpoints instead.
+</ParamField>
+
+### Request body
+
+Send a JSON array of document objects. The array must contain between 1 and 100 objects. Each object must conform to the collection's schema if one is defined.
+
+urBackend validates every record before inserting any of them. If one or more records fail validation, nothing is inserted and the response lists the indexes of the invalid records.
+
+<Note>
+  When using `pk_live` with RLS enabled, the owner field (e.g., `userId`) is automatically
+  injected into each record from the authenticated user's JWT if you omit it. If any record
+  includes the owner field but it doesn't match the token's user ID, the whole request is
+  rejected with `403`.
+</Note>
+
+<Note>
+  Bulk inserts don't trigger `document.inserted` webhooks. Use the single [insert endpoint](/api-reference/data/insert) when you need a webhook for each new document.
+</Note>
+
+### Response fields
+
+<ResponseField name="success" type="boolean">
+  `true` when the documents were inserted.
+</ResponseField>
+
+<ResponseField name="data.insertedCount" type="number">
+  The number of documents inserted.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Always `Bulk insert successful`.
+</ResponseField>
+
+### Code examples
+
+<CodeGroup>
+
+```javascript sk_live (server-side)
+// Use sk_live from your server. Never expose it in frontend code.
+const res = await fetch('https://api.urbackend.in/api/data/posts/bulk', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'sk_live_YOUR_SECRET_KEY'
+  },
+  body: JSON.stringify([
+    { title: 'First post', body: 'Hello world', userId: 'USER_ID' },
+    { title: 'Second post', body: 'Hello again', userId: 'USER_ID' }
+  ])
+});
+
+const result = await res.json();
+// result.data.insertedCount === 2
+```
+
+```javascript pk_live + RLS (client-side)
+// Use pk_live + user JWT when collection has RLS enabled
+// userId is auto-injected into each record from the JWT
+const res = await fetch('https://api.urbackend.in/api/data/posts/bulk', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'pk_live_YOUR_KEY',
+    'Authorization': `Bearer ${accessToken}`
+  },
+  body: JSON.stringify([
+    { title: 'First post', body: 'Hello world' },
+    { title: 'Second post', body: 'Hello again' }
+  ])
+});
+
+const result = await res.json();
+```
+
+```bash curl (sk_live)
+curl -X POST "https://api.urbackend.in/api/data/posts/bulk" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: sk_live_YOUR_SECRET_KEY" \
+  -d '[
+    { "title": "First post", "body": "Hello world", "userId": "USER_ID" },
+    { "title": "Second post", "body": "Hello again", "userId": "USER_ID" }
+  ]'
+```
+
+</CodeGroup>
+
+### Success response
+
+Status `201 Created`:
 
 ```json
 {
@@ -29,6 +115,13 @@ An array of objects that follow your collection schema.
 }
 ```
 
-## Notes
-- Maximum number of records per request is limited
-- Duplicate key errors return status 409
+### Errors
+
+| Status | Cause |
+| :--- | :--- |
+| `400 Bad Request` | Body is not an array, is empty, or has more than 100 records. Also returned as `Invalid records at index: …` when records fail schema validation or are not objects |
+| `401 Unauthorized` | Missing/invalid API key, or missing Bearer token when using `pk_live` with RLS |
+| `403 Forbidden` | `pk_live` without RLS enabled, a record's owner field doesn't match the token's user ID, the collection is `users`, or the insert would exceed your project's database limit (`Database limit exceeded.`) |
+| `404 Not Found` | The collection does not exist |
+| `409 Conflict` | A record has a duplicate value for a unique field. Records before the duplicate in the array may already be inserted |
+| `429 Too Many Requests` | Your project's per-minute or daily request limit was reached |
