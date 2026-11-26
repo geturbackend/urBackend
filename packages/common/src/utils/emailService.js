@@ -111,7 +111,7 @@ const escapeHtml = (unsafe) => {
 async function sendReleaseEmail(email, { version, title, content, changelogUrl }) {
     const sVersion = escapeHtml(version);
     const sTitle = escapeHtml(title);
-    const fallbackUrl = 'https://urbackend.in/releases';
+    const fallbackUrl = 'https://urbackend.in/changelog';
     const ctaUrl = typeof changelogUrl === 'string' && /^https?:\/\//i.test(changelogUrl)
         ? changelogUrl
         : fallbackUrl;
