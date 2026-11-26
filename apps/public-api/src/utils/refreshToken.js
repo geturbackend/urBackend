@@ -25,6 +25,19 @@ const clearCookieOptions = () => ({
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
 });
 
+const getCsrfCookieOptions = () => ({
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: REFRESH_TOKEN_TTL_SECONDS * 1000
+});
+
+const clearCsrfCookieOptions = () => ({
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+});
+
 const hashRefreshToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
 const toProjectIdString = (projectId) => projectId?.toString?.() || String(projectId);
@@ -135,6 +148,87 @@ const assertRefreshRateLimits = async ({ req, tokenId, userId }) => {
 
 const clearRefreshCookie = (res) => {
     res.clearCookie('refreshToken', clearCookieOptions());
+    res.clearCookie('csrfToken', clearCsrfCookieOptions());
+};
+
+const safeTokenEqual = (a, b) => {
+    if (typeof a !== 'string' || typeof b !== 'string') return false;
+    const bufA = Buffer.from(a);
+    const bufB = Buffer.from(b);
+    if (bufA.length !== bufB.length) return false;
+    return crypto.timingSafeEqual(bufA, bufB);
+};
+
+const extractOrigin = (rawHeader) => {
+    if (!rawHeader || typeof rawHeader !== 'string') return null;
+    try {
+        return new URL(rawHeader).origin;
+    } catch {
+        return null;
+    }
+};
+
+const isOriginExplicitlyTrusted = (origin, project) => {
+    if (!origin || !project) return false;
+    const siteOrigin = extractOrigin(project.siteUrl);
+    if (siteOrigin && origin === siteOrigin) {
+        return true;
+    }
+
+    const allowedDomains = Array.isArray(project.allowedDomains) ? project.allowedDomains : [];
+    if (allowedDomains.includes('*')) {
+        return false;
+    }
+
+    try {
+        const parsedOrigin = new URL(origin);
+        return allowedDomains.some((domain) => {
+            const cleanDomain = String(domain || '').trim().replace(/\/$/, '');
+            if (!cleanDomain) return false;
+            if (cleanDomain.startsWith('*.')) {
+                const baseDomain = cleanDomain.slice(2);
+                return parsedOrigin.hostname === baseDomain || parsedOrigin.hostname.endsWith(`.${baseDomain}`);
+            }
+            return parsedOrigin.origin === cleanDomain || parsedOrigin.hostname === cleanDomain;
+        });
+    } catch {
+        return false;
+    }
+};
+
+/**
+ * Validate CSRF protections when a request authenticates via the httpOnly refreshToken cookie.
+ * Header-based refresh requests (`x-refresh-token`) are exempt to preserve non-browser clients.
+ */
+const validateCookieCsrf = (req) => {
+    const usingHeaderToken = !!req.header?.('x-refresh-token');
+    const usingCookieToken = !!req.cookies?.refreshToken && !usingHeaderToken;
+    if (!usingCookieToken) {
+        return { valid: true };
+    }
+
+    const csrfCookie = req.cookies?.csrfToken;
+    const csrfHeader = req.header?.('x-csrf-token');
+    const hasValidCsrfToken = !!(csrfCookie && csrfHeader && safeTokenEqual(csrfCookie, csrfHeader));
+
+    if (csrfCookie && !hasValidCsrfToken) {
+        return { valid: false, message: 'Forbidden: Invalid or missing CSRF token' };
+    }
+
+    const secFetchSite = req.header?.('sec-fetch-site');
+    const requestOrigin = extractOrigin(req.headers?.origin || req.headers?.referer);
+
+    if (secFetchSite === 'cross-site' && !hasValidCsrfToken && !isOriginExplicitlyTrusted(requestOrigin, req.project)) {
+        return { valid: false, message: 'Forbidden: Cross-site cookie request rejected' };
+    }
+
+    const siteOrigin = extractOrigin(req.project?.siteUrl);
+    const hasWildcardDomains = !Array.isArray(req.project?.allowedDomains) || req.project.allowedDomains.includes('*');
+    if (requestOrigin && siteOrigin && hasWildcardDomains && requestOrigin !== siteOrigin && !hasValidCsrfToken) {
+        return { valid: false, message: 'Forbidden: Request origin does not match project siteUrl' };
+    }
+
+    return { valid: true };
 };
 
 const issueAuthTokens = async ({ project, userId, req, res, rotatedFrom = null }) => {
@@ -159,9 +253,12 @@ const issueAuthTokens = async ({ project, userId, req, res, rotatedFrom = null }
     });
 
     res.cookie('refreshToken', rawToken, getRefreshCookieOptions());
+    const csrfToken = crypto.randomBytes(32).toString('hex');
+    res.cookie('csrfToken', csrfToken, getCsrfCookieOptions());
     return {
         accessToken,
         refreshToken: rawToken,
+        csrfToken,
         tokenId,
         expiresIn: ACCESS_TOKEN_EXPIRES_IN
     };
@@ -174,5 +271,6 @@ module.exports = {
     issueAuthTokens,
     parseRefreshToken,
     readRefreshTokenFromRequest,
-    shouldExposeRefreshToken
+    shouldExposeRefreshToken,
+    validateCookieCsrf
 };

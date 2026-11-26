@@ -20,7 +20,8 @@ const {
     issueAuthTokens,
     parseRefreshToken,
     readRefreshTokenFromRequest,
-    shouldExposeRefreshToken
+    shouldExposeRefreshToken,
+    validateCookieCsrf
 } = require('../utils/refreshToken');
 
 const checkUserSoftDeleted = (user) => {
@@ -1721,6 +1722,11 @@ module.exports.changePasswordUser = async (req, res, next) => {
 
 module.exports.refreshToken = async (req, res, next) => {
     try {
+        const csrfCheck = validateCookieCsrf(req);
+        if (!csrfCheck.valid) {
+            return next(new AppError(403, csrfCheck.message));
+        }
+
         const rawRefreshToken = readRefreshTokenFromRequest(req);
         if (!rawRefreshToken) {
             clearRefreshCookie(res);
@@ -1836,6 +1842,11 @@ module.exports.refreshToken = async (req, res, next) => {
 
 module.exports.logout = async (req, res, next) => {
     try {
+        const csrfCheck = validateCookieCsrf(req);
+        if (!csrfCheck.valid) {
+            return next(new AppError(403, csrfCheck.message));
+        }
+
         const rawRefreshToken = readRefreshTokenFromRequest(req);
         if (rawRefreshToken) {
             const parsedToken = parseRefreshToken(rawRefreshToken);

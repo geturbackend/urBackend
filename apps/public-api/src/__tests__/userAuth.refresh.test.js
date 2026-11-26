@@ -329,4 +329,128 @@ next = jest.fn();
         expect.objectContaining({ data: expect.objectContaining({ password: 'hashed_secret' }) })
     );
     });
+
+    test('refresh-token rejects cross-site cookie request without CSRF token or trusted origin', async () => {
+        const req = makeReq({
+            cookies: { refreshToken: 'token_1.secret_1' },
+            headers: {
+                'sec-fetch-site': 'cross-site',
+                origin: 'https://evil.example',
+            },
+        });
+        const res = makeRes();
+
+        await controller.refreshToken(req, res, next);
+
+        expect(next).toHaveBeenCalledWith(expect.any(AppError));
+        expect(next.mock.calls[next.mock.calls.length - 1][0].statusCode).toBe(403);
+        expect(getRefreshSession).not.toHaveBeenCalled();
+    });
+
+    test('logout rejects cross-site cookie request without revoking session', async () => {
+        const req = makeReq({
+            cookies: { refreshToken: 'token_1.secret_1' },
+            headers: {
+                'sec-fetch-site': 'cross-site',
+                origin: 'https://evil.example',
+            },
+        });
+        const res = makeRes();
+
+        await controller.logout(req, res, next);
+
+        expect(next).toHaveBeenCalledWith(expect.any(AppError));
+        expect(next.mock.calls[next.mock.calls.length - 1][0].statusCode).toBe(403);
+        expect(persistRefreshSession).not.toHaveBeenCalled();
+        expect(res.clearCookie).not.toHaveBeenCalled();
+    });
+
+    test('refresh-token rejects cookie request when csrfToken cookie mismatches x-csrf-token header', async () => {
+        const req = makeReq({
+            cookies: { refreshToken: 'token_1.secret_1', csrfToken: 'expected_csrf' },
+            headers: { 'x-csrf-token': 'wrong_csrf' },
+        });
+        const res = makeRes();
+
+        await controller.refreshToken(req, res, next);
+
+        expect(next).toHaveBeenCalledWith(expect.any(AppError));
+        expect(next.mock.calls[next.mock.calls.length - 1][0].statusCode).toBe(403);
+    });
+
+    test('refresh-token allows cookie request when csrfToken cookie matches x-csrf-token header', async () => {
+        const incoming = 'token_3.secret_3';
+        const session = {
+            tokenId: 'token_3',
+            projectId: 'project_1',
+            userId: 'user_1',
+            tokenHash: hashToken(incoming),
+            isUsed: false,
+            revokedAt: null,
+            expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        };
+
+        getRefreshSession.mockResolvedValueOnce(session);
+        Project.__chain.lean.mockResolvedValueOnce(makeProject());
+        mockModel.findOne.mockReturnValueOnce({
+            lean: jest.fn().mockResolvedValue({ _id: 'user_1' }),
+        });
+
+        const req = makeReq({
+            cookies: { refreshToken: incoming, csrfToken: 'valid_csrf_token' },
+            headers: {
+                'sec-fetch-site': 'cross-site',
+                origin: 'https://app.example.com',
+                'x-csrf-token': 'valid_csrf_token',
+            },
+        });
+        const res = makeRes();
+
+        await controller.refreshToken(req, res, next);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith(
+            expect.objectContaining({
+                token: 'signed_access_token',
+                accessToken: 'signed_access_token',
+            })
+        );
+    });
+
+    test('refresh-token preserves x-refresh-token header flow regardless of sec-fetch-site', async () => {
+        const incoming = 'token_4.secret_4';
+        const session = {
+            tokenId: 'token_4',
+            projectId: 'project_1',
+            userId: 'user_1',
+            tokenHash: hashToken(incoming),
+            isUsed: false,
+            revokedAt: null,
+            expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        };
+
+        getRefreshSession.mockResolvedValueOnce(session);
+        Project.__chain.lean.mockResolvedValueOnce(makeProject());
+        mockModel.findOne.mockReturnValueOnce({
+            lean: jest.fn().mockResolvedValue({ _id: 'user_1' }),
+        });
+
+        const req = makeReq({
+            headers: {
+                'x-refresh-token': incoming,
+                'x-refresh-token-mode': 'header',
+                'sec-fetch-site': 'cross-site',
+            },
+        });
+        const res = makeRes();
+
+        await controller.refreshToken(req, res, next);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith(
+            expect.objectContaining({
+                refreshToken: expect.any(String),
+            })
+        );
+    });
 });
